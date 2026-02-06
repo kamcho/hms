@@ -1,0 +1,683 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static custom_filters %}
+
+{% block title %}Financial Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Reset & Custom Properties */
+    :root {
+        --dash-bg: #f4f6f9;
+        --card-bg: #ffffff;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --accent-primary: #7e3af2;
+        --accent-success: #10b981;
+        --accent-danger: #ef4444;
+        --accent-warning: #f59e0b;
+        --border-color: #e5e7eb;
+    }
+
+    /* Override dashboard container background if needed */
+    .dashboard-container {
+        background-color: var(--dash-bg);
+        color: var(--text-primary);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Layout Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .grid-col-span-2 {
+        grid-column: span 2;
+    }
+
+    .grid-col-span-3 {
+        grid-column: span 3;
+    }
+
+    .grid-col-span-4 {
+        grid-column: span 4;
+    }
+
+    /* Cards */
+    .custom-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.01);
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Headers & Text */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Metrics */
+    .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .metric-content h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .metric-sub {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .icon-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+    }
+
+    .icon-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+    }
+
+    .icon-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-warning);
+    }
+
+    .icon-primary {
+        background: rgba(126, 58, 242, 0.1);
+        color: var(--accent-primary);
+    }
+
+    /* Colors */
+    .text-success {
+        color: var(--accent-success);
+    }
+
+    .text-danger {
+        color: var(--accent-danger);
+    }
+
+    .text-warning {
+        color: var(--accent-warning);
+    }
+
+    .text-primary {
+        color: var(--accent-primary);
+    }
+
+    /* Charts */
+    .chart-box {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    /* List Groups */
+    .custom-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .custom-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .custom-list-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Badge */
+    .custom-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+    }
+
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-warning);
+    }
+
+    .badge-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+    }
+
+    .badge-gray {
+        background: #f3f4f6;
+        color: var(--text-secondary);
+    }
+
+    /* Tables */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        background: #f9fafb;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .custom-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+
+    .custom-table tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .text-end {
+        text-align: right !important;
+    }
+
+    /* Buttons */
+    .custom-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .btn-primary {
+        background: var(--accent-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #6c2bd9;
+    }
+
+    .btn-outline {
+        background: white;
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .btn-outline:hover {
+        background: #f9fafb;
+    }
+
+    /* Utilities */
+    .gap-2 {
+        gap: 0.5rem;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    .h-100 {
+        height: 100%;
+    }
+
+    /* Filter Form */
+    .filter-group {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+    }
+
+    .form-group {
+        flex: 1;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: #f9fafb;
+        color: var(--text-primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-col-span-3,
+        .grid-col-span-4 {
+            grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .grid-col-span-2,
+        .grid-col-span-3,
+        .grid-col-span-4 {
+            grid-column: span 1;
+        }
+
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Financial Overview</h1>
+            <p class="page-subtitle">Real-time financial analytics and reporting</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="custom-btn btn-outline" type="button"
+                onclick="document.getElementById('filterPanel').style.display = document.getElementById('filterPanel').style.display === 'none' ? 'block' : 'none'">
+                <i class="fas fa-filter" style="margin-right: 0.5rem;"></i>Filter
+            </button>
+            <a href="?export=csv{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}"
+                class="custom-btn btn-primary">
+                <i class="fas fa-download" style="margin-right: 0.5rem;"></i>Export Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filterPanel" class="mb-4" style="display: none;">
+        <div class="custom-card">
+            <form method="GET">
+                <div class="filter-group">
+                    <div class="form-group">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" class="custom-input" value="{{ from_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" class="custom-input" value="{{ to_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 150px;">
+                        <button type="submit" class="custom-btn btn-primary w-100"
+                            style="justify-content: center;">Apply</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top Metrics Row -->
+    <div class="dashboard-grid">
+        <!-- Revenue -->
+        <div class="custom-card">
+            <div class="metric-item">
+                <div class="metric-content">
+                    <h3>Total Revenue</h3>
+                    <p class="metric-value text-success">Ksh {{ total_revenue|format_number:2 }}</p>
+                    <div class="metric-sub">
+                        <i class="fas fa-arrow-up text-success"></i>
+                        From payments received
+                    </div>
+                </div>
+                <div class="icon-box icon-success">
+                    <i class="fas fa-wallet"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="custom-card">
+            <div class="metric-item">
+                <div class="metric-content">
+                    <h3>Total Expenses</h3>
+                    <p class="metric-value text-danger">Ksh {{ total_expenses|format_number:2 }}</p>
+                    <div class="metric-sub">Inventory usage & purchases</div>
+                </div>
+                <div class="icon-box icon-danger">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Profit -->
+        <div class="custom-card">
+            <div class="metric-item">
+                <div class="metric-content">
+                    <h3>Net Profit</h3>
+                    <p class="metric-value {% if net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                        Ksh {{ net_profit|format_number:2 }}
+                    </p>
+                    <div class="metric-sub">Revenue - Expenses</div>
+                </div>
+                <div class="icon-box icon-primary">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Risk Debt -->
+        <div class="custom-card">
+            <div class="metric-item">
+                <div class="metric-content">
+                    <h3>Patient Debt (30+ Days)</h3>
+                    <p class="metric-value text-warning">Ksh {{ aging_debtors|get_item:'30+
+                        Days'|default:0|format_number:2 }}</p>
+                    <div class="metric-sub">Action required</div>
+                </div>
+                <div class="icon-box icon-warning">
+                    <i class="fas fa-hand-holding-medical"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts Payable -->
+        <div class="custom-card">
+            <div class="metric-item">
+                <div class="metric-content">
+                    <h3>Accounts Payable</h3>
+                    <p class="metric-value text-rose-600">Ksh {{ total_payable|format_number:2 }}</p>
+                    <div class="metric-sub">Owed to suppliers</div>
+                </div>
+                <div class="icon-box" style="background: rgba(225, 29, 72, 0.1); color: #e11d48;">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="dashboard-grid">
+        <div class="custom-card grid-col-span-3">
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Revenue Trend</h5>
+            <div class="chart-box">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+        <div class="custom-card">
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Payment Methods</h5>
+            <div class="chart-container" style="height: 200px;">
+                <canvas id="methodChart"></canvas>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                {% for pm in payment_methods %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">{{ pm.payment_method }}</span>
+                    <span style="font-weight: 600;">Ksh {{ pm.total|format_number:2 }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Row -->
+    <div class="dashboard-grid">
+        <!-- Aging Debtors -->
+        <div class="custom-card">
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Aging Debtors</h5>
+            <ul class="custom-list">
+                <li class="custom-list-item">
+                    <span>0 - 7 Days</span>
+                    <span class="custom-badge badge-success">Ksh {{ aging_debtors|get_item:'0-7 Days'|format_number:2
+                        }}</span>
+                </li>
+                <li class="custom-list-item">
+                    <span>8 - 30 Days</span>
+                    <span class="custom-badge badge-warning">Ksh {{ aging_debtors|get_item:'8-30 Days'|format_number:2
+                        }}</span>
+                </li>
+                <li class="custom-list-item">
+                    <span>30+ Days</span>
+                    <span class="custom-badge badge-danger">Ksh {{ aging_debtors|get_item:'30+ Days'|format_number:2
+                        }}</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Cashier Performance -->
+        <div class="custom-card">
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Cashier Accountability</h5>
+            <div style="overflow-x: auto;">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Cashier</th>
+                            <th class="text-end">Collected</th>
+                            <th class="text-end">Txns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cashier_stats %}
+                        <tr>
+                            <td>{{ c.created_by__first_name|default:c.created_by__id_number }}</td>
+                            <td class="text-end">Ksh {{ c.total|format_number:2 }}</td>
+                            <td class="text-end">{{ c.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-secondary);">No data available
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Visit Revenue (spanning 2 cols on wide screens if space permits, or share row) -->
+        <div class="custom-card grid-col-span-2">
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Revenue Source</h5>
+            {% for v in visit_revenue %}
+            <div class="mb-4">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                    <span>{{ v.visit__visit_type|default:'Direct Bill' }}</span>
+                    <span style="font-weight: 600;">Ksh {{ v.total|format_number:2 }}</span>
+                </div>
+                <!-- Simple progress bar using Flexbox/Divs -->
+                <div style="height: 8px; background-color: #f3f4f6; border-radius: 4px; overflow: hidden;">
+                    <div style="height: 100%; width: 100%; background-color: var(--accent-primary);"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="custom-card">
+        <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Recent Transactions</h5>
+        <div style="overflow-x: auto;">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Receipt / Ref</th>
+                        <th>Patient</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>Cashier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in recent_transactions %}
+                    <tr>
+                        <td>{{ txn.payment_date|date:"M d, H:i" }}</td>
+                        <td style="color: var(--accent-primary);">{{ txn.transaction_reference|default:"-" }}</td>
+                        <td>
+                            <div style="font-weight: 500;">{{ txn.invoice.patient.full_name }}</div>
+                            <small style="color: var(--text-secondary);">INV-{{ txn.invoice.id }}</small>
+                        </td>
+                        <td>
+                            {% if txn.payment_method == 'M-Pesa' %}
+                            <span class="custom-badge badge-success">M-Pesa</span>
+                            {% elif txn.payment_method == 'Cash' %}
+                            <span class="custom-badge badge-gray">Cash</span>
+                            {% elif txn.payment_method == 'Insurance' %}
+                            <span class="custom-badge badge-primary"
+                                style="background: rgba(126, 58, 242, 0.1); color: var(--accent-primary);">Insurance</span>
+                            {% else %}
+                            <span class="custom-badge badge-gray">{{ txn.payment_method }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 600;">Ksh {{ txn.amount|format_number:2 }}</td>
+                        <td>{{ txn.created_by.id_number|default:'System' }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No
+                            recent transactions found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Revenue Line Chart
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revCtx, {
+        type: 'line',
+        data: {
+            labels: {{ daily_labels| safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ daily_revenue_data| safe }},
+        borderColor: '#7e3af2',
+        backgroundColor: 'rgba(126, 58, 242, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                grid: { color: '#e5e7eb' },
+                ticks: { color: '#6b7280' }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: '#6b7280' }
+            }
+        }
+    }
+    });
+
+    // Payment Method Doughnut
+    const methodCtx = document.getElementById('methodChart').getContext('2d');
+    new Chart(methodCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ payment_method_labels| safe }},
+        datasets: [{
+            data: {{ payment_method_data| safe }},
+        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+        borderWidth: 0
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        cutout: '70%'
+    }
+    });
+</script>
+{% endblock %}

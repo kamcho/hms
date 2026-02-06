@@ -1,0 +1,151 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block title %}Triage Dashboard - HMS{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header">
+        <h1><i class="fas fa-tachometer-alt"></i> Triage Dashboard</h1>
+        <div class="header-actions">
+            <a href="{% url 'home:triage:add' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Triage Entry
+            </a>
+            <a href="{% url 'home:triage:list' %}" class="btn btn-secondary">
+                <i class="fas fa-list"></i> All Entries
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-ambulance"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ total_entries }}</h3>
+                <p>Total Entries</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ active_entries }}</h3>
+                <p>Active Entries</p>
+            </div>
+        </div>
+        
+        <div class="stat-card urgent">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ urgent_entries }}</h3>
+                <p>Urgent Cases</p>
+            </div>
+        </div>
+        
+        <div class="stat-card critical">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ critical_entries }}</h3>
+                <p>Critical Cases</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Priority Breakdown -->
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-chart-pie"></i> Priority Breakdown</h3>
+            </div>
+            <div class="card-body">
+                <div class="priority-stats">
+                    {% for priority, data in priority_stats.items %}
+                    <div class="priority-stat-item">
+                        <div class="priority-indicator" style="background-color: {{ data.color }};"></div>
+                        <div class="priority-info">
+                            <span class="priority-label">{{ data.label }}</span>
+                            <span class="priority-count">{{ data.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Active Entries -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-history"></i> Recent Active Entries</h3>
+                <a href="{% url 'home:triage:list' %}?status=active" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="recent-entries">
+                    {% for entry in recent_entries %}
+                    <div class="entry-item">
+                        <div class="entry-priority" style="background-color: {{ entry.get_priority_color }};">
+                            {{ entry.get_priority_display|first }}
+                        </div>
+                        <div class="entry-info">
+                            <h4>{{ entry.patient.first_name }} {{ entry.patient.last_name }}</h4>
+                            <p class="entry-complaint">{{ entry.chief_complaint|truncatechars:50 }}</p>
+                            <div class="entry-meta">
+                                <span><i class="fas fa-clock"></i> {{ entry.entry_date|timesince }} ago</span>
+                                <span><i class="fas fa-user-nurse"></i> {{ entry.triage_nurse.get_full_name|default:entry.triage_nurse.username }}</span>
+                            </div>
+                        </div>
+                        <div class="entry-actions">
+                            <a href="{% url 'home:triage:detail' entry.pk %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'home:triage:edit' entry.pk %}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="no-data">
+                        <i class="fas fa-ambulance fa-2x text-muted"></i>
+                        <p>No active triage entries</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions">
+                <a href="{% url 'home:triage:add' %}" class="action-btn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Triage Entry</span>
+                </a>
+                <a href="{% url 'home:triage:list' %}?priority=CRITICAL" class="action-btn critical">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>View Critical Cases</span>
+                </a>
+                <a href="{% url 'home:triage:list' %}?priority=URGENT" class="action-btn urgent">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>View Urgent Cases</span>
+                </a>
+                <a href="{% url 'home:triage:list' %}?status=completed" class="action-btn">
+                    <i class="fas fa-check-circle"></i>
+                    <span>View Completed Entries</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

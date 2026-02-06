@@ -1,0 +1,487 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - HMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --input-bg: rgba(255, 255, 255, 0.8);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .form-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .form-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .form-header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Standard form inputs */
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="date"],
+    .form-group select,
+    .form-group textarea {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px;
+        padding: 0.875rem 1rem !important;
+        color: #1e293b !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease;
+        font-weight: 500 !important;
+    }
+
+    .form-group input[type="text"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group input[type="date"]:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+        background: white !important;
+        transform: translateY(-1px);
+        color: #1e293b !important;
+    }
+
+    /* Custom Searchable Select Styles */
+    .searchable-select-wrapper {
+        position: relative;
+    }
+
+    .searchable-select-wrapper select {
+        display: none;
+    }
+
+    .searchable-input {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px;
+        padding: 0.875rem 2.5rem 0.875rem 1rem !important;
+        color: #1e293b !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease;
+        font-weight: 500 !important;
+        width: 100%;
+        cursor: text;
+    }
+
+    .searchable-input:focus {
+        outline: none !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+
+    .searchable-input::placeholder {
+        color: #94a3b8 !important;
+        font-weight: 400 !important;
+    }
+
+    .dropdown-arrow {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #64748b;
+        transition: transform 0.3s ease;
+    }
+
+    .dropdown-arrow.open {
+        transform: translateY(-50%) rotate(180deg);
+    }
+
+    .searchable-dropdown {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+
+    .searchable-dropdown.open {
+        display: block;
+        animation: dropdownSlide 0.2s ease-out;
+    }
+
+    @keyframes dropdownSlide {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .dropdown-option {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #1e293b;
+        font-size: 0.9375rem;
+    }
+
+    .dropdown-option:hover {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+
+    .dropdown-option.selected {
+        background: #6366f1;
+        color: white;
+    }
+
+    .dropdown-option.hidden {
+        display: none;
+    }
+
+    .no-results {
+        padding: 1.5rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+
+    .form-actions {
+        margin-top: 2.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
+        border: 2px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
+        transform: translateY(-1px);
+        box-shadow: var(--card-shadow);
+    }
+
+    .btn-primary {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .info-box {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+
+    .info-box i {
+        color: #6366f1;
+        margin-right: 0.5rem;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0.25rem;
+        color: #dc2626;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h2>{{ title }}</h2>
+            <p>Request inventory items for your department or location.</p>
+        </div>
+
+        <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            Please select the item you need and specify the quantity and location where it's required.
+        </div>
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="item-search">Inventory Item <small style="color: #6366f1;">(Searchable)</small></label>
+                <div class="searchable-select-wrapper">
+                    {{ form.item }}
+                    <input type="text" id="item-search" class="searchable-input"
+                        placeholder="Search for an inventory item..." autocomplete="off">
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    <div class="searchable-dropdown" id="item-dropdown">
+                        <!-- Options will be populated by JavaScript -->
+                    </div>
+                </div>
+                {{ form.item.errors }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.quantity.id_for_label }}">Quantity Required</label>
+                {{ form.quantity }}
+                {{ form.quantity.errors }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.location.id_for_label }}">Delivery Location</label>
+                {{ form.location }}
+                {{ form.location.errors }}
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const originalSelect = document.querySelector('#{{ form.item.id_for_label }}');
+        const searchInput = document.querySelector('#item-search');
+        const dropdown = document.querySelector('#item-dropdown');
+        const dropdownArrow = document.querySelector('.dropdown-arrow');
+
+        if (!originalSelect || !searchInput || !dropdown) return;
+
+        // Build options from the original select
+        const options = Array.from(originalSelect.options).filter(opt => opt.value);
+        let selectedValue = originalSelect.value;
+
+        // Populate dropdown
+        function populateDropdown(filter = '') {
+            dropdown.innerHTML = '';
+            const filterLower = filter.toLowerCase();
+            let visibleCount = 0;
+
+            options.forEach(option => {
+                if (!filter || option.text.toLowerCase().includes(filterLower)) {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-option';
+                    div.textContent = option.text;
+                    div.dataset.value = option.value;
+
+                    if (option.value === selectedValue) {
+                        div.classList.add('selected');
+                        searchInput.value = option.text;
+                    }
+
+                    div.addEventListener('click', function () {
+                        selectOption(option.value, option.text);
+                    });
+
+                    dropdown.appendChild(div);
+                    visibleCount++;
+                }
+            });
+
+            if (visibleCount === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No items found. Try a different search term.';
+                dropdown.appendChild(noResults);
+            }
+        }
+
+        // Select an option
+        function selectOption(value, text) {
+            selectedValue = value;
+            originalSelect.value = value;
+            searchInput.value = text;
+            closeDropdown();
+
+            // Update selected styling
+            dropdown.querySelectorAll('.dropdown-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.value === value) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        // Open dropdown
+        function openDropdown() {
+            populateDropdown(searchInput.value);
+            dropdown.classList.add('open');
+            dropdownArrow.classList.add('open');
+        }
+
+        // Close dropdown
+        function closeDropdown() {
+            dropdown.classList.remove('open');
+            dropdownArrow.classList.remove('open');
+        }
+
+        // Event listeners
+        searchInput.addEventListener('focus', function () {
+            openDropdown();
+        });
+
+        searchInput.addEventListener('input', function () {
+            populateDropdown(this.value);
+            if (!dropdown.classList.contains('open')) {
+                openDropdown();
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        // Handle keyboard navigation
+        let currentFocus = -1;
+        searchInput.addEventListener('keydown', function (e) {
+            const options = dropdown.querySelectorAll('.dropdown-option:not(.hidden)');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentFocus++;
+                if (currentFocus >= options.length) currentFocus = 0;
+                setActive(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentFocus--;
+                if (currentFocus < 0) currentFocus = options.length - 1;
+                setActive(options);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentFocus > -1 && options[currentFocus]) {
+                    options[currentFocus].click();
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        function setActive(options) {
+            options.forEach((opt, idx) => {
+                opt.style.background = idx === currentFocus ? 'rgba(99, 102, 241, 0.1)' : '';
+                opt.style.color = idx === currentFocus ? '#6366f1' : '#1e293b';
+            });
+
+            if (options[currentFocus]) {
+                options[currentFocus].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        // Initialize with selected value if exists
+        if (selectedValue) {
+            const selectedOption = options.find(opt => opt.value === selectedValue);
+            if (selectedOption) {
+                searchInput.value = selectedOption.text;
+            }
+        }
+
+        // Initial population
+        populateDropdown();
+    })();
+</script>
+{% endblock %}

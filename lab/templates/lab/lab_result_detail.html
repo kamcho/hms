@@ -1,0 +1,498 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - HMS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --clinical-primary: #6366f1;
+        --clinical-primary-light: #eef2ff;
+        --clinical-secondary: #64748b;
+        --clinical-success: #10b981;
+        --clinical-warning: #f59e0b;
+        --clinical-danger: #ef4444;
+        --clinical-bg: #f8fafc;
+        --clinical-card-bg: rgba(255, 255, 255, 0.9);
+        --clinical-border: #e2e8f0;
+        --clinical-text-main: #1e293b;
+        --clinical-text-muted: #64748b;
+        --clinical-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.05), 0 4px 6px -2px rgba(99, 102, 241, 0.03);
+    }
+
+    .lab-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    /* Glassmorphism Header */
+    .lab-header {
+        background: var(--clinical-card-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid white;
+        border-radius: 20px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--clinical-shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .patient-summary {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .patient-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: var(--clinical-primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--clinical-primary);
+        font-size: 1.5rem;
+        font-weight: 800;
+        box-shadow: inset 0 2px 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .patient-meta h1 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--clinical-text-main);
+        margin: 0 0 0.25rem 0;
+        letter-spacing: -0.025em;
+    }
+
+    .patient-meta p {
+        font-size: 0.875rem;
+        color: var(--clinical-text-muted);
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .status-pill {
+        padding: 0.5rem 1rem;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .status-pending {
+        background: #fff7ed;
+        color: #c2410c;
+        border: 1px solid #ffedd5;
+    }
+
+    .status-progress {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #dbeafe;
+    }
+
+    .status-completed {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #d1fae5;
+    }
+
+    /* Layout Grid */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1.8fr 1.2fr;
+        gap: 2rem;
+    }
+
+    .modern-card {
+        background: white;
+        border: 1px solid var(--clinical-border);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: var(--clinical-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.1);
+    }
+
+    .card-header {
+        padding: 1.25rem 1.75rem;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--clinical-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--clinical-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .card-body {
+        padding: 1.75rem;
+    }
+
+    /* Info Items */
+    .info-strip {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .item-box {
+        padding: 1rem;
+        background: #f8fafc;
+        border: 1px solid var(--clinical-border);
+        border-radius: 12px;
+    }
+
+    .item-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--clinical-text-muted);
+        margin-bottom: 0.35rem;
+        display: block;
+    }
+
+    .item-value {
+        font-size: 0.95rem;
+        color: var(--clinical-text-main);
+        font-weight: 600;
+    }
+
+    /* Form Elements */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--clinical-text-muted);
+        margin-bottom: 0.5rem;
+        display: block;
+        text-transform: uppercase;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid var(--clinical-border);
+        border-radius: 12px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--clinical-primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    /* File Upload Area */
+    .upload-zone {
+        border: 2px dashed var(--clinical-border);
+        border-radius: 16px;
+        padding: 2.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #f8fafc;
+    }
+
+    .upload-zone:hover {
+        border-color: var(--clinical-primary);
+        background: var(--clinical-primary-light);
+    }
+
+    .upload-icon {
+        font-size: 2.5rem;
+        color: var(--clinical-primary);
+        margin-bottom: 1rem;
+    }
+
+    /* Custom Checkbox */
+    .fancy-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+        border: 1.5px solid var(--clinical-border);
+        border-radius: 12px;
+        width: fit-content;
+        font-weight: 600;
+        color: var(--clinical-text-main);
+    }
+
+    .fancy-checkbox input {
+        width: 1.2rem;
+        height: 1.2rem;
+        accent-color: var(--clinical-primary);
+    }
+
+    /* Buttons */
+    .modern-btn {
+        padding: 0.8rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+    }
+
+    .btn-primary {
+        background: var(--clinical-primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .report-badge {
+        background: #ecfdf5;
+        border: 1px solid #d1fae5;
+        padding: 1.5rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="lab-container">
+    <!-- Premium Header -->
+    <header class="lab-header">
+        <a href="{% url 'lab:radiology_dashboard' %}" class="modern-btn"
+            style="background: white; border: 1px solid var(--clinical-border); color: var(--clinical-secondary); text-decoration: none; padding: 0.6rem 1.2rem;">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+        <div class="patient-summary">
+            <div class="patient-icon">
+                {{ lab_result.patient.first_name.0 }}{{ lab_result.patient.last_name.0 }}
+            </div>
+            <div class="patient-meta">
+                <h1>{{ lab_result.patient.full_name }}</h1>
+                <p><i class="fas fa-microscope"></i> {{ lab_result.service.name }} • {{lab_result.service.get_category_display }}</p>
+            </div>
+        </div>
+        <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+            <div
+                class="status-pill {% if lab_result.status == 'Pending' %}status-pending{% elif lab_result.status == 'In Progress' %}status-progress{% else %}status-completed{% endif %}">
+                <i
+                    class="fas {% if lab_result.status == 'Pending' %}fa-clock{% elif lab_result.status == 'In Progress' %}fa-spinner fa-spin{% else %}fa-check-circle{% endif %}"></i>
+                {{ lab_result.status }}
+            </div>
+            <div class="status-pill"
+                style="background: {% if lab_result.priority == 'Urgent' %}#fee2e2{% else %}#f1f5f9{% endif %}; color: {% if lab_result.priority == 'Urgent' %}#b91c1c{% else %}#475569{% endif %}; border: 1px solid {% if lab_result.priority == 'Urgent' %}#fecaca{% else %}#e2e8f0{% endif %};">
+                <i class="fas fa-exclamation-triangle"></i> {{ lab_result.priority }}
+            </div>
+        </div>
+    </header>
+
+    <div class="detail-grid">
+        <!-- Left Column: Test Results & Update -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-vial"></i> Test Specifications</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-strip">
+                        <div class="item-box">
+                            <span class="item-label">Requesting Clinician</span>
+                            <span class="item-value">{{ lab_result.requested_by.username|title }}</span>
+                        </div>
+                        <div class="item-box">
+                            <span class="item-label">Request Date</span>
+                            <span class="item-value">{{ lab_result.requested_at|date:"M d, Y • H:i" }}</span>
+                        </div>
+                    </div>
+
+                    {% if lab_result.clinical_notes %}
+                    <div
+                        style="background: #eff6ff; padding: 1.25rem; border-radius: 12px; border: 1px solid #dbeafe; margin-bottom: 2rem;">
+                        <span class="item-label" style="color: #1d4ed8;"><i class="fas fa-comment-medical"></i>
+                            Clinician's Notes</span>
+                        <p style="margin: 0.5rem 0 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">{{ lab_result.clinical_notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Processing Status</label>
+                                {{ form.status }}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Diagnostic Findings</label>
+                            {{ form.results }}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Clinical Interpretation</label>
+                            {{ form.interpretation }}
+                        </div>
+
+                        <div
+                            style="display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--clinical-border);">
+                            <button type="submit" name="update_result" class="modern-btn btn-primary">
+                                <i class="fas fa-save"></i> Save Diagnostic Result
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Lab Report & Documentation -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-file-signature"></i> Final Report</h2>
+                </div>
+                <div class="card-body">
+                    {% if lab_report %}
+                    <div class="report-badge">
+                        <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.25rem;">
+                            <div
+                                style="width: 44px; height: 44px; border-radius: 10px; background: white; display: flex; align-items: center; justify-content: center; color: var(--clinical-success); box-shadow: 0 4px 6px rgba(0,0,0,0.04);">
+                                <i class="fas fa-check-circle fa-lg"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; color: #065f46; font-size: 0.95rem; font-weight: 800;">Report
+                                    Finalized</h4>
+                                <p style="margin: 0.2rem 0 0; color: #059669; font-size: 0.8rem; font-weight: 600;">{{ lab_report.created_at|date:"M d, Y • H:i" }}</p>
+                            </div>
+                        </div>
+
+                        {% if lab_report.report_file %}
+                        <a href="{{ lab_report.report_file.url }}" target="_blank" class="modern-btn"
+                            style="width: 100%; background: white; border: 1px solid #d1fae5; color: #047857; margin-bottom: 1rem;">
+                            <i class="fas fa-file-pdf"></i> View Annex Document
+                        </a>
+                        {% endif %}
+
+                        {% if lab_report.report_text %}
+                        <div
+                            style="background: white; padding: 1rem; border-radius: 10px; border: 1px dashed #d1fae5; font-size: 0.85rem; color: #065f46; line-height: 1.5;">
+                            {{ lab_report.report_text|linebreaks }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div
+                        style="text-align: center; padding: 2rem; background: #f8fafc; border-radius: 16px; border: 1px dashed var(--clinical-border); margin-bottom: 2rem;">
+                        <i class="fas fa-file-medical-alt fa-3x"
+                            style="color: var(--clinical-border); margin-bottom: 1rem; display: block;"></i>
+                        <p style="margin: 0; color: var(--clinical-text-muted); font-size: 0.85rem; font-weight: 600;">
+                            No report generated yet.</p>
+                    </div>
+                    {% endif %}
+
+                    <h3 class="form-label" style="margin-bottom: 1.25rem;"><i class="fas fa-plus-circle"></i> {% if lab_report %}Revise{% else %}Generate{% endif %} Report</h3>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <input type="file" id="report_file" name="report_file" style="display: none;">
+                            <div class="upload-zone" onclick="document.getElementById('report_file').click()">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h4 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: var(--clinical-text-main);">
+                                    Upload Attachment</h4>
+                                <p style="font-size: 0.75rem; color: var(--clinical-text-muted); margin: 0;"
+                                    id="file-name">Drag & drop or click to browse</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Summary Remarks</label>
+                            <textarea name="report_text" rows="4" class="form-control"
+                                placeholder="Key takeaways and summary for the clinician...">{{ lab_report.report_text }}</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="fancy-checkbox">
+                                <input type="checkbox" name="is_final" {% if lab_report.is_final %}checked{% endif %}>
+                                <span>Validate & Mark as Final</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" name="create_report" class="modern-btn btn-primary"
+                            style="width: 100%; justify-content: center;">
+                            <i class="fas fa-paper-plane"></i> Publish Report
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // File input visual feedback
+    document.getElementById('report_file').addEventListener('change', function (e) {
+        const fileName = e.target.files[0]?.name;
+        if (fileName) {
+            document.getElementById('file-name').innerHTML = `<span style="color: var(--clinical-primary); font-weight: 800;">Selected: ${fileName}</span>`;
+            document.querySelector('.upload-zone').style.borderColor = 'var(--clinical-primary)';
+            document.querySelector('.upload-zone').style.background = 'var(--clinical-primary-light)';
+        }
+    });
+
+    // Nice select replacement styling if needed, otherwise standard inputs
+    document.querySelectorAll('select').forEach(sel => {
+        sel.classList.add('form-control');
+    });
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+        input.classList.add('form-control');
+    });
+    document.querySelectorAll('textarea').forEach(area => {
+        area.classList.add('form-control');
+    });
+</script>
+{% endblock %}

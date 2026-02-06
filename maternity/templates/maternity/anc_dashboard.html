@@ -1,0 +1,342 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Antenatal Care Dashboard - HMS{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto p-5">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Antenatal Care Dashboard</h1>
+            <p class="text-slate-500 mt-1 font-medium text-lg">Managing prenatal clinic flow and service delivery
+                compliance</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'maternity:dashboard' %}"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-sm transition-all hover:bg-slate-200">
+                <i class="fas fa-hospital text-lg"></i> Ward Hub
+            </a>
+            <button
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0"
+                onclick="window.print()">
+                <i class="fas fa-file-export text-lg"></i> Print List
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+            class="bg-white p-6 rounded-2xl border-t-4 border-t-blue-500 border-l border-r border-b border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="text-3xl font-bold text-slate-900">{{ total_anc_month }}</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total ANC Visits (This Month)
+            </div>
+            <div class="mt-4">
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+                    <i class="fas fa-arrow-up"></i> Active Clinic Cycle
+                </span>
+            </div>
+        </div>
+        <div
+            class="bg-white p-6 rounded-2xl border-t-4 border-t-emerald-500 border-l border-r border-b border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="text-3xl font-bold text-slate-900">{{ anc_coverage }}%</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Clinic Coverage Rate</div>
+            <div class="mt-4">
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full {% if anc_coverage > 80 %}bg-emerald-50 text-emerald-700{% else %}bg-rose-50 text-rose-700{% endif %} text-[10px] font-black uppercase tracking-wider">
+                    <i
+                        class="fas {% if anc_coverage > 80 %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                    Target: 95%
+                </span>
+            </div>
+        </div>
+        <div
+            class="bg-white p-6 rounded-2xl border-t-4 border-t-amber-500 border-l border-r border-b border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="text-3xl font-bold text-slate-900">{{ anc_queue.count }}</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Mothers in Queue</div>
+            <div class="mt-4">
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+                    Waiting for Clinician
+                </span>
+            </div>
+        </div>
+    </div>
+    <!-- New Arrivals from Triage -->
+    {% if new_arrivals %}
+    <div
+        class="bg-white rounded-2xl border-l-4 border-l-amber-500 border-t border-r border-b border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-amber-50/30">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="fas fa-sign-in-alt text-amber-500"></i> New Arrivals from Triage
+            </h2>
+            <span
+                class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Pending
+                Reception</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient Name
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Triaged From
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                            Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for arrival in new_arrivals %}
+                    <tr class="transition-colors hover:bg-slate-50/50">
+                        <td class="px-6 py-4 text-sm">
+                            <div class="font-bold text-slate-900">{{ arrival.visit.patient.full_name }}</div>
+                            <div class="text-[11px] font-bold text-slate-400">ID: {{ arrival.visit.patient.id }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px]">
+                                {{ arrival.qued_from.name|default:"Triage" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            {% if arrival.active_pregnancy %}
+                            <a href="{% url 'maternity:receive_anc_arrival' arrival.id %}"
+                                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
+                                <i class="fas fa-sign-in-alt"></i> Receive & Queue
+                            </a>
+                            {% else %}
+                            <a href="{% url 'maternity:register_pregnancy' %}?patient_id={{ arrival.visit.patient.id }}"
+                                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
+                                <i class="fas fa-user-plus"></i> Register Pregnancy
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Receive ANC Queue -->
+    <div
+        class="bg-white rounded-2xl border-l border-l-blue-500 border-t border-r border-b border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div
+            class="px-6 py-5 border-b border-slate-50 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="fas fa-user-clock text-blue-500"></i> ANC Clinical Queue
+            </h2>
+            <form method="GET" class="flex gap-2 items-center">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search patient name or ID..."
+                        class="pl-9 pr-4 py-1.5 border border-slate-200 rounded-xl text-sm w-64 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all">
+                </div>
+                <button type="submit"
+                    class="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-100 transition-all hover:bg-blue-700">Filter</button>
+                {% if search_query %}
+                <a href="{% url 'maternity:anc_dashboard' %}"
+                    class="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold border border-slate-200 transition-all hover:bg-slate-200">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient Name
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Clinical
+                            Alerts</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pregnancy #
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Wait Time
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                            Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for visit in anc_queue %}
+                    <tr
+                        class="transition-colors hover:bg-slate-50/50 {% if visit.is_high_risk %}bg-rose-50/30{% endif %}">
+                        <td class="px-6 py-4 text-sm">
+                            <div class="font-bold text-slate-900">{{ visit.pregnancy.patient.full_name }}</div>
+                            <div class="text-[11px] font-bold text-slate-400">G{{ visit.pregnancy.gravida }}P{{
+                                visit.pregnancy.para }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for alert in visit.alerts %}
+                                <span
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider
+                                {% if alert.type == 'danger' %}bg-rose-100 text-rose-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                    <i class="fas fa-exclamation-triangle"></i> {{ alert.message }}
+                                </span>
+                                {% empty %}
+                                <span class="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold">
+                                    <i class="fas fa-check-circle"></i> Low Risk
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px]">#{{
+                                visit.pregnancy.id }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500 font-medium">{{ visit.created_at|timesince }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'maternity:record_anc_visit' visit.pregnancy.id %}"
+                                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm
+                                {% if visit.is_high_risk %}bg-rose-600 text-white hover:bg-rose-700 shadow-rose-100{% else %}bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100{% endif %}">
+                                <i class="fas fa-plus"></i> Attend
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic">
+                            <i class="fas fa-check-circle block text-3xl mb-3 opacity-20 text-emerald-500"></i>
+                            No mothers currently waiting in the ANC queue.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-chart-area text-blue-500"></i> ANC Attendance Trends
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="h-[350px] relative">
+                    <canvas id="ancTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-bullseye text-amber-500"></i> Service KPI
+                </h2>
+            </div>
+            <div class="p-6 flex flex-col items-center justify-center gap-6 min-h-[350px]">
+                <div
+                    class="relative w-40 h-40 rounded-full border-[12px] border-blue-500 flex items-center justify-center shadow-lg shadow-blue-50">
+                    <span class="text-4xl font-black text-slate-900 leading-none">{{ anc_coverage }}%</span>
+                    <div
+                        class="absolute -bottom-4 bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        COVERAGE
+                    </div>
+                </div>
+                <p class="text-center text-slate-500 font-medium text-sm px-4 leading-relaxed">
+                    Goal: <span class="text-slate-900 font-bold tracking-tight">95%</span> clinic attendance for
+                    registered mothers.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Visit Logs -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="fas fa-history text-emerald-500"></i> Recent ANC Interactions
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient Name
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visit #</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">BP / Temp
+                        </th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                            Fundal (cm)</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                            FHR (bpm)</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                            Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for visit in recent_anc_visits %}
+                    <tr class="transition-colors hover:bg-slate-50/50">
+                        <td class="px-6 py-4 text-sm font-medium text-slate-600">{{ visit.visit_date|date:"d M Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-900">{{ visit.pregnancy.patient.full_name }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[10px] uppercase tracking-wider border border-blue-100">Visit
+                                {{ visit.visit_number }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-700">{{ visit.bp_systolic }}/{{
+                            visit.bp_diastolic }} <span class="text-slate-400 font-medium">|</span> {{ visit.temperature
+                            }}°C</td>
+                        <td class="px-6 py-4 text-sm text-center font-bold text-slate-600">{{
+                            visit.fundal_height|default:"-" }}</td>
+                        <td class="px-6 py-4 text-sm text-center font-bold text-slate-600">{{
+                            visit.fetal_heart_rate|default:"-" }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'maternity:pregnancy_detail' visit.pregnancy.id %}"
+                                class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase tracking-widest transition-colors">Details</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-slate-400 italic">No historical visits
+                            recorded.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var ctx = document.getElementById('ancTrendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [{% for t in trends %}"{{ t.label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'ANC Visits',
+            data: [{% for t in trends %}{{ t.anc }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+            fill: true,
+                tension: 0.4,
+                    borderWidth: 3,
+                        pointRadius: 4,
+                            pointBackgroundColor: '#3b82f6'
+                }]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { borderDash: [2, 2], color: '#f1f5f9' } },
+            x: { grid: { display: false } }
+        }
+    }
+        });
+    });
+</script>
+{% endblock %}

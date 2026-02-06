@@ -1,0 +1,307 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - HMS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .form-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .form-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .invoice-info {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .invoice-info h3 {
+        color: #6366f1;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .invoice-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .invoice-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .invoice-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .invoice-value {
+        font-size: 1rem;
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-group label {
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Force visibility with higher specificity */
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="datetime-local"],
+    .form-group select,
+    .form-group textarea {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px;
+        padding: 0.875rem 1rem !important;
+        color: #1e293b !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease;
+        font-weight: 500 !important;
+    }
+
+    /* Force focus visibility */
+    .form-group input[type="text"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group input[type="datetime-local"]:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+        background: white !important;
+        transform: translateY(-1px);
+        color: #1e293b !important;
+    }
+
+    .form-actions {
+        margin-top: 2.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
+        border: 2px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
+        transform: translateY(-1px);
+        box-shadow: var(--card-shadow);
+    }
+
+    .btn-primary {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0.25rem;
+        color: #dc2626;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .form-group input.error,
+    .form-group select.error,
+    .form-group textarea.error {
+        border-color: #dc2626;
+        background: rgba(239, 68, 68, 0.05);
+    }
+</style>
+
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h2>{{ title }}</h2>
+            <p style="color: var(--text-secondary); font-size: 1rem;">Create a new lab result for this patient service.</p>
+        </div>
+
+        <div class="invoice-info">
+            <h3>
+                <i class="fas fa-file-invoice"></i>
+                Service Invoice Information
+            </h3>
+            <div class="invoice-details">
+                <div class="invoice-item">
+                    <span class="invoice-label">Patient</span>
+                    <span class="invoice-value">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</span>
+                </div>
+                <div class="invoice-item">
+                    <span class="invoice-label">Service</span>
+                    <span class="invoice-value">{{ invoice.service.name }}</span>
+                </div>
+                <div class="invoice-item">
+                    <span class="invoice-label">Service Type</span>
+                    <span class="invoice-value">{{ invoice.service.service_type }}</span>
+                </div>
+                <div class="invoice-item">
+                    <span class="invoice-label">Price</span>
+                    <span class="invoice-value">${{ invoice.service.price }}</span>
+                </div>
+                <div class="invoice-item">
+                    <span class="invoice-label">Created</span>
+                    <span class="invoice-value">{{ invoice.created_at|date:"F d, Y H:i" }}</span>
+                </div>
+                <div class="invoice-item">
+                    <span class="invoice-label">Created By</span>
+                    <span class="invoice-value">{{ invoice.created_by.id_number }}</span>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="{{ form.patient.id_for_label }}">Patient</label>
+                    {{ form.patient }}
+                    {{ form.patient.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.service.id_for_label }}">Service</label>
+                    {{ form.service }}
+                    {{ form.service.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.priority.id_for_label }}">Priority</label>
+                    {{ form.priority }}
+                    {{ form.priority.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.scheduled_for.id_for_label }}">Scheduled For</label>
+                    {{ form.scheduled_for }}
+                    {{ form.scheduled_for.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.invoice.id_for_label }}">Invoice</label>
+                    {{ form.invoice }}
+                    {{ form.invoice.errors }}
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="{{ form.clinical_notes.id_for_label }}">Clinical Notes</label>
+                    {{ form.clinical_notes }}
+                    {{ form.clinical_notes.errors }}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'lab:radiology_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Create Lab Result
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

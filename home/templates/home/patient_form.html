@@ -1,0 +1,446 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Register New{% endif %} Patient - HMS{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="form-container-wrapper">
+        <div class="page-header-premium">
+            <div class="header-main">
+                <div class="header-icon">
+                    <i class="fas fa-id-card-alt"></i>
+                </div>
+                <div class="header-text">
+                    <h1>{% if form.instance.pk %}Edit Patient Record{% else %}Patient Registration{% endif %}</h1>
+                    <p class="subtitle text-muted">Complete the form below to {% if form.instance.pk %}update{% else
+                        %}onboard a new{% endif %} patient.</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'home:patient_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Patients
+                </a>
+            </div>
+        </div>
+
+        <form method="post" class="premium-form">
+            {% csrf_token %}
+
+            <!-- Personal Information Section -->
+            <div class="form-section-card">
+                <div class="section-header">
+                    <div class="section-number">1</div>
+                    <h3>Personal Information</h3>
+                </div>
+
+                <div class="form-grid-premium">
+                    <div class="form-group-premium">
+                        <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user input-icon"></i>
+                            {{ form.first_name }}
+                        </div>
+                        {{ form.first_name.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
+                        <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user input-icon"></i>
+                            {{ form.last_name }}
+                        </div>
+                        {{ form.last_name.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
+                        <label for="{{ form.gender.id_for_label }}">Gender</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-venus-mars input-icon"></i>
+                            {{ form.gender }}
+                        </div>
+                        {{ form.gender.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
+                        <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-calendar-alt input-icon"></i>
+                            {{ form.date_of_birth }}
+                        </div>
+                        {{ form.date_of_birth.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
+                        <label for="{{ form.phone.id_for_label }}">Phone Number</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-phone input-icon"></i>
+                            {{ form.phone }}
+                        </div>
+                        {{ form.phone.errors }}
+                    </div>
+
+                    <div class="form-group-premium full-width">
+                        <label for="{{ form.location.id_for_label }}">Residential Location</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-map-marker-alt input-icon"></i>
+                            {{ form.location }}
+                        </div>
+                        {{ form.location.errors }}
+                    </div>
+                </div>
+            </div>
+
+            {% if not form.instance.pk %}
+            <!-- Billing & Consultation Section -->
+            <div class="form-section-card billing-card shadow-lg">
+                <div class="section-header">
+                    <div class="section-number">2</div>
+                    <h3>Billing & Consultation</h3>
+                    <span class="badge badge-billing">Required</span>
+                </div>
+
+                <div class="form-grid-premium">
+                    <div class="form-group-premium">
+                        <label for="{{ form.consultation_type.id_for_label }}">Consultation Category</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-stethoscope input-icon"></i>
+                            {{ form.consultation_type }}
+                        </div>
+                        <small class="helper-text">Select the appropriate consultation service</small>
+                        {{ form.consultation_type.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
+                        <label for="{{ form.payment_method.id_for_label }}">Mode of Payment</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-wallet input-icon"></i>
+                            {{ form.payment_method }}
+                        </div>
+                        <small class="helper-text">Confirm payment before proceeding</small>
+                        {{ form.payment_method.errors }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-sticky-actions">
+                <div class="actions-content">
+                    <p class="text-muted d-none d-md-block">Ensure all critical fields are accurate before saving.</p>
+                    <div class="button-group">
+                        <a href="{% url 'home:patient_list' %}" class="btn btn-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-primary-premium">
+                            <i class="fas fa-save"></i>
+                            {% if form.instance.pk %}Update Record{% else %}Complete Registration{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-clinical: #2563eb;
+        --primary-clinical-dark: #1d4ed8;
+        --secondary-clinical: #64748b;
+        --bg-premium: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --input-focus: #3b82f633;
+        --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --radius-premium: 12px;
+    }
+
+    .form-container-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem 6rem;
+    }
+
+    /* Page Header Styles */
+    .page-header-premium {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .header-main {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .header-icon {
+        width: 54px;
+        height: 54px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-premium);
+        color: var(--primary-clinical);
+        font-size: 1.5rem;
+    }
+
+    .header-text h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0;
+        letter-spacing: -0.025em;
+    }
+
+    .header-text .subtitle {
+        margin: 0.25rem 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* Form Section Card */
+    .form-section-card {
+        background: var(--card-bg);
+        border-radius: var(--radius-premium);
+        padding: 2rem;
+        box-shadow: var(--shadow-premium);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .billing-card {
+        border-left: 5px solid var(--primary-clinical);
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+    }
+
+    .section-number {
+        width: 28px;
+        height: 28px;
+        background: var(--primary-clinical);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin: 0;
+    }
+
+    .badge-billing {
+        margin-left: auto;
+        background: #ebf5ff;
+        color: var(--primary-clinical);
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Form Grid & Group */
+    .form-grid-premium {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-group-premium {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group-premium.full-width {
+        grid-column: span 2;
+    }
+
+    .form-group-premium label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    /* Input Wrapper & Icons */
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 1rem;
+        color: #94a3b8;
+        font-size: 0.9rem;
+        pointer-events: none;
+        transition: color 0.3s ease;
+    }
+
+    .input-wrapper .form-control,
+    .input-wrapper select {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        color: var(--text-main);
+        transition: all 0.2s ease;
+        background-color: #fcfcfc;
+    }
+
+    .input-wrapper .form-control:focus,
+    .input-wrapper select:focus {
+        border-color: var(--primary-clinical);
+        box-shadow: 0 0 0 4px var(--input-focus);
+        outline: none;
+        background-color: #fff;
+    }
+
+    .input-wrapper .form-control:focus+.input-icon,
+    .input-wrapper select:focus+.input-icon {
+        color: var(--primary-clinical);
+    }
+
+    .helper-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* Stick Actions */
+    .form-sticky-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 1rem 2rem;
+        z-index: 100;
+        box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.05);
+    }
+
+    .actions-content {
+        max-width: 900px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-primary-premium {
+        background: var(--primary-clinical);
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary-premium:hover {
+        background: var(--primary-clinical-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-ghost {
+        padding: 0.75rem 1.5rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-ghost:hover {
+        color: var(--text-main);
+        background: #f1f5f9;
+        border-radius: 8px;
+    }
+
+    .btn-outline-secondary {
+        border: 1px solid var(--border-color);
+        background: white;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-main);
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .form-grid-premium {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group-premium.full-width {
+            grid-column: span 1;
+        }
+
+        .page-header-premium {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .form-sticky-actions {
+            padding: 1rem;
+        }
+
+        .button-group {
+            width: 100%;
+        }
+
+        .btn-primary-premium {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}

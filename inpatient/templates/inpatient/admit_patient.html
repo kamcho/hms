@@ -1,0 +1,285 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - HMS Admissions{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] px-4 py-8 md:px-8 lg:py-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Breadcrumbs & Back -->
+        <div class="mb-8 flex items-center justify-between">
+            <nav class="flex text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                <a href="{% url 'inpatient:dashboard' %}" class="hover:text-indigo-600 transition-colors">Inpatient</a>
+                <span class="mx-2 text-slate-300">/</span>
+                <span class="text-slate-600">Admission Process</span>
+            </nav>
+            <a href="{% url 'home:patient_detail' patient.pk %}"
+                class="group flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-indigo-600 transition-all">
+                <i class="fas fa-arrow-left transition-transform group-hover:-translate-x-1"></i>
+                Back to Profile
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Patient Profile Card -->
+            <div class="lg:col-span-4 space-y-6">
+                <div
+                    class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 overflow-hidden relative group">
+                    <div
+                        class="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16 blur-3xl transition-all group-hover:bg-indigo-100/50">
+                    </div>
+
+                    <div class="relative z-10 text-center">
+                        <div
+                            class="w-24 h-24 rounded-[2rem] bg-slate-900 mx-auto mb-6 flex items-center justify-center text-white text-3xl shadow-xl shadow-slate-200">
+                            {{ patient.first_name|slice:":1" }}{{ patient.last_name|slice:":1" }}
+                        </div>
+                        <h2 class="text-xl font-black text-slate-900 tracking-tight">{{ patient.full_name }}</h2>
+                        <div class="flex items-center justify-center gap-3 mt-2">
+                            <span
+                                class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-wider rounded-full">
+                                {{ patient.age }} Years
+                            </span>
+                            <span
+                                class="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider rounded-full">
+                                {{ patient.get_gender_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-8 border-t border-slate-50 space-y-4">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-bold text-slate-400 uppercase tracking-wider">Patient ID</span>
+                            <span class="font-black text-slate-900">#{{ patient.id }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-bold text-slate-400 uppercase tracking-wider">ID Number</span>
+                            <span class="font-black text-slate-900">{{ patient.id_number|default:"N/A" }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-bold text-slate-400 uppercase tracking-wider">Location</span>
+                            <span class="font-black text-slate-900">{{ patient.location }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div
+                    class="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+                    <div class="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mb-16 blur-3xl">
+                    </div>
+                    <div class="relative z-10">
+                        <i class="fas fa-info-circle text-2xl mb-4"></i>
+                        <h3 class="text-sm font-black uppercase tracking-wider mb-2">Notice</h3>
+                        <p class="text-xs text-indigo-100 font-medium leading-relaxed">
+                            Admitting this patient will automatically create a new inpatient visit and initialize their
+                            clinical chart.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Admission Form -->
+            <div class="lg:col-span-8">
+                <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden relative">
+                    <div class="bg-slate-900 p-8 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-black text-white tracking-tight">Clinical Admission</h1>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Hospital
+                                Entry Process</p>
+                        </div>
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400">
+                            <i class="fas fa-hospital-alt text-xl"></i>
+                        </div>
+                    </div>
+
+                    <form method="post" autocomplete="off" id="admissionForm" class="p-8 md:p-10 space-y-8">
+                        {% csrf_token %}
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 font-poppins">
+                            <!-- Ward Selection -->
+                            <div class="space-y-3">
+                                <label
+                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Target
+                                    Ward</label>
+                                <div class="relative group">
+                                    <div
+                                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+                                        <i class="fas fa-door-open"></i>
+                                    </div>
+                                    {{ form.ward }}
+                                </div>
+                                {% if form.ward.errors %}
+                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.ward.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Bed Selection -->
+                            <div class="space-y-3">
+                                <label
+                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Available
+                                    Bed</label>
+                                <div class="relative group">
+                                    <div
+                                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+                                        <i class="fas fa-bed"></i>
+                                    </div>
+                                    {{ form.bed }}
+                                </div>
+                                {% if form.bed.errors %}
+                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.bed.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Bed Status Micro-Interaction -->
+                        <div id="bed-status-message"
+                            class="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
+                            <i class="fas fa-info-circle text-indigo-500"></i>
+                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Please select a
+                                ward to view available beds</span>
+                        </div>
+
+                        <!-- Diagnosis -->
+                        <div class="space-y-3">
+                            <label
+                                class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Provisional
+                                Diagnosis</label>
+                            <div class="relative group">
+                                <div
+                                    class="absolute left-5 top-6 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                {{ form.provisional_diagnosis }}
+                            </div>
+                            {% if form.provisional_diagnosis.errors %}
+                            <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.provisional_diagnosis.errors.0
+                                }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Footer Actions -->
+                        <div class="pt-10 flex flex-col sm:flex-row items-center gap-4">
+                            <button type="submit" id="submitBtn"
+                                class="w-full sm:flex-[2] bg-indigo-600 text-white px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-slate-900 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                                <span>Finalise Admission</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <a href="{% url 'home:patient_detail' patient.pk %}"
+                                class="w-full sm:flex-1 bg-slate-50 text-slate-400 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] text-center hover:bg-rose-50 hover:text-rose-600 transition-all">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Premium Input Styling */
+    select,
+    textarea {
+        appearance: none !important;
+        width: 100% !important;
+        background: #fdfdfd !important;
+        border: 2px solid #f1f5f9 !important;
+        border-radius: 1.25rem !important;
+        padding: 1.25rem 1.25rem 1.25rem 3.5rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    textarea {
+        padding-top: 1.25rem !important;
+        padding-left: 3.5rem !important;
+        min-height: 140px !important;
+        resize: none !important;
+    }
+
+    select:focus,
+    textarea:focus {
+        background: #ffffff !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.05) !important;
+        outline: none !important;
+    }
+
+    /* Select Arrow */
+    select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 1.25rem center !important;
+        background-size: 1rem !important;
+    }
+
+    /* Animation */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const wardSelect = document.getElementById('{{ form.ward.id_for_label }}');
+        const bedSelect = document.getElementById('{{ form.bed.id_for_label }}');
+        const bedMessage = document.getElementById('bed-status-message');
+
+        const availableBeds = [
+            {% for bed in form.fields.bed.queryset %}
+                { id: "{{ bed.id }}", number: "{{ bed.bed_number }}", wardId: "{{ bed.ward.id }}", type: "{{ bed.get_bed_type_display }}" },
+        {% endfor %}
+        ];
+
+    function updateBeds() {
+        const selectedWardId = wardSelect.value;
+        bedSelect.innerHTML = '<option value="">Choose a bed...</option>';
+
+        if (!selectedWardId) {
+            bedMessage.innerHTML = '<i class="fas fa-info-circle text-indigo-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Please select a ward to view available beds</span>';
+            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all";
+            bedSelect.disabled = true;
+            return;
+        }
+
+        const filteredBeds = availableBeds.filter(bed => bed.wardId === selectedWardId);
+
+        if (filteredBeds.length === 0) {
+            bedMessage.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-rose-600">No available beds in this ward</span>';
+            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-rose-50 rounded-2xl border border-rose-100 transition-all";
+            bedSelect.disabled = true;
+        } else {
+            bedMessage.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-emerald-600">${filteredBeds.length} Clinical bed(s) available</span>`;
+            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-emerald-50 rounded-2xl border border-emerald-100 transition-all";
+            bedSelect.disabled = false;
+
+            filteredBeds.forEach(bed => {
+                const option = document.createElement('option');
+                option.value = bed.id;
+                option.textContent = `Bed ${bed.number} (${bed.type})`;
+                bedSelect.appendChild(option);
+            });
+        }
+    }
+
+    wardSelect.addEventListener('change', updateBeds);
+    updateBeds(); // Run once on load
+    });
+</script>
+{% endblock %}

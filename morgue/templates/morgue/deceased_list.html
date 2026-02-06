@@ -1,0 +1,767 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Deceased List - Morgue{% endblock %}
+
+{% block content %}
+<div class="deceased-list-page">
+    <!-- Header Section -->
+    <header class="list-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fas fa-users"></i> Deceased Registry</h1>
+                <p>Complete list of all deceased persons in the morgue system</p>
+            </div>
+            <div class="header-stats">
+                <div class="quick-stat">
+                    <span class="stat-number">{{ total_count }}</span>
+                    <span class="stat-label">Current Occupancy</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="stat-number">{{ released_count }}</span>
+                    <span class="stat-label">Total Released</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Admission
+            </a>
+        </div>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <div class="search-container">
+            <form method="GET" class="search-form">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" 
+                           name="search" 
+                           id="search_query" 
+                           value="{{ request.GET.search }}"
+                           placeholder="Search by name, tag, or ID number..."
+                           class="search-input">
+                </div>
+                <div class="search-actions">
+                    <button type="submit" class="btn btn-search">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    {% if request.GET.search %}
+                    <a href="{% url 'morgue:deceased_list' %}" class="btn btn-clear">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Deceased Table -->
+    <section class="table-section">
+        <div class="table-container">
+            <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <th style="padding: 15px; text-align: left;">Tag</th>
+                        <th style="padding: 15px; text-align: left;">Name</th>
+                        <th style="padding: 15px; text-align: left;">Sex</th>
+                        <th style="padding: 15px; text-align: left;">Date of Death</th>
+                        <th style="padding: 15px; text-align: left;">Storage</th>
+                        <th style="padding: 15px; text-align: left;">Date Received</th>
+                        <th style="padding: 15px; text-align: left;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for deceased in deceased_list %}
+                    <tr class="deceased-row" data-url="{% url 'morgue:deceased_detail' deceased.pk %}" style="cursor: pointer; border-bottom: 1px solid #e9ecef;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                        <td style="padding: 15px;">{{ deceased.tag|default:"No Tag" }}</td>
+                        <td style="padding: 15px;">{{ deceased.surname|default:"N/A" }} {{ deceased.other_names|default:"" }}</td>
+                        <td style="padding: 15px;">{{ deceased.get_sex_display }}</td>
+                        <td style="padding: 15px;">{{ deceased.date_of_death|date:"M d, Y"|default:"N/A" }}</td>
+                        <td style="padding: 15px;">{{ deceased.get_storage_chamber_display|default:"N/A" }}</td>
+                        <td style="padding: 15px;">
+                            {% if deceased.admissions.exists %}
+                                {{ deceased.admissions.first.admission_datetime|date:"M d, Y H:i"|default:"N/A" }}
+                            {% else %}
+                                {{ deceased.created_at|date:"M d, Y H:i"|default:"N/A" }}
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px;">
+                            {% if deceased.is_released %}Released{% else %}Admitted{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
+                            No deceased records found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <section class="pagination-section">
+        <div class="pagination-info">
+            <span class="page-info">
+                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+            </span>
+        </div>
+        
+        <div class="pagination-controls">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                    <i class="fas fa-angle-double-left"></i> First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                    <i class="fas fa-angle-left"></i> Previous
+                </a>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="page-link current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                    Next <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                    Last <i class="fas fa-angle-double-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<style>
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.deceased-list-page {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    min-height: 100vh;
+    color: #2c3e50;
+    padding: 20px;
+}
+
+/* Header Section */
+.list-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.list-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-text h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-text p {
+    font-size: 1.1rem;
+    margin: 0;
+    opacity: 0.9;
+}
+
+.header-stats {
+    display: flex;
+    gap: 30px;
+}
+
+.quick-stat {
+    text-align: center;
+}
+
+.quick-stat .stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.quick-stat .stat-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.header-actions {
+    position: relative;
+    z-index: 1;
+}
+
+/* Search Section */
+.search-section {
+    margin-bottom: 30px;
+}
+
+.search-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    padding: 25px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.search-form {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.search-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 14px 16px 14px 45px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+    transform: translateY(-1px);
+}
+
+.search-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-search {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-search:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.btn-clear:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* Table Section */
+.table-section {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.deceased-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.deceased-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.deceased-table th i {
+    margin-right: 8px;
+    font-size: 1rem;
+}
+
+/* Column widths for proper alignment */
+.deceased-table th:nth-child(1),
+.deceased-table td:nth-child(1) { width: 12%; } /* Tag */
+.deceased-table th:nth-child(2),
+.deceased-table td:nth-child(2) { width: 20%; } /* Name */
+.deceased-table th:nth-child(3),
+.deceased-table td:nth-child(3) { width: 10%; } /* Sex */
+.deceased-table th:nth-child(4),
+.deceased-table td:nth-child(4) { width: 15%; } /* Date of Death */
+.deceased-table th:nth-child(5),
+.deceased-table td:nth-child(5) { width: 12%; } /* Storage */
+.deceased-table th:nth-child(6),
+.deceased-table td:nth-child(6) { width: 18%; } /* Date Received */
+.deceased-table th:nth-child(7),
+.deceased-table td:nth-child(7) { width: 13%; } /* Status */
+
+.deceased-table td {
+    padding: 20px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+}
+
+/* Clickable Rows */
+.deceased-row {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.deceased-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.deceased-row:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    transform: translateX(4px);
+}
+
+.deceased-row:hover::before {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+/* Cell Styles */
+.tag-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.name-cell strong {
+    display: block;
+    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.name-cell small {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.sex-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.sex-badge.male {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.sex-badge.female {
+    background: linear-gradient(135deg, #e91e63, #c2185b);
+    color: white;
+}
+
+.sex-badge.other {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+.date-cell, .storage-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.date-cell i, .storage-cell i {
+    color: #667eea;
+    font-size: 1rem;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-badge.admitted {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.status-badge.released {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+/* Empty State */
+.empty-row {
+    background: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+    color: #667eea;
+}
+
+.empty-state h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3rem;
+}
+
+.empty-state p {
+    margin: 0 0 20px 0;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Pagination */
+.pagination-section {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    padding: 25px;
+    margin-top: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.page-link {
+    padding: 8px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #667eea;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-link:hover {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.page-link.current {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: #667eea;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .header-content {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .search-form {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .search-actions {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .deceased-list-page {
+        padding: 15px;
+    }
+    
+    .list-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 25px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.8rem;
+    }
+    
+    .header-stats {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .quick-stat {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .search-container {
+        padding: 20px;
+    }
+    
+    .deceased-table th,
+    .deceased-table td {
+        padding: 12px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .tag-badge,
+    .sex-badge,
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+    
+    .pagination-section {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-text h1 {
+        font-size: 1.5rem;
+    }
+    
+    .deceased-table th:nth-child(4),
+    .deceased-table th:nth-child(5),
+    .deceased-table td:nth-child(4),
+    .deceased-table td:nth-child(5) {
+        display: none;
+    }
+    
+    .date-cell,
+    .storage-cell {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-section,
+.table-section,
+.pagination-section {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.search-section { animation-delay: 0.1s; }
+.table-section { animation-delay: 0.2s; }
+.pagination-section { animation-delay: 0.3s; }
+
+/* Custom scrollbar */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f3f5;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #5a6fd8;
+}
+</style>
+
+<script>
+// Handle clickable rows
+document.addEventListener('DOMContentLoaded', function() {
+    const deceasedRows = document.querySelectorAll('.deceased-row');
+    deceasedRows.forEach(row => {
+        row.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

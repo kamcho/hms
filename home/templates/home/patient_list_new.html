@@ -1,0 +1,153 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block title %}Patients - HMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-row">
+        <h2>Patients</h2>
+        <a href="{% url 'home:patient_create' %}" class="btn btn-primary">Add New Patient</a>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <form method="GET" class="search-form">
+            <div class="search-container">
+                <input type="text" 
+                       name="search" 
+                       id="search_query" 
+                       value="{{ request.GET.search }}"
+                       placeholder="Search by name or phone number..."
+                       class="search-input">
+                <button type="submit" class="btn btn-primary search-btn">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                {% if request.GET.search %}
+                <a href="{% url 'home:patient_list' %}" class="btn btn-secondary clear-btn">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="patient-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Phone</th>
+                    <th>Location</th>
+                    <th>Gender</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                    <td>{{ patient.age }}</td>
+                    <td>{{ patient.phone }}</td>
+                    <td>{{ patient.location }}</td>
+                    <td>{{ patient.get_gender_display }}</td>
+                    <td class="actions">
+                        <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-view">View</a>
+                        <a href="{% url 'home:patient_update' patient.pk %}" class="btn btn-edit">Edit</a>
+                        <a href="{% url 'home:patient_delete' patient.pk %}" class="btn btn-delete">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="no-records">
+                        {% if request.GET.search %}
+                            No patients found matching "{{ request.GET.search }}".
+                        {% else %}
+                            No patients found.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.search-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+}
+
+.search-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 300px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.search-btn, .clear-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.clear-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.search-btn:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.clear-btn:hover {
+    background-color: #5a6268;
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-input {
+        min-width: auto;
+    }
+    
+    .search-btn, .clear-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

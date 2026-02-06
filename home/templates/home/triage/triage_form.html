@@ -1,0 +1,191 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block title %}{{ title }} - HMS{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header">
+        <h1><i class="fas fa-ambulance"></i> {{ title }}</h1>
+        <a href="{% url 'home:triage:list' %}" class="btn btn-secondary">Back to Triage</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="triage-form">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3><i class="fas fa-user"></i> Basic Information</h3>
+                    <div class="form-grid">
+                        {% if form.patient %}
+                        <div class="form-group">
+                            <label for="{{ form.patient.id_for_label }}">Patient *</label>
+                            {{ form.patient }}
+                            {{ form.patient.errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="form-group">
+                            <label for="{{ form.priority.id_for_label }}">Priority *</label>
+                            {{ form.priority }}
+                            {{ form.priority.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.category.id_for_label }}">Category</label>
+                            {{ form.category }}
+                            {{ form.category.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chief Complaint -->
+                <div class="form-section">
+                    <h3><i class="fas fa-notes-medical"></i> Chief Complaint</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.chief_complaint.id_for_label }}">Chief Complaint *</label>
+                            {{ form.chief_complaint }}
+                            {{ form.chief_complaint.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.symptoms_duration.id_for_label }}">Duration of Symptoms *</label>
+                            {{ form.symptoms_duration }}
+                            {{ form.symptoms_duration.errors }}
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.symptom_description.id_for_label }}">Symptom Description</label>
+                            {{ form.symptom_description }}
+                            {{ form.symptom_description.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vital Signs -->
+                <div class="form-section">
+                    <h3><i class="fas fa-heartbeat"></i> Vital Signs</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.temperature.id_for_label }}">Temperature (°C)</label>
+                            {{ form.temperature }}
+                            {{ form.temperature.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.blood_pressure_systolic.id_for_label }}">BP Systolic (mmHg)</label>
+                            {{ form.blood_pressure_systolic }}
+                            {{ form.blood_pressure_systolic.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.blood_pressure_diastolic.id_for_label }}">BP Diastolic (mmHg)</label>
+                            {{ form.blood_pressure_diastolic }}
+                            {{ form.blood_pressure_diastolic.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.heart_rate.id_for_label }}">Heart Rate (bpm)</label>
+                            {{ form.heart_rate }}
+                            {{ form.heart_rate.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.respiratory_rate.id_for_label }}">Respiratory Rate (breaths/min)</label>
+                            {{ form.respiratory_rate }}
+                            {{ form.respiratory_rate.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.oxygen_saturation.id_for_label }}">O2 Saturation (%)</label>
+                            {{ form.oxygen_saturation }}
+                            {{ form.oxygen_saturation.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.blood_glucose.id_for_label }}">Blood Glucose (mg/dL)</label>
+                            {{ form.blood_glucose }}
+                            {{ form.blood_glucose.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pain Assessment -->
+                <div class="form-section">
+                    <h3><i class="fas fa-frown"></i> Pain Assessment</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.pain_scale.id_for_label }}">Pain Scale (0-10)</label>
+                            {{ form.pain_scale }}
+                            {{ form.pain_scale.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.pain_location.id_for_label }}">Pain Location</label>
+                            {{ form.pain_location }}
+                            {{ form.pain_location.errors }}
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.pain_description.id_for_label }}">Pain Description</label>
+                            {{ form.pain_description }}
+                            {{ form.pain_description.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical History -->
+                <div class="form-section">
+                    <h3><i class="fas fa-history"></i> Medical History</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.allergies.id_for_label }}">Known Allergies</label>
+                            {{ form.allergies }}
+                            {{ form.allergies.errors }}
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.current_medications.id_for_label }}">Current Medications</label>
+                            {{ form.current_medications }}
+                            {{ form.current_medications.errors }}
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.medical_history.id_for_label }}">Relevant Medical History</label>
+                            {{ form.medical_history }}
+                            {{ form.medical_history.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assessment -->
+                <div class="form-section">
+                    <h3><i class="fas fa-clipboard-check"></i> Assessment</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.triage_notes.id_for_label }}">Triage Notes</label>
+                            {{ form.triage_notes }}
+                            {{ form.triage_notes.errors }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.disposition.id_for_label }}">Disposition</label>
+                            {{ form.disposition }}
+                            {{ form.disposition.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Triage Entry
+                    </button>
+                    <a href="{% url 'home:triage:list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

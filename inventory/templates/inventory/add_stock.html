@@ -1,0 +1,273 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - HMS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --input-bg: rgba(255, 255, 255, 0.8);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .form-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .form-header {
+        margin-bottom: 2.5rem;
+        text-align: center;
+    }
+
+    .form-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .item-highlight {
+        display: inline-block;
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-group label {
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Force visibility with higher specificity */
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="date"],
+    .form-group select,
+    .form-group textarea {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px;
+        padding: 0.875rem 1rem !important;
+        color: #1e293b !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease;
+        font-weight: 500 !important;
+    }
+
+    /* Force focus visibility */
+    .form-group input[type="text"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group input[type="date"]:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+        background: white !important;
+        transform: translateY(-1px);
+        color: #1e293b !important;
+    }
+
+    .form-actions {
+        margin-top: 2.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
+        border: 2px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
+        transform: translateY(-1px);
+        box-shadow: var(--card-shadow);
+    }
+
+    .btn-primary {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Force placeholder visibility */
+    .form-group input[type="text"]::placeholder,
+    .form-group input[type="number"]::placeholder,
+    .form-group textarea::placeholder {
+        color: #94a3b8 !important;
+        font-weight: 400 !important;
+    }
+
+    /* Force select option visibility */
+    .form-group select option {
+        color: #1e293b !important;
+        background: white !important;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0.25rem;
+        color: #dc2626;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .form-group input.error,
+    .form-group select.error,
+    .form-group textarea.error {
+        border-color: #dc2626;
+        background: rgba(239, 68, 68, 0.05);
+    }
+</style>
+
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h2>Add Physical Stock</h2>
+            <div class="item-highlight">
+                <i class="fas fa-box"></i> {{ item.name }}
+            </div>
+            <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 1rem;">Enter details for the specific
+                batch/shipment received.</p>
+        </div>
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.batch_number.id_for_label }}">Batch Number</label>
+                    {{ form.batch_number }}
+                    {{ form.batch_number.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.quantity.id_for_label }}">Quantity ({% if item.is_dispensed_as_whole and item.packaging_unit %}{{ item.packaging_unit }}{% else %}{{ item.dispensing_unit }}{% endif %})</label>
+                    {{ form.quantity }}
+                    {{ form.quantity.errors }}
+                    {% if item.is_dispensed_as_whole and item.packaging_unit %}
+                    <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                        📦 Enter number of {{ item.packaging_unit }}s{% if item.units_per_pack and item.units_per_pack > 1 %} (each = {{ item.units_per_pack }} {{ item.dispensing_unit }}s){% endif %}
+                    </small>
+                    {% else %}
+                    <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                        💊 Enter total {{ item.dispensing_unit }}s received
+                    </small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.expiry_date.id_for_label }}">Expiry Date</label>
+                    {{ form.expiry_date }}
+                    {{ form.expiry_date.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.purchase_price.id_for_label }}">Purchase Price (per {% if item.is_dispensed_as_whole and item.packaging_unit %}{{ item.packaging_unit }}{% else %}{{ item.dispensing_unit }}{% endif %})</label>
+                    {{ form.purchase_price }}
+                    {{ form.purchase_price.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.supplier.id_for_label }}">Supplier</label>
+                    {{ form.supplier }}
+                    {{ form.supplier.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.current_location.id_for_label }}">Storage Location</label>
+                    {{ form.current_location }}
+                    {{ form.current_location.errors }}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Add to Stock
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

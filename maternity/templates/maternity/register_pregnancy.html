@@ -1,0 +1,201 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Register Pregnancy - HMS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <a href="{% url 'maternity:dashboard' %}"
+            class="flex items-center gap-2 text-blue-500 hover:text-blue-600 font-bold transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Maternity Dashboard</span>
+        </a>
+    </div>
+
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div class="mb-10">
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Register New Pregnancy</h1>
+            <p class="text-slate-500">Initialize a new obstetric record for prenatal care.</p>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Patient <span
+                            class="text-red-500">*</span></label>
+                    {{ form.patient }}
+                    {% if form.patient.errors %}
+                    <div class="mt-2 text-sm text-red-600 font-medium flex items-center gap-1.5">
+                        <i class="fas fa-info-circle"></i> {{ form.patient.errors|striptags }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Blood Group</label>
+                    {{ form.blood_group }}
+                </div>
+            </div>
+
+            <!-- Pregnancy Dates Section -->
+            <div class="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 mb-10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Pregnancy Dates</h3>
+                        <p class="text-xs text-slate-500">Track milestones and expected delivery.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Last Menstrual Period (LMP) <span
+                                class="text-red-500">*</span></label>
+                        {{ form.lmp }}
+                        {% if form.lmp.errors %}
+                        <div class="mt-2 text-sm text-red-600 font-medium">{{ form.lmp.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Expected Delivery Date (EDD)</label>
+                        {{ form.edd }}
+                        <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500 italic">
+                            <i class="fas fa-magic text-blue-400"></i>
+                            <span>Auto-calculated from LMP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Obstetric History Section -->
+            <div class="bg-indigo-50/30 p-6 rounded-2xl border border-indigo-100/50 mb-10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Obstetric History (GPAL)</h3>
+                        <p class="text-xs text-slate-500">Summarize previous pregnancy outcomes.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Gravida (G)</label>
+                        {{ form.gravida }}
+                        <small
+                            class="block mt-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total</small>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Para (P)</label>
+                        {{ form.para }}
+                        <small
+                            class="block mt-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-bold">Deliveries</small>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Abortion (A)</label>
+                        {{ form.abortion }}
+                        <small
+                            class="block mt-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-bold">Lost</small>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Living (L)</label>
+                        {{ form.living }}
+                        <small
+                            class="block mt-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-bold">Alive</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical History Section -->
+            <div class="bg-rose-50/30 p-6 rounded-2xl border border-rose-100/50 mb-10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+                        <i class="fas fa-notes-medical"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Health & Risks</h3>
+                        <p class="text-xs text-slate-500">Document conditions and allergies.</p>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        {{ form.previous_cs }}
+                        <span
+                            class="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Previous
+                            C-Section Case</span>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Known Allergies</label>
+                        {{ form.allergies }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Chronic Conditions</label>
+                        {{ form.chronic_conditions }}
+                        <small class="block mt-2 text-xs text-slate-400">e.g., Diabetes, Hypertension</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-10">
+                <label class="block text-sm font-bold text-slate-700 mb-2">Risk Classification <span
+                        class="text-red-500">*</span></label>
+                {{ form.risk_level }}
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 pt-8 border-t border-slate-100">
+                <button type="submit"
+                    class="flex-1 sm:flex-none px-10 py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Submit Registration</span>
+                </button>
+                <a href="{% url 'maternity:dashboard' %}"
+                    class="flex-1 sm:flex-none px-10 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-center">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const lmpInput = document.getElementById('id_lmp');
+        const eddInput = document.getElementById('id_edd');
+
+        if (lmpInput && eddInput) {
+            lmpInput.addEventListener('change', function () {
+                if (this.value) {
+                    const lmpDate = new Date(this.value);
+                    const eddDate = new Date(lmpDate.getTime() + (280 * 24 * 60 * 60 * 1000));
+
+                    const year = eddDate.getFullYear();
+                    const month = String(eddDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(eddDate.getDate()).padStart(2, '0');
+
+                    eddInput.value = `${year}-${month}-${day}`;
+                    eddInput.removeAttribute('readonly');
+                    eddInput.classList.remove('bg-slate-50/50');
+                }
+            });
+
+            eddInput.addEventListener('focus', function () {
+                this.removeAttribute('readonly');
+                this.classList.remove('bg-slate-50/50');
+            });
+        }
+    });
+</script>
+{% endblock %}

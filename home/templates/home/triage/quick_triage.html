@@ -1,0 +1,102 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block title %}Quick Triage - {{ patient }} - HMS{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header">
+        <h1><i class="fas fa-ambulance"></i> Quick Triage - {{ patient.first_name }} {{ patient.last_name }}</h1>
+        <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">Back to Patient</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="quick-triage-form">
+                {% csrf_token %}
+                
+                <!-- Patient Summary -->
+                <div class="patient-summary">
+                    <div class="patient-info">
+                        <h3>{{ patient.first_name }} {{ patient.last_name }}</h3>
+                        <p>{{ patient.age }} years • {{ patient.get_gender_display }}</p>
+                        <p><i class="fas fa-phone"></i> {{ patient.phone }}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> {{ patient.location }}</p>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="chief_complaint">Chief Complaint *</label>
+                        <textarea name="chief_complaint" id="chief_complaint" rows="3" required placeholder="Main reason for visit"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="symptoms_duration">Duration of Symptoms *</label>
+                        <input type="text" name="symptoms_duration" id="symptoms_duration" required placeholder="e.g., 2 hours, 3 days">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="priority">Priority Level</label>
+                        <select name="priority" id="priority">
+                            <option value="LOW">Low Priority</option>
+                            <option value="MEDIUM" selected>Medium Priority</option>
+                            <option value="HIGH">High Priority</option>
+                            <option value="URGENT">Urgent</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select name="category" id="category">
+                            <option value="GENERAL" selected>General</option>
+                            <option value="EMERGENCY">Emergency</option>
+                            <option value="PEDIATRIC">Pediatric</option>
+                            <option value="MATERNITY">Maternity</option>
+                            <option value="SURGERY">Surgery</option>
+                            <option value="CARDIAC">Cardiac</option>
+                            <option value="NEURO">Neurological</option>
+                            <option value="RESPIRATORY">Respiratory</option>
+                            <option value="ORTHOPEDIC">Orthopedic</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quick Vital Signs -->
+                <div class="form-section">
+                    <h4><i class="fas fa-heartbeat"></i> Quick Vital Signs (Optional)</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="temperature">Temperature (°C)</label>
+                            <input type="number" name="temperature" id="temperature" step="0.1" min="35" max="42" placeholder="36.5">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bp_systolic">BP Systolic (mmHg)</label>
+                            <input type="number" name="bp_systolic" id="bp_systolic" min="60" max="250" placeholder="120">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bp_diastolic">BP Diastolic (mmHg)</label>
+                            <input type="number" name="bp_diastolic" id="bp_diastolic" min="40" max="150" placeholder="80">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="heart_rate">Heart Rate (bpm)</label>
+                            <input type="number" name="heart_rate" id="heart_rate" min="30" max="200" placeholder="72">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Quick Triage Entry
+                    </button>
+                    <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

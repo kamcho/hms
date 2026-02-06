@@ -1,0 +1,18 @@
+
+class PatientDetailView(LoginRequiredMixin, DetailView):
+    model = Patient
+    template_name = 'home/patient_detail.html'
+    context_object_name = 'patient'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        patient = self.get_object()
+        
+        # Get all related data
+        context['visits'] = Visit.objects.filter(patient=patient).order_by('-visit_date')
+        context['triage_entries'] = TriageEntry.objects.filter(visit__patient=patient).order_by('-entry_date')
+        context['consultations'] = Consultation.objects.filter(visit__patient=patient).order_by('-checkin_date')
+        context['consultation_notes'] = ConsultationNotes.objects.filter(consultation__visit__patient=patient).order_by('-created_at')
+        context['queue_entries'] = PatientQue.objects.filter(visit__patient=patient).order_by('-created_at')
+        
+        return context

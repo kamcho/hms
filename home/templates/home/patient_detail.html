@@ -1,0 +1,1571 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static custom_filters %}
+
+{% block title %}Patient Details - {{ patient.first_name }} {{ patient.last_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Theme Variables - Matching Accountant Dashboard */
+    :root {
+        --dash-bg: #f4f6f9;
+        --card-bg: #ffffff;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --accent-primary: #7e3af2;
+        --accent-primary-light: rgba(126, 58, 242, 0.1);
+        --accent-success: #10b981;
+        --accent-danger: #ef4444;
+        --accent-warning: #f59e0b;
+        --border-color: #e5e7eb;
+        --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Base Styles */
+    .dashboard-container {
+        background-color: var(--dash-bg);
+        --clinical-primary: #6366f1;
+        --clinical-primary-light: #e0e7ff;
+        --clinical-secondary: #64748b;
+        --clinical-success: #10b981;
+        --clinical-warning: #f59e0b;
+        --clinical-danger: #ef4444;
+        --clinical-info: #3b82f6;
+        --clinical-bg: #f8fafc;
+        --clinical-card-bg: #ffffff;
+        --clinical-text-main: #1e293b;
+        --clinical-text-muted: #64748b;
+        --clinical-border: #e2e8f0;
+        --clinical-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --clinical-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    body {
+        background-color: var(--clinical-bg);
+        color: var(--clinical-text-main);
+    }
+
+    /* Layout Structure */
+    .profile-grid {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Cards */
+    .modern-card {
+        background: var(--clinical-card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--clinical-border);
+        box-shadow: var(--clinical-shadow);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .modern-card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--clinical-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fbfcfe;
+    }
+
+    .modern-card-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--clinical-text-main);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .modern-card-body {
+        padding: 1.5rem;
+    }
+
+    /* Patient Summary Sidebar */
+    .patient-profile-summary {
+        text-align: center;
+        padding: 2rem 1.5rem;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+    }
+
+    .avatar-circle {
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        margin: 0 auto 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        font-weight: 700;
+        backdrop-filter: blur(4px);
+    }
+
+    .patient-name-large {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .patient-meta-badges {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .meta-badge {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 0.25rem 0.75rem;
+        border-radius: 99px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    /* Detail Lists */
+    .detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--clinical-border);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .detail-label {
+        color: var(--clinical-text-muted);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .detail-value {
+        color: var(--clinical-text-main);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    /* Action Buttons */
+    .action-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .modern-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+        text-decoration: none !important;
+    }
+
+    .btn-primary {
+        background: var(--clinical-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #4f46e5;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: var(--clinical-bg);
+        color: var(--clinical-text-main);
+        border: 1px solid var(--clinical-border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--clinical-border);
+    }
+
+    .btn-success {
+        background: var(--clinical-success);
+        color: white;
+    }
+
+    .btn-warning {
+        background: var(--clinical-warning);
+        color: white;
+    }
+
+    .btn-danger {
+        background: var(--clinical-danger);
+        color: white;
+    }
+
+    /* Tabs Customization */
+    .modern-tabs {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid var(--clinical-border);
+        overflow-x: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .tab-item {
+        padding: 1rem 0;
+        color: var(--clinical-text-muted);
+        font-weight: 600;
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .tab-item:hover {
+        color: var(--clinical-primary);
+    }
+
+    .tab-item.active {
+        color: var(--clinical-primary);
+    }
+
+    .tab-item.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--clinical-primary);
+        border-radius: 3px 3px 0 0;
+    }
+
+    /* Timeline & Data Display */
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--clinical-border);
+    }
+
+    .activity-event {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .event-dot {
+        position: absolute;
+        left: -2rem;
+        top: 0.25rem;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border: 3px solid var(--clinical-primary);
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    .event-card {
+        background: var(--clinical-card-bg);
+        border: 1px solid var(--clinical-border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: transform 0.2s;
+    }
+
+    .event-card:hover {
+        border-color: var(--clinical-primary);
+    }
+
+    .event-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Badges */
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    /* Modals Modernization */
+    .custom-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        display: flex;
+        flex-direction: column;
+        animation: modalFadeUp 0.3s ease-out;
+    }
+
+    @keyframes modalFadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--clinical-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--clinical-border);
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-select {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--clinical-border);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .filter-select:focus {
+        border-color: var(--clinical-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-grid">
+    <!-- Sidebar Column -->
+    <aside class="sidebar-column">
+        <!-- Patient Summary Card -->
+        <div class="modern-card">
+            <div class="patient-profile-summary">
+                <div class="avatar-circle">
+                    {{ patient.first_name|first }}{{ patient.last_name|first }}
+                </div>
+                <h1 class="patient-name-large">{{ patient.full_name }}</h1>
+                <div class="patient-meta-badges">
+                    <span class="meta-badge">{{ patient.age }} Years</span>
+                    <span class="meta-badge">{{ patient.get_gender_display }}</span>
+                </div>
+            </div>
+            <div class="modern-card-body">
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <span class="detail-label">Patient ID</span>
+                        <span class="detail-value text-primary">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
+                    </div>
+                    {% if active_admission %}
+                    <div class="detail-item" style="color: var(--clinical-warning);">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value"><i class="fas fa-bed"></i> Admitted ({{
+                            active_admission.bed.bed_number }})</span>
+                    </div>
+                    {% else %}
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value text-success">Outpatient</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if user.role == 'Receptionist' %}
+                <div class="action-group">
+                    <a href="{% url 'home:patient_update' patient.pk %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{% url 'home:patient_list' %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Personal Details Card -->
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h3 class="modern-card-title"><i class="fas fa-id-card"></i> Personal Info</h3>
+            </div>
+            <div class="modern-card-body">
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="fas fa-calendar"></i> DoB</span>
+                        <span class="detail-value">{{ patient.date_of_birth }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="fas fa-phone"></i> Phone</span>
+                        <span class="detail-value">{{ patient.phone }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Location</span>
+                        <span class="detail-value">{{ patient.location }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="fas fa-clock"></i> Registered</span>
+                        <span class="detail-value">{{ patient.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Contacts Card -->
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h3 class="modern-card-title"><i class="fas fa-heart"></i> Emergency</h3>
+                {% if user.role == 'Receptionist' %}
+                <a href="{% url 'home:emergency_contact_create' patient.pk %}" class="modern-btn btn-secondary"
+                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                    <i class="fas fa-plus"></i> Add
+                </a>
+                {% endif %}
+            </div>
+            <div class="modern-card-body">
+                {% if patient.emergency_contacts.all %}
+                <div class="detail-list">
+                    {% for contact in patient.emergency_contacts.all %}
+                    <div class="detail-item {% if contact.is_primary %}text-primary{% endif %}"
+                        style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span class="detail-value">{{ contact.name }}</span>
+                            <span class="status-badge" style="font-size: 0.65rem; background: var(--clinical-bg);">{{
+                                contact.get_relationship_display }}</span>
+                        </div>
+                        <span class="detail-label"><i class="fas fa-phone"></i> {{ contact.phone }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0;">No contacts registered
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Clinical Actions Card -->
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h3 class="modern-card-title"><i class="fas fa-stethoscope"></i> Actions</h3>
+            </div>
+            <div class="modern-card-body">
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% if selected_visit == latest_visit or not selected_visit %}
+                    {% if user.role == 'Doctor' %}
+                    {% if active_admission %}
+                    <a href="{% url 'inpatient:discharge_patient' active_admission.id %}" class="modern-btn btn-danger"
+                        style="width: 100%;">
+                        <i class="fas fa-sign-out-alt"></i> Discharge Patient
+                    </a>
+                    {% else %}
+                    <a href="{% url 'inpatient:admit_patient' patient.pk %}" class="modern-btn btn-warning"
+                        style="width: 100%;">
+                        <i class="fas fa-bed"></i> Admit for Observation
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    {% if user.role == 'Doctor' %}
+                    <a href="{% url 'home:create_prescription' patient.pk %}" class="modern-btn btn-success"
+                        style="width: 100%;">
+                        <i class="fas fa-prescription"></i> New Prescription
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <div
+                        style="background: #f1f5f9; padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border); text-align: center;">
+                        <p style="font-size: 0.75rem; color: var(--clinical-text-muted); margin: 0;">
+                            <i class="fas fa-lock"></i> Actions restricted to latest visit
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Column -->
+    <main class="main-column">
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <label for="visit-filter"
+                style="font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; color: var(--clinical-text-muted);">
+                <i class="fas fa-filter"></i> VIEW VISIT HISTORY:
+            </label>
+            <select id="visit-filter" onchange="filterByVisit(this.value)" class="filter-select" style="flex: 1;">
+                <option value="all" {% if not selected_visit %}selected{% endif %}>Show All Clinical History</option>
+                {% for visit in visits %}
+                <option value="{{ visit.id }}" {% if selected_visit and selected_visit.id == visit.id %}selected{%endif%}>
+                    {{ visit.get_visit_type_display }} - {{ visit.visit_date|date:"M d, Y H:i" }}
+                </option>
+                {% endfor %}
+            </select>
+            {% if selected_visit %}
+            <span class="status-badge"
+                style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
+                <i class="fas fa-check"></i> Filter Active
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- TABS SECTION -->
+        <div class="modern-card">
+            <div class="modern-card-header" style="background: white; padding-bottom: 0;">
+                <div class="modern-tabs">
+                    <div class="tab-item active" onclick="openTab(event, 'visits')">
+                        <i class="fas fa-calendar-alt"></i> Visits
+                    </div>
+                    <div class="tab-item" onclick="openTab(event, 'triage')">
+                        <i class="fas fa-heartbeat"></i> Triage
+                    </div>
+                    <div class="tab-item" onclick="openTab(event, 'consultations')">
+                        <i class="fas fa-user-md"></i> Consultations
+                    </div>
+                    <div class="tab-item" onclick="openTab(event, 'labs')">
+                        <i class="fas fa-flask"></i> Laboratory
+                    </div>
+                    <div class="tab-item" onclick="openTab(event, 'prescriptions')">
+                        <i class="fas fa-prescription"></i> Prescriptions
+                    </div>
+                    {% if active_admission %}
+                    <div class="tab-item" onclick="openTab(event, 'inpatient')">
+                        <i class="fas fa-procedures"></i> Inpatient
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="modern-card-body">
+                <!-- VISITS TAB -->
+                <div id="visits" class="tab-content active">
+                    {% if visits %}
+                    <div class="activity-timeline">
+                        {% for visit in visits %}
+                        <div class="activity-event">
+                            <div class="event-dot"></div>
+                            <div class="event-card">
+                                <div class="event-header">
+                                    <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-primary);">
+                                        {{ visit.get_visit_type_display }}
+                                    </h4>
+                                    <span
+                                        style="font-size: 0.8rem; font-weight: 600; color: var(--clinical-text-muted);">
+                                        {{ visit.visit_date|date:"F d, Y H:i" }}
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                                    <span class="status-badge"
+                                        style="background: var(--clinical-bg); color: var(--clinical-text-muted); font-size: 0.7rem;">
+                                        Mode: {{ visit.get_visit_mode_display }}
+                                    </span>
+                                    {% if visit.reason_for_visit %}
+                                    <span style="font-size: 0.875rem; color: var(--clinical-text-main);">
+                                        <i class="far fa-comment-dots"></i> {{ visit.reason_for_visit|truncatechars:100
+                                        }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 3rem 0;">
+                        <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No visits recorded for this
+                            patient.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- TRIAGE TAB -->
+                <div id="triage" class="tab-content">
+                    {% if triage_entries %}
+                    <div class="activity-timeline">
+                        {% for entry in triage_entries %}
+                        <div class="activity-event">
+                            <div class="event-dot" style="border-color: {{ entry.get_priority_color }};"></div>
+                            <div class="event-card">
+                                <div class="event-header">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-main);">
+                                            Clinical Triage</h4>
+                                        <span class="status-badge"
+                                            style="background-color: {{ entry.get_priority_color }}15; color: {{ entry.get_priority_color }};">
+                                            {{ entry.get_priority_display }}
+                                        </span>
+                                        <span class="status-badge"
+                                            style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
+                                            {{ entry.get_category_display }}
+                                        </span>
+                                    </div>
+                                    <span
+                                        style="font-size: 0.8rem; font-weight: 600; color: var(--clinical-text-muted);">
+                                        {{ entry.entry_date|date:"M d, Y H:i" }}
+                                    </span>
+                                </div>
+
+                                <div style="margin: 1.25rem 0;">
+                                    <div
+                                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; background: var(--clinical-bg); padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border);">
+                                        {% if entry.temperature %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                Temp</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.temperature }}°C</div>
+                                        </div>
+                                        {% endif %}
+                                        {% if entry.blood_pressure_systolic %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                BP</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.get_blood_pressure }}</div>
+                                        </div>
+                                        {% endif %}
+                                        {% if entry.heart_rate %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                HR</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.heart_rate }} bpm</div>
+                                        </div>
+                                        {% endif %}
+                                        {% if entry.respiratory_rate %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                Resp</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.respiratory_rate }}/min</div>
+                                        </div>
+                                        {% endif %}
+                                        {% if entry.oxygen_saturation %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                SpO2</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.oxygen_saturation }}%</div>
+                                        </div>
+                                        {% endif %}
+                                        {% if entry.weight %}
+                                        <div style="text-align: center;">
+                                            <div
+                                                style="font-size: 0.7rem; color: var(--clinical-text-muted); text-transform: uppercase;">
+                                                Weight</div>
+                                            <div style="font-weight: 700; color: var(--clinical-text-main);">
+                                                {{entry.weight }} kg</div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if entry.triage_notes %}
+                                <div
+                                    style="font-size: 0.9rem; color: var(--clinical-text-main); line-height: 1.6; background: #f8fafc; padding: 1rem; border-radius: 8px; border-left: 4px solid var(--clinical-primary);">
+                                    <strong>Clinical Notes:</strong> {{ entry.triage_notes }}
+                                </div>
+                                {% endif %}
+
+                                <div
+                                    style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem;">
+                                    <span style="color: var(--clinical-text-muted);">
+                                        <i class="fas fa-stethoscope"></i> Recorded by:
+                                        <strong>{{entry.triage_nurse.full_name|default:"HMS Provider" }}</strong>
+                                    </span>
+                                    {% if entry.disposition %}
+                                    <span class="status-badge"
+                                        style="background: var(--clinical-primary-light); color: var(--clinical-primary); padding: 0.1rem 0.5rem;">
+                                        Disp: {{ entry.disposition }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 3rem 0;">
+                        <i class="fas fa-heart-broken" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No triage entries found.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- CONSULTATIONS TAB -->
+                <div id="consultations" class="tab-content">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">Consultation History
+                        </h4>
+                        {% if selected_visit == latest_visit or not selected_visit %}
+                        {% if user.role == 'Doctor' %}
+                        <button class="modern-btn btn-primary btn-sm" onclick="showModal('noteModal')">
+                            <i class="fas fa-plus"></i> Add Clinical Note
+                        </button>
+                        {% endif %}
+                        {% else %}
+                        <div
+                            style="background: #fff7ed; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #ffedd5; font-size: 0.8rem; color: #9a3412; font-weight: 600;">
+                            <i class="fas fa-info-circle"></i> View only mode for past visits
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if consultation_notes %}
+                    <div class="activity-timeline">
+                        {% for note in consultation_notes %}
+                        <div class="activity-event">
+                            <div class="event-dot" style="border-color: var(--clinical-primary);"></div>
+                            <div class="event-card" style="border-left: 4px solid var(--clinical-primary);">
+                                <div class="event-header">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-user-md" style="color: var(--clinical-primary);"></i>
+                                        <h4 style="margin: 0; font-size: 0.95rem; color: var(--clinical-text-main);">
+                                            Clinical Note</h4>
+                                    </div>
+                                    <span
+                                        style="font-size: 0.8rem; font-weight: 600; color: var(--clinical-text-muted);">
+                                        {{ note.created_at|date:"M d, Y H:i" }}
+                                    </span>
+                                </div>
+                                <div
+                                    style="font-size: 0.95rem; color: var(--clinical-text-main); line-height: 1.6; background: var(--clinical-bg); padding: 1rem; border-radius: 8px;">
+                                    {{ note.notes|linebreaksbr }}
+                                </div>
+                                <div
+                                    style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--clinical-text-muted);">
+                                    By Provider ID: <strong>{{ note.created_by.id_number|default:"HMS Provider" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 3rem 0;">
+                        <i class="fas fa-comment-slash" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No clinical notes recorded.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- LABS TAB -->
+                <div id="labs" class="tab-content">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">Laboratory
+                            Investigations</h4>
+                    </div>
+                    {% if lab_results %}
+                    <div style="overflow-x: auto;">
+                        <table class="custom-table"
+                            style="width: 100%; border-collapse: separate; border-spacing: 0 0.5rem;">
+                            <thead style="background: var(--clinical-bg);">
+                                <tr>
+                                    <th style="padding: 1rem; border-radius: 8px 0 0 8px; font-weight: 700;">Service
+                                        Name</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Requested Date</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Status</th>
+                                    <th
+                                        style="padding: 1rem; border-radius: 0 8px 8px 0; font-weight: 700; text-align: right;">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in lab_results %}
+                                <tr
+                                    style="background: white; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <td style="padding: 1rem; font-weight: 600; color: var(--clinical-text-main);">{{ result.service.name }}</td>
+                                    <td style="padding: 1rem; color: var(--clinical-text-muted); font-size: 0.85rem;">{{ result.requested_at|date:"M d, Y H:i" }}</td>
+                                    <td style="padding: 1rem;">
+                                        <span class="status-badge"
+                                            style="background: {% if result.status == 'Completed' %}var(--clinical-primary-light){% else %}#fff7ed{% endif %}; color: {% if result.status == 'Completed' %}var(--clinical-primary){% else %}#c2410c{% endif %}; font-size: 0.7rem;">
+                                            {{ result.status }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 1rem; text-align: right;">
+                                        <a href="/lab/result/{{ result.id }}/" class="modern-btn btn-secondary"
+                                            style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                            View Report
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 3rem 0;">
+                        <i class="fas fa-microscope" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No lab results found.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- PRESCRIPTIONS TAB -->
+                <div id="prescriptions" class="tab-content">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">Active & Past
+                            Prescriptions</h4>
+                    </div>
+                    {% if prescriptions %}
+                    <div style="overflow-x: auto;">
+                        <table class="custom-table"
+                            style="width: 100%; border-collapse: separate; border-spacing: 0 0.5rem;">
+                            <thead style="background: var(--clinical-bg);">
+                                <tr>
+                                    <th style="padding: 1rem; border-radius: 8px 0 0 8px; font-weight: 700;">Prescribed
+                                        Date</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Diagnosis</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Physician</th>
+                                    <th style="padding: 1rem; font-weight: 700;">Status</th>
+                                    <th
+                                        style="padding: 1rem; border-radius: 0 8px 8px 0; font-weight: 700; text-align: right;">
+                                        Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prescription in prescriptions %}
+                                <tr style="background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <td style="padding: 1rem; font-weight: 600; color: var(--clinical-text-main);">{{ prescription.prescribed_at|date:"M d, Y H:i" }}</td>
+                                    <td style="padding: 1rem; color: var(--clinical-text-main); font-size: 0.875rem;">{{ prescription.diagnosis|truncatewords:8 }}</td>
+                                    <td style="padding: 1rem; color: var(--clinical-text-muted); font-size: 0.85rem;">{{ prescription.prescribed_by.full_name|default:"Unknown Provider" }}</td>
+                                    <td style="padding: 1rem;">
+                                        <span class="status-badge"
+                                            style="background: {% if prescription.status == 'Active' %}var(--clinical-primary-light){% elif prescription.status == 'Completed' %}var(--clinical-bg){% else %}#fee2e2{% endif %}; color: {% if prescription.status == 'Active' %}var(--clinical-primary){% elif prescription.status == 'Completed' %}var(--clinical-secondary){% else %}var(--clinical-danger){% endif %}; font-size: 0.7rem;">
+                                            {{ prescription.status }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 1rem; text-align: right;">
+                                        <a href="{% url 'home:prescription_detail' prescription.id %}"
+                                            class="modern-btn btn-secondary"
+                                            style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                            Manage
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 3rem 0;">
+                        <i class="fas fa-prescription-bottle-alt"
+                            style="font-size: 3rem; color: var(--clinical-border);"></i>
+                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No prescriptions on file.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- INPATIENT TAB -->
+                {% if active_admission %}
+                <div id="inpatient" class="tab-content">
+                    <!-- Medications Section -->
+                    <div class="modern-card"
+                        style="margin-bottom: 2rem; border: 1px solid var(--clinical-border); box-shadow: none;">
+                        <div class="modern-card-header" style="padding: 1rem 1.5rem;">
+                            <h4 class="modern-card-title"><i class="fas fa-pills"></i> Inpatient Medications</h4>
+                            {% if selected_visit == latest_visit or not selected_visit %}
+                            <button class="modern-btn btn-primary btn-sm" onclick="showModal('medicationModal')">
+                                <i class="fas fa-plus"></i> Administer
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="modern-card-body" style="padding: 0;">
+                            <table class="custom-table" style="width: 100%;">
+                                <thead style="background: var(--clinical-bg);">
+                                    <tr>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Medication Item</th>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Dosage</th>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Frequency</th>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for med in active_medications %}
+                                    <tr style="border-bottom: 1px solid var(--clinical-border);">
+                                        <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ med.item.name }}</td>
+                                        <td style="padding: 1rem 1.5rem;">{{ med.dosage }}</td>
+                                        <td style="padding: 1rem 1.5rem;">{{ med.frequency }}</td>
+                                        <td style="padding: 1rem 1.5rem;">
+                                            {% if med.is_administered %}
+                                            <span class="status-badge"
+                                                style="background: var(--clinical-primary-light); color: var(--clinical-primary);">Administered</span>
+                                            {% else %}
+                                            <span class="status-badge"
+                                                style="background: #fff7ed; color: #c2410c;">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4"
+                                            style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">
+                                            No active inpatient medications</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Services Section -->
+                    <div class="modern-card" style="border: 1px solid var(--clinical-border); box-shadow: none;">
+                        <div class="modern-card-header" style="padding: 1rem 1.5rem;">
+                            <h4 class="modern-card-title"><i class="fas fa-concierge-bell"></i> Ward Services</h4>
+                            {% if selected_visit == latest_visit or not selected_visit %}
+                            <button class="modern-btn btn-success btn-sm" onclick="showModal('serviceModal')">
+                                <i class="fas fa-plus"></i> Bill Service
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="modern-card-body" style="padding: 0;">
+                            <table class="custom-table" style="width: 100%;">
+                                <thead style="background: var(--clinical-bg);">
+                                    <tr>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Service Description</th>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Qty</th>
+                                        <th
+                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                            Fulfillment Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for link in active_services %}
+                                    <tr style="border-bottom: 1px solid var(--clinical-border);">
+                                        <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ link.service.name }}</td>
+                                        <td style="padding: 1rem 1.5rem;">{{ link.quantity }}</td>
+                                        <td
+                                            style="padding: 1rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.85rem;">
+                                            {{ link.date_provided|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3"
+                                            style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">
+                                            No services provided during this admission</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Next Action Dispatcher -->
+            <div class="modern-card" style="margin-top: 2rem;">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title"><i class="fas fa-paper-plane"></i> Clinical Next Action</h3>
+                </div>
+                <div class="modern-card-body">
+                    {% if selected_visit == latest_visit or not selected_visit %}
+                    {% if user.role == 'Doctor' %}
+                    <form id="nextActionForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="patient_id" value="{{ patient.pk }}">
+                        <div class="profile-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 0;">
+                            <div>
+                                <h4
+                                    style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
+                                    <i class="fas fa-building"></i> Select Department
+                                </h4>
+                                <div
+                                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
+                                    {% for dept in available_departments %}
+                                    <label
+                                        style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; border: 1px solid var(--clinical-border); border-radius: 10px; transition: all 0.2s; background: var(--clinical-bg);">
+                                        <input type="checkbox" name="send_to" value="{{ dept.name|lower }}"
+                                            data-dept-id="{{ dept.id }}" onchange="updateServicesFilter()"
+                                            style="width: 1.1rem; height: 1.1rem; accent-color: var(--clinical-primary);">
+                                        <span
+                                            style="font-size: 0.9rem; font-weight: 600; color: var(--clinical-text-main);">{{ dept.name }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div>
+                                <h4
+                                    style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
+                                    <i class="fas fa-vial"></i> Available Investigations
+                                </h4>
+                                <div id="tests-container"
+                                    style="background: var(--clinical-bg); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--clinical-border); min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                                    <p id="no-destination-message"
+                                        style="color: var(--clinical-text-muted); font-size: 0.875rem; text-align: center; margin: 0;">
+                                        Select at least one department above to view available investigations.
+                                    </p>
+                                    <div id="dynamic-test-categories" style="display: none; width: 100%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--clinical-border);">
+                            <button type="button" class="modern-btn btn-secondary" onclick="clearNextActionForm()">
+                                <i class="fas fa-undo"></i> Reset Form
+                            </button>
+                            <button type="button" id="execute-btn" class="modern-btn btn-success"
+                                onclick="submitNextAction()" disabled>
+                                <i class="fas fa-play"></i> Execute Actions
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div
+                        style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
+                        <h4 style="margin: 0 0 0.5rem; color: #1e293b; font-weight: 800;"><i class="fas fa-lock"></i>
+                            Restricted Access</h4>
+                        <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Clinical next actions
+                            (requests/routing) are restricted to the <strong>Doctor</strong> role.</p>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div
+                        style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
+                        <div
+                            style="width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: #64748b; font-size: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h4 style="margin: 0 0 0.5rem; color: #1e293b; font-weight: 800;">Historical Visit View</h4>
+                        <p style="margin: 0; color: #64748b; font-size: 0.9rem; max-width: 400px; margin: 0 auto;">
+                            Clinical actions are only available for the current/latest visit. <strong>Please select the
+                                most recent visit</strong> from the history dropdown to record new data.</p>
+                        <button class="modern-btn btn-secondary btn-sm" style="margin-top: 1.5rem;"
+                            onclick="filterByVisit('{{ latest_visit.id }}')">
+                            Switch to Latest Visit
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+    </main>
+</div> <!-- End Profile Grid -->
+
+<!-- Clinical Modals -->
+<!-- Note Modal -->
+<div id="noteModal" class="custom-modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-edit"></i> Add Clinical Note</h3>
+            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('noteModal')"
+                style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+            <form id="addNoteForm">
+                {% csrf_token %}
+                <input type="hidden" name="patient_id" value="{{ patient.pk }}">
+                <input type="hidden" name="visit_id" value="{{ latest_visit.id }}">
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label"
+                        style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Clinical
+                        Note Details</label>
+                    <textarea name="note_content" rows="6" class="form-control"
+                        style="border-radius: 10px; border: 1px solid var(--clinical-border); padding: 1rem; font-size: 0.95rem;"
+                        placeholder="Record patient assessment, findings, or treatment updates..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"
+                        style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Focus
+                        Area</label>
+                    <select name="note_type" class="form-control"
+                        style="border-radius: 10px; border: 1px solid var(--clinical-border); height: 3.2rem; appearance: auto;">
+                        <option value="GENERAL">General Assessment</option>
+                        <option value="DIAGNOSIS">Differential Diagnosis</option>
+                        <option value="TREATMENT">Treatment Plan</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer"
+            style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border); padding: 1rem 1.5rem;">
+            <button class="modern-btn btn-secondary" onclick="closeModal('noteModal')">Discard</button>
+            <button class="modern-btn btn-primary" onclick="submitNote()">Save Entry</button>
+        </div>
+    </div>
+</div>
+
+{% if active_admission %}
+<!-- Medication Modal -->
+<div id="medicationModal" class="custom-modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-pills"></i> Inpatient Medication
+            </h3>
+            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('medicationModal')"
+                style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+            <form id="addMedicationForm">
+                {% csrf_token %}
+                <div class="clinical-form-styled">
+                    {{ medication_form.as_p }}
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+            <button class="modern-btn btn-secondary" onclick="closeModal('medicationModal')">Cancel</button>
+            <button class="modern-btn btn-primary" onclick="submitMedication()">Administer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Service Modal -->
+<div id="serviceModal" class="custom-modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header" style="background: var(--clinical-success); border: none;">
+            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-concierge-bell"></i> Ward Service
+                Billing</h3>
+            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('serviceModal')"
+                style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+            <form id="addServiceForm">
+                {% csrf_token %}
+                <div class="clinical-form-styled">
+                    {{ service_form.as_p }}
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+            <button class="modern-btn btn-secondary" onclick="closeModal('serviceModal')">Cancel</button>
+            <button class="modern-btn btn-primary"
+                style="background: var(--clinical-success); border-color: var(--clinical-success);"
+                onclick="submitService()">Apply Charge</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Unified Message Modal -->
+<div id="messageModal" class="custom-modal">
+    <div class="modal-content" style="max-width: 400px; border-radius: 20px; overflow: hidden; border: none;">
+        <div id="messageModalIndicator" style="height: 6px; background: var(--clinical-primary);"></div>
+        <div class="modal-body" style="padding: 2.5rem 1.5rem; text-align: center;">
+            <div id="messageModalIcon" style="margin-bottom: 1.5rem; font-size: 3rem;"></div>
+            <h3 id="messageModalTitle"
+                style="margin-bottom: 0.75rem; color: var(--clinical-text-main); font-size: 1.25rem;">Notification</h3>
+            <p id="messageModalContent"
+                style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted); line-height: 1.5;"></p>
+        </div>
+        <div class="modal-footer"
+            style="justify-content: center; padding: 1.5rem; background: var(--clinical-bg); border: none;">
+            <button class="modern-btn btn-primary" id="messageModalBtn" style="min-width: 120px;"
+                onclick="closeModal('messageModal')">Acknowledge</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Enhanced Tab Switching
+     */
+    function openTab(evt, tabName) {
+        // Hide all tab content
+        const tabContent = document.querySelectorAll(".tab-content");
+        tabContent.forEach(tab => {
+            tab.style.display = "none";
+            tab.classList.remove('active');
+        });
+
+        // Remove active class from all tab items
+        const tabItems = document.querySelectorAll(".tab-item");
+        tabItems.forEach(item => {
+            item.classList.remove("active");
+        });
+
+        // Show selected tab content and mark as active
+        const activeTab = document.getElementById(tabName);
+        if (activeTab) {
+            activeTab.style.display = "block";
+            setTimeout(() => activeTab.classList.add('active'), 10);
+        }
+
+        // Add active class to clicked button
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add("active");
+        } else if (typeof evt === 'string') {
+            // Support for manual tab activation by string name
+            const targetItem = Array.from(tabItems).find(item => item.textContent.trim().toLowerCase() === evt.toLowerCase());
+            if (targetItem) targetItem.classList.add("active");
+        }
+
+        // Store state in URL hash if needed
+        window.location.hash = tabName;
+    }
+
+    // Restore tab from hash on load
+    document.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash && document.getElementById(hash)) {
+            openTab(null, hash);
+            // Also find and mark the corresponding tab item as active
+            const tabItems = document.querySelectorAll(".tab-item");
+            tabItems.forEach(item => {
+                if (item.getAttribute('onclick').includes(`'${hash}'`)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+    });
+
+    /**
+     * Unified Modal Logic
+     */
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = "flex";
+            // Add entry animation trigger if needed
+        }
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    // Global click-away handler
+    window.onclick = function (event) {
+        if (event.target.classList.contains('custom-modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    /**
+     * Clinical Form Submissions
+     */
+    function submitNote() {
+        const form = document.getElementById('addNoteForm');
+        const formData = new FormData(form);
+        const url = "{% url 'home:add_consultation_note' %}";
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Record Updated', 'Patient clinical note has been successfully saved.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Submission Error', data.error || 'Unable to save clinical note.', null, 'error');
+                }
+            })
+            .catch(err => showMessageModal('System Error', 'Network failure while saving clinical note.', null, 'error'));
+    }
+
+    {% if active_admission %}
+    function submitMedication() {
+        // Inpatient med submission logic
+        // Using standard form submit for simplicity, can be upgraded to fetch
+        document.getElementById('addMedicationForm').submit();
+    }
+    function submitService() {
+        // Inpatient service billing logic
+        document.getElementById('addServiceForm').submit();
+    }
+    {% endif %}
+
+    /**
+     * Clinical History Filtering
+     */
+    function filterByVisit(visitId) {
+        const currentUrl = new URL(window.location.href);
+        if (visitId === 'all') {
+            currentUrl.searchParams.delete('visit_id');
+        } else {
+            currentUrl.searchParams.set('visit_id', visitId);
+        }
+        window.location.href = currentUrl.toString();
+    }
+
+    /**
+     * Clinical Next Action Dispatcher
+     */
+    function submitNextAction() {
+        const form = document.getElementById('nextActionForm');
+        const formData = new FormData(form);
+        const url = "{% url 'home:submit_next_action' %}";
+
+        const executeBtn = document.getElementById('execute-btn');
+        executeBtn.disabled = true;
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Order Dispatched', data.message || 'Clinical orders have been successfully sent.', () => {
+                        if (data.invoice_id) {
+                            window.location.href = `/accounts/invoice/${data.invoice_id}/`;
+                        } else {
+                            location.reload();
+                        }
+                    }, 'success');
+                } else {
+                    executeBtn.disabled = false;
+                    executeBtn.innerHTML = '<i class="fas fa-play"></i> Execute Actions';
+                    showMessageModal('Routing Error', data.error || 'Failed to dispatch clinical orders.', null, 'error');
+                }
+            })
+            .catch(err => {
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = '<i class="fas fa-play"></i> Execute Actions';
+                showMessageModal('System Error', 'Clinical routing service is temporarily unavailable.', null, 'error');
+            });
+    }
+
+    function clearNextActionForm() {
+        document.getElementById('nextActionForm').reset();
+        updateServicesFilter();
+    }
+
+    /**
+     * Dynamic Department & Test Logic
+     */
+    const medicalTests = {{ medical_tests_json| safe }};
+
+    function updateServicesFilter() {
+        const selectedDepts = Array.from(document.querySelectorAll('input[name="send_to"]:checked'))
+            .map(input => input.value);
+
+        const dynamicCategories = document.getElementById('dynamic-test-categories');
+        const noDestMessage = document.getElementById('no-destination-message');
+
+        if (selectedDepts.length === 0) {
+            dynamicCategories.style.display = 'none';
+            noDestMessage.style.display = 'flex';
+            toggleExecuteButton();
+            return;
+        }
+
+        // Capture current state of selected tests before clearing
+        const previousState = {};
+        document.querySelectorAll('input[name="tests"]:checked').forEach(input => {
+            const testId = input.value;
+            const noteTextarea = document.querySelector(`textarea[name="test_notes_${testId}"]`);
+            previousState[testId] = {
+                checked: true,
+                note: noteTextarea ? noteTextarea.value : ''
+            };
+        });
+
+        noDestMessage.style.display = 'none';
+        dynamicCategories.style.display = 'block';
+        dynamicCategories.innerHTML = '';
+
+        const filteredTests = medicalTests.filter(test => selectedDepts.includes(test.department_name.toLowerCase()));
+
+        if (filteredTests.length === 0) {
+            dynamicCategories.innerHTML = `
+                        <div style="text-align: center; padding: 1.5rem; color: var(--clinical-text-muted);">
+                            <i class="fas fa-exclamation-circle" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            No available services found for the selected department(s).
+                        </div>`;
+            toggleExecuteButton();
+            return;
+        }
+
+        const grouped = filteredTests.reduce((acc, test) => {
+            if (!acc[test.department_name]) acc[test.department_name] = [];
+            acc[test.department_name].push(test);
+            return acc;
+        }, {});
+
+        for (const [dept, tests] of Object.entries(grouped)) {
+            let deptHtml = `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h5 style="font-size: 0.75rem; color: var(--clinical-primary); text-transform: uppercase; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px dashed var(--clinical-border); padding-bottom: 0.5rem;">
+                                ${dept} Investigations
+                            </h5>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+                    `;
+
+            tests.forEach(test => {
+                const isChecked = previousState[test.id] ? 'checked' : '';
+                const displayStyle = previousState[test.id] ? 'block' : 'none';
+                const noteValue = previousState[test.id] ? previousState[test.id].note : '';
+
+                deptHtml += `
+                            <div style="background: white; padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border); box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: all 0.2s;">
+                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer; margin: 0;">
+                                    <input type="checkbox" name="tests" value="${test.id}" ${isChecked}
+                                           onchange="toggleTestNotes(${test.id}); toggleExecuteButton()"
+                                           style="margin-top: 0.2rem; width: 1rem; height: 1rem; accent-color: var(--clinical-primary);">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.9rem;">${test.name}</div>
+                                        <div id="test-notes-container-${test.id}" style="display: ${displayStyle}; margin-top: 0.75rem;">
+                                            <textarea name="test_notes_${test.id}" class="form-control" rows="2" 
+                                                      style="font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--clinical-border); background: #f8fafc;"
+                                                      placeholder="Specific clinical indications for ${test.name}...">${noteValue}</textarea>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+            });
+
+            deptHtml += `</div></div>`;
+            dynamicCategories.innerHTML += deptHtml;
+        }
+        toggleExecuteButton();
+    }
+
+    function toggleTestNotes(testId) {
+        const checkbox = document.querySelector(`input[name="tests"][value="${testId}"]`);
+        const container = document.getElementById(`test-notes-container-${testId}`);
+        if (container) {
+            container.style.display = checkbox.checked ? 'block' : 'none';
+        }
+    }
+
+    function toggleExecuteButton() {
+        const executeBtn = document.getElementById('execute-btn');
+        const anyTestSelected = document.querySelectorAll('input[name="tests"]:checked').length > 0;
+        const anyDeptSelected = document.querySelectorAll('input[name="send_to"]:checked').length > 0;
+        executeBtn.disabled = !(anyTestSelected || anyDeptSelected);
+    }
+
+    /**
+     * System Notifications
+     */
+    function showMessageModal(title, message, callback, type = 'info') {
+        const modal = document.getElementById('messageModal');
+        const indicator = document.getElementById('messageModalIndicator');
+        const icon = document.getElementById('messageModalIcon');
+        const btn = document.getElementById('messageModalBtn');
+
+        // Set colors based on type
+        if (type === 'success') {
+            indicator.style.background = 'var(--clinical-success)';
+            icon.innerHTML = '<i class="fas fa-check-circle" style="color: var(--clinical-success);"></i>';
+            btn.style.background = 'var(--clinical-success)';
+            btn.style.borderColor = 'var(--clinical-success)';
+        } else if (type === 'error') {
+            indicator.style.background = 'var(--clinical-danger)';
+            icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: var(--clinical-danger);"></i>';
+            btn.style.background = 'var(--clinical-danger)';
+            btn.style.borderColor = 'var(--clinical-danger)';
+        } else {
+            indicator.style.background = 'var(--clinical-primary)';
+            icon.innerHTML = '<i class="fas fa-info-circle" style="color: var(--clinical-primary);"></i>';
+            btn.style.background = 'var(--clinical-primary)';
+            btn.style.borderColor = 'var(--clinical-primary)';
+        }
+
+        document.getElementById('messageModalTitle').textContent = title;
+        document.getElementById('messageModalContent').textContent = message;
+
+        btn.onclick = function () {
+            closeModal('messageModal');
+            if (callback) callback();
+        };
+
+        showModal('messageModal');
+    }
+</script>
+{% endblock %}

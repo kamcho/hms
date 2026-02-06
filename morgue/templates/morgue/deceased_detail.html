@@ -1,0 +1,681 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ deceased.full_name }} - Morgue{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-row">
+        <h2><i class="fas fa-user"></i> {{ deceased.full_name }}</h2>
+        <div class="header-actions">
+            {% if not deceased.is_released %}
+            <a href="{% url 'morgue:deceased_update' deceased.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'morgue:release_deceased' deceased.pk %}" class="btn btn-warning">
+                <i class="fas fa-sign-out-alt"></i> Release
+            </a>
+            {% endif %}
+            <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        <!-- Deceased Information -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-user"></i> Deceased Information</h3>
+                <span class="status-badge {% if deceased.is_released %}released{% else %}admitted{% endif %}">
+                    {% if deceased.is_released %}Released{% else %}Admitted{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Tag:</span>
+                        <span class="value tag-badge">{{ deceased.tag }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Type:</span>
+                        <span class="value">{{ deceased.get_deceased_type_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Surname:</span>
+                        <span class="value">{{ deceased.surname }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Other Names:</span>
+                        <span class="value">{{ deceased.other_names }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Sex:</span>
+                        <span class="value">
+                            <span class="sex-badge {{ deceased.sex|lower }}">
+                                {{ deceased.get_sex_display }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Scheme:</span>
+                        <span class="value">{{ deceased.get_scheme_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">ID Type:</span>
+                        <span class="value">{{ deceased.get_id_type_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">ID Number:</span>
+                        <span class="value">{{ deceased.id_number }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Physical Address -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-map-marker-alt"></i> Physical Address</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item full-width">
+                        <span class="label">Physical Address:</span>
+                        <span class="value">{{ deceased.physical_address }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Residence:</span>
+                        <span class="value">{{ deceased.residence }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Town:</span>
+                        <span class="value">{{ deceased.town }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Nationality:</span>
+                        <span class="value">{{ deceased.nationality }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Death Details -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-cross"></i> Death Details</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Date of Death:</span>
+                        <span class="value">{{ deceased.date_of_death|date:"F d, Y" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Place of Death:</span>
+                        <span class="value">{{ deceased.place_of_death }}</span>
+                    </div>
+                    <div class="info-item full-width">
+                        <span class="label">Cause of Death:</span>
+                        <span class="value">{{ deceased.cause_of_death }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admission Details -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-hospital"></i> Admission Details</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Date Time Received:</span>
+                        <span class="value">{{ deceased.date_time_received|date:"F d, Y H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Storage Area:</span>
+                        <span class="value">{{ deceased.get_storage_area_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Storage Chamber:</span>
+                        <span class="value">{{ deceased.get_storage_chamber_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Expected Removal Date:</span>
+                        <span class="value">{{ deceased.expected_removal_date|date:"F d, Y" }}</span>
+                    </div>
+                    {% if deceased.is_released and deceased.release_date %}
+                    <div class="info-item">
+                        <span class="label">Release Date:</span>
+                        <span class="value">{{ deceased.release_date|date:"F d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Next of Kin -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-users"></i> Next of Kin</h3>
+                <a href="{% url 'morgue:next_of_kin_create' deceased.pk %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add Next of Kin
+                </a>
+            </div>
+            <div class="card-body">
+                {% if next_of_kin %}
+                <div class="kin-list">
+                    {% for kin in next_of_kin %}
+                    <div class="kin-item">
+                        <div class="kin-info">
+                            <h4>{{ kin.name }} {% if kin.is_primary %}<span class="primary-badge">Primary</span>{% endif %}</h4>
+                            <p><strong>Relationship:</strong> {{ kin.get_relationship_display }}</p>
+                            <p><strong>ID:</strong> {{ kin.get_id_type_display }} - {{ kin.id_number }}</p>
+                            {% if kin.phone %}<p><strong>Phone:</strong> {{ kin.phone }}</p>{% endif %}
+                            {% if kin.email %}<p><strong>Email:</strong> {{ kin.email }}</p>{% endif %}
+                            {% if kin.address %}<p><strong>Address:</strong> {{ kin.address }}</p>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">No next of kin information available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Admission Records -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h3><i class="fas fa-clipboard-list"></i> Admission Records</h3>
+                {% if not deceased.is_released %}
+                <a href="{% url 'morgue:create_admission' deceased.pk %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Create Admission
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if admissions %}
+                <div class="admission-list">
+                    {% for admission in admissions %}
+                    <div class="admission-item">
+                        <div class="admission-info">
+                            <h4>{{ admission.admission_number }}</h4>
+                            <p><strong>Status:</strong> 
+                                <span class="status-badge {{ admission.status|lower }}">
+                                    {{ admission.get_status_display }}
+                                </span>
+                            </p>
+                            <p><strong>Admission Date:</strong> {{ admission.admission_date|date:"F d, Y H:i" }}</p>
+                            {% if admission.release_date %}
+                            <p><strong>Release Date:</strong> {{ admission.release_date|date:"F d, Y H:i" }}</p>
+                            {% endif %}
+                            {% if admission.released_to %}
+                            <p><strong>Released To:</strong> {{ admission.released_to }}</p>
+                            {% endif %}
+                            {% if admission.release_notes %}
+                            <p><strong>Release Notes:</strong> {{ admission.release_notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">No admission records available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Professional Modern Design */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 0;
+    border-bottom: 2px solid #f0f0f0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: -1rem -1rem 2rem -1rem;
+    padding: 2rem;
+    border-radius: 0 0 1rem 1rem;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+}
+
+.header-row h2 {
+    color: white;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-row h2 i {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.75rem;
+    border-radius: 50%;
+    font-size: 1.5rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.detail-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.detail-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.detail-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.card-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.card-header h3 i {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+    transition: all 0.2s ease;
+}
+
+.info-item:hover {
+    background: #e9ecef;
+    transform: translateX(2px);
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-item .value {
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.tag-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.sex-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sex-badge.male { 
+    background: linear-gradient(135deg, #3498db, #2980b9); 
+    color: white; 
+}
+
+.sex-badge.female { 
+    background: linear-gradient(135deg, #e74c3c, #c0392b); 
+    color: white; 
+}
+
+.sex-badge.other { 
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d); 
+    color: white; 
+}
+
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge.admitted {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+}
+
+.status-badge.released {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+}
+
+.status-badge.pending {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.kin-list, .admission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.kin-item, .admission-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.kin-item::before, .admission-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.kin-item:hover, .admission-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.kin-info h4, .admission-info h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.kin-info p, .admission-info p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.kin-info strong, .admission-info strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.primary-badge {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+.no-data {
+    text-align: center;
+    color: #95a5a6;
+    font-style: italic;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(243, 156, 18, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(149, 165, 166, 0.3);
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .detail-grid {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 0.5rem;
+    }
+    
+    .header-row {
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        margin: -0.5rem -0.5rem 1.5rem -0.5rem;
+    }
+    
+    .header-row h2 {
+        font-size: 1.5rem;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-item {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-row h2 {
+        font-size: 1.25rem;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.detail-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.detail-card:nth-child(1) { animation-delay: 0.1s; }
+.detail-card:nth-child(2) { animation-delay: 0.2s; }
+.detail-card:nth-child(3) { animation-delay: 0.3s; }
+.detail-card:nth-child(4) { animation-delay: 0.4s; }
+.detail-card:nth-child(5) { animation-delay: 0.5s; }
+.detail-card:nth-child(6) { animation-delay: 0.6s; }
+</style>
+{% endblock %}

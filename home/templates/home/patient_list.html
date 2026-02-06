@@ -1,0 +1,688 @@
+{% extends 'users/dashboard_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Patients - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="patient-list-wrapper">
+    <!-- Page Header -->
+    <div class="page-header-premium">
+        <div class="header-main">
+            <div class="header-text">
+                <h1>Patient Directory</h1>
+                <p>Manage and monitor patient records, visits, and details.</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'home:patient_create' %}" class="btn-create-premium">
+                    <i class="fas fa-plus-circle"></i> Add New Patient
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid-premium">
+            <div class="stat-card-modern">
+                <div class="stat-icon-bg primary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.total }}</span>
+                    <span class="stat-label">Total Patients</span>
+                </div>
+            </div>
+            <div class="stat-card-modern">
+                <div class="stat-icon-bg success">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.new_today }}</span>
+                    <span class="stat-label">New Today</span>
+                </div>
+            </div>
+            <div class="stat-card-modern">
+                <div class="stat-icon-bg warning">
+                    <i class="fas fa-mars"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.male }}</span>
+                    <span class="stat-label">Male Patients</span>
+                </div>
+            </div>
+            <div class="stat-card-modern">
+                <div class="stat-icon-bg info">
+                    <i class="fas fa-venus"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.female }}</span>
+                    <span class="stat-label">Female Patients</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="filter-section-premium">
+        <form method="GET" class="search-form-modern">
+            <div class="search-box-premium">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" value="{{ request.GET.search }}"
+                    placeholder="Search by name, phone or location..." class="search-input-modern">
+                {% if request.GET.search %}
+                <a href="{% url 'home:patient_list' %}" class="clear-search-btn" title="Clear Search">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+                <button type="submit" class="apply-search-btn">Find Patient</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Patient Table View -->
+    <div class="patient-grid-container">
+        <div class="table-card-premium">
+            <div class="table-responsive">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Patient Information</th>
+                            <th>Contact / Location</th>
+                            <th>Gender & Age</th>
+                            <th>Medical Status</th>
+                            <th class="text-right">Quick Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient_data in patients_with_last_visit %}
+                        <tr class="patient-data-row">
+                            <td>
+                                <div class="patient-profile-inline">
+                                    <div class="avatar-initials" data-name="{{ patient_data.patient.first_name }}">
+                                        {{ patient_data.patient.first_name|first }}{{ patient_data.patient.last_name|first }}
+                                    </div>
+                                    <div class="name-id">
+                                        <span class="full-name">{{ patient_data.patient.first_name }} {{ patient_data.patient.last_name }}</span>
+                                        <span class="patient-id">#PAT-{{ patient_data.patient.pk|stringformat:"05d" }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <span class="phone"><i class="fas fa-phone-alt"></i> {{ patient_data.patient.phone }}</span>
+                                    <span class="location"><i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.location }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="demographics">
+                                    <span class="gender-badge {{ patient_data.patient.get_gender_display|lower }}">
+                                        {% if patient_data.patient.gender == 'M' %}<i class="fas fa-mars"></i>{% else %}<i class="fas fa-venus"></i>{% endif %}
+                                        {{ patient_data.patient.get_gender_display }}
+                                    </span>
+                                    <span class="age-text">{{ patient_data.patient.age }} Years Old</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="visit-status">
+                                    {% if patient_data.last_visit %}
+                                    <span class="visit-badge active">
+                                        <i class="fas fa-calendar-check"></i>
+                                        {{ patient_data.last_visit.visit_date|date:"d M, Y" }}
+                                    </span>
+                                    <span class="visit-type-label">{{ patient_data.last_visit.get_visit_type_display }}</span>
+                                    {% else %}
+                                    <span class="visit-badge none">
+                                        <i class="fas fa-calendar-times"></i>
+                                        Never Visited
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-right">
+                                <div class="action-buttons-premium">
+                                    <a href="{% url 'home:patient_detail' patient_data.patient.pk %}"
+                                        class="action-btn-p view" title="View Profile">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="empty-results">
+                                <div class="empty-state-p">
+                                    <i class="fas fa-search"></i>
+                                    <h3>No Patients Found</h3>
+                                    <p>We couldn't find any results matching your search criteria.</p>
+                                    <a href="{% url 'home:patient_list' %}" class="btn-secondary-modern">Reset
+                                        Filters</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Layout Containers */
+    .patient-list-wrapper {
+        padding: 1rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Header Redesign */
+    .page-header-premium {
+        margin-bottom: 2rem;
+    }
+
+    .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .header-text h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .header-text p {
+        color: #64748b;
+        margin: 0;
+    }
+
+    .btn-create-premium {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn-create-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+
+    /* Stats Cards */
+    .stats-grid-premium {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .stat-card-modern {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card-modern:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .stat-icon-bg {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .stat-icon-bg.primary {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .stat-icon-bg.success {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    .stat-icon-bg.warning {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .stat-icon-bg.info {
+        background: #f0f9ff;
+        color: #0284c7;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    /* Search Box */
+    .filter-section-premium {
+        margin-bottom: 2rem;
+    }
+
+    .search-box-premium {
+        display: flex;
+        align-items: center;
+        background: white;
+        padding: 0.5rem 1rem;
+        border-radius: 14px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        gap: 1rem;
+        position: relative;
+        border: 1px solid #e2e8f0;
+    }
+
+    .search-box-premium i {
+        color: #94a3b8;
+    }
+
+    .search-input-modern {
+        flex: 1;
+        border: none;
+        padding: 0.75rem 0;
+        font-size: 1rem;
+        color: #1e293b;
+    }
+
+    .search-input-modern:focus {
+        outline: none;
+    }
+
+    .clear-search-btn {
+        color: #94a3b8;
+        text-decoration: none;
+        padding: 0.5rem;
+        transition: color 0.2s;
+    }
+
+    .clear-search-btn:hover {
+        color: #ef4444;
+    }
+
+    .apply-search-btn {
+        padding: 0.625rem 1.25rem;
+        background: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .apply-search-btn:hover {
+        background: #0f172a;
+    }
+
+    /* Table Design */
+    .table-card-premium {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .premium-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .premium-table th {
+        background: #f8fafc;
+        padding: 1.25rem 1.5rem;
+        text-align: left;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        color: #64748b;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .premium-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .patient-data-row {
+        transition: background 0.2s;
+    }
+
+    .patient-data-row:hover {
+        background: #f8fafc;
+    }
+
+    /* Patient Info Column */
+    .patient-profile-inline {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .avatar-initials {
+        width: 45px;
+        height: 45px;
+        background: #ddd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    /* Color coding avatars */
+    .avatar-initials[data-name^="A"],
+    .avatar-initials[data-name^="B"],
+    .avatar-initials[data-name^="C"] {
+        background: #4f46e5;
+    }
+
+    .avatar-initials[data-name^="D"],
+    .avatar-initials[data-name^="E"],
+    .avatar-initials[data-name^="F"] {
+        background: #10b981;
+    }
+
+    .avatar-initials[data-name^="G"],
+    .avatar-initials[data-name^="H"],
+    .avatar-initials[data-name^="I"] {
+        background: #f59e0b;
+    }
+
+    .avatar-initials[data-name^="J"],
+    .avatar-initials[data-name^="K"],
+    .avatar-initials[data-name^="L"] {
+        background: #ef4444;
+    }
+
+    .avatar-initials[data-name^="M"],
+    .avatar-initials[data-name^="N"],
+    .avatar-initials[data-name^="O"] {
+        background: #8b5cf6;
+    }
+
+    .avatar-initials[data-name^="P"],
+    .avatar-initials[data-name^="Q"],
+    .avatar-initials[data-name^="R"] {
+        background: #ec4899;
+    }
+
+    .avatar-initials[data-name^="S"],
+    .avatar-initials[data-name^="T"],
+    .avatar-initials[data-name^="U"] {
+        background: #06b6d4;
+    }
+
+    .avatar-initials[data-name^="V"],
+    .avatar-initials[data-name^="W"],
+    .avatar-initials[data-name^="Y"],
+    .avatar-initials[data-name^="Z"] {
+        background: #334155;
+    }
+
+    .name-id {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .full-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 1rem;
+    }
+
+    .patient-id {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-family: monospace;
+    }
+
+    /* Contact Column */
+    .contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .contact-info span {
+        font-size: 0.875rem;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .contact-info i {
+        color: #94a3b8;
+        width: 14px;
+    }
+
+    /* Demographics Column */
+    .demographics {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .gender-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        width: fit-content;
+    }
+
+    .gender-badge.male {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    .gender-badge.female {
+        background: #fdf2f8;
+        color: #be185d;
+    }
+
+    .gender-badge.other {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .age-text {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    /* Visit Status Column */
+    .visit-status {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .visit-badge {
+        font-size: 0.825rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .visit-badge.active {
+        color: #16a34a;
+    }
+
+    .visit-badge.none {
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    .visit-type-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    /* Action Buttons */
+    .action-buttons-premium {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .action-btn-p {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .action-btn-p.view {
+        background: #f0f9ff;
+        color: #0284c7;
+    }
+
+    .action-btn-p.edit {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    .action-btn-p.delete {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .action-btn-p:hover {
+        transform: scale(1.1);
+    }
+
+    .action-btn-p.view:hover {
+        background: #0284c7;
+        color: white;
+    }
+
+    .action-btn-p.edit:hover {
+        background: #16a34a;
+        color: white;
+    }
+
+    .action-btn-p.delete:hover {
+        background: #dc2626;
+        color: white;
+    }
+
+    /* Empty State */
+    .empty-results {
+        padding: 5rem 0 !important;
+    }
+
+    .empty-state-p {
+        text-align: center;
+        color: #64748b;
+    }
+
+    .empty-state-p i {
+        font-size: 3rem;
+        color: #e2e8f0;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state-p h3 {
+        font-size: 1.25rem;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-secondary-modern {
+        display: inline-block;
+        margin-top: 1.5rem;
+        padding: 0.625rem 1.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        color: #1e293b;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+    .btn-secondary-modern:hover {
+        background: #f8fafc;
+    }
+
+    /* Utilities */
+    .text-right {
+        text-align: right;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+
+        .premium-table th:nth-child(2),
+        .premium-table td:nth-child(2) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header-main {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .btn-create-premium {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .premium-table th:nth-child(4),
+        .premium-table td:nth-child(4) {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}

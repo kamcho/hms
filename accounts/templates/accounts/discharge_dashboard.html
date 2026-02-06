@@ -1,0 +1,144 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Discharge Billing Dashboard{% endblock %}
+
+{% block content %}
+<div class="p-6 bg-slate-50 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">Discharge Billing</h1>
+                <p class="text-slate-500 mt-1">Manage final billing and discharge for IPD and Morgue</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i class="fas fa-bed text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">IPD Admissions</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ ipd_admissions.count }}</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="p-3 bg-purple-100 rounded-lg">
+                        <i class="fas fa-box text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Morgue Cases</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ morgue_admissions.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Inpatient Admissions -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-bottom border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-procedures text-blue-500"></i>
+                        Active IPD Admissions
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">Patient</th>
+                                <th class="px-6 py-4 font-semibold">Ward/Bed</th>
+                                <th class="px-6 py-4 font-semibold">Admitted At</th>
+                                <th class="px-6 py-4 font-semibold text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for admission in ipd_admissions %}
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="font-semibold text-slate-900">{{ admission.patient.full_name }}</div>
+                                    <div class="text-xs text-slate-400">ID: {{ admission.patient.id }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">
+                                    {{ admission.bed.ward.name|default:"N/A" }} - {{
+                                    admission.bed.bed_number|default:"N/A" }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">
+                                    {{ admission.admitted_at|date:"M d, Y" }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}"
+                                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm">
+                                        Process Billing
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center text-slate-400">
+                                    <i class="fas fa-inbox text-4xl mb-3 block"></i>
+                                    No active IPD admissions found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Morgue Admissions -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-bottom border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-mortuary text-purple-500"></i>
+                        Active Morgue Cases
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">Deceased</th>
+                                <th class="px-6 py-4 font-semibold">Tag</th>
+                                <th class="px-6 py-4 font-semibold">Admission Date</th>
+                                <th class="px-6 py-4 font-semibold text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for admission in morgue_admissions %}
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="font-semibold text-slate-900">{{ admission.deceased.full_name }}</div>
+                                    <div class="text-xs text-slate-400">S/N: {{ admission.admission_number }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">
+                                    <span class="px-2 py-1 bg-slate-100 rounded text-xs font-mono">{{
+                                        admission.deceased.tag }}</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">
+                                    {{ admission.admission_datetime|date:"M d, Y" }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}"
+                                        class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm">
+                                        Process Billing
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center text-slate-400">
+                                    <i class="fas fa-box-open text-4xl mb-3 block"></i>
+                                    No active morgue cases found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

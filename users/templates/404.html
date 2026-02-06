@@ -1,0 +1,9 @@
+{% extends 'users/base.html' %}
+
+{% block content %}
+<div class="error-container">
+    <h1>404 - Page Not Found</h1>
+    <p>The page you are looking for doesn't exist or has been moved.</p>
+    <a href="{% url 'users:login' %}" class="btn btn-primary">Go to Login</a>
+</div>
+{% endblock %}

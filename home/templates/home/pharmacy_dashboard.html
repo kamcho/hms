@@ -1,0 +1,904 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Pharmacy Operations - HMS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --pharm-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --pharm-gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --pharm-gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --pharm-gradient-4: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        --pharm-gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --pharm-bg: #0f172a;
+        --pharm-card-bg: #1e293b;
+        --pharm-border: rgba(148, 163, 184, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+    }
+
+    body {
+        background: var(--pharm-bg);
+        color: var(--text-primary);
+    }
+
+    .pharmacy-hero {
+        background: var(--pharm-gradient-1);
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pharmacy-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        filter: blur(80px);
+    }
+
+    .pharmacy-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 0.5rem 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .pharmacy-hero p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+        background: var(--pharm-card-bg);
+        border: 1px solid var(--pharm-border);
+        border-radius: 20px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        border-color: rgba(148, 163, 184, 0.3);
+        box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-card.pending::before {
+        background: var(--pharm-gradient-1);
+    }
+
+    .stat-card.low-stock::before {
+        background: var(--pharm-gradient-warning);
+    }
+
+    .stat-card.requests::before {
+        background: var(--pharm-gradient-2);
+    }
+
+    .stat-card.dispensed::before {
+        background: var(--pharm-gradient-4);
+    }
+
+    .stat-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        margin-bottom: 1.25rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
+    }
+
+    .section-card {
+        background: var(--pharm-card-bg);
+        border: 1px solid var(--pharm-border);
+        border-radius: 24px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .section-header {
+        padding: 1.75rem 2rem;
+        border-bottom: 1px solid var(--pharm-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .section-header h2 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .section-header h2 i {
+        background: var(--pharm-gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .search-box {
+        position: relative;
+        margin: 1.5rem 2rem;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 1rem 1.25rem 1rem 3.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--pharm-border);
+        border-radius: 16px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .search-box input::placeholder {
+        color: var(--text-secondary);
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+    }
+
+    .prescription-group {
+        padding: 2rem;
+        border-bottom: 1px solid var(--pharm-border);
+    }
+
+    .prescription-group:last-child {
+        border-bottom: none;
+    }
+
+    .patient-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .patient-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .patient-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: var(--pharm-gradient-1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: white;
+    }
+
+    .patient-details h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .patient-details h3 a {
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .patient-details h3 a:hover {
+        background: var(--pharm-gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .patient-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .patient-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .med-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .med-table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+    }
+
+    .med-table td {
+        padding: 1.25rem 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-top: 1px solid var(--pharm-border);
+        border-bottom: 1px solid var(--pharm-border);
+    }
+
+    .med-table td:first-child {
+        border-left: 1px solid var(--pharm-border);
+        border-radius: 12px 0 0 12px;
+    }
+
+    .med-table td:last-child {
+        border-right: 1px solid var(--pharm-border);
+        border-radius: 0 12px 12px 0;
+    }
+
+    .med-name {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .med-dosage {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .badge-success {
+        background: rgba(67, 233, 123, 0.15);
+        color: #43e97b;
+    }
+
+    .badge-warning {
+        background: rgba(254, 225, 64, 0.15);
+        color: #fee140;
+    }
+
+    .badge-danger {
+        background: rgba(245, 87, 108, 0.15);
+        color: #f5576c;
+    }
+
+    .badge-primary {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: var(--pharm-gradient-1);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px -5px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+        background: var(--pharm-gradient-4);
+        color: white;
+    }
+
+    .btn-success:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px -5px rgba(67, 233, 123, 0.4);
+    }
+
+    .btn-ghost {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        border: 1px solid var(--pharm-border);
+    }
+
+    .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .side-card {
+        background: var(--pharm-card-bg);
+        border: 1px solid var(--pharm-border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .side-card h3 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 1.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-item {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-left: 3px solid;
+    }
+
+    .alert-item.warning {
+        border-left-color: #fee140;
+    }
+
+    .alert-item.danger {
+        border-left-color: #f5576c;
+    }
+
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    .empty-state h4 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .quick-actions {
+        position: relative;
+        z-index: 1;
+    }
+
+    .action-btn-group {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+        .pharmacy-hero h1 {
+            font-size: 1.75rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
+    <!-- Hero Header -->
+    <div class="pharmacy-hero">
+        <div class="quick-actions">
+            <h1><i class="fas fa-pills"></i> Pharmacy Operations Center</h1>
+            <p>Manage prescriptions, monitor stock levels, and ensure optimal patient care delivery</p>
+        </div>
+    </div>
+
+    <!-- Statistics Dashboard -->
+    <div class="stats-grid">
+        <div class="stat-card pending">
+            <div class="stat-icon"><i class="fas fa-file-prescription"></i></div>
+            <div class="stat-label">OPD Pending</div>
+            <div class="stat-value">{{ stats.pending_prescriptions }}</div>
+        </div>
+        <div class="stat-card requests" style="--gradient: var(--pharm-gradient-3)">
+            <div class="stat-icon"><i class="fas fa-bed-pulse"></i></div>
+            <div class="stat-label">IPD Pending</div>
+            <div class="stat-value">{{ stats.pending_ipd_count }}</div>
+        </div>
+        <div class="stat-card low-stock">
+            <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="stat-label">Stock Alerts</div>
+            <div class="stat-value">{{ stats.low_stock_count }}</div>
+        </div>
+        <div class="stat-card requests">
+            <div class="stat-icon"><i class="fas fa-truck-ramp-box"></i></div>
+            <div class="stat-label">Pending Requests</div>
+            <div class="stat-value">{{ stats.pending_requests }}</div>
+        </div>
+        <div class="stat-card dispensed">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-label">Dispensed Today</div>
+            <div class="stat-value">{{ stats.dispensed_today }}</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <div>
+            <!-- Prescription Queue -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2><i class="fas fa-clinic-medical"></i> OPD Prescription Queue</h2>
+                    <span class="badge badge-primary">{{ stats.pending_prescriptions }} Active</span>
+                </div>
+
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <form method="GET">
+                        <input type="text" name="search" placeholder="Search by patient name or medication..."
+                            value="{{ search_query }}">
+                    </form>
+                </div>
+
+                {% regroup pending_items by prescription as prescription_groups %}
+                {% for group in prescription_groups %}
+                <div class="prescription-group">
+                    <div class="patient-header">
+                        <div class="patient-info">
+                            <div class="patient-avatar">{{ group.grouper.patient.full_name|slice:":1" }}</div>
+                            <div class="patient-details">
+                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{
+                                        group.grouper.patient.full_name }}</a></h3>
+                                <div class="patient-meta">
+                                    <span><i class="far fa-clock"></i> {{ group.grouper.prescribed_at|date:"M d, H:i"
+                                        }}</span>
+                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.grouper.prescribed_by.last_name
+                                        }}</span>
+                                    {% if group.grouper.invoice %}
+                                    <span><i class="fas fa-file-invoice-dollar"></i> {{
+                                        group.grouper.invoice.status|upper }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="action-btn-group">
+                            {% if group.grouper.invoice.status == 'Paid' %}
+                            <button class="btn btn-success dispense-all-btn"
+                                data-prescription-id="{{ group.grouper.id }}"
+                                data-patient="{{ group.grouper.patient.full_name }}">
+                                <i class="fas fa-check-double"></i> Dispense All
+                            </button>
+                            {% else %}
+                            <button class="btn btn-ghost" disabled title="Payment Required">
+                                <i class="fas fa-lock"></i> Payment Pending
+                            </button>
+                            {% endif %}
+                            <a href="{% url 'home:prescription_detail' group.grouper.id %}" class="btn btn-ghost">
+                                <i class="fas fa-external-link-alt"></i> Details
+                            </a>
+                        </div>
+                    </div>
+
+                    <table class="med-table">
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th>Regimen</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in group.list %}
+                            <tr>
+                                <td>
+                                    <div class="med-name">{{ item.medication.name }}</div>
+                                    <div class="med-dosage">{{ item.dose_count }} units / dose</div>
+                                </td>
+                                <td>
+                                    <div class="badge badge-primary">{{ item.frequency_count }}x daily</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                        {{ item.duration_days }} days</div>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
+                                    <span style="color: var(--text-secondary);"> {{ item.medication.unit }}</span>
+                                </td>
+                                <td>
+                                    {% if group.grouper.invoice.status == 'Paid' %}
+                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
+                                    {% elif group.grouper.invoice %}
+                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
+                                        group.grouper.invoice.status }}</span>
+                                    {% else %}
+                                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> No
+                                        Invoice</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    {% if group.grouper.invoice.status == 'Paid' %}
+                                    <button class="btn btn-success dispense-btn" data-item-id="{{ item.id }}"
+                                        data-medication="{{ item.medication.name }}"
+                                        data-patient="{{ group.grouper.patient.full_name }}">
+                                        <i class="fas fa-check"></i> Dispense
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-ghost" disabled><i class="fas fa-lock"></i> Locked</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-check"></i>
+                    <h4>All Clear</h4>
+                    <p>No pending prescriptions. Queue is empty.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- IPD Dispensing Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2><i class="fas fa-bed-pulse"></i> Dispense to IPD</h2>
+                    <span class="badge badge-success">{{ stats.pending_ipd_count }} Prescribed</span>
+                </div>
+
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <form method="GET">
+                        <input type="text" name="search" placeholder="Search inpatient or medication..."
+                            value="{{ search_query }}">
+                    </form>
+                </div>
+
+                {% regroup pending_ipd_items by admission as admission_groups %}
+                {% for group in admission_groups %}
+                <div class="prescription-group">
+                    <div class="patient-header">
+                        <div class="patient-info">
+                            <div class="patient-avatar" style="background: var(--pharm-gradient-3)">{{
+                                group.grouper.patient.full_name|slice:":1" }}</div>
+                            <div class="patient-details">
+                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{
+                                        group.grouper.patient.full_name }}</a></h3>
+                                <div class="patient-meta">
+                                    <span><i class="fas fa-procedures"></i> {{ group.grouper.bed.ward.name }} / Bed {{
+                                        group.grouper.bed.bed_number }}</span>
+                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.list.0.prescribed_by.last_name
+                                        }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="med-table">
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th>Regimen</th>
+                                <th>Quantity (Auto)</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in group.list %}
+                            <tr>
+                                <td>
+                                    <div class="med-name">{{ item.item.name }}</div>
+                                    <div class="med-dosage">{{ item.dose_count }} units / dose</div>
+                                </td>
+                                <td>
+                                    <div class="badge badge-primary"
+                                        style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">{{
+                                        item.frequency_count }}x daily</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                        {{ item.duration_days }} days</div>
+                                </td>
+                                <td>
+                                    {% if item.quantity > 0 %}
+                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
+                                    {% else %}
+                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">{{
+                                        item.dose_count|multiply:item.frequency_count|multiply:item.duration_days
+                                        }}</span>
+                                    <i class="fas fa-magic text-[10px]" title="Calculated from regimen"></i>
+                                    {% endif %}
+                                    <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units"
+                                        }}</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <button class="btn btn-primary dispense-ipd-btn" data-item-id="{{ item.id }}"
+                                        data-medication="{{ item.item.name }}"
+                                        data-patient="{{ group.grouper.patient.full_name }}">
+                                        <i class="fas fa-truck-medical"></i> Dispense to Ward
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-bed"></i>
+                    <h4>No IPD Orders</h4>
+                    <p>No pending medications for inpatients.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sidebar: Alerts & Requests -->
+        <div>
+            <!-- Stock Alerts -->
+            <div class="side-card">
+                <h3><i class="fas fa-triangle-exclamation"></i> Stock Alerts</h3>
+                {% for stock in pharmacy_stock %}
+                {% if stock in low_stock_items or stock in expiring_soon_items %}
+                <div class="alert-item {% if stock in expiring_soon_items %}danger{% else %}warning{% endif %}">
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-primary);">{{ stock.item.name }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Stock: {{ stock.quantity }} | Exp: {{ stock.expiry_date|date:"M Y"|default:"N/A" }}
+                        </div>
+                    </div>
+                    {% if stock in expiring_soon_items %}
+                    <span class="badge badge-danger">Expiring</span>
+                    {% else %}
+                    <span class="badge badge-warning">Low</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% empty %}
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                    <div>All stock levels healthy</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Inventory Requests -->
+            <div class="side-card">
+                <h3><i class="fas fa-history"></i> Recent Requests</h3>
+                {% for request in inventory_requests %}
+                <div class="alert-item"
+                    style="border-left-color: {% if request.status == 'Pending' %}#fee140{% elif request.status == 'Approved' %}#43e97b{% else %}#f5576c{% endif %};">
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-primary);">{{ request.item.name }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Qty: {{ request.quantity }} | {{ request.requested_at|date:"M d" }}
+                        </div>
+                    </div>
+                    {% if request.status == 'Pending' %}
+                    <span class="badge badge-warning">Waiting</span>
+                    {% elif request.status == 'Approved' %}
+                    <span class="badge badge-success">Approved</span>
+                    {% else %}
+                    <span class="badge badge-danger">Declined</span>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                    <div>No recent requests</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Dispense individual item
+    document.querySelectorAll('.dispense-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const medication = this.dataset.medication;
+            const patient = this.dataset.patient;
+
+            if (confirm(`Dispense ${medication} for ${patient}?`)) {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+
+                fetch(`/home/pharmacy/dispense/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.innerHTML = '<i class="fas fa-check"></i> Done';
+                            setTimeout(() => location.reload(), 800);
+                        } else {
+                            alert('Error: ' + data.error);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-check"></i> Dispense';
+                        }
+                    })
+                    .catch(error => {
+                        alert('System error: ' + error);
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-check"></i> Dispense';
+                    });
+            }
+        });
+    });
+
+    // Dispense all items in prescription
+    document.querySelectorAll('.dispense-all-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const prescriptionId = this.dataset.prescriptionId;
+            const patient = this.dataset.patient;
+
+            if (confirm(`Dispense all medications for ${patient}?`)) {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+
+                fetch(`/home/pharmacy/dispense-all/${prescriptionId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-check-double"></i> Dispense All';
+                        }
+                    })
+                    .catch(error => {
+                        alert('System error: ' + error);
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-check-double"></i> Dispense All';
+                    });
+            }
+        });
+    });
+
+    // Dispense IPD item
+    document.querySelectorAll('.dispense-ipd-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const medication = this.dataset.medication;
+            const patient = this.dataset.patient;
+
+            if (confirm(`Dispense ${medication} to ward for ${patient}?`)) {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+
+                fetch(`/home/pharmacy/dispense-ipd/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.innerHTML = '<i class="fas fa-check"></i> Sent';
+                            setTimeout(() => location.reload(), 800);
+                        } else {
+                            alert('Error: ' + data.error);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-truck-medical"></i> Dispense to Ward';
+                        }
+                    })
+                    .catch(error => {
+                        alert('System error: ' + error);
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-truck-medical"></i> Dispense to Ward';
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}

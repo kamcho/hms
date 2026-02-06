@@ -1,0 +1,490 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Create Invoice - Accounts{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1><i class="fas fa-file-invoice"></i> Create Invoice</h1>
+            <p>Create a new invoice for patient or deceased</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'accounts:invoice_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Invoices
+            </a>
+        </div>
+    </div>
+
+    <!-- Entity Selection -->
+    {% if deceased_id or patient_id %}
+    <div class="selection-card">
+        <div class="selection-header">
+            <h3><i class="fas fa-user-check"></i> Selected Entity</h3>
+        </div>
+        <div class="selection-body">
+            {% if deceased_id %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="type" value="deceased">
+                    <input type="hidden" name="entity_id" value="{{ deceased_id }}">
+                    <div class="entity-info">
+                        <div class="entity-icon deceased">
+                            <i class="fas fa-cross"></i>
+                        </div>
+                        <div class="entity-details">
+                            <h4>Deceased</h4>
+                            <p class="entity-id">ID: {{ deceased_id }}</p>
+                            <p class="confirm-text">Create invoice for this deceased person?</p>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check"></i> Create Invoice
+                        </button>
+                        <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            {% elif patient_id %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="type" value="patient">
+                    <input type="hidden" name="entity_id" value="{{ patient_id }}">
+                    <div class="entity-info">
+                        <div class="entity-icon patient">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="entity-details">
+                            <h4>Patient</h4>
+                            <p class="entity-id">ID: {{ patient_id }}</p>
+                            <p class="confirm-text">Create invoice for this patient?</p>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check"></i> Create Invoice
+                        </button>
+                        <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- Search Form -->
+    <div class="search-card">
+        <div class="search-header">
+            <h3><i class="fas fa-search"></i> Search for Entity</h3>
+            <p>Find the patient or deceased to create an invoice for</p>
+        </div>
+        <div class="search-body">
+            <div class="search-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('patient')">
+                        <i class="fas fa-user"></i> Patient
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('deceased')">
+                        <i class="fas fa-cross"></i> Deceased
+                    </button>
+                </div>
+                
+                <!-- Patient Search -->
+                <div class="tab-content active" id="patient-tab">
+                    <form method="get" class="search-form">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Search Patient</label>
+                                <input type="text" name="patient_search" class="form-control" 
+                                       placeholder="Enter patient name, ID, or phone number...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Deceased Search -->
+                <div class="tab-content" id="deceased-tab">
+                    <form method="get" class="search-form">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Search Deceased</label>
+                                <input type="text" name="deceased_search" class="form-control" 
+                                       placeholder="Enter deceased name, tag, or ID number...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if search_results %}
+    <div class="results-card">
+        <div class="results-header">
+            <h3><i class="fas fa-list"></i> Search Results</h3>
+            <span class="badge bg-info">{{ search_results.count }} results</span>
+        </div>
+        <div class="results-body">
+            <div class="results-list">
+                {% for entity in search_results %}
+                <div class="result-item">
+                    <div class="result-icon">
+                        {% if entity|class_name == 'Patient' %}
+                            <i class="fas fa-user"></i>
+                        {% else %}
+                            <i class="fas fa-cross"></i>
+                        {% endif %}
+                    </div>
+                    <div class="result-info">
+                        <h4>{{ entity.full_name }}</h4>
+                        <p class="result-meta">
+                            {% if entity|class_name == 'Patient' %}
+                                <span class="badge bg-primary">Patient</span>
+                                <span>ID: {{ entity.id }}</span>
+                                {% if entity.phone %}<span>Phone: {{ entity.phone }}</span>{% endif %}
+                            {% else %}
+                                <span class="badge bg-danger">Deceased</span>
+                                <span>ID: {{ entity.id }}</span>
+                                <span>Tag: {{ entity.tag }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="result-actions">
+                        <a href="{% url 'accounts:create_invoice' %}?{% if entity|class_name == 'Patient' %}patient={{ entity.id }}{% else %}deceased={{ entity.id }}{% endif %}" 
+                           class="btn btn-success">
+                            <i class="fas fa-plus"></i> Create Invoice
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.selection-card,
+.search-card,
+.results-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.selection-header,
+.search-header,
+.results-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.selection-header h3,
+.search-header h3,
+.results-header h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.selection-header p,
+.search-header p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.selection-body,
+.search-body,
+.results-body {
+    padding: 2rem;
+}
+
+.entity-info {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.entity-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+}
+
+.entity-icon.patient {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.entity-icon.deceased {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.entity-details h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.entity-details .entity-id {
+    margin: 0 0 0.5rem 0;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.entity-details .confirm-text {
+    margin: 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.search-tabs {
+    margin-top: 1rem;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tab-btn {
+    padding: 1rem 2rem;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.tab-btn:hover {
+    color: #667eea;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.result-item:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.result-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    flex-shrink: 0;
+}
+
+.result-info {
+    flex: 1;
+}
+
+.result-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.result-meta {
+    margin: 0;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.result-actions {
+    flex-shrink: 0;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+.btn-outline-secondary {
+    background: transparent;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+    
+    .entity-info,
+    .result-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .result-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+function switchTab(tab) {
+    // Remove active class from all tabs and buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Add active class to selected tab and button
+    if (tab === 'patient') {
+        document.querySelector('.tab-btn:first-child').classList.add('active');
+        document.getElementById('patient-tab').classList.add('active');
+    } else {
+        document.querySelector('.tab-btn:last-child').classList.add('active');
+        document.getElementById('deceased-tab').classList.add('active');
+    }
+}
+</script>
+{% endblock %}

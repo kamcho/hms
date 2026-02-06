@@ -1,0 +1,140 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Record Maternity Referral - HMS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Record Maternity Referral</h1>
+            <p class="text-slate-500 mt-1">Formal outward transfer for specialized care</p>
+        </div>
+        <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
+            class="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+            <i class="fas fa-times"></i> Cancel
+        </a>
+    </div>
+
+    <!-- Patient Context Card -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-8 flex items-center gap-6">
+        <div class="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 text-2xl">
+            <i class="fas fa-truck-medical"></i>
+        </div>
+        <div>
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patient Subject for
+                Referral</div>
+            <h2 class="text-xl font-bold text-slate-800">{{ pregnancy.patient.full_name }}</h2>
+            <div class="flex items-center gap-4 mt-1">
+                <span class="text-xs font-medium text-slate-500">ID: #{{ pregnancy.patient.patient_id }}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">Awaiting
+                    Transfer</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" class="space-y-8">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Destination Section -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-hospital text-orange-500"></i> Referral Destination
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Referral
+                            Date & Time</label>
+                        {{ form.referral_date }}
+                        {% if form.referral_date.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.referral_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Receiving
+                            Hospital</label>
+                        {{ form.referred_to_facility }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Department
+                            / Unit</label>
+                        {{ form.department }}
+                    </div>
+                    <div class="pt-2">
+                        <label class="inline-flex items-center gap-3 cursor-pointer">
+                            {{ form.urgent }}
+                            <span class="text-sm font-bold text-slate-700">Mark as Life-Threatening Urgent</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logistics Section -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-ambulance text-blue-500"></i> Transport & Logistics
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Mode of
+                            Transport</label>
+                        {{ form.transport_mode }}
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-700 leading-relaxed">
+                            <i class="fas fa-info-circle mr-1"></i> Ensure the destination facility has been contacted
+                            and has confirmed bed availability before dispatching transport.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Reason Section -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-notes-medical text-red-500"></i> Clinical Indication
+                </h3>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Reason for
+                        Referral</label>
+                    {{ form.reason_for_referral }}
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Interim
+                        Clinical Summary</label>
+                    {{ form.clinical_clinical_summary }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-4 pb-12">
+            <button type="submit"
+                class="px-8 py-3 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 shadow-lg shadow-orange-200 transition-all flex items-center gap-2">
+                <i class="fas fa-paper-plane"></i> Authorize Referral
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-control {
+        @apply w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-700 font-medium;
+    }
+
+    .form-check-input {
+        @apply w-5 h-5 rounded border-slate-300 text-orange-600 focus:ring-orange-500/20 transition-all;
+    }
+</style>
+{% endblock %}

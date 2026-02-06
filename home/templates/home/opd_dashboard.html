@@ -1,0 +1,1079 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}OPD Consultation - HMS Premium{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper-premium">
+    <!-- Header Section -->
+    <div class="header-premium glass-card">
+        <div class="header-content">
+            <div class="brand-section">
+                <div class="brand-icon-wrapper pulse-blue">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>OPD Consultation Hub</h1>
+                    <p><i class="fas fa-stethoscope"></i> Manage your patient workflow with precision</p>
+                </div>
+            </div>
+            <div class="header-metadata">
+                <div class="date-badge">
+                    <i class="far fa-calendar-alt"></i>
+                    <span>{{ today|date:"l, F d, Y" }}</span>
+                </div>
+                <div class="live-clock" id="liveClock">--:--:--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div class="analytics-grid">
+        <!-- Waiting Card -->
+        <div class="stat-card-premium glass-card hover-glow-indigo">
+            <div class="card-bg-decoration"></div>
+            <div class="card-content">
+                <div class="card-header">
+                    <div class="icon-box-indigo">
+                        <i class="fas fa-users-viewfinder"></i>
+                    </div>
+                    {% if waiting_count > 0 %}
+                    <span class="status-indicator live">Live Queue</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h2 class="stat-value">{{ waiting_count }}</h2>
+                    <p class="stat-label">Patients Waiting</p>
+                </div>
+                <div class="card-footer-info">
+                    <i class="fas fa-arrow-right"></i> Priority queue active
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Card -->
+        <div class="stat-card-premium glass-card hover-glow-rose">
+            <div class="card-bg-decoration rose"></div>
+            <div class="card-content">
+                <div class="card-header">
+                    <div class="icon-box-rose">
+                        <i class="fas fa-heart-pulse"></i>
+                    </div>
+                    {% if critical_count > 0 %}
+                    <span class="status-indicator alert">Urgent Action</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h2 class="stat-value text-rose-600">{{ critical_count }}</h2>
+                    <p class="stat-label">Critical Cases</p>
+                </div>
+                <div class="card-footer-info text-rose-500">
+                    <i class="fas fa-exclamation-triangle"></i> Requires immediate attention
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Card -->
+        <div class="stat-card-premium glass-card hover-glow-emerald">
+            <div class="card-bg-decoration emerald"></div>
+            <div class="card-content">
+                <div class="card-header">
+                    <div class="icon-box-emerald">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h2 class="stat-value text-emerald-600">{{ todays_visits_count }}</h2>
+                    <p class="stat-label">Consultations Completed</p>
+                </div>
+                <div class="card-footer-info text-emerald-500">
+                    <i class="fas fa-chart-line"></i> +12% from yesterday
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-dashboard-grid">
+        <!-- Queue Section -->
+        <div class="queue-section-wrapper glass-card">
+            <div class="section-toolbar">
+                <div class="toolbar-left">
+                    <h2><i class="fas fa-stream"></i> Patient Consultation Queue</h2>
+                </div>
+                <div class="toolbar-right">
+                    <form method="GET" class="search-form-premium">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input type="text" name="q" value="{{ request.GET.q|default:'' }}"
+                                placeholder="Search by name or ID...">
+                        </div>
+                        <button type="submit" class="btn-search-premium">Filter</button>
+                        {% if request.GET.q %}
+                        <a href="{% url 'home:opd_dashboard' %}" class="btn-clear-search"><i
+                                class="fas fa-times"></i></a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <div class="queue-table-container">
+                <table class="premium-data-table">
+                    <thead>
+                        <tr>
+                            <th>Patient Identity</th>
+                            <th>Priority</th>
+                            <th>Wait Time</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in queue_list %}
+                        <tr class="queue-row-premium priority-border-{{ item.triage.priority|lower|default:'low' }}">
+                            <td>
+                                <div class="patient-info-cell">
+                                    <div class="patient-avatar-mini"
+                                        data-initials="{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}">
+                                        {{ item.patient.first_name|first }}{{ item.patient.last_name|first }}
+                                    </div>
+                                    <div class="patient-details">
+                                        <span class="p-name">{{ item.patient.full_name }}</span>
+                                        <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{
+                                            item.patient.age }}Y • {{ item.patient.gender|first }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <span class="type-badge type-{{ item.queue_type|lower|default:'initial' }}">
+                                        <i
+                                            class="fas {% if item.queue_type == 'REVIEW' %}fa-redo{% else %}fa-user-plus{% endif %}"></i>
+                                        {% if item.queue_type == 'REVIEW' %}REVIEW{% else %}NEW VISIT{% endif %}
+                                    </span>
+                                    <span class="priority-chip priority-{{ item.triage.priority|lower|default:'low' }}">
+                                        <i class="fas fa-circle"></i> {{ item.triage.priority|default:"NORMAL" }}
+                                    </span>
+                                </div>
+                            </td>
+
+
+                            <td>
+                                <div class="time-tracking">
+                                    <i class="far fa-clock"></i>
+                                    <span>{{ item.queued_at|time:"H:i" }}</span>
+                                    <small>Queued</small>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'home:patient_detail' item.patient.pk %}?visit_id={{ item.visit.id }}"
+                                    class="btn-consult-start">
+                                    Consult <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-queue-state">
+                                    <div class="empty-icon-wrapper">
+                                        <i class="fas fa-file-medical"></i>
+                                    </div>
+                                    <h3>No Patients in Queue</h3>
+                                    <p>The reception is currently processing new arrivals.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sidebar Section -->
+        <div class="sidebar-premium">
+            <!-- Recent Consults -->
+            <div class="recent-consults-card glass-card">
+                <div class="card-header-simple">
+                    <h3><i class="fas fa-history"></i> Recent Consults</h3>
+                </div>
+                <div class="recent-list">
+                    {% for consult in recent_consultations %}
+                    <div class="recent-item">
+                        <div class="recent-info">
+                            <span class="r-name">{{ consult.visit.patient.full_name }}</span>
+                            <span class="r-time">{{ consult.checkin_date|time:"H:i" }} HRS</span>
+                        </div>
+                        <a href="{% url 'home:patient_detail' consult.visit.patient.pk %}" class="r-link">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <p class="empty-text">No history today</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Department Info -->
+            <div class="dept-info-card glass-card secondary">
+                <h3><i class="fas fa-info-circle"></i> Service Status</h3>
+                <div class="status-rows">
+                    <div class="status-row">
+                        <span>Staff on Duty</span>
+                        <span class="val">4 Active</span>
+                    </div>
+                    <div class="status-row">
+                        <span>Avg Service Time</span>
+                        <span class="val green">15m</span>
+                    </div>
+                    <div class="status-row">
+                        <span>Room Availability</span>
+                        <span class="val">2 Free</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-indigo: #4338ca;
+        --primary-light: #e0e7ff;
+        --clinical-bg: #f8fbff;
+        --card-border: #cbd5e1;
+        --glass-bg: rgba(255, 255, 255, 0.98);
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --rose-glow: 0 10px 15px -3px rgba(244, 63, 94, 0.2);
+        --indigo-glow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+        --emerald-glow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Type Badges */
+    .type-badge {
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-transform: uppercase;
+        width: fit-content;
+    }
+
+    .type-initial {
+        background: #f0f9ff;
+        color: #0369a1;
+        border: 1px solid #e0f2fe;
+    }
+
+    .type-review {
+        background: #fdf2f8;
+        color: #9d174d;
+        border: 1px solid #fce7f3;
+        animation: pulse-pink 2s infinite;
+    }
+
+    @keyframes pulse-pink {
+        0% {
+            box-shadow: 0 0 0 0 rgba(157, 23, 77, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 6px rgba(157, 23, 77, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(157, 23, 77, 0);
+        }
+    }
+
+    body {
+        background-color: var(--clinical-bg);
+        color: var(--text-dark);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .dashboard-wrapper-premium {
+        padding: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+    }
+
+    /* Glass Effect Utility */
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        box-shadow: 0 15px 35px -12px rgba(67, 56, 202, 0.12), 0 4px 10px -5px rgba(67, 56, 202, 0.08);
+    }
+
+    /* Header Styling */
+    .header-premium {
+        padding: 1.5rem 2.5rem;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .brand-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .brand-icon-wrapper {
+        width: 54px;
+        height: 54px;
+        background: var(--primary-indigo);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 10px 15px -3px rgba(67, 56, 202, 0.4);
+    }
+
+    .brand-text h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+        margin: 4px 0 0;
+        color: var(--text-muted);
+        font-size: 0.9375rem;
+        font-weight: 500;
+    }
+
+    .header-metadata {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .date-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 1.25rem;
+        background: white;
+        border-radius: 12px;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        border: 1px solid #f1f5f9;
+    }
+
+    .live-clock {
+        font-family: 'Monaco', monospace;
+        font-weight: 800;
+        color: var(--primary-indigo);
+        background: #f1f5ff;
+        padding: 0.625rem 1.25rem;
+        border-radius: 12px;
+        letter-spacing: 0.05em;
+    }
+
+    /* Analytics Grid */
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card-premium {
+        position: relative;
+        padding: 0.75rem 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+
+    .stat-card-premium:hover {
+        transform: translateY(-8px);
+        border-color: rgba(67, 56, 202, 0.3);
+    }
+
+    .hover-glow-indigo:hover {
+        box-shadow: var(--indigo-glow);
+    }
+
+    .hover-glow-rose:hover {
+        box-shadow: var(--rose-glow);
+    }
+
+    .hover-glow-emerald:hover {
+        box-shadow: var(--emerald-glow);
+    }
+
+    .card-bg-decoration {
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 140px;
+        height: 140px;
+        background: rgba(67, 56, 202, 0.05);
+        border-radius: 50%;
+        transition: all 0.5s ease;
+    }
+
+    .card-bg-decoration.rose {
+        background: rgba(244, 63, 94, 0.05);
+    }
+
+    .card-bg-decoration.emerald {
+        background: rgba(16, 185, 129, 0.05);
+    }
+
+    .stat-card-premium:hover .card-bg-decoration {
+        transform: scale(1.5);
+        opacity: 0.1;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .icon-box-indigo {
+        width: 36px;
+        height: 36px;
+        background: #eef2ff;
+        color: #4338ca;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .icon-box-rose {
+        width: 36px;
+        height: 36px;
+        background: #fff1f2;
+        color: #e11d48;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .icon-box-emerald {
+        width: 36px;
+        height: 36px;
+        background: #ecfdf5;
+        color: #059669;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .status-indicator {
+        padding: 0.375rem 0.875rem;
+        border-radius: 20px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-indicator.live {
+        background: #e0e7ff;
+        color: #4338ca;
+        border: 1px solid #c7d2fe;
+    }
+
+    .status-indicator.alert {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1;
+        letter-spacing: -0.04em;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        margin: 0.75rem 0 0;
+    }
+
+    .card-footer-info {
+        margin-top: 0.5rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0.8;
+    }
+
+    /* Main Grid Layout */
+    .main-dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+    }
+
+    /* Queue Section Styling */
+    .queue-section-wrapper {
+        min-height: 600px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .section-toolbar {
+        padding: 1.5rem 2.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .section-toolbar h2 {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .section-toolbar h2 i {
+        color: var(--primary-indigo);
+    }
+
+    /* Search Premium */
+    .search-form-premium {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-input-wrapper i {
+        position: absolute;
+        left: 1.25rem;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+
+    .search-input-wrapper input {
+        padding: 0.75rem 1.25rem 0.75rem 3rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        width: 260px;
+        transition: all 0.2s ease;
+    }
+
+    .search-input-wrapper input:focus {
+        outline: none;
+        border-color: var(--primary-indigo);
+        box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.1);
+        width: 320px;
+    }
+
+    .btn-search-premium {
+        background: var(--primary-indigo);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-search {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        color: #ef4444;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-search:hover {
+        background: #fff1f2;
+    }
+
+    /* Table Premium Styling */
+    .queue-table-container {
+        padding: 1rem;
+    }
+
+    .premium-data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 1.25rem;
+    }
+
+    .premium-data-table th {
+        padding: 0.75rem 1.5rem;
+        text-align: left;
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--text-muted);
+        letter-spacing: 0.1em;
+    }
+
+    .queue-row-premium {
+        background: white;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 16px;
+        position: relative;
+    }
+
+    .queue-row-premium:hover {
+        transform: scale(1.01) translateX(4px);
+        box-shadow: 0 12px 20px -10px rgba(67, 56, 202, 0.15);
+        z-index: 10;
+        background: #fdfdff;
+    }
+
+    .queue-row-premium td {
+        padding: 1.25rem 1.5rem;
+        border-top: 2px solid var(--card-border);
+        border-bottom: 2px solid var(--card-border);
+    }
+
+    .queue-row-premium td:first-child {
+        border-left: 2px solid var(--card-border);
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+
+    .queue-row-premium td:last-child {
+        border-right: 2px solid var(--card-border);
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    /* Patient Identity Cell */
+    .patient-info-cell {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .patient-avatar-mini {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--primary-light);
+        color: var(--primary-indigo);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8125rem;
+        flex-shrink: 0;
+    }
+
+    .patient-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .patient-details .p-name {
+        font-weight: 800;
+        font-size: 0.9375rem;
+        color: var(--text-dark);
+    }
+
+    .patient-details .p-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Priority Chips */
+    .priority-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.875rem;
+        border-radius: 8px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+    }
+
+    .priority-chip i {
+        font-size: 0.4rem;
+    }
+
+    .priority-critical {
+        background: #fff1f2;
+        color: #e11d48;
+    }
+
+    .priority-urgent {
+        background: #fff7ed;
+        color: #ea580c;
+    }
+
+    .priority-high {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .priority-normal {
+        background: #f0f9ff;
+        color: #0284c7;
+    }
+
+    .priority-low {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    /* Vitals Grid Mini */
+    .vitals-grid-mini {
+        display: flex;
+        gap: 1.25rem;
+    }
+
+    .v-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .v-item i {
+        font-size: 0.75rem;
+    }
+
+    .v-item span {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: #334155;
+    }
+
+    /* Time Tracking */
+    .time-tracking {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        color: var(--text-muted);
+    }
+
+    .time-tracking i {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+
+    .time-tracking span {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: var(--text-dark);
+    }
+
+    .time-tracking small {
+        font-size: 0.625rem;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    /* Consult Button */
+    .btn-consult-start {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--primary-indigo);
+        color: white;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(67, 56, 202, 0.2);
+    }
+
+    .btn-consult-start:hover {
+        background: #3730a3;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(67, 56, 202, 0.3);
+    }
+
+    /* Sidebar Content */
+    .sidebar-premium {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .card-header-simple h3 {
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        margin: 0 0 1.25rem;
+        color: var(--text-dark);
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+    }
+
+    .recent-consults-card {
+        padding: 1.75rem;
+    }
+
+    .recent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .recent-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+    }
+
+    .recent-item:last-child {
+        border: 0;
+        padding: 0;
+    }
+
+    .recent-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .recent-info .r-name {
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: var(--text-dark);
+    }
+
+    .recent-info .r-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .r-link {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .r-link:hover {
+        background: var(--primary-light);
+        color: var(--primary-indigo);
+    }
+
+    .dept-info-card {
+        padding: 1.75rem;
+    }
+
+    .dept-info-card.secondary {
+        background: #0f172a;
+        color: white;
+        border: 0;
+    }
+
+    .dept-info-card h3 {
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        font-weight: 800;
+        margin: 0 0 1.5rem;
+    }
+
+    .status-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .status-row .val {
+        color: white;
+        font-weight: 800;
+    }
+
+    .status-row .val.green {
+        color: #10b981;
+    }
+
+    /* Animations */
+    @keyframes pulse-azure {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(67, 56, 202, 0.4);
+        }
+
+        70% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(67, 56, 202, 0);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(67, 56, 202, 0);
+        }
+    }
+
+    .pulse-blue {
+        animation: pulse-azure 2.5s infinite;
+    }
+
+    /* Empty State */
+    .empty-queue-state {
+        padding: 5rem 2rem;
+        text-align: center;
+    }
+
+    .empty-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: #f8fafc;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: #cbd5e1;
+        margin: 0 auto 1.5rem;
+        border: 2px dashed #e2e8f0;
+    }
+
+    .empty-queue-state h3 {
+        font-weight: 800;
+        color: #334155;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-queue-state p {
+        font-size: 0.9375rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    /* Clock Sync Script */
+    @media (max-width: 1200px) {
+        .main-dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar-premium {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .analytics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .sidebar-premium {
+            grid-template-columns: 1fr;
+        }
+
+        .queue-row-premium td:nth-child(3),
+        .queue-row-premium td:nth-child(4) {
+            display: none;
+        }
+    }
+</style>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        const clock = document.getElementById('liveClock');
+        if (clock) {
+            clock.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Randomize avatar backgrounds for variety
+    document.addEventListener('DOMContentLoaded', function () {
+        const colors = ['#e0e7ff', '#ecfdf5', '#fff1f2', '#fffbeb', '#f0f9ff'];
+        const textColors = ['#4338ca', '#059669', '#e11d48', '#d97706', '#0284c7'];
+
+        document.querySelectorAll('.patient-avatar-mini').forEach((avatar, index) => {
+            const colorIndex = avatar.dataset.initials.charCodeAt(0) % colors.length;
+            avatar.style.backgroundColor = colors[colorIndex];
+            avatar.style.color = textColors[colorIndex];
+        });
+    });
+</script>
+{% endblock %}

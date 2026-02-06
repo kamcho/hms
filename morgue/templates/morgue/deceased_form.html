@@ -1,0 +1,909 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Deceased - Morgue{% endblock %}
+
+{% block content %}
+<div class="deceased-form-page">
+    <!-- Header Section -->
+    <header class="form-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fas fa-user-plus"></i> {% if form.instance.pk %}Edit Deceased{% else %}New Deceased Admission{% endif %}</h1>
+                <p>Register deceased person information and morgue admission details</p>
+            </div>
+            <div class="header-progress">
+                <div class="progress-steps">
+                    <div class="step active">
+                        <span class="step-number">1</span>
+                        <span class="step-label">Personal Info</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Address</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Death Details</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Admission</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Form Container -->
+    <main class="form-main">
+        <form method="post" id="deceased-form" class="admission-form">
+            {% csrf_token %}
+            
+            <!-- Deceased Details Section -->
+            <section class="form-section active">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="section-content">
+                        <h2>Deceased Details</h2>
+                        <p>Basic personal information of the deceased</p>
+                    </div>
+                </div>
+                
+                <div class="section-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.deceased_type.id_for_label }}">
+                                <i class="fas fa-tag"></i> Type of Deceased
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.deceased_type }}
+                            {% if form.deceased_type.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.deceased_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.surname.id_for_label }}">
+                                <i class="fas fa-user"></i> Surname
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.surname }}
+                            {% if form.surname.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.surname.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.other_names.id_for_label }}">
+                                <i class="fas fa-user"></i> Other Names
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.other_names }}
+                            {% if form.other_names.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.other_names.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.sex.id_for_label }}">
+                                <i class="fas fa-venus-mars"></i> Sex
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.sex }}
+                            {% if form.sex.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.sex.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.scheme.id_for_label }}">
+                                <i class="fas fa-shield-alt"></i> Scheme
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.scheme }}
+                            {% if form.scheme.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.scheme.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.id_type.id_for_label }}">
+                                <i class="fas fa-id-card"></i> ID Type
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.id_type }}
+                            {% if form.id_type.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.id_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.id_number.id_for_label }}">
+                                <i class="fas fa-hashtag"></i> ID Number
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.id_number }}
+                            {% if form.id_number.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.id_number.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Physical Address Section -->
+            <section class="form-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="section-content">
+                        <h2>Physical Address</h2>
+                        <p>Residential and location information</p>
+                    </div>
+                </div>
+                
+                <div class="section-body">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.physical_address.id_for_label }}">
+                                <i class="fas fa-home"></i> Physical Address
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.physical_address }}
+                            {% if form.physical_address.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.physical_address.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.residence.id_for_label }}">
+                                <i class="fas fa-building"></i> Residence
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.residence }}
+                            {% if form.residence.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.residence.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.town.id_for_label }}">
+                                <i class="fas fa-city"></i> Town
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.town }}
+                            {% if form.town.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.town.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.nationality.id_for_label }}">
+                                <i class="fas fa-globe"></i> Nationality
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.nationality }}
+                            {% if form.nationality.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.nationality.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Death Details Section -->
+            <section class="form-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-cross"></i>
+                    </div>
+                    <div class="section-content">
+                        <h2>Death Details</h2>
+                        <p>Information regarding the circumstances of death</p>
+                    </div>
+                </div>
+                
+                <div class="section-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.date_of_death.id_for_label }}">
+                                <i class="fas fa-calendar-alt"></i> Date of Death
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.date_of_death }}
+                            {% if form.date_of_death.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.date_of_death.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.place_of_death.id_for_label }}">
+                                <i class="fas fa-map-pin"></i> Place of Death
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.place_of_death }}
+                            {% if form.place_of_death.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.place_of_death.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.cause_of_death.id_for_label }}">
+                                <i class="fas fa-notes-medical"></i> Cause of Death
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.cause_of_death }}
+                            {% if form.cause_of_death.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.cause_of_death.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admission Details Section -->
+            <section class="form-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <div class="section-content">
+                        <h2>Admission Details</h2>
+                        <p>Morgue admission and storage information</p>
+                    </div>
+                </div>
+                
+                <div class="section-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.admission_datetime.id_for_label }}">
+                                <i class="fas fa-clock"></i> Date & Time Received
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.admission_datetime }}
+                            {% if form.admission_datetime.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.admission_datetime.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.storage_area.id_for_label }}">
+                                <i class="fas fa-warehouse"></i> Storage Area
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.storage_area }}
+                            {% if form.storage_area.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.storage_area.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.storage_chamber.id_for_label }}">
+                                <i class="fas fa-snowflake"></i> Storage Chamber
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.storage_chamber }}
+                            {% if form.storage_chamber.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.storage_chamber.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.expected_removal_date.id_for_label }}">
+                                <i class="fas fa-calendar-check"></i> Expected Removal Date
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.expected_removal_date }}
+                            {% if form.expected_removal_date.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.expected_removal_date.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.tag.id_for_label }}">
+                                <i class="fas fa-tag"></i> Identification Tag
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.tag }}
+                            <small class="form-help">Unique identification tag for the deceased person</small>
+                            {% if form.tag.errors %}
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.tag.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <div class="actions-content">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        {% if form.instance.pk %}Update Deceased{% else %}Register Deceased{% endif %}
+                    </button>
+                    <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+                <div class="actions-info">
+                    <p><i class="fas fa-info-circle"></i> All fields marked with <span class="required">*</span> are required</p>
+                </div>
+            </div>
+        </form>
+    </main>
+</div>
+
+<style>
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.deceased-form-page {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    min-height: 100vh;
+    color: #2c3e50;
+}
+
+/* Header Section */
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.form-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-text h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-text p {
+    font-size: 1.1rem;
+    margin: 0;
+    opacity: 0.9;
+}
+
+.header-progress {
+    flex-shrink: 0;
+}
+
+.progress-steps {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.step-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.header-actions {
+    position: relative;
+    z-index: 1;
+}
+
+/* Main Form Container */
+.form-main {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.admission-form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Form Sections */
+.form-section {
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.section-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 25px 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+}
+
+.section-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.section-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.section-content h2 {
+    color: #2c3e50;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.section-content p {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.section-body {
+    padding: 30px;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.required {
+    color: #dc3545;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* Form Controls */
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Error Messages */
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 4px;
+    padding: 8px 12px;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid #dc3545;
+}
+
+.error-message i {
+    flex-shrink: 0;
+}
+
+/* Form Actions */
+.form-actions {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e9ecef;
+}
+
+.actions-content {
+    display: flex;
+    gap: 15px;
+}
+
+.actions-info {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.actions-info p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .header-content {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .form-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .deceased-form-page {
+        padding: 15px;
+    }
+    
+    .form-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 25px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.8rem;
+    }
+    
+    .progress-steps {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .section-body {
+        padding: 20px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .actions-content {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-text h1 {
+        font-size: 1.5rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .section-body {
+        padding: 15px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 10px 12px;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-section {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.form-section:nth-child(1) { animation-delay: 0.1s; }
+.form-section:nth-child(2) { animation-delay: 0.2s; }
+.form-section:nth-child(3) { animation-delay: 0.3s; }
+.form-section:nth-child(4) { animation-delay: 0.4s; }
+
+/* Form validation styles */
+.form-group input:invalid,
+.form-group select:invalid,
+.form-group textarea:invalid {
+    border-color: #dc3545;
+}
+
+.form-group input:valid,
+.form-group select:valid,
+.form-group textarea:valid {
+    border-color: #28a745;
+}
+
+/* Hover effects for form sections */
+.form-section:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar for textareas */
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+textarea::-webkit-scrollbar-track {
+    background: #f1f3f5;
+    border-radius: 4px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+    background: #5a6fd8;
+}
+</style>
+{% endblock %}

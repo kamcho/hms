@@ -1,0 +1,1185 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Pregnancy Record - {{ pregnancy.patient.full_name }} - HMS{% endblock %}
+
+
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto p-5">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="{% url 'maternity:dashboard' %}"
+            class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-bold transition-all">
+            <i class="fas fa-arrow-left"></i> Back to Maternity Dashboard
+        </a>
+    </div>
+
+    <!-- Patient Header -->
+    <div
+        class="bg-white p-6 rounded-2xl shadow-sm border-l-8 mb-8 flex flex-col md:flex-row justify-between items-start gap-6 
+        {% if pregnancy.risk_level == 'High' %}border-rose-500{% elif pregnancy.risk_level == 'Moderate' %}border-amber-500{% else %}border-emerald-500{% endif %}">
+        <div class="flex-1">
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-2">{{ pregnancy.patient.full_name }}</h1>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-500 font-semibold">
+                <span class="flex items-center gap-1.5"><i class="fas fa-id-card text-slate-400"></i> {{
+                    pregnancy.patient.patient_id }}</span>
+                <span class="text-slate-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-user text-slate-400"></i> {{
+                    pregnancy.patient.age }} Years</span>
+                <span class="text-slate-300">•</span>
+                <span
+                    class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-black">{{
+                    pregnancy.para_code }}</span>
+            </div>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <span
+                class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest
+                {% if pregnancy.status == 'Active' %}bg-blue-100 text-blue-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                {{ pregnancy.status }}
+            </span>
+            <span
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest border-2
+                {% if pregnancy.risk_level == 'High' %}bg-rose-50 text-rose-700 border-rose-100{% elif pregnancy.risk_level == 'Moderate' %}bg-amber-50 text-amber-700 border-amber-100{% else %}bg-emerald-50 text-emerald-700 border-emerald-100{% endif %}">
+                <i class="fas fa-exclamation-circle"></i> {{ pregnancy.risk_level }} Risk
+            </span>
+        </div>
+    </div>
+
+    <!-- Persistent Clinical Alerts Banner -->
+    {% with alerts=pregnancy.get_active_alerts %}
+    {% if alerts %}
+    <div class="grid gap-4 mb-8">
+        {% for alert in alerts %}
+        <div
+            class="flex items-center gap-4 px-6 py-4 rounded-2xl border transition-all animate-pulse
+            {% if alert.type == 'danger' %}bg-rose-50 border-rose-100 text-rose-800 shadow-sm shadow-rose-100{% elif alert.type == 'warning' %}bg-amber-50 border-amber-100 text-amber-800 shadow-sm shadow-amber-100{% else %}bg-emerald-50 border-emerald-100 text-emerald-800 shadow-sm shadow-emerald-100{% endif %}">
+            <div
+                class="p-3 rounded-xl {% if alert.type == 'danger' %}bg-rose-100 text-rose-600{% elif alert.type == 'warning' %}bg-amber-100 text-amber-600{% else %}bg-emerald-100 text-emerald-600{% endif %}">
+                <i
+                    class="fas {% if alert.type == 'danger' %}fa-radiation-alt{% else %}fa-exclamation-triangle{% endif %} text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black uppercase tracking-widest opacity-60">{{ alert.category }}</div>
+                <div class="text-lg font-bold tracking-tight">{{ alert.message }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Pregnancy Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Pregnancy Details</h2>
+            <div class="flex items-center gap-4">
+                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-black">{{ pregnancy.para_code
+                    }}</span>
+                {% if pregnancy.status %}
+                <div class="flex items-center gap-2">
+                    {% if not delivery %}
+                    <a href="{% url 'maternity:record_delivery' pregnancy.id %}"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-md shadow-rose-100 hover:bg-rose-700 transition-all">
+                        <i class="fas fa-baby"></i> Record Delivery
+                    </a>
+                    {% endif %}
+
+                    {% if not discharge %}
+                    <a href="{% url 'maternity:record_maternity_discharge' pregnancy.id %}"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-100 hover:bg-blue-700 transition-all">
+                        <i class="fas fa-sign-out-alt"></i> Record Discharge
+                    </a>
+                    {% endif %}
+
+                    <a href="{% url 'maternity:record_maternity_referral' pregnancy.id %}"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-100 hover:bg-orange-700 transition-all">
+                        <i class="fas fa-truck-medical"></i> Referral Out
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registration</div>
+                <div class="text-sm font-bold text-slate-900">{{ pregnancy.registration_date|date:"d M Y" }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">LMP</div>
+                <div class="text-sm font-bold text-slate-900">{{ pregnancy.lmp|date:"d M Y" }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">EDD</div>
+                <div class="text-sm font-bold text-slate-900 text-blue-600">{{ pregnancy.edd|date:"d M Y" }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">GA (Weeks)</div>
+                <div class="text-sm font-bold text-slate-900">{{ pregnancy.gestational_age_weeks|default:"-" }} Weeks
+                </div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Group</div>
+                <div class="text-sm font-bold text-slate-900">{{ pregnancy.blood_group|default:"-" }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prev. C-Section</div>
+                <div class="text-sm font-bold text-slate-900">{% if pregnancy.previous_cs %}Yes{% else %}No{% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if pregnancy.allergies or pregnancy.chronic_conditions %}
+        <div class="px-6 py-6 border-t border-slate-50 grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50/30">
+            {% if pregnancy.allergies %}
+            <div class="flex gap-4">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <i class="fas fa-hand-holding-medical"></i>
+                </div>
+                <div>
+                    <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Allergies</div>
+                    <div class="text-sm font-bold text-slate-700">{{ pregnancy.allergies }}</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if pregnancy.chronic_conditions %}
+            <div class="flex gap-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <div>
+                    <div class="text-[10px] font-black text-amber-400 uppercase tracking-widest">Chronic Conditions
+                    </div>
+                    <div class="text-sm font-bold text-slate-700">{{ pregnancy.chronic_conditions }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ANC Visits -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Antenatal Care Visits</h2>
+            <a href="{% url 'maternity:record_anc_visit' pregnancy.id %}"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-100 hover:bg-blue-700 transition-all">
+                <i class="fas fa-plus"></i> Record ANC Visit
+            </a>
+        </div>
+
+        {% if anc_visits %}
+        <div class="p-8">
+            <div class="relative space-y-12">
+                <!-- Timeline Line -->
+                <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-100"></div>
+
+                {% for visit in anc_visits %}
+                <div class="relative pl-12">
+                    <!-- Timeline Dot -->
+                    <div
+                        class="absolute left-0 top-1 w-8 h-8 rounded-full bg-blue-100 border-4 border-white shadow-sm flex items-center justify-center z-10 transition-transform hover:scale-110">
+                        <span class="text-[10px] font-black text-blue-600">{{ visit.visit_number }}</span>
+                    </div>
+
+                    <div
+                        class="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 transition-all hover:bg-white hover:shadow-md group">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Visit {{ visit.visit_number }}</h3>
+                                <p class="text-xs font-bold text-blue-500 uppercase tracking-widest mt-1">
+                                    {{ visit.visit_date|date:"d M Y" }} • {{ visit.gestational_age }} Weeks GA
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-4 overflow-x-auto pb-2 md:pb-0">
+                                {% if visit.weight %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm shrink-0">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        Weight</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.weight }} kg
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if visit.bp_systolic and visit.bp_diastolic %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm shrink-0">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        BP</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{
+                                        visit.bp_diastolic }}</div>
+                                </div>
+                                {% endif %}
+                                {% if visit.fetal_heart_rate %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm shrink-0">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        FHR</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center text-rose-600">{{
+                                        visit.fetal_heart_rate }} bpm</div>
+                                </div>
+                                {% endif %}
+                                {% if visit.fundal_height %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm shrink-0">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        FH</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.fundal_height }}
+                                        cm</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Expandable Details -->
+                        <div id="visit-details-{{ visit.id }}"
+                            class="hidden pt-6 mt-6 border-t border-slate-100 space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                            <!-- Full Vitals & Presentation -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="bg-white p-4 rounded-xl border border-slate-50 shadow-sm">
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                                        Baseline Vitals</h4>
+                                    <div class="space-y-3 font-bold text-xs">
+                                        <div class="flex justify-between"><span>Temperature</span><span
+                                                class="text-slate-900">{{ visit.temperature }} °C</span></div>
+                                        <div class="flex justify-between"><span>O2 Satulation</span><span
+                                                class="text-slate-900">98%</span></div>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-50 shadow-sm">
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                                        Fetal Presentation</h4>
+                                    <div class="space-y-3 font-bold text-xs">
+                                        <div class="flex justify-between"><span>Presentation</span><span
+                                                class="text-slate-900">{{ visit.get_fetal_presentation_display }}</span>
+                                        </div>
+                                        <div class="flex justify-between"><span>Movements</span><span
+                                                class="text-slate-900">{{ visit.get_fetal_movements_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-slate-50 shadow-sm">
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Lab
+                                        Status</h4>
+                                    <div class="space-y-3 font-bold text-xs">
+                                        <div class="flex justify-between"><span>Hemoglobin</span><span
+                                                class="text-slate-900">{{ visit.hemoglobin|default:"-" }} g/dL</span>
+                                        </div>
+                                        <div class="flex justify-between"><span>Urine Prot.</span><span
+                                                class="text-slate-900">{{ visit.urine_protein|default:"-" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Treatment Banner -->
+                            <div class="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-wrap gap-3">
+                                <span
+                                    class="text-[10px] font-black text-blue-400 uppercase tracking-widest w-full mb-1">Medication
+                                    & Supplements</span>
+                                {% if visit.iron_supplements %}<span
+                                    class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-2"><i
+                                        class="fas fa-check-circle"></i> Iron</span>{% endif %}
+                                {% if visit.folate_supplements %}<span
+                                    class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-2"><i
+                                        class="fas fa-check-circle"></i> Folate</span>{% endif %}
+                                {% if visit.deworming %}<span
+                                    class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-2"><i
+                                        class="fas fa-check-circle"></i> Deworming</span>{% endif %}
+                                {% if visit.tetanus_toxoid %}<span
+                                    class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-2"><i
+                                        class="fas fa-check-circle"></i> Tetanus</span>{% endif %}
+                            </div>
+
+                            <!-- Clinical Narrative -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                                <div>
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                        Complaints & Findings</h4>
+                                    <div class="p-4 bg-slate-50 rounded-xl font-medium text-sm text-slate-600 italic">
+                                        "{{ visit.complaints|default:"None reported" }}" - {{ visit.findings|default:"No
+                                        findings recorded" }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                        Plan & Follow-up</h4>
+                                    <div class="space-y-4">
+                                        <div class="text-sm font-bold text-slate-800">{{ visit.plan|default:"Continue
+                                            regular ANC protocol" }}</div>
+                                        {% if visit.next_visit_date %}
+                                        <div
+                                            class="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-xl font-black uppercase tracking-widest text-[10px] border border-amber-100">
+                                            <i class="fas fa-calendar-alt"></i> Next Visit: {{
+                                            visit.next_visit_date|date:"d M Y" }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toggle Button -->
+                        <button onclick="toggleVisitDetails({{ visit.id }})" id="toggle-btn-{{ visit.id }}"
+                            class="mt-6 w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-chevron-down transition-transform duration-300"></i> See Visit Recap
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="py-20 flex flex-col items-center justify-center text-slate-400">
+            <i class="fas fa-notes-medical text-6xl opacity-10 mb-6"></i>
+            <p class="font-bold tracking-tight">No ANC visits recorded yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Labor & Delivery -->
+    {% if delivery %}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Labor & Delivery</h2>
+        </div>
+
+        <div class="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Date/Time</div>
+                <div class="text-sm font-bold text-slate-900">{{ delivery.delivery_datetime|date:"d M Y H:i" }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">GA at Delivery</div>
+                <div class="text-sm font-bold text-slate-900">{{ delivery.gestational_age_at_delivery }} Weeks</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode of Delivery</div>
+                <div class="text-sm font-bold text-slate-900">{{ delivery.get_delivery_mode_display }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Labor Onset</div>
+                <div class="text-sm font-bold text-slate-900">{{ delivery.get_labor_onset_display }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maternal Cond.</div>
+                <div class="text-sm font-bold text-slate-900">{{ delivery.mother_condition }}</div>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Loss</div>
+                <div class="text-sm font-bold text-rose-600">{{ delivery.estimated_blood_loss|default:"-" }} mL</div>
+            </div>
+        </div>
+
+        <!-- Expandable Details -->
+        <div id="delivery-details"
+            class="hidden p-6 border-t border-slate-50 space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+            <!-- Labor Sub-details -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Labor Progress</h4>
+                    <div class="space-y-3 text-xs font-bold">
+                        <div class="flex justify-between text-slate-500"><span>Rupture of Memb.</span><span
+                                class="text-slate-900">{{ delivery.rupture_of_membranes|date:"d M Y H:i"|default:"N/A"
+                                }}</span></div>
+                        <div class="flex justify-between text-slate-500"><span>Labor Duration</span><span
+                                class="text-slate-900">{{ delivery.labor_duration|default:"N/A" }}</span></div>
+                        <div class="flex justify-between text-slate-500"><span>Admission</span><span
+                                class="text-slate-900">{{ delivery.admission_date|date:"d M Y H:i"|default:"N/A"
+                                }}</span></div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Maternal Outcomes
+                    </h4>
+                    <div class="space-y-3 text-xs font-bold">
+                        <div class="flex justify-between text-slate-500"><span>Episiotomy</span><span
+                                class="{% if delivery.episiotomy %}text-rose-600{% else %}text-slate-900{% endif %}">{%if delivery.episiotomy %}Yes{% else %}No{% endif %}</span></div>
+                        <div class="flex justify-between text-slate-500"><span>Perineal Tear</span><span
+                                class="text-slate-900">{{ delivery.perineal_tear|default:"None" }}</span></div>
+                        <div class="flex justify-between text-slate-500"><span>Transfusion</span><span
+                                class="{% if delivery.blood_transfusion %}text-rose-600{% else %}text-slate-900{% endif %}">{%if delivery.blood_transfusion %}Yes{% else %}No{% endif %}</span></div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Placenta & Notes
+                    </h4>
+                    <div class="space-y-3 text-xs font-bold">
+                        <div class="flex justify-between text-slate-500"><span>Placenta Delivery</span><span
+                                class="text-slate-900">{{ delivery.get_placenta_delivery_display|default:"N/A" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clinical Narratives -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                {% if delivery.maternal_complications %}
+                <div>
+                    <h4 class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-3">Complications</h4>
+                    <div
+                        class="p-4 bg-rose-50 text-rose-800 rounded-xl font-bold text-sm italic border border-rose-100">
+                        {{ delivery.maternal_complications }}
+                    </div>
+                </div>
+                {% endif %}
+                {% if delivery.delivery_notes %}
+                <div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Delivery Notes</h4>
+                    <div class="p-4 bg-slate-100 text-slate-700 rounded-xl font-medium text-sm border border-slate-200">
+                        {{ delivery.delivery_notes }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- See More Button -->
+        <button id="toggle-delivery-btn" onclick="toggleDeliveryDetails()"
+            class="w-full py-4 bg-slate-50/50 hover:bg-slate-100 text-slate-600 border-t border-slate-100 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-chevron-down transition-transform duration-300"></i> See Delivery Digest
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Newborns -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Newborn(s)</h2>
+            {% if delivery %}
+            <a href="{% url 'maternity:register_newborn' pregnancy.id %}"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-100 hover:bg-emerald-700 transition-all">
+                <i class="fas fa-baby"></i> Register Newborn
+            </a>
+            {% endif %}
+        </div>
+
+        {% if newborns %}
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for baby in newborns %}
+            <div class="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 relative group overflow-hidden">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110">
+                </div>
+
+                <div class="relative z-10 flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Baby {{ baby.baby_number }}</h3>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span
+                                class="text-[10px] font-black uppercase tracking-widest {% if baby.gender == 'M' %}text-blue-500{% else %}text-rose-500{% endif %}">
+                                {{ baby.get_gender_display }}
+                            </span>
+                            <span class="text-slate-300">•</span>
+                            <span class="text-[10px] font-bold text-slate-400">Born {{ baby.birth_datetime|date:"d M
+                                H:i" }}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest
+                            {% if baby.status == 'Alive' %}bg-emerald-100 text-emerald-700
+                            {% elif baby.status == 'NICU' %}bg-amber-100 text-amber-700
+                            {% elif baby.status == 'Stillborn' %}bg-slate-200 text-slate-700
+                            {% else %}bg-rose-100 text-rose-700{% endif %}">
+                            {{ baby.status }}
+                        </span>
+                        <a href="{% url 'maternity:generate_birth_notification' baby.id %}" target="_blank"
+                            title="Print Birth Notification"
+                            class="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-100 transition-all shadow-sm">
+                            <i class="fas fa-print text-xs"></i>
+                        </a>
+                        <a href="{% url 'maternity:edit_newborn' baby.id %}"
+                            class="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm">
+                            <i class="fas fa-edit text-xs"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="relative z-10 grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-white rounded-xl border border-slate-50 shadow-sm">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Birth Weight
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">{{ baby.birth_weight }} kg</div>
+                    </div>
+                    <div class="p-3 bg-white rounded-xl border border-slate-50 shadow-sm">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Breastfeeding
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">{% if baby.breastfeeding_initiated %}Initiated{%
+                            else %}Pending{% endif %}</div>
+                    </div>
+                </div>
+
+                <!-- Vaccinations -->
+                <div class="relative z-10 mt-6 pt-6 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-syringes text-blue-500"></i> Vaccinations
+                        </h4>
+                        <a href="{% url 'maternity:record_vaccination' baby.id %}"
+                            class="text-[9px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest transition-colors flex items-center gap-1">
+                            <i class="fas fa-plus-circle"></i> Add Vaccine
+                        </a>
+                    </div>
+
+                    {% if baby.vaccinations.all %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for record in baby.vaccinations.all %}
+                        <div
+                            class="group relative px-2 py-1 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-200 transition-all">
+                            <div class="text-[10px] font-bold text-slate-700">{{ record.vaccine.abbreviation }}</div>
+                            <!-- Tooltip/Details -->
+                            <div
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-slate-900 text-white text-[9px] rounded-lg shadow-xl z-50">
+                                <div class="font-black mb-1">{{ record.vaccine.name }}</div>
+                                <div>Dose {{ record.dose_number }} • {{ record.date_administered|date:"d M Y" }}</div>
+                                {% if record.next_dose_due %}
+                                <div class="text-blue-300 mt-1">Next due: {{ record.next_dose_due|date:"d M Y" }}</div>
+                                {% endif %}
+                                <div
+                                    class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-[10px] font-bold text-slate-300 italic">No vaccinations recorded yet.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Checkup History (PNC Visits) -->
+                <div class="relative z-10 mt-6 pt-6 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-stethoscope text-emerald-500"></i> Checkup History
+                        </h4>
+                        <a href="{% url 'maternity:record_baby_pnc_visit' baby.id %}"
+                            class="text-[9px] font-bold text-emerald-600 hover:text-emerald-800 uppercase tracking-widest transition-colors flex items-center gap-1">
+                            <i class="fas fa-plus-circle"></i> New Visit
+                        </a>
+                    </div>
+
+                    {% if baby.pnc_visits.all %}
+                    <div class="space-y-3">
+                        {% for visit in baby.pnc_visits.all %}
+                        <div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <div class="text-xs font-bold text-slate-900">Day {{ visit.visit_day }}</div>
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{
+                                        visit.visit_date|date:"d M Y" }}</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <a href="{% url 'maternity:record_vaccination' baby.id %}?visit_id={{ visit.id }}"
+                                        title="Add vaccine to this visit"
+                                        class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all">
+                                        <i class="fas fa-syringe text-[10px]"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                                <div class="text-slate-500">Weight: <span class="text-slate-900">{{ visit.weight }}
+                                        kg</span></div>
+                                <div class="text-slate-500">Temp: <span class="text-slate-900">{{ visit.temperature
+                                        }}°C</span></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-[10px] font-bold text-slate-300 italic">No PNC checkups recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-16 flex flex-col items-center justify-center text-slate-400">
+            <div class="relative mb-6">
+                <i class="fas fa-baby text-6xl opacity-10"></i>
+                <i class="fas fa-question absolute -bottom-2 -right-2 text-2xl text-blue-300 animate-bounce"></i>
+            </div>
+            <p class="font-bold tracking-tight">No newborns registered yet.</p>
+            {% if delivery %}
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-300 mt-2">Use the button above to add
+                baby details</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Postnatal Care -->
+    {% if mother_pnc %}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Postnatal Care - Mother</h2>
+            <a href="{% url 'maternity:record_mother_pnc_visit' pregnancy.id %}"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-100 hover:bg-blue-700 transition-all">
+                <i class="fas fa-plus"></i> Record PNC Visit
+            </a>
+        </div>
+
+        <div class="p-8">
+            <div class="relative space-y-12">
+                <!-- Timeline Line -->
+                <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-100"></div>
+
+                {% for visit in mother_pnc %}
+                <div class="relative pl-12">
+                    <!-- Timeline Dot -->
+                    <div
+                        class="absolute left-0 top-1 w-8 h-8 rounded-full bg-emerald-100 border-4 border-white shadow-sm flex items-center justify-center z-10 transition-transform hover:scale-110">
+                        <span class="text-[10px] font-black text-emerald-600">P</span>
+                    </div>
+
+                    <div class="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Postnatal Day {{ visit.visit_day }}</h3>
+                                <p class="text-xs font-bold text-emerald-500 uppercase tracking-widest mt-1">
+                                    {{ visit.visit_date|date:"d M Y" }}
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                {% if visit.bp_systolic and visit.bp_diastolic %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        BP</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{
+                                        visit.bp_diastolic }}</div>
+                                </div>
+                                {% endif %}
+                                {% if visit.breastfeeding_status %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        Breastfeeding</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{
+                                        visit.breastfeeding_status }}</div>
+                                </div>
+                                {% endif %}
+                                {% if visit.lochia %}
+                                <div class="px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div
+                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                        Lochia</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.lochia }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div
+        class="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 mb-8 flex flex-col items-center justify-center text-slate-400">
+        <i class="fas fa-hand-holding-heart text-6xl opacity-10 mb-6"></i>
+        <p class="font-bold tracking-tight">No postnatal visits recorded yet</p>
+    </div>
+    {% endif %}
+
+    <!-- Vitals Charts Section -->
+    {% if anc_visits %}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-chart-line text-blue-600"></i> Vital Signs Trends
+            </h2>
+        </div>
+        <div class="p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Maternal Weight</span>
+                        <span class="text-blue-500">kg</span>
+                    </h3>
+                    <canvas id="weightChart"></canvas>
+                </div>
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Blood Pressure</span>
+                        <span class="text-blue-500">mmHg</span>
+                    </h3>
+                    <canvas id="bpChart"></canvas>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Fetal Heart Rate</span>
+                        <span class="text-rose-500">bpm</span>
+                    </h3>
+                    <canvas id="fhrChart"></canvas>
+                </div>
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Fundal Height</span>
+                        <span class="text-blue-500">cm</span>
+                    </h3>
+                    <canvas id="fundalChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if mother_pnc %}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-chart-bar text-emerald-600"></i> Postnatal Vital Signs
+            </h2>
+        </div>
+        <div class="p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Postnatal BP</span>
+                        <span class="text-emerald-500">mmHg</span>
+                    </h3>
+                    <canvas id="postnatalBpChart"></canvas>
+                </div>
+                <div class="aspect-video h-[300px]">
+                    <h3
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex justify-between">
+                        <span>Temperature</span>
+                        <span class="text-amber-500">°C</span>
+                    </h3>
+                    <canvas id="postnatalTempChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Clinical Next Action - Service Requests -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-paper-plane text-blue-600"></i> Clinical Next Action
+            </h2>
+        </div>
+        <div class="p-6">
+            {% if user.role == 'Doctor' %}
+            <form id="nextActionForm">
+                {% csrf_token %}
+                <input type="hidden" name="patient_id" value="{{ pregnancy.patient.pk }}">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+                    <div>
+                        <h4
+                            class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <i class="fas fa-building"></i> Select Department
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            {% for dept in available_departments %}
+                            <label
+                                class="flex items-center gap-3 cursor-pointer p-3 border border-slate-200 rounded-xl transition-all hover:bg-slate-50 hover:border-blue-300">
+                                <input type="checkbox" name="send_to" value="{{ dept.name|lower }}"
+                                    data-dept-id="{{ dept.id }}" onchange="updateServicesFilter()"
+                                    class="w-4 h-4 accent-blue-600">
+                                <span class="text-sm font-bold text-slate-700">{{ dept.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div>
+                        <h4
+                            class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <i class="fas fa-vial"></i> Available Investigations
+                        </h4>
+                        <div id="tests-container"
+                            class="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[120px] flex items-center justify-center">
+                            <p id="no-destination-message" class="text-slate-500 text-sm text-center m-0">
+                                Select at least one department above to view available investigations.
+                            </p>
+                            <div id="dynamic-test-categories" style="display: none; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all"
+                        onclick="clearNextActionForm()">
+                        <i class="fas fa-undo"></i> Reset Form
+                    </button>
+                    <button type="button" id="execute-btn"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="submitNextAction()" disabled>
+                        <i class="fas fa-play"></i> Execute Actions
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="text-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                <div
+                    class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl shadow-sm">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h4 class="text-lg font-black text-slate-900 mb-2">Restricted Access</h4>
+                <p class="text-slate-600 text-sm">Clinical next actions (service requests/routing) are restricted to the
+                    <strong>Doctor</strong> role.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Clinical Transitions Section (Discharge & Referral) -->
+{% if discharge or referrals %}
+<div class="max-w-[1400px] mx-auto p-5 pt-0">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <!-- Discharge Summary -->
+        {% if discharge %}
+        <div
+            class="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+            <div class="px-6 py-5 border-b border-blue-50 bg-blue-50/50 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <i class="fas fa-door-open text-blue-600"></i> Clinical Discharge
+                </h2>
+                <div class="flex gap-2">
+                    <a href="{% url 'maternity:generate_discharge_summary' pregnancy.id %}" target="_blank"
+                        class="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2">
+                        <i class="fas fa-print"></i> Print
+                    </a>
+                    <a href="{% url 'maternity:record_maternity_discharge' pregnancy.id %}"
+                        class="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-all">Edit</a>
+                </div>
+            </div>
+            <div class="p-6 space-y-6 flex-1">
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Discharge Date
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">{{ discharge.discharge_date|date:"d M Y, H:i" }}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Authorized By
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">{{
+                            discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Mother
+                            Condition</div>
+                        <div class="text-sm font-bold text-emerald-700">{{
+                            discharge.get_mother_condition_at_discharge_display }}</div>
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                        <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Baby Condition
+                        </div>
+                        <div class="text-sm font-bold text-blue-700">{{ discharge.baby_condition_at_discharge }}</div>
+                    </div>
+                </div>
+
+                {% if discharge.discharge_summary %}
+                <div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 text-center">
+                        Episode Summary</h4>
+                    <div
+                        class="p-4 bg-slate-50 text-slate-700 rounded-2xl text-sm font-medium border border-slate-100 leading-relaxed italic">
+                        {{ discharge.discharge_summary|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if discharge.follow_up_plan %}
+                <div>
+                    <h4 class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2 px-1 text-center">
+                        Follow-up Plan</h4>
+                    <div
+                        class="p-4 bg-purple-50 text-purple-700 rounded-2xl text-sm font-bold border border-purple-100">
+                        {{ discharge.follow_up_plan|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Referrals -->
+        {% if referrals %}
+        <div
+            class="bg-white rounded-2xl border border-orange-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+            <div class="px-6 py-5 border-b border-orange-50 bg-orange-50/50">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <i class="fas fa-ambulance text-orange-600"></i> Referrals Out
+                </h2>
+            </div>
+            <div class="p-6 space-y-4 flex-1 overflow-y-auto max-h-[500px]">
+                {% for referral in referrals %}
+                <div class="p-5 bg-orange-50/50 rounded-2xl border border-orange-100 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="text-sm font-black text-orange-900 leading-tight">To: {{
+                                referral.referred_to_facility }}</div>
+                            <div class="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-1">{{
+                                referral.referral_date|date:"d M Y, H:i" }}</div>
+                        </div>
+                        {% if referral.urgent %}
+                        <span
+                            class="px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-black rounded uppercase animate-pulse">Urgent</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-sm text-slate-700 font-bold mb-3">Reason: <span class="font-medium italic">{{
+                            referral.reason_for_referral }}</span></div>
+
+                    <div
+                        class="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-t border-orange-100 pt-3 mt-3">
+                        <span><i class="fas fa-ambulance"></i> {{ referral.transport_mode }}</span>
+                        <span>•</span>
+                        <span>By: {{ referral.referred_by.username }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const opt = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { weight: 'bold', size: 11 } } }
+        },
+        scales: {
+            y: { beginAtZero: false, grid: { color: '#f8fafc' }, ticks: { font: { weight: 'bold' } } },
+            x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+        }
+    };
+
+    {% if anc_visits %}
+    const anc = [{% for v in anc_visits %}{ n: {{ v.visit_number|default:"null" } }, ga: {{ v.gestational_age|default:"null" } }, w: {{ v.weight|default:"null" } }, sys: {{ v.bp_systolic|default:"null" } }, dia: {{ v.bp_diastolic|default:"null" } }, fhr: {{ v.fetal_heart_rate|default:"null" } }, fh: {{ v.fundal_height|default:"null" } } } {% if not forloop.last %}, {% endif %} {% endfor %}];
+    const lbl = anc.map(v => `${v.ga}w`);
+
+    if (document.getElementById('weightChart')) {
+        new Chart(document.getElementById('weightChart'), { type: 'line', data: { labels: lbl, datasets: [{ label: 'Weight (kg)', data: anc.map(v => v.w), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 4, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }] }, options: opt });
+    }
+    if (document.getElementById('bpChart')) {
+        new Chart(document.getElementById('bpChart'), { type: 'line', data: { labels: lbl, datasets: [{ label: 'Systolic', data: anc.map(v => v.sys), borderColor: '#ef4444', borderWidth: 4, fill: false, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }, { label: 'Diastolic', data: anc.map(v => v.dia), borderColor: '#f59e0b', borderWidth: 4, fill: false, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }] }, options: opt });
+    }
+    if (document.getElementById('fhrChart')) {
+        new Chart(document.getElementById('fhrChart'), { type: 'line', data: { labels: lbl, datasets: [{ label: 'FHR (bpm)', data: anc.map(v => v.fhr), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 4, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }] }, options: { ...opt, scales: { ...opt.scales, y: { ...opt.scales.y, min: 110, max: 170 } } } });
+    }
+    if (document.getElementById('fundalChart')) {
+        new Chart(document.getElementById('fundalChart'), { type: 'line', data: { labels: lbl, datasets: [{ label: 'Fundal Height (cm)', data: anc.map(v => v.fh), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 4, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }, { label: 'Expected (GA)', data: anc.map(v => v.ga), borderColor: 'rgba(139,92,246,0.3)', borderWidth: 2, borderDash: [5, 5], fill: false, tension: 0.4, pointRadius: 0 }] }, options: opt });
+    }
+    {% endif %}
+
+    {% if mother_pnc %}
+    const pnc = [{% for v in mother_pnc %}{ d: {{ v.visit_day|default:"null" } }, sys: {{ v.bp_systolic|default:"null" } }, dia: {{ v.bp_diastolic|default:"null" } }, t: {{ v.temperature|default:"null" } } } {% if not forloop.last %}, {% endif %} {% endfor %}];
+    const plbl = pnc.map(v => `Day ${v.d}`);
+
+    if (document.getElementById('postnatalBpChart')) {
+        new Chart(document.getElementById('postnatalBpChart'), { type: 'line', data: { labels: plbl, datasets: [{ label: 'Systolic', data: pnc.map(v => v.sys), borderColor: '#ef4444', borderWidth: 4, fill: false, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }, { label: 'Diastolic', data: pnc.map(v => v.dia), borderColor: '#f59e0b', borderWidth: 4, fill: false, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }] }, options: opt });
+    }
+    if (document.getElementById('postnatalTempChart')) {
+        new Chart(document.getElementById('postnatalTempChart'), { type: 'line', data: { labels: plbl, datasets: [{ label: 'Temperature (°C)', data: pnc.map(v => v.t), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 4, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderWidth: 2 }] }, options: { ...opt, scales: { ...opt.scales, y: { ...opt.scales.y, min: 35, max: 40 } } } });
+    }
+    {% endif %}
+
+
+    function toggleVisitDetails(visitId) {
+        const details = document.getElementById("visit-details-" + visitId);
+        const btn = document.getElementById("toggle-btn-" + visitId);
+        const icon = btn.querySelector('i');
+
+        if (details.classList.contains('hidden')) {
+            details.classList.remove('hidden');
+            btn.classList.add('bg-slate-200');
+            btn.innerHTML = '<i class="fas fa-chevron-up transition-transform duration-300"></i> See Less';
+        } else {
+            details.classList.add('hidden');
+            btn.classList.remove('bg-slate-200');
+            btn.innerHTML = '<i class="fas fa-chevron-down transition-transform duration-300"></i> See Visit Recap';
+        }
+    }
+
+    function toggleDeliveryDetails() {
+        const details = document.getElementById("delivery-details");
+        const btn = document.getElementById("toggle-delivery-btn");
+
+        if (details.classList.contains('hidden')) {
+            details.classList.remove('hidden');
+            btn.classList.add('bg-slate-200');
+            btn.innerHTML = '<i class="fas fa-chevron-up transition-transform duration-300"></i> Hide Digest';
+        } else {
+            details.classList.add('hidden');
+            btn.classList.remove('bg-slate-200');
+            btn.innerHTML = '<i class="fas fa-chevron-down transition-transform duration-300"></i> See Delivery Digest';
+        }
+    }
+
+    /**
+     * Clinical Next Action - Service Request Functions
+     */
+    const medicalTests = {{ medical_tests_json| safe }};
+
+    function submitNextAction() {
+        const form = document.getElementById('nextActionForm');
+        const formData = new FormData(form);
+        const url = "{% url 'home:submit_next_action' %}";
+
+        const executeBtn = document.getElementById('execute-btn');
+        executeBtn.disabled = true;
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Clinical orders have been successfully sent.');
+                    if (data.invoice_id) {
+                        window.location.href = `/accounts/invoice/${data.invoice_id}/`;
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    executeBtn.disabled = false;
+                    executeBtn.innerHTML = '<i class="fas fa-play"></i> Execute Actions';
+                    alert(data.error || 'Failed to dispatch clinical orders.');
+                }
+            })
+            .catch(err => {
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = '<i class="fas fa-play"></i> Execute Actions';
+                alert('Clinical routing service is temporarily unavailable.');
+            });
+    }
+
+    function clearNextActionForm() {
+        document.getElementById('nextActionForm').reset();
+        updateServicesFilter();
+    }
+
+    function updateServicesFilter() {
+        const selectedDepts = Array.from(document.querySelectorAll('input[name="send_to"]:checked'))
+            .map(input => input.value);
+
+        const dynamicCategories = document.getElementById('dynamic-test-categories');
+        const noDestMessage = document.getElementById('no-destination-message');
+
+        if (selectedDepts.length === 0) {
+            dynamicCategories.style.display = 'none';
+            noDestMessage.style.display = 'flex';
+            toggleExecuteButton();
+            return;
+        }
+
+        const previousState = {};
+        document.querySelectorAll('input[name="tests"]:checked').forEach(input => {
+            const testId = input.value;
+            const noteTextarea = document.querySelector(`textarea[name="test_notes_${testId}"]`);
+            previousState[testId] = {
+                checked: true,
+                note: noteTextarea ? noteTextarea.value : ''
+            };
+        });
+
+        noDestMessage.style.display = 'none';
+        dynamicCategories.style.display = 'block';
+        dynamicCategories.innerHTML = '';
+
+        const filteredTests = medicalTests.filter(test => selectedDepts.includes(test.department_name.toLowerCase()));
+
+        if (filteredTests.length === 0) {
+            dynamicCategories.innerHTML = `
+                <div style="text-align: center; padding: 1.5rem; color: #64748b;">
+                    <i class="fas fa-exclamation-circle" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                    No available services found for the selected department(s).
+                </div>`;
+            toggleExecuteButton();
+            return;
+        }
+
+        const grouped = filteredTests.reduce((acc, test) => {
+            if (!acc[test.department_name]) acc[test.department_name] = [];
+            acc[test.department_name].push(test);
+            return acc;
+        }, {});
+
+        for (const [dept, tests] of Object.entries(grouped)) {
+            let deptHtml = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h5 style="font-size: 0.75rem; color: #3b82f6; text-transform: uppercase; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                        ${dept} Investigations
+                    </h5>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+            `;
+
+            tests.forEach(test => {
+                const isChecked = previousState[test.id] ? 'checked' : '';
+                const displayStyle = previousState[test.id] ? 'block' : 'none';
+                const noteValue = previousState[test.id] ? previousState[test.id].note : '';
+
+                deptHtml += `
+                    <div style="background: white; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: all 0.2s;">
+                        <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer; margin: 0;">
+                            <input type="checkbox" name="tests" value="${test.id}" ${isChecked}
+                                   onchange="toggleTestNotes(${test.id}); toggleExecuteButton()"
+                                   style="margin-top: 0.2rem; width: 1rem; height: 1rem; accent-color: #3b82f6;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem;">${test.name}</div>
+                                <div id="test-notes-container-${test.id}" style="display: ${displayStyle}; margin-top: 0.75rem;">
+                                    <textarea name="test_notes_${test.id}" class="form-control" rows="2" 
+                                              style="font-size: 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; width: 100%; padding: 0.5rem;"
+                                              placeholder="Specific clinical indications for ${test.name}...">${noteValue}</textarea>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+
+            deptHtml += `</div></div>`;
+            dynamicCategories.innerHTML += deptHtml;
+        }
+        toggleExecuteButton();
+    }
+
+    function toggleTestNotes(testId) {
+        const checkbox = document.querySelector(`input[name="tests"][value="${testId}"]`);
+        const container = document.getElementById(`test-notes-container-${testId}`);
+        if (container) {
+            container.style.display = checkbox.checked ? 'block' : 'none';
+        }
+    }
+
+    function toggleExecuteButton() {
+        const executeBtn = document.getElementById('execute-btn');
+        const anyTestSelected = document.querySelectorAll('input[name="tests"]:checked').length > 0;
+        const anyDeptSelected = document.querySelectorAll('input[name="send_to"]:checked').length > 0;
+        executeBtn.disabled = !(anyTestSelected || anyDeptSelected);
+    }
+</script>
+
+{% endblock %}

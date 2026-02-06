@@ -1,0 +1,785 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}{{ dashboard_title }} - HMS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .radiology-dashboard {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: var(--card-shadow);
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .icon-invoices {
+        background: var(--primary-gradient);
+    }
+
+    .icon-pending {
+        background: var(--warning-gradient);
+    }
+
+    .icon-progress {
+        background: var(--primary-gradient);
+    }
+
+    .icon-completed {
+        background: var(--success-gradient);
+    }
+
+    .icon-inventory {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+
+    .icon-requests {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    }
+
+    .stat-info h3 {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-info .number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .dashboard-main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .content-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .btn-inventory-request,
+    .btn-inventory-view {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-inventory-request {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+    }
+
+    .btn-inventory-request:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-inventory-view {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+    }
+
+    .btn-inventory-view:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+
+    .search-filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--glass-border);
+        border-radius: 12px;
+        background: white;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--glass-border);
+        border-radius: 12px;
+        background: white;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-secondary);
+    }
+
+    .data-table th {
+        text-align: left;
+        padding: 1rem;
+        border-bottom: 2px solid var(--glass-border);
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.03);
+    }
+
+    .data-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tr:hover {
+        background: rgba(99, 102, 241, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .badge-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .status-pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .status-in-progress {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .status-completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .priority-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .priority-urgent {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+
+    .priority-high {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+    }
+
+    .priority-normal {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+
+    .priority-low {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    .action-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 0.5rem;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+    .action-link:hover {
+        color: #6366f1;
+        background: rgba(99, 102, 241, 0.1);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Modal Styles */
+    .custom-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        padding: 0;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .custom-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .btn-primary {
+        background: #6366f1;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
+    }
+</style>
+
+<div class="radiology-dashboard">
+    <div class="analytics-grid">
+        <div class="stat-card">
+            <div class="stat-icon icon-invoices">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Tests</h3>
+                <div class="number">{{ total_invoices }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-completed">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Cleared (Paid)</h3>
+                <div class="number">{{ paid_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-pending">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Unpaid</h3>
+                <div class="number">{{ unpaid_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon icon-progress">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <div class="stat-info">
+                <h3>In Lab</h3>
+                <div class="number">{{ in_progress_results }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-main">
+        <div class="content-card">
+            <div class="card-header">
+                <h2><i class="fas fa-file-invoice"></i> Patient Service Invoices</h2>
+            </div>
+
+            <div class="search-filters">
+                <input type="text" class="search-input" placeholder="Search patients or services..."
+                    value="{{ search_query }}">
+                <select class="filter-select" name="service_type_filter" {% if dept_focus %}style="display:none;"{% endif %}>
+                    <option value="">All Service Types</option>
+                    {% for service_type in service_types %}
+                    <option value="{{ service_type.0 }}" {% if service_type_filter == service_type.0 %}selected{% endif %}>{{ service_type.1 }}</option>
+                    {% endfor %}
+                </select>
+                <select class="filter-select" name="payment_status">
+                    <option value="">All Payment Status</option>
+                    <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid / Cleared</option>
+                    <option value="Pending" {% if payment_filter == 'Pending' %}selected{% endif %}>Unpaid (Pending)
+                    </option>
+                    <option value="Partial" {% if payment_filter == 'Partial' %}selected{% endif %}>Partially Paid
+                    </option>
+                </select>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Service</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in lab_invoices %}
+                        {% with related_result=invoice.related_results.0 %}
+                        <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}')"
+                            style="cursor: pointer;">
+                            {% endwith %}
+                            <td>
+                                <strong>{{ invoice.invoice.patient.full_name }}</strong>
+                            </td>
+                            <td>{{ invoice.service.name }}</td>
+                            <td>${{ invoice.service.price }}</td>
+                            <td>
+                                {% if invoice.invoice.status == 'Paid' %}
+                                <span class="badge-status status-completed"><i class="fas fa-check-circle"></i>
+                                    PAID</span>
+                                {% elif invoice.invoice.status == 'Partial' %}
+                                <span class="badge-status status-in-progress"><i class="fas fa-adjust"></i>
+                                    PARTIAL</span>
+                                {% else %}
+                                <span class="badge-status status-pending"
+                                    style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i
+                                        class="fas fa-exclamation-triangle"></i> UNPAID</span>
+                                {% endif %}
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{
+                                    invoice.invoice.id }}</div>
+                            </td>
+                            <td>{{ invoice.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-file-invoice"></i>
+                                <div>No service invoices found.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-header">
+                <h2><i class="fas fa-flask"></i> {% if user_role == 'Radiographer' %}Radiology{% else %}Lab{% endif %}
+                    Results</h2>
+            </div>
+
+            <div class="search-filters">
+                <input type="text" class="search-input" placeholder="Search patients or services..."
+                    value="{{ search_query }}">
+                <select class="filter-select" name="status_filter">
+                    <option value="">All Status</option>
+                    {% for status in status_choices %}
+                    <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>{{ status.1 }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Test</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Requested</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in lab_results %}
+                        <tr>
+                            <td>
+                                <strong>{{ result.patient.full_name }}</strong>
+                            </td>
+                            <td>{{ result.service.name }}</td>
+                            <td>
+                                <span class="badge-status status-{{ result.status|slugify }}">{{ result.status }}</span>
+                            </td>
+                            <td>
+                                <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority
+                                    }}</span>
+                            </td>
+                            <td>{{ result.requested_at|date:"M d, Y" }}</td>
+                            <td>
+                                <a href="{% url 'lab:lab_result_detail' result.id %}" class="action-link">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-flask"></i>
+                                <div>No lab results found.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Section -->
+    <div class="dashboard-main" style="margin-top: 1.5rem;">
+        <div class="content-card">
+            <div class="card-header">
+                <h2><i class="fas fa-boxes"></i> {% if user_role == 'Radiographer' %}Radiology{% else %}Lab{% endif %}
+                    Inventory</h2>
+                <div class="header-actions">
+                    <a href="{% url 'inventory:create_request' %}" class="btn-inventory-request">
+                        <i class="fas fa-plus-circle"></i> Request Stock
+                    </a>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Batch</th>
+                            <th>Quantity</th>
+                            <th>Expiry Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in lab_stock %}
+                        <tr>
+                            <td><strong>{{ stock.item.name }}</strong></td>
+                            <td>{{ stock.batch_number }}</td>
+                            <td>
+                                {% if stock.quantity <= stock.item.reorder_level %} <span
+                                    class="badge-status status-pending">{{ stock.quantity }}</span>
+                                    {% else %}
+                                    {{ stock.quantity }}
+                                    {% endif %}
+                            </td>
+                            <td>{{ stock.expiry_date|date:"M d, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                <i class="fas fa-box-open"></i>
+                                <div>No stock in Lab location.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-header">
+                <h2><i class="fas fa-clipboard-list"></i> Inventory Requests</h2>
+                <div class="header-actions">
+                    <a href="{% url 'inventory:request_list' %}" class="btn-inventory-view">
+                        <i class="fas fa-list"></i> View All
+                    </a>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                            <th>Acknowledged</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in lab_requests %}
+                        <tr>
+                            <td>{{ req.item.name }}</td>
+                            <td>{{ req.quantity }}</td>
+                            <td>
+                                <span
+                                    class="badge-status {% if req.status == 'Approved' %}status-completed{% elif req.status == 'Rejected' %}status-pending{% else %}status-in-progress{% endif %}">
+                                    {{ req.status }}
+                                </span>
+                            </td>
+                            <td>{{ req.requested_at|date:"M d" }}</td>
+                            <td>
+                                {% with req.acknowledgements.first as ack %}
+                                {% if ack %}
+                                <span class="text-success"><i class="fas fa-check"></i> {{ ack.received_at|date:"M d"
+                                    }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="fas fa-clipboard"></i>
+                                <div>No inventory requests found.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="custom-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="messageModalTitle" style="font-size: 1.25rem; font-weight: 600;">Message</h3>
+                <button class="custom-btn btn-secondary" onclick="closeModal('messageModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalContent" style="margin: 0; font-size: 1rem; color: var(--text-primary);"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="custom-btn btn-primary" onclick="closeModal('messageModal')">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showMessageModal(title, message) {
+        document.getElementById('messageModalTitle').textContent = title;
+        document.getElementById('messageModalContent').textContent = message;
+        document.getElementById('messageModal').style.display = "flex";
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    function handleInvoiceClick(invoiceItemId, status, visitType, resultId) {
+        if (visitType === 'OUT-PATIENT' && status !== 'Paid') {
+            const msg = "For Out-Patient visits, the invoice must be fully paid before tests can be processed.";
+            showMessageModal('Payment Required', msg);
+            return;
+        }
+
+        if (resultId) {
+            window.location.href = `/lab/result/${resultId}/`;
+        } else {
+            window.location.href = `/lab/create-result/${invoiceItemId}/`;
+        }
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        if (event.target.classList.contains('custom-modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    // Simple form submission for filters
+    document.querySelectorAll('.search-input, .filter-select').forEach(element => {
+        element.addEventListener('change', function () {
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = window.location.href.split('?')[0];
+
+            document.querySelectorAll('.search-input, .filter-select').forEach(input => {
+                if (input.value) {
+                    const inputField = document.createElement('input');
+                    inputField.type = 'hidden';
+                    inputField.name = input.getAttribute('name') || (input.classList.contains('search-input') ? 'search' : '');
+                    if (inputField.name) {
+                        inputField.value = input.value;
+                        form.appendChild(inputField);
+                    }
+                }
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    });
+
+    // Handle enter key on search input
+    document.querySelectorAll('.search-input').forEach(input => {
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                this.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+</script>
+{% endblock %}

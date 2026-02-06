@@ -1,0 +1,372 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Add Next of Kin - Morgue{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-row">
+        <h2><i class="fas fa-user-plus"></i> Add Next of Kin</h2>
+        <div class="header-actions">
+            <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Deceased
+            </a>
+        </div>
+    </div>
+
+    <!-- Deceased Info -->
+    <div class="deceased-info-card">
+        <div class="info-header">
+            <h3><i class="fas fa-user"></i> Deceased Information</h3>
+        </div>
+        <div class="info-content">
+            <div class="info-row">
+                <span class="label">Name:</span>
+                <span class="value">{{ deceased.full_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Tag:</span>
+                <span class="value tag-badge">{{ deceased.tag }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Date of Death:</span>
+                <span class="value">{{ deceased.date_of_death|date:"F d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next of Kin Form -->
+    <div class="form-container">
+        <form method="post" id="next-of-kin-form">
+            {% csrf_token %}
+            
+            <div class="form-section">
+                <h3><i class="fas fa-users"></i> Next of Kin Details</h3>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="{{ form.name.id_for_label }}">Full Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="error">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.id_type.id_for_label }}">ID Type *</label>
+                        {{ form.id_type }}
+                        {% if form.id_type.errors %}
+                            <div class="error">{{ form.id_type.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.id_number.id_for_label }}">ID Number *</label>
+                        {{ form.id_number }}
+                        {% if form.id_number.errors %}
+                            <div class="error">{{ form.id_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.relationship.id_for_label }}">Relationship *</label>
+                        {{ form.relationship }}
+                        {% if form.relationship.errors %}
+                            <div class="error">{{ form.relationship.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.phone.id_for_label }}">Phone Number</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="error">{{ form.phone.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.email.id_for_label }}">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="error">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="{{ form.address.id_for_label }}">Physical Address</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="error">{{ form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            {{ form.is_primary }}
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">Primary Contact Person</span>
+                        </label>
+                        <small class="form-help">Check if this is the primary next of kin to contact</small>
+                        {% if form.is_primary.errors %}
+                            <div class="error">{{ form.is_primary.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Next of Kin
+                </button>
+                <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.deceased-info-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.info-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.info-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-content {
+    padding: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    gap: 1rem;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-row .label {
+    font-weight: 600;
+    color: #666;
+    min-width: 120px;
+}
+
+.info-row .value {
+    color: #333;
+}
+
+.tag-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.form-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.form-section {
+    padding: 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group.checkbox-group {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkmark {
+    display: none;
+}
+
+.checkbox-text {
+    font-weight: normal;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-help {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.error {
+    margin-top: 0.25rem;
+    color: #dc3545;
+    font-size: 0.875rem;
+}
+
+.form-actions {
+    padding: 2rem;
+    background: #f8f9fa;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .info-row .label {
+        min-width: auto;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,304 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Prescription Details - {{ patient.full_name }} - HMS{% endblock %}
+
+{% block content %}
+<style>
+    .prescription-detail {
+        max-width: 900px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .prescription-header {
+        border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .prescription-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .prescription-info {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        color: #1e293b;
+    }
+
+    .medications-section {
+        margin-top: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
+    }
+
+    .medication-card {
+        background: rgba(99, 102, 241, 0.03);
+        border: 2px solid rgba(99, 102, 241, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .medication-name {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #6366f1;
+        margin-bottom: 0.75rem;
+    }
+
+    .medication-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .detail-item {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .detail-value {
+        color: #1e293b;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: #64748b;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-dispense {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+
+    .btn-dispense:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-dispense:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+    }
+</style>
+
+<div class="prescription-detail">
+    <div class="prescription-header">
+        <h2><i class="fas fa-prescription"></i> Prescription Details</h2>
+    </div>
+
+    <div class="prescription-info">
+        <div class="info-item">
+            <span class="info-label">Patient</span>
+            <span class="info-value">{{ patient.full_name }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-label">Prescribed By</span>
+            <span class="info-value">{{
+                prescription.prescribed_by.get_full_name|default:prescription.prescribed_by.username }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-label">Date</span>
+            <span class="info-value">{{ prescription.prescribed_at|date:"F d, Y H:i" }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="info-value">{{ prescription.status }}</span>
+        </div>
+
+        <div class="info-item" style="grid-column: span 2;">
+            <span class="info-label">Diagnosis</span>
+            <span class="info-value">{{ prescription.diagnosis }}</span>
+        </div>
+
+        {% if prescription.notes %}
+        <div class="info-item" style="grid-column: span 2;">
+            <span class="info-label">Notes</span>
+            <span class="info-value">{{ prescription.notes }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="medications-section">
+        <h3 class="section-title">Prescribed Medications</h3>
+
+        {% for item in prescription.items.all %}
+        <div class="medication-card">
+            <div class="medication-name">
+                <i class="fas fa-pills"></i> {{ item.medication.name }}
+            </div>
+
+            <div class="medication-details">
+                <div class="detail-item">
+                    <span class="detail-label">Dose:</span>
+                    <span class="detail-value">{{ item.dose_count }} units</span>
+                </div>
+
+                <div class="detail-item">
+                    <span class="detail-label">Frequency:</span>
+                    <span class="detail-value">{{ item.frequency_count }} times/day</span>
+                </div>
+
+                <div class="detail-item">
+                    <span class="detail-label">Duration:</span>
+                    <span class="detail-value">{{ item.duration_days }} days</span>
+                </div>
+
+                <div class="detail-item">
+                    <span class="detail-label">Quantity:</span>
+                    <span class="detail-value">{{ item.quantity }} {{ item.medication.unit }}</span>
+                </div>
+
+                {% if item.instructions %}
+                <div class="detail-item" style="grid-column: span 2;">
+                    <span class="detail-label">Instructions:</span>
+                    <span class="detail-value">{{ item.instructions }}</span>
+                </div>
+                {% endif %}
+
+                <div class="detail-item">
+                    <span class="detail-label">Dispensed:</span>
+                    <span class="detail-value">
+                        {% if item.dispensed %}
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i> Yes
+                        <span style="font-size: 0.875rem; color: #64748b;">
+                            ({{ item.dispensed_at|date:"M d, Y H:i" }} by {{
+                            item.dispensed_by.full_name|default:"Unknown" }})
+                        </span>
+                        {% else %}
+                        <i class="fas fa-times-circle" style="color: #ef4444;"></i> No
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% if not item.dispensed %}
+                <div class="detail-item" style="grid-column: span 2; margin-top: 0.5rem;">
+                    <button class="btn-dispense" data-item-id="{{ item.id }}"
+                        data-medication="{{ item.medication.name }}" data-patient="{{ patient.full_name }}">
+                        <i class="fas fa-check"></i> Mark as Dispensed
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p style="color: #64748b;">No medications prescribed.</p>
+        {% endfor %}
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Patient
+        </a>
+    </div>
+</div>
+
+<script>
+    // Handle dispense button clicks
+    document.querySelectorAll('.btn-dispense').forEach(button => {
+        button.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const medication = this.dataset.medication;
+            const patient = this.dataset.patient;
+
+            if (confirm(`Mark ${medication} as dispensed for ${patient}?`)) {
+                // Disable button to prevent double-clicks
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dispensing...';
+
+                fetch(`/home/pharmacy/dispense/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-check"></i> Mark as Dispensed';
+                        }
+                    })
+                    .catch(error => {
+                        alert('An error occurred: ' + error);
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-check"></i> Mark as Dispensed';
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}

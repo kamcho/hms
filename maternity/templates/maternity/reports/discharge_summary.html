@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Discharge Summary - {{ pregnancy.patient.full_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            font-size: 10pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .hospital-name {
+            font-size: 16pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 12pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            color: #334155;
+        }
+
+        .section {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+
+        .section-header {
+            font-size: 9pt;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border-left: 3px solid #0f172a;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            padding: 0 10px;
+        }
+
+        .label {
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .value {
+            font-weight: 600;
+            font-size: 9.5pt;
+            color: #0f172a;
+        }
+
+        .outcome-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 9pt;
+            color: #334155;
+            background: #fff;
+            margin-top: 5px;
+        }
+
+        .narrative {
+            white-space: pre-line;
+            margin-top: 5px;
+        }
+
+        .newborn-card {
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+            background: #fdfdfd;
+        }
+
+        .footer {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+        }
+
+        .sign-area {
+            border-top: 1px solid #0f172a;
+            padding-top: 8px;
+            text-align: center;
+            font-size: 8pt;
+            font-weight: 700;
+        }
+
+        .print-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0f172a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        @media print {
+            .print-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button class="print-btn" onclick="window.print()">Print Summary</button>
+
+    <div class="header">
+        <div class="hospital-name">Maternity Health System</div>
+        <div style="font-size: 8pt; color: #64748b; margin-top: 5px;">Maternity & Neonatal Discharge Department</div>
+    </div>
+
+    <div class="title">Clinical Discharge Summary</div>
+
+    <div class="section">
+        <div class="section-header">Patient Identification</div>
+        <div class="grid">
+            <div>
+                <div class="label">Patient Name</div>
+                <div class="value">{{ pregnancy.patient.full_name }}</div>
+            </div>
+            <div>
+                <div class="label">Patient Number</div>
+                <div class="value">#{{ pregnancy.patient.id }}</div>
+            </div>
+            <div>
+                <div class="label">Date of Discharge</div>
+                <div class="value">{{ discharge.discharge_date|date:"d M Y, H:i" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Obstetric Summary</div>
+        <div class="grid">
+            <div>
+                <div class="label">Parity Code</div>
+                <div class="value">{{ pregnancy.para_code }}</div>
+            </div>
+            <div>
+                <div class="label">GA at Delivery</div>
+                <div class="value">{{ delivery.gestational_age_at_delivery }} Weeks</div>
+            </div>
+            <div>
+                <div class="label">Delivery Mode</div>
+                <div class="value">{{ delivery.get_delivery_mode_display }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Maternal Outcome & Summary</div>
+        <div class="outcome-box">
+            <div class="label">Condition at Discharge</div>
+            <div class="value" style="margin-bottom: 10px;">{{ discharge.get_mother_condition_at_discharge_display }}
+            </div>
+
+            <div class="label">Clinical Summary</div>
+            <div class="narrative">{{ discharge.discharge_summary|default:"Refer to complete case notes." }}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Neonatal Information</div>
+        {% for baby in newborns %}
+        <div class="newborn-card">
+            <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <div>
+                    <div class="label">Baby No.</div>
+                    <div class="value">{{ baby.baby_number }}</div>
+                </div>
+                <div>
+                    <div class="label">Gender</div>
+                    <div class="value">{{ baby.get_gender_display }}</div>
+                </div>
+                <div>
+                    <div class="label">Weight</div>
+                    <div class="value">{{ baby.birth_weight }} kg</div>
+                </div>
+                <div>
+                    <div class="label">APGAR (1/5)</div>
+                    <div class="value">{{ baby.apgar_1min }}/{{ baby.apgar_5min }}</div>
+                </div>
+            </div>
+            <div style="margin-top: 8px;">
+                <span class="label">Condition:</span> <span class="value">{{ baby.status }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding: 10px; font-style: italic; color: #94a3b8;">No newborn records associated with this episode.
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section">
+        <div class="section-header">Discharge Plan & Medications</div>
+        <div class="outcome-box">
+            <div class="label">Follow-up Plan</div>
+            <div class="value" style="margin-bottom: 10px; color: #7c3aed;">{{
+                discharge.follow_up_plan|default:"Standard PNC schedule (Day 3, 2 Weeks, 6 Weeks)." }}</div>
+
+            <div class="label">Take-home Medications</div>
+            <div class="narrative">{{ discharge.medications_prescribed|default:"None prescribed." }}</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="sign-area">
+            Discharging Clinician Signature
+            <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">{{
+                discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}</div>
+        </div>
+        <div class="sign-area">
+            Hospital Registrar / Stamp
+            <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">Date: {{ today|date:"d M Y" }}</div>
+        </div>
+    </div>
+</body>
+
+</html>

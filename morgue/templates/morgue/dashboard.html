@@ -1,0 +1,991 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Morgue Dashboard - HMS{% endblock %}
+
+{% block content %}
+<div class="morgue-dashboard">
+    <!-- Header Section -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fas fa-skull-crossbones"></i> Morgue Management System</h1>
+                <p>Comprehensive deceased management and tracking dashboard</p>
+            </div>
+            <div class="header-stats">
+                <div class="quick-stat">
+                    <span class="stat-number">{{ total_deceased }}</span>
+                    <span class="stat-label">Current Occupancy</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Admission
+            </a>
+            <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list"></i> View All
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Statistics Grid -->
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ total_deceased }}</div>
+                    <div class="stat-label">Current Occupancy</div>
+                    <div class="stat-change">Active in morgue</div>
+                </div>
+                <div class="stat-progress">
+                    <div class="progress-bar" style="width: 85%"></div>
+                </div>
+            </div>
+            
+            <div class="stat-card success">
+                <div class="stat-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ admitted_today }}</div>
+                    <div class="stat-label">Admitted Today</div>
+                    <div class="stat-change">New admissions</div>
+                </div>
+                <div class="stat-progress">
+                    <div class="progress-bar success" style="width: 60%"></div>
+                </div>
+            </div>
+            
+            <div class="stat-card warning">
+                <div class="stat-icon">
+                    <i class="fas fa-user-minus"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ released_today }}</div>
+                    <div class="stat-label">Released Today</div>
+                    <div class="stat-change">Processed releases</div>
+                </div>
+                <div class="stat-progress">
+                    <div class="progress-bar warning" style="width: 40%"></div>
+                </div>
+            </div>
+            
+            <div class="stat-card info">
+                <div class="stat-icon">
+                    <i class="fas fa-snowflake"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ released_count }}</div>
+                    <div class="stat-label">Total Released</div>
+                    <div class="stat-change">All time releases</div>
+                </div>
+                <div class="stat-progress">
+                    <div class="progress-bar info" style="width: 75%"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Grid -->
+    <section class="main-dashboard-grid">
+        <!-- Storage Occupancy Card -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3><i class="fas fa-th"></i> Storage Occupancy</h3>
+                <div class="card-badge">
+                    <span>{{ chamber_occupancy.items|length }} Chambers</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="occupancy-grid">
+                    {% for chamber, count in chamber_occupancy.items %}
+                    <div class="occupancy-item {% if count > 5 %}high-occupancy{% endif %}">
+                        <div class="chamber-info">
+                            <span class="chamber-name">{{ chamber }}</span>
+                            <span class="chamber-count">{{ count }}</span>
+                        </div>
+                        <div class="occupancy-indicator">
+                            <div class="indicator-bar" data-count="{{ count }}"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="occupancy-legend">
+                    <div class="legend-item">
+                        <span class="legend-color low"></span>
+                        <span>Low (0-5)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color high"></span>
+                        <span>High (6+)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Admissions Card -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3><i class="fas fa-clock"></i> Recent Admissions</h3>
+                <div class="card-badge">
+                    <span>{{ recent_admissions|length }} Recent</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="recent-list">
+                    {% for admission in recent_admissions %}
+                    <div class="recent-item">
+                        <div class="recent-avatar">
+                            <span>{{ admission.surname|first }}{{ admission.other_names|first }}</span>
+                        </div>
+                        <div class="recent-info">
+                            <h4>{{ admission.full_name }}</h4>
+                            <div class="recent-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-tag"></i> {{ admission.tag }}
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-snowflake"></i> {{ admission.get_storage_chamber_display }}
+                                </span>
+                            </div>
+                            <div class="recent-time">
+                                <i class="fas fa-clock"></i> {{ admission.date_time_received|date:"M d, Y H:i" }}
+                            </div>
+                        </div>
+                        <div class="recent-actions">
+                            <a href="{% url 'morgue:deceased_detail' admission.pk %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-user-injured"></i>
+                        <h4>No Recent Admissions</h4>
+                        <p>No new admissions have been recorded in the last 24 hours.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Actions Section -->
+    <section class="quick-actions-section">
+        <div class="section-header">
+            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            <p>Common tasks and shortcuts</p>
+        </div>
+        <div class="quick-actions-grid">
+            <a href="{% url 'morgue:deceased_create' %}" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-content">
+                    <h4>New Admission</h4>
+                    <p>Register a new deceased person</p>
+                </div>
+            </a>
+            
+            <a href="{% url 'morgue:deceased_list' %}" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div class="action-content">
+                    <h4>View All Deceased</h4>
+                    <p>Browse all registered deceased</p>
+                </div>
+            </a>
+            
+            <a href="{% url 'morgue:next_of_kin_create' 1 %}" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Add Next of Kin</h4>
+                    <p>Manage contact information</p>
+                </div>
+            </a>
+            
+            <a href="#" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Generate Report</h4>
+                    <p>Export morgue statistics</p>
+                </div>
+            </a>
+        </div>
+    </section>
+</div>
+
+<style>
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.morgue-dashboard {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    min-height: 100vh;
+    padding: 20px;
+    color: #2c3e50;
+}
+
+/* Header Section */
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-text h1 {
+    color: white;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-text p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.header-stats {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quick-stat {
+    text-align: center;
+}
+
+.quick-stat .stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.quick-stat .stat-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+}
+
+/* Statistics Section */
+.stats-section {
+    margin-bottom: 30px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+
+.stat-card.primary::before { background: linear-gradient(135deg, #667eea, #764ba2); }
+.stat-card.success::before { background: linear-gradient(135deg, #28a745, #20c997); }
+.stat-card.warning::before { background: linear-gradient(135deg, #ffc107, #e0a800); }
+.stat-card.info::before { background: linear-gradient(135deg, #17a2b8, #138496); }
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.stat-card.primary .stat-icon { background: linear-gradient(135deg, #667eea, #764ba2); }
+.stat-card.success .stat-icon { background: linear-gradient(135deg, #28a745, #20c997); }
+.stat-card.warning .stat-icon { background: linear-gradient(135deg, #ffc107, #e0a800); }
+.stat-card.info .stat-icon { background: linear-gradient(135deg, #17a2b8, #138496); }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.stat-change {
+    font-size: 0.85rem;
+    color: #95a5a6;
+}
+
+.stat-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 0 3px 3px 0;
+    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.progress-bar.success { background: linear-gradient(90deg, #28a745, #20c997); }
+.progress-bar.warning { background: linear-gradient(90deg, #ffc107, #e0a800); }
+.progress-bar.info { background: linear-gradient(90deg, #17a2b8, #138496); }
+
+/* Main Dashboard Grid */
+.main-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 20px 25px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header h3 {
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.card-badge {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 25px;
+}
+
+/* Occupancy Grid */
+.occupancy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.occupancy-item {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.occupancy-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.occupancy-item.high-occupancy {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+
+.chamber-info {
+    margin-bottom: 10px;
+}
+
+.chamber-name {
+    display: block;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.chamber-count {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.occupancy-indicator {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.indicator-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.occupancy-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.legend-color.low {
+    background: #28a745;
+}
+
+.legend-color.high {
+    background: #dc3545;
+}
+
+/* Recent List */
+.recent-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.recent-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-bottom: 1px solid #f1f3f5;
+    transition: all 0.3s ease;
+}
+
+.recent-item:hover {
+    background: #f8f9fa;
+}
+
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.recent-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.recent-info {
+    flex: 1;
+}
+
+.recent-info h4 {
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.recent-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 5px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.recent-time {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: #95a5a6;
+}
+
+.recent-actions {
+    flex-shrink: 0;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #95a5a6;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    margin: 0 0 10px 0;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Quick Actions Section */
+.quick-actions-section {
+    margin-bottom: 30px;
+}
+
+.section-header {
+    margin-bottom: 20px;
+}
+
+.section-header h3 {
+    color: #2c3e50;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-header p {
+    color: #6c757d;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.action-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    transition: width 0.3s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.action-card:hover::before {
+    width: 8px;
+}
+
+.action-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.action-content h4 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.action-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .main-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .morgue-dashboard {
+        padding: 15px;
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 25px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.8rem;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .occupancy-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .recent-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .recent-meta {
+        justify-content: center;
+    }
+    
+    .recent-actions {
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-text h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .occupancy-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Custom Scrollbar */
+.recent-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.recent-list::-webkit-scrollbar-track {
+    background: #f1f3f5;
+    border-radius: 3px;
+}
+
+.recent-list::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 3px;
+}
+
+.recent-list::-webkit-scrollbar-thumb:hover {
+    background: #5a6fd8;
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card,
+.dashboard-card,
+.action-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+.dashboard-card:nth-child(1) { animation-delay: 0.5s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.6s; }
+.action-card:nth-child(1) { animation-delay: 0.7s; }
+.action-card:nth-child(2) { animation-delay: 0.8s; }
+.action-card:nth-child(3) { animation-delay: 0.9s; }
+.action-card:nth-child(4) { animation-delay: 1.0s; }
+</style>
+
+<script>
+// Set occupancy indicator bar widths
+document.addEventListener('DOMContentLoaded', function() {
+    const indicatorBars = document.querySelectorAll('.indicator-bar');
+    indicatorBars.forEach(bar => {
+        const count = parseInt(bar.getAttribute('data-count'));
+        if (!isNaN(count)) {
+            // Calculate width: each count unit = 10%, max 100%
+            const width = Math.min(count * 10, 100);
+            setTimeout(() => {
+                bar.style.width = width + '%';
+            }, 100);
+        }
+    });
+});
+</script>
+{% endblock %}

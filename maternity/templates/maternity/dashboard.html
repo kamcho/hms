@@ -1,0 +1,202 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Maternity Ward Dashboard - HMS{% endblock %}
+
+
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto p-5">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Maternity Ward Management</h1>
+            <p class="text-slate-500 mt-1 font-medium text-lg">Detailed overview of active patients, upcoming
+                deliveries, and ward status</p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <a href="{% url 'maternity:anc_dashboard' %}"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 font-semibold text-sm transition-all hover:bg-blue-100">
+                <i class="fas fa-baby-carriage text-lg"></i> ANC Dashboard
+            </a>
+            <a href="{% url 'maternity:pnc_dashboard' %}"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-50 text-pink-600 border border-pink-100 font-semibold text-sm transition-all hover:bg-pink-100">
+                <i class="fas fa-child text-lg"></i> PNC Dashboard
+            </a>
+            <a href="{% url 'maternity:register_pregnancy' %}"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fas fa-plus"></i> Register Pregnancy
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-blue-50 text-blue-600">
+                <i class="fas fa-female text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-slate-900">{{ total_active }}</div>
+            <div class="text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">Active Pregnancies</div>
+        </div>
+
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-amber-50 text-amber-600">
+                <i class="fas fa-exclamation-triangle text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-slate-900">{{ high_risk_count }}</div>
+            <div class="text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">High Risk Cases</div>
+        </div>
+
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-rose-50 text-rose-600">
+                <i class="fas fa-clock text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-slate-900">{{ overdue_count }}</div>
+            <div class="text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">Overdue (EDD+)</div>
+        </div>
+
+        <div
+            class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-emerald-50 text-emerald-600">
+                <i class="fas fa-home text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-slate-900">{{ current_newborns.count }}</div>
+            <div class="text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">Newborns In-Ward</div>
+        </div>
+    </div>
+
+    <!-- Ward Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <!-- Left: Active Pregnancy Registry -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-bottom border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-users text-blue-500"></i> Active Pregnancy Registry
+                </h2>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Top 20 Recently Updated</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50">
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient
+                            </th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">GPAL
+                            </th>
+                            <th
+                                class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                                GA</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">EDD</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Risk
+                            </th>
+                            <th
+                                class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                                Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for p in active_pregnancies %}
+                        <tr class="transition-colors hover:bg-slate-50/50">
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-slate-900 leading-tight">{{ p.patient.full_name }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600 font-medium">{{ p.para_code }}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">{{
+                                    p.gestational_age_weeks }}w</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-slate-700">{{ p.edd|date:"d M Y" }}</span>
+                                    {% if p.edd < today %} <span
+                                        class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-tighter">
+                                        OVERDUE</span>
+                                        {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2.5 py-1 rounded-lg font-black text-[10px] uppercase tracking-wider
+                                    {% if p.risk_level == 'High' %}bg-rose-100 text-rose-700
+                                    {% elif p.risk_level == 'Moderate' %}bg-amber-100 text-amber-700
+                                    {% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                                    {{ p.risk_level }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <a href="{% url 'maternity:pregnancy_detail' p.id %}"
+                                    class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase tracking-widest transition-colors">View
+                                    File</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">
+                                <i class="fas fa-search block text-3xl mb-3 opacity-20"></i>
+                                No active pregnancies registered
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right: Ward Status/Recent Deliveries -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-baby-carriage text-emerald-500"></i> Recent Deliveries
+                    </h2>
+                </div>
+                <div class="divide-y divide-slate-50">
+                    {% for delivery in recent_deliveries %}
+                    <div class="px-6 py-4 flex justify-between items-center transition-colors hover:bg-slate-50/50">
+                        <div>
+                            <div class="font-bold text-slate-900">{{ delivery.pregnancy.patient.full_name }}</div>
+                            <div class="text-xs font-medium text-slate-400 mt-0.5">
+                                {{ delivery.get_delivery_mode_display }} • {{ delivery.delivery_datetime|date:"d M, H:i"
+                                }}
+                            </div>
+                        </div>
+                        <a href="{% url 'maternity:pregnancy_detail' delivery.pregnancy.id %}"
+                            class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase tracking-widest transition-colors">View</a>
+                    </div>
+                    {% empty %}
+                    <div class="p-8 text-center text-slate-400 italic">No recent deliveries</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-bolt text-amber-500"></i> Quick Shortcuts
+                    </h2>
+                </div>
+                <div class="p-4 flex flex-col gap-3">
+                    <a href="{% url 'maternity:anc_dashboard' %}"
+                        class="flex items-center gap-4 p-3 rounded-xl bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-md hover:border-slate-200 group text-slate-900 no-underline">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-blue-500 text-white flex items-center justify-center transition-transform group-hover:scale-110 shadow-md shadow-blue-100">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="font-bold text-sm">Visit Analytics Dashboard</div>
+                    </a>
+                    <a href="#"
+                        class="flex items-center gap-4 p-3 rounded-xl bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-md hover:border-slate-200 group text-slate-900 no-underline">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-emerald-500 text-white flex items-center justify-center transition-transform group-hover:scale-110 shadow-md shadow-emerald-100">
+                            <i class="fas fa-file-medical"></i>
+                        </div>
+                        <div class="font-bold text-sm">Maternity Reports (Monthly)</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

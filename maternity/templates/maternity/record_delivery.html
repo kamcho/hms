@@ -1,0 +1,142 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Record Delivery - HMS{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+    <div style="margin-bottom: 30px;">
+        <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
+            style="color: #00a8e8; text-decoration: none; font-weight: 600;">
+            <i class="fas fa-arrow-left"></i> Back to Pregnancy Record
+        </a>
+    </div>
+
+    <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div style="margin-bottom: 24px;">
+            <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
+                {% if is_new %}Record{% else %}Update{% endif %} Labor & Delivery
+            </h1>
+            <p style="color: #64748b; margin: 0;">{{ pregnancy.patient.full_name }} • {{ pregnancy.para_code }}</p>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Delivery Information -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Delivery Information
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <div>
+                        <label class="form-label"><strong>Admission Date & Time</strong> <span
+                                style="color: #dc2626;">*</span></label>
+                        {{ form.admission_date }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Delivery Date & Time</strong> <span
+                                style="color: #dc2626;">*</span></label>
+                        {{ form.delivery_datetime }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Gestational Age at Delivery (weeks)</strong> <span
+                                style="color: #dc2626;">*</span></label>
+                        {{ form.gestational_age_at_delivery }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Labor Details -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Labor Details</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label class="form-label"><strong>Labor Onset</strong> <span
+                                style="color: #dc2626;">*</span></label>
+                        {{ form.labor_onset }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Rupture of Membranes</strong></label>
+                        {{ form.rupture_of_membranes }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Labor Duration</strong></label>
+                        {{ form.labor_duration }}
+                        <small style="color: #64748b; display: block; margin-top: 4px;">e.g., 08:30:00 for 8h
+                            30m</small>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label"><strong>Delivery Mode</strong> <span
+                            style="color: #dc2626;">*</span></label>
+                    {{ form.delivery_mode }}
+                </div>
+            </div>
+
+            <!-- Maternal Outcomes -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Maternal Outcomes
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label class="form-label"><strong>Estimated Blood Loss (mL)</strong></label>
+                        {{ form.estimated_blood_loss }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Perineal Tear</strong></label>
+                        {{ form.perineal_tear }}
+                    </div>
+                    <div>
+                        <label class="form-label"><strong>Placenta Delivery</strong></label>
+                        {{ form.placenta_delivery }}
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+                    <div class="form-check">
+                        {{ form.episiotomy }}
+                        <label class="form-check-label" for="{{ form.episiotomy.id_for_label }}">Episiotomy
+                            Performed</label>
+                    </div>
+                    <div class="form-check">
+                        {{ form.blood_transfusion }}
+                        <label class="form-check-label" for="{{ form.blood_transfusion.id_for_label }}">Blood
+                            Transfusion Required</label>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label class="form-label"><strong>Mother's Condition</strong> <span
+                            style="color: #dc2626;">*</span></label>
+                    {{ form.mother_condition }}
+                </div>
+                <div>
+                    <label class="form-label"><strong>Maternal Complications</strong></label>
+                    {{ form.maternal_complications }}
+                </div>
+            </div>
+
+            <!-- Clinical Notes -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Clinical
+                    Documentation</h3>
+                <div>
+                    <label class="form-label"><strong>Delivery Notes</strong></label>
+                    {{ form.delivery_notes }}
+                    <small style="color: #64748b; display: block; margin-top: 4px;">Labor progress, delivery summary,
+                        immediate postpartum care, etc.</small>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                <button type="submit"
+                    style="background: #00a8e8; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-check"></i> {% if is_new %}Save Delivery{% else %}Update Delivery{% endif %}
+                </button>
+                <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
+                    style="background: #e2e8f0; color: #475569; padding: 12px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
