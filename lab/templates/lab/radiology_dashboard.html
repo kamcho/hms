@@ -6,128 +6,175 @@
 {% block content %}
 <style>
     :root {
-        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        --glass-bg: rgba(255, 255, 255, 0.95);
-        --glass-border: rgba(255, 255, 255, 0.2);
-        --text-primary: #1e293b;
-        --text-secondary: #64748b;
-        --text-muted: #94a3b8;
-        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --lab-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --lab-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        --lab-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        --lab-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --lab-bg: #0f172a;
+        --lab-card-bg: #1e293b;
+        --lab-border: rgba(148, 163, 184, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+        background: var(--lab-bg);
+        color: var(--text-primary);
     }
 
     .radiology-dashboard {
         animation: fadeIn 0.6s ease-out;
+        padding: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .lab-hero {
+        background: var(--lab-gradient-1);
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lab-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        filter: blur(80px);
+    }
+
+    .lab-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 0.5rem 0;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .lab-hero p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin: 0;
+        position: relative;
+        z-index: 1;
     }
 
     .analytics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 1.5rem;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
     }
 
     .stat-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--glass-border);
+        background: var(--lab-card-bg);
+        border: 1px solid var(--lab-border);
         border-radius: 20px;
-        padding: 1.5rem;
+        padding: 2rem;
         display: flex;
         align-items: center;
         gap: 1.5rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        box-shadow: var(--card-shadow);
-        cursor: pointer;
-        text-decoration: none;
-        color: inherit;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient, var(--lab-gradient-1));
     }
 
     .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-8px);
+        border-color: rgba(148, 163, 184, 0.3);
+        box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
     }
 
     .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 15px;
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
+        font-size: 1.75rem;
+        background: rgba(255, 255, 255, 0.05);
         color: white;
     }
 
-    .icon-invoices {
-        background: var(--primary-gradient);
-    }
-
-    .icon-pending {
-        background: var(--warning-gradient);
-    }
-
-    .icon-progress {
-        background: var(--primary-gradient);
-    }
-
-    .icon-completed {
-        background: var(--success-gradient);
-    }
-
-    .icon-inventory {
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    }
-
-    .icon-requests {
-        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-    }
-
     .stat-info h3 {
-        font-size: 0.875rem;
+        font-size: 0.85rem;
+        font-weight: 600;
         color: var(--text-secondary);
-        margin-bottom: 0.25rem;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem;
     }
 
     .stat-info .number {
-        font-size: 1.75rem;
-        font-weight: 700;
+        font-size: 2.5rem;
+        font-weight: 900;
         color: var(--text-primary);
+        line-height: 1;
     }
 
     .dashboard-main {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
+        gap: 2rem;
     }
 
     .content-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--glass-border);
+        background: var(--lab-card-bg);
+        border: 1px solid var(--lab-border);
         border-radius: 24px;
-        padding: 1.5rem;
-        box-shadow: var(--card-shadow);
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.2);
     }
 
     .card-header {
+        padding: 1.75rem 2rem;
+        border-bottom: 1px solid var(--lab-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        background: rgba(255, 255, 255, 0.02);
     }
 
     .card-header h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
+        font-size: 1.5rem;
+        font-weight: 800;
         color: var(--text-primary);
+        margin: 0;
         display: flex;
         align-items: center;
         gap: 0.75rem;
+    }
+
+    .card-header h2 i {
+        background: var(--lab-gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .header-actions {
@@ -172,144 +219,154 @@
     }
 
     .search-filters {
+        position: relative;
+        margin: 1.5rem 2rem;
         display: flex;
         gap: 1rem;
-        margin-bottom: 1.5rem;
         flex-wrap: wrap;
     }
 
     .search-input {
         flex: 1;
         min-width: 200px;
-        padding: 0.75rem 1rem;
-        border: 2px solid var(--glass-border);
-        border-radius: 12px;
-        background: white;
+        padding: 1rem 1.25rem 1rem 3.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--lab-border);
+        border-radius: 16px;
         color: var(--text-primary);
-        font-size: 0.875rem;
-        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        transition: all 0.3s;
     }
 
     .search-input:focus {
         outline: none;
+        background: rgba(255, 255, 255, 0.08);
         border-color: #6366f1;
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     }
 
     .filter-select {
         padding: 0.75rem 1rem;
-        border: 2px solid var(--glass-border);
-        border-radius: 12px;
-        background: white;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--lab-border);
+        border-radius: 16px;
         color: var(--text-primary);
-        font-size: 0.875rem;
-        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        transition: all 0.3s;
         cursor: pointer;
     }
 
     .filter-select:focus {
         outline: none;
         border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     }
 
     .data-table {
         width: 100%;
-        border-collapse: collapse;
-        color: var(--text-secondary);
+        border-collapse: separate;
+        border-spacing: 0;
     }
 
     .data-table th {
+        padding: 1rem 2rem;
         text-align: left;
-        padding: 1rem;
-        border-bottom: 2px solid var(--glass-border);
-        color: var(--text-muted);
         font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
-        background: rgba(99, 102, 241, 0.03);
+        letter-spacing: 1px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--lab-border);
     }
 
     .data-table td {
-        padding: 1rem;
-        border-bottom: 1px solid var(--glass-border);
+        padding: 1.25rem 2rem;
+        background: transparent;
+        border-bottom: 1px solid var(--lab-border);
+        color: var(--text-primary);
+        vertical-align: middle;
     }
 
     .data-table tr:last-child td {
         border-bottom: none;
     }
 
-    .data-table tr:hover {
-        background: rgba(99, 102, 241, 0.05);
-        transition: all 0.3s ease;
+    .data-table tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
     }
 
     .badge-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-
-    .status-pending {
-        background: rgba(245, 158, 11, 0.1);
-        color: #d97706;
-        border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-
-    .status-in-progress {
-        background: rgba(99, 102, 241, 0.1);
-        color: #6366f1;
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
     }
 
     .status-completed {
-        background: rgba(16, 185, 129, 0.1);
-        color: #059669;
-        border: 1px solid rgba(16, 185, 129, 0.2);
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+
+    .status-in-progress {
+        background: rgba(99, 102, 241, 0.15);
+        color: #6366f1;
+    }
+
+    .status-pending {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
     }
 
     .priority-badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
     }
 
     .priority-urgent {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
     }
 
     .priority-high {
-        background: rgba(245, 158, 11, 0.1);
-        color: #d97706;
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
     }
 
     .priority-normal {
-        background: rgba(99, 102, 241, 0.1);
+        background: rgba(99, 102, 241, 0.15);
         color: #6366f1;
     }
 
     .priority-low {
-        background: rgba(16, 185, 129, 0.1);
-        color: #059669;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
     }
 
     .action-link {
-        color: var(--text-muted);
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
         text-decoration: none;
-        padding: 0.5rem;
-        border-radius: 6px;
-        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .action-link:hover {
-        color: #6366f1;
-        background: rgba(99, 102, 241, 0.1);
+        background: var(--lab-gradient-1);
+        color: white;
     }
 
     .empty-state {
@@ -346,69 +403,94 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(8px);
         align-items: center;
         justify-content: center;
     }
 
     .modal-content {
-        background-color: white;
-        padding: 0;
-        border-radius: 12px;
+        background: var(--lab-card-bg);
+        border: 1px solid var(--lab-border);
+        border-radius: 24px;
         width: 90%;
-        max-width: 400px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
     .modal-header {
-        padding: 1.25rem;
-        border-bottom: 1px solid var(--glass-border);
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--lab-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        background: rgba(255, 255, 255, 0.02);
     }
 
     .modal-body {
-        padding: 1.5rem;
+        padding: 2rem;
     }
 
     .modal-footer {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid var(--glass-border);
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--lab-border);
         display: flex;
         justify-content: flex-end;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.02);
     }
 
     .custom-btn {
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.3s;
         border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
     }
 
     .btn-secondary {
-        background: #e5e7eb;
-        color: #374151;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        border: 1px solid var(--lab-border);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
     }
 
     .btn-primary {
-        background: #6366f1;
+        background: var(--lab-gradient-1);
         color: white;
     }
 
     .btn-primary:hover {
-        opacity: 0.9;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
     }
 </style>
 
 <div class="radiology-dashboard">
+    <!-- Hero Header -->
+    <div class="lab-hero">
+        <div style="position: relative; z-index: 1;">
+            <h1><i class="fas fa-flask"></i> {{ dashboard_title }}</h1>
+            <p>Diagnostic excellence through synchronized laboratory and radiology operations</p>
+        </div>
+    </div>
+
+    <!-- Analytics Section -->
     <div class="analytics-grid">
-        <div class="stat-card">
-            <div class="stat-icon icon-invoices">
+        <div class="stat-card" style="--gradient: var(--lab-gradient-1)">
+            <div class="stat-icon">
                 <i class="fas fa-file-invoice"></i>
             </div>
             <div class="stat-info">
@@ -417,8 +499,8 @@
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon icon-completed">
+        <div class="stat-card" style="--gradient: var(--lab-gradient-4)">
+            <div class="stat-icon">
                 <i class="fas fa-check-double"></i>
             </div>
             <div class="stat-info">
@@ -427,8 +509,8 @@
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon icon-pending">
+        <div class="stat-card" style="--gradient: var(--lab-gradient-2)">
+            <div class="stat-icon">
                 <i class="fas fa-exclamation-circle"></i>
             </div>
             <div class="stat-info">
@@ -437,8 +519,8 @@
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon icon-progress">
+        <div class="stat-card" style="--gradient: var(--lab-gradient-3)">
+            <div class="stat-icon">
                 <i class="fas fa-spinner fa-spin"></i>
             </div>
             <div class="stat-info">
@@ -455,6 +537,7 @@
             </div>
 
             <div class="search-filters">
+                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
                 <input type="text" class="search-input" placeholder="Search patients or services..."
                     value="{{ search_query }}">
                 <select class="filter-select" name="service_type_filter" {% if dept_focus %}style="display:none;"{% endif %}>
@@ -507,8 +590,7 @@
                                     style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i
                                         class="fas fa-exclamation-triangle"></i> UNPAID</span>
                                 {% endif %}
-                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{
-                                    invoice.invoice.id }}</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{ invoice.invoice.id }}</div>
                             </td>
                             <td>{{ invoice.created_at|date:"M d, Y" }}</td>
                         </tr>
@@ -532,6 +614,7 @@
             </div>
 
             <div class="search-filters">
+                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
                 <input type="text" class="search-input" placeholder="Search patients or services..."
                     value="{{ search_query }}">
                 <select class="filter-select" name="status_filter">
@@ -566,8 +649,7 @@
                                 <span class="badge-status status-{{ result.status|slugify }}">{{ result.status }}</span>
                             </td>
                             <td>
-                                <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority
-                                    }}</span>
+                                <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority }}</span>
                             </td>
                             <td>{{ result.requested_at|date:"M d, Y" }}</td>
                             <td>
@@ -576,6 +658,7 @@
                                 </a>
                             </td>
                         </tr>
+                        
                         {% empty %}
                         <tr>
                             <td colspan="6" class="empty-state">

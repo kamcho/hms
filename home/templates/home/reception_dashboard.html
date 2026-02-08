@@ -4,71 +4,170 @@
 {% block title %}Reception Dashboard - HMS{% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --reception-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --reception-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        --reception-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        --reception-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --reception-bg: #0f172a;
+        --reception-card-bg: #1e293b;
+        --reception-border: rgba(148, 163, 184, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+        background: var(--reception-bg);
+        color: var(--text-primary);
+    }
+
+    .container {
+        padding: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .reception-hero {
+        background: var(--reception-gradient-1);
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .reception-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        filter: blur(80px);
+    }
+
+    .hero-content h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .hero-content p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .quick-action-btn {
+        padding: 1rem 1.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s;
+    }
+
+    .quick-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
 <div class="container">
-    <div class="header-row">
-        <h2>Reception Dashboard</h2>
+
+    <!-- Hero Section -->
+    <div class="reception-hero">
+        <div class="hero-content">
+            <h1><i class="fas fa-hospital-user"></i> Reception Dashboard</h1>
+            <p>Streamlined patient intake and coordination hub</p>
+        </div>
+        <div class="hero-actions">
+            {% if user_role == 'Receptionist' %}
+            <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
+                <i class="fas fa-plus-circle"></i> Add New Patient
+            </a>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="stats-container">
-        <div class="stat-card">
+    <!-- Analytics Cards -->
+    <div class="analytics-grid">
+        <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
             <div class="stat-icon">
                 <i class="fas fa-calendar-day"></i>
             </div>
-            <div class="stat-content">
+            <div class="stat-info">
                 <h3>Today's Visits</h3>
-                <div class="stat-number">{{ today_visits }}</div>
+                <div class="number">{{ today_visits }}</div>
             </div>
         </div>
-        <div class="stat-card">
+
+        <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
             <div class="stat-icon">
                 <i class="fas fa-users"></i>
             </div>
-            <div class="stat-content">
+            <div class="stat-info">
                 <h3>Total Patients</h3>
-                <div class="stat-number">{{ total_patients }}</div>
+                <div class="number">{{ total_patients }}</div>
             </div>
         </div>
+
         {% if user_role == 'Receptionist' %}
-        <div class="stat-card">
+        <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
             <div class="stat-icon">
                 <i class="fas fa-file-invoice-dollar"></i>
             </div>
-            <div class="stat-content">
+            <div class="stat-info">
                 <h3>Unpaid Invoices</h3>
-                <div class="stat-number">{{ unpaid_invoices }}</div>
+                <div class="number">{{ unpaid_invoices }}</div>
             </div>
         </div>
         {% elif user_role == 'Triage Nurse' %}
-        <div class="stat-card">
+        <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
             <div class="stat-icon">
                 <i class="fas fa-clipboard-check"></i>
             </div>
-            <div class="stat-content">
+            <div class="stat-info">
                 <h3>Today's Triage</h3>
-                <div class="stat-number">{{ today_triage_entries }}</div>
+                <div class="number">{{ today_triage_entries }}</div>
             </div>
         </div>
-        <div class="stat-card">
+
+        <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
             <div class="stat-icon">
                 <i class="fas fa-user-clock"></i>
             </div>
-            <div class="stat-content">
+            <div class="stat-info">
                 <h3>Pending Triage</h3>
-                <div class="stat-number">{{ pending_triage_count }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% if user_role == 'Receptionist' %}
-        <div class="stat-card">
-            <div class="stat-icon">
-                <i class="fas fa-user-plus"></i>
-            </div>
-            <div class="stat-content">
-                <h3>Recent Patients</h3>
-                <div class="stat-number">{{ patients|length }}</div>
-                <a href="{% url 'home:patient_create' %}" class="add-patient-btn">
-                    <i class="fas fa-plus"></i> Add New Patient
-                </a>
+                <div class="number">{{ pending_triage_count }}</div>
             </div>
         </div>
         {% endif %}
@@ -78,19 +177,17 @@
         {% if user_role == 'Receptionist' %}
         <div class="section">
             <div class="section-header">
-                <h3>Patient Service Invoices</h3>
+                <h3><i class="fas fa-file-invoice-dollar"></i> Patient Service Invoices</h3>
                 <button id="reloadInvoices" class="reload-btn" title="Reload Invoice Data">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
             <div class="search-section">
                 <form method="GET" class="search-form">
-                    <div class="search-container">
+                    <div class="search-container" style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
                         <input type="text" name="invoice_search" class="search-input"
                             placeholder="Search by patient name or service name..." value="{{ invoice_search }}">
-                        <button type="submit" class="btn btn-primary search-btn">
-                            <i class="fas fa-search"></i> Search
-                        </button>
                         {% if invoice_search %}
                         <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
                             <i class="fas fa-times"></i> Clear
@@ -105,7 +202,7 @@
             </div>
             {% endif %}
             <div class="table-responsive">
-                <table class="invoice-table">
+                <table class="premium-table">
                     <thead>
                         <tr>
                             <th>Patient</th>
@@ -117,43 +214,59 @@
                     </thead>
                     <tbody id="invoiceTableBody">
                         {% for invoice in invoices %}
-                        <tr class="invoice-row {% if invoice.deceased %}bg-light-danger{% endif %}"
+                        <tr class="invoice-row"
                             data-invoice-id="{{ invoice.pk }}"
                             data-patient-name="{% if invoice.patient %}{{ invoice.patient.full_name }}{% else %}{{ invoice.deceased.full_name }}{% endif %}"
                             data-service-name="{% for item in invoice.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% empty %}No services{% endfor %}"
                             data-price="{{ invoice.total_amount }}" data-status="{{ invoice.status }}">
                             <td class="patient-name">
-                                {% if invoice.patient %}
-                                {{ invoice.patient.full_name }}
-                                {% elif invoice.deceased %}
-                                <span class="text-danger font-weight-bold">{{ invoice.deceased.full_name }}</span>
-                                {% else %}
-                                Unknown
-                                {% endif %}
+                                <div class="patient-profile-inline">
+                                    <div class="avatar-initials" data-name="{% if invoice.patient %}{{ invoice.patient.first_name }}{% else %}{{ invoice.deceased.first_name }}{% endif %}">
+                                        {% if invoice.patient %}{{ invoice.patient.first_name|first }}{{ invoice.patient.last_name|first }}{% else %}{{ invoice.deceased.first_name|first }}{{ invoice.deceased.last_name|first }}{% endif %}
+                                    </div>
+                                    <div class="name-id">
+                                        <span class="full-name">
+                                            {% if invoice.patient %}
+                                            {{ invoice.patient.full_name }}
+                                            {% elif invoice.deceased %}
+                                            <span class="text-danger">{{ invoice.deceased.full_name }}</span>
+                                            {% else %}
+                                            Unknown
+                                            {% endif %}
+                                        </span>
+                                        <span class="patient-id">#INV-{{ invoice.pk|stringformat:"05d" }}</span>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="service-name">
-                                {% for item in invoice.items.all %}
-                                {{ item.name }}{% if not forloop.last %}, {% endif %}
-                                {% empty %}
-                                No services
-                                {% endfor %}
+                            <td class="service-name-cell">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                    {% for item in invoice.items.all %}
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: #6366f1;">{{ item.name }}</span>
+                                    {% empty %}
+                                    <span class="text-secondary">No services</span>
+                                    {% endfor %}
+                                </div>
                             </td>
                             <td class="price">Ksh {{ invoice.total_amount|format_number:2 }}</td>
                             <td>
                                 <span class="invoice-status status-{{ invoice.status|lower }}">
-                                    {{ invoice.status }}
+                                    <i class="fas {% if invoice.status == 'Paid' %}fa-check-circle{% else %}fa-clock{% endif %}"></i> {{ invoice.status }}
                                 </span>
                             </td>
-                            <td class="date">{{ invoice.created_at|date:"M d, Y H:i" }}</td>
+                            <td class="date">
+                                <div class="time-cell">
+                                    <i class="far fa-calendar-alt"></i> {{ invoice.created_at|date:"M d, Y" }}
+                                    <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ invoice.created_at|date:"H:i" }}</span>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
                             <td colspan="5" class="no-records">
-                                {% if invoice_search %}
-                                No invoices found matching "{{ invoice_search }}".
-                                {% else %}
-                                No patient service invoices found.
-                                {% endif %}
+                                <div class="empty-state-small">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <p>No invoices found matching your criteria.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -164,19 +277,17 @@
         {% elif user_role == 'Triage Nurse' %}
         <div class="section">
             <div class="section-header">
-                <h3>Recent Triage Entries</h3>
+                <h3><i class="fas fa-clipboard-list"></i> Recent Triage Entries</h3>
                 <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
             <div class="search-section">
                 <form method="GET" class="search-form">
-                    <div class="search-container">
+                    <div class="search-container" style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
                         <input type="text" name="triage_search" class="search-input"
                             placeholder="Search by patient name or phone..." value="{{ triage_search }}">
-                        <button type="submit" class="btn btn-primary search-btn">
-                            <i class="fas fa-search"></i> Search
-                        </button>
                         {% if triage_search %}
                         <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
                             <i class="fas fa-times"></i> Clear
@@ -206,7 +317,8 @@
                             <td>
                                 <div class="patient-profile-inline">
                                     <div class="avatar-initials" data-name="{{ triage.visit.patient.first_name }}">
-                                        {{ triage.visit.patient.first_name|first }}{{triage.visit.patient.last_name|first }}
+                                        {{ triage.visit.patient.first_name|first
+                                        }}{{triage.visit.patient.last_name|first }}
                                     </div>
                                     <div class="name-id">
                                         <span class="full-name">{{ triage.visit.patient.first_name }}
@@ -248,19 +360,17 @@
         </div>
         <div class="section">
             <div class="section-header">
-                <h3>Visits Pending Triage</h3>
+                <h3><i class="fas fa-hourglass-half"></i> Visits Pending Triage</h3>
                 <button class="reload-btn" onclick="location.reload()" title="Refresh visits">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
             <div class="search-section">
                 <form method="GET" class="search-form">
-                    <div class="search-container">
+                    <div class="search-container" style="position: relative;">
+                         <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
                         <input type="text" name="pending_search" class="search-input"
                             placeholder="Search by patient name or phone..." value="{{ pending_search }}">
-                        <button type="submit" class="btn btn-primary search-btn">
-                            <i class="fas fa-search"></i> Search
-                        </button>
                         {% if pending_search %}
                         <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
                             <i class="fas fa-times"></i> Clear
@@ -271,8 +381,7 @@
             </div>
             {% if pending_search %}
             <div class="search-results-info">
-                Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search
-                    }}</strong>"
+                Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search }}</strong>"
             </div>
             {% endif %}
             <div class="table-responsive">
@@ -293,20 +402,18 @@
                                         {{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}
                                     </div>
                                     <div class="name-id">
-                                        <span class="full-name">{{ visit.patient.first_name }} {{visit.patient.last_name  }}</span>
-                                        <span class="visit-time"><i class="far fa-clock"></i>
-                                            {{visit.visit_date|date:"H:i" }}</span>
+                                        <span class="full-name">{{ visit.patient.full_name }}</span>
+                                        <span class="visit-time"><i class="far fa-clock"></i> {{ visit.visit_date|date:"H:i" }}</span>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <div class="visit-reason-box">
                                     <span class="reason-text">{{ visit.services_summary|default:"Standard Check-up"|truncatechars:60 }}</span>
-                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
                                         <span class="visit-type-tag">{{ visit.get_visit_type_display }}</span>
                                         {% if visit.is_maternity %}
-                                        <span class="badge"
-                                            style="background: rgba(231, 84, 128, 0.15); color: #e75480; border: 1px solid rgba(231, 84, 128, 0.3); font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 4px;">
+                                        <span class="badge" style="background: rgba(231, 84, 128, 0.15); color: #e75480; border: 1px solid rgba(231, 84, 128, 0.3); font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">
                                             <i class="fas fa-baby-carriage"></i> MATERNITY
                                         </span>
                                         {% endif %}
@@ -314,12 +421,12 @@
                                 </div>
                             </td>
                             <td class="text-right">
-                                <button class="btn-triage-start start-triage-btn" data-visit-id="{{ visit.pk }}"
-                                    data-patient-name="{{ visit.patient.first_name }} {{ visit.patient.last_name }}"
+                                <button class="btn-triage-start" data-visit-id="{{ visit.pk }}"
+                                    data-patient-name="{{ visit.patient.full_name }}"
                                     data-visit-date="{{ visit.visit_date|date:'M d, Y H:i' }}"
                                     data-is-maternity="{{ visit.is_maternity|yesno:'true,false' }}"
                                     data-services="{{ visit.services_summary }}">
-                                    <i class="fas fa-stethoscope"></i> Start Triage
+                                    <i class="fas fa-stethoscope"></i> Triage
                                 </button>
                             </td>
                         </tr>
@@ -345,10 +452,10 @@
             <div class="tab-container">
                 <div class="tabs-header">
                     <button class="dashboard-tab active" onclick="switchDashboardTab(event, 'ipd-tab')">
-                        <i class="fas fa-procedures"></i> Active IPD Admissions
+                        <i class="fas fa-procedures"></i> IPD Admissions
                     </button>
                     <button class="dashboard-tab" onclick="switchDashboardTab(event, 'morgue-tab')">
-                        <i class="fas fa-box"></i> Active Morgue Cases
+                        <i class="fas fa-box"></i> Morgue Cases
                     </button>
                 </div>
 
@@ -367,21 +474,41 @@
                                 {% for admission in ipd_admissions %}
                                 <tr>
                                     <td>
-                                        <div class="font-bold text-slate-900">{{ admission.patient.full_name }}</div>
-                                        <div class="text-xs text-slate-500">#PAT-{{ admission.patient.id }}</div>
+                                        <div class="patient-profile-inline">
+                                            <div class="avatar-initials" data-name="{{ admission.patient.first_name }}">
+                                                {{ admission.patient.first_name|first }}{{ admission.patient.last_name|first }}
+                                            </div>
+                                            <div class="name-id">
+                                                <span class="full-name">{{ admission.patient.full_name }}</span>
+                                                <span class="patient-id">#PAT-{{ admission.patient.id|stringformat:"05d" }}</span>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>{{ admission.bed.ward.name }} - {{ admission.bed.bed_number }}</td>
-                                    <td>{{ admission.admitted_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        <div style="font-weight: 600; color: #10b981;">{{ admission.bed.ward.name }}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Bed: {{ admission.bed.bed_number }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="time-cell">
+                                            <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y" }}
+                                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admitted_at|date:"H:i" }}</span>
+                                        </div>
+                                    </td>
                                     <td class="text-right">
                                         <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}"
-                                            class="btn btn-primary btn-sm">
-                                            <i class="fas fa-file-invoice-dollar"></i> Bill & Discharge
+                                            class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                            <i class="fas fa-file-invoice-dollar"></i> Discharge
                                         </a>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="no-records">No active Inpatient admissions.</td>
+                                    <td colspan="4" class="no-records">
+                                        <div class="empty-state-small">
+                                            <i class="fas fa-procedures"></i>
+                                            <p>No active IPD admissions.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -389,14 +516,14 @@
                     </div>
                 </div>
 
-                <div id="morgue-tab" class="tab-content">
+                <div id="morgue-tab" class="tab-content" style="display: none;">
                     <div class="table-responsive">
                         <table class="premium-table">
                             <thead>
                                 <tr>
                                     <th>Deceased</th>
-                                    <th>Tag</th>
-                                    <th>Admission Date</th>
+                                    <th>Tag/Number</th>
+                                    <th>Status</th>
                                     <th class="text-right">Action</th>
                                 </tr>
                             </thead>
@@ -404,21 +531,38 @@
                                 {% for admission in morgue_admissions %}
                                 <tr>
                                     <td>
-                                        <div class="font-bold text-slate-900">{{ admission.deceased.full_name }}</div>
-                                        <div class="text-xs text-slate-500">S/N: {{ admission.admission_number }}</div>
+                                        <div class="patient-profile-inline">
+                                            <div class="avatar-initials" data-name="{{ admission.deceased.first_name }}" style="background: #475569;">
+                                                {{ admission.deceased.first_name|first }}{{ admission.deceased.last_name|first }}
+                                            </div>
+                                            <div class="name-id">
+                                                <span class="full-name text-danger">{{ admission.deceased.full_name }}</span>
+                                                <span class="patient-id">S/N: {{ admission.admission_number }}</span>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td><span class="badge bg-secondary">{{ admission.deceased.tag }}</span></td>
-                                    <td>{{ admission.admission_datetime|date:"M d, Y H:i" }}</td>
+                                    <td><span class="invoice-status status-unpaid">{{ admission.deceased.tag }}</span></td>
+                                    <td>
+                                        <div class="time-cell">
+                                            <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M d, Y" }}
+                                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admission_datetime|date:"H:i" }}</span>
+                                        </div>
+                                    </td>
                                     <td class="text-right">
                                         <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}"
-                                            class="btn btn-primary btn-sm">
-                                            <i class="fas fa-file-invoice-dollar"></i> Bill & Release
+                                            class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                            <i class="fas fa-file-invoice-dollar"></i> Release
                                         </a>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="no-records">No active Morgue cases.</td>
+                                    <td colspan="4" class="no-records">
+                                        <div class="empty-state-small">
+                                            <i class="fas fa-door-closed"></i>
+                                            <p>No active morgue cases.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -432,16 +576,14 @@
         {% if user_role == 'Receptionist' %}
         <div class="section" style="grid-column: span 2;">
             <div class="section-header">
-                <h3>Recent Patients (Last 10)</h3>
+                <h3><i class="fas fa-users-cog"></i> Recent Patient Directory</h3>
             </div>
             <div class="search-section">
                 <form method="GET" class="search-form">
-                    <div class="search-container">
+                    <div class="search-container" style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
                         <input type="text" name="patient_search" class="search-input"
                             placeholder="Search by name, phone, or location..." value="{{ patient_search }}">
-                        <button type="submit" class="btn btn-primary search-btn">
-                            <i class="fas fa-search"></i> Search
-                        </button>
                         {% if patient_search %}
                         <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
                             <i class="fas fa-times"></i> Clear
@@ -456,34 +598,54 @@
             </div>
             {% endif %}
             <div class="table-responsive">
-                <table class="patient-table">
+                <table class="premium-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Age</th>
-                            <th>Gender</th>
-                            <th>Phone</th>
+                            <th>Patient</th>
+                            <th>Age/Gender</th>
+                            <th>Contact</th>
                             <th>Location</th>
                         </tr>
                     </thead>
                     <tbody id="patientTableBody">
                         {% for patient in patients %}
                         <tr class="patient-row" data-patient-id="{{ patient.pk }}"
-                            data-patient-name="{{ patient.first_name }} {{ patient.last_name }}">
-                            <td class="patient-name">{{ patient.first_name }} {{ patient.last_name }}</td>
-                            <td>{{ patient.age }}</td>
-                            <td>{{ patient.get_gender_display }}</td>
-                            <td>{{ patient.phone }}</td>
-                            <td>{{ patient.location }}</td>
+                            data-patient-name="{{ patient.full_name }}">
+                            <td>
+                                <div class="patient-profile-inline">
+                                    <div class="avatar-initials" data-name="{{ patient.first_name }}">
+                                        {{ patient.first_name|first }}{{ patient.last_name|first }}
+                                    </div>
+                                    <div class="name-id">
+                                        <span class="full-name">{{ patient.full_name }}</span>
+                                        <span class="patient-id">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <span style="font-weight: 600;">{{ patient.age }} yrs</span>
+                                    <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{ patient.get_gender_display }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.85rem; color: var(--text-primary);">
+                                    <i class="fas fa-phone-alt" style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{ patient.phone }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    <i class="fas fa-map-marker-alt" style="font-size: 0.75rem; margin-right: 0.5rem;"></i>{{ patient.location }}
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="no-records">
-                                {% if patient_search %}
-                                No patients found matching "{{ patient_search }}".
-                                {% else %}
-                                No patients found.
-                                {% endif %}
+                            <td colspan="4" class="no-records">
+                                <div class="empty-state-small">
+                                    <i class="fas fa-user-slash"></i>
+                                    <p>No patients found.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -863,334 +1025,205 @@
 </div>
 
 <style>
-    /* Stats Container */
-    .stats-container {
+    .analytics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 1.5rem;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
     }
 
     .stat-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 20px;
+        padding: 2rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
-        border-left: 4px solid var(--primary-color);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-    }
-
-    .stat-content h3 {
-        margin: 0 0 0.5rem 0;
-        color: #64748b;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 600;
-    }
-
-    .stat-number {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #1e293b;
-        margin: 0;
-    }
-
-    .add-patient-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
-        color: white;
-        text-decoration: none;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    .add-patient-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
-        background: linear-gradient(135deg, var(--primary-color-dark), #6d28d9);
-    }
-
-    /* Content Grid */
-    .content-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-    }
-
-    @media (max-width: 1024px) {
-        .content-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* Section Styles */
-    .section {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        gap: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
         overflow: hidden;
     }
 
-    .section-header {
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
-        color: white;
-        padding: 1.25rem;
-        border-bottom: 2px solid var(--primary-color);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient, var(--reception-gradient-1));
     }
 
-    .section-header h3 {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 500;
+    .stat-card:hover {
+        transform: translateY(-8px);
+        border-color: rgba(148, 163, 184, 0.3);
+        box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
     }
 
-    .reload-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        cursor: pointer;
+    .stat-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
-        font-size: 1rem;
+        font-size: 1.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
     }
 
-    .reload-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: scale(1.05);
+    .stat-info h3 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem;
     }
 
-    .reload-btn.loading {
-        animation: spin 1s linear infinite;
+    .stat-info .number {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
     }
 
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-
-        100% {
-            transform: rotate(360deg);
-        }
+    .content-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+        gap: 2rem;
     }
 
-    /* Search Section */
-    .search-section {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-bottom: 1px solid #e9ecef;
+    .section {
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 24px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.2);
     }
 
-    .search-container {
+    .section-header {
+        padding: 1.75rem 2rem;
+        border-bottom: 1px solid var(--reception-border);
         display: flex;
-        gap: 1rem;
+        justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .section-header h3 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .search-section {
+        padding: 1.5rem 2rem;
+        background: rgba(255, 255, 255, 0.01);
+        border-bottom: 1px solid var(--reception-border);
     }
 
     .search-input {
         flex: 1;
-        min-width: 300px;
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 1rem;
+        padding: 1rem 1.25rem 1rem 3.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--reception-border);
+        border-radius: 16px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s;
     }
 
     .search-input:focus {
         outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     }
 
-    .search-btn,
-    .clear-btn {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-        text-decoration: none;
+    .premium-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .premium-table th {
+        padding: 1.25rem 2rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--reception-border);
+    }
+
+    .premium-table td {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--reception-border);
+        color: var(--text-primary);
+        vertical-align: middle;
+    }
+
+    .premium-table tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .invoice-status, .priority-badge-modern {
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .status-paid { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .status-unpaid { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .status-pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .status-partial { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+    
+    .priority-critical { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .priority-high { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .priority-medium { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+    .priority-low { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+    /* Tab Styles */
+    .tabs-header {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 2rem 0;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--reception-border);
+    }
+
+    .dashboard-tab {
+        padding: 1rem 1.5rem;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--text-secondary);
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+        display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .search-btn {
-        background-color: var(--primary-color);
+    .dashboard-tab.active {
         color: white;
+        border-bottom-color: #6366f1;
     }
 
-    .clear-btn {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    .search-btn:hover {
-        background-color: var(--primary-color-dark);
-    }
-
-    .clear-btn:hover {
-        background-color: #5a6268;
-    }
-
-    .search-results-info {
-        padding: 1rem 1.5rem;
-        background: #f0f9ff;
-        color: #0369a1;
-        font-size: 0.9rem;
-        border-bottom: 1px solid #e2e8f0;
-    }
-
-    .search-results-info strong {
-        font-weight: 600;
-    }
-
-    .bg-light-danger {
-        background-color: #fff1f2 !important;
-    }
-
-    .text-danger {
-        color: #dc2626 !important;
-    }
-
-    .font-weight-bold {
-        font-weight: 700;
-    }
-
-    /* Table Styles */
-    .invoice-table,
-    .patient-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-    }
-
-    .invoice-table th,
-    .patient-table th {
-        background: #f8f9fa;
-        padding: 1rem;
-        text-align: left;
-        font-weight: 600;
-        color: #475569;
-        border-bottom: 2px solid #e2e8f0;
-    }
-
-    .invoice-table td,
-    .patient-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
-    }
-
-    .invoice-table tbody tr:hover,
-    .patient-table tbody tr:hover {
-        background-color: #f8fafc;
-    }
-
-    .invoice-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-
-    .status-unpaid {
-        background: #fef2f2;
-        color: #dc2626;
-    }
-
-    .status-paid {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .patient-name {
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    .service-name {
-        color: var(--primary-color);
-        font-weight: 500;
-    }
-
-    .price {
-        font-weight: 600;
-        color: #059669;
-    }
-
-    .date {
-        color: #64748b;
-        font-size: 0.9rem;
-    }
-
-    .btn-view {
-        background-color: #007bff;
-        color: white;
-        padding: 0.375rem 0.75rem;
-        text-decoration: none;
-        border-radius: 4px;
-        font-size: 0.875rem;
-        display: inline-block;
-        transition: background-color 0.2s ease;
-    }
-
-    .btn-view:hover {
-        background-color: #0056b3;
-    }
-
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-    }
-
-    .no-records {
-        text-align: center;
-        padding: 2rem;
-        color: #6c757d;
-        font-style: italic;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    /* Modal Styles */
+    /* Modal Redesign */
     .modal {
         display: none;
         position: fixed;
@@ -1199,793 +1232,136 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(5px);
+        background-color: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(8px);
+        align-items: center;
+        justify-content: center;
     }
 
     .modal-content {
-        background-color: white;
-        margin: 5% auto;
-        padding: 0;
-        border-radius: 12px;
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 24px;
         width: 90%;
-        max-width: 500px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        animation: modalSlideIn 0.3s ease;
+        max-width: 600px;
+        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
         display: flex;
         flex-direction: column;
-    }
-
-    @keyframes modalSlideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-50px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        overflow: hidden;
     }
 
     .modal-header {
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 12px 12px 0 0;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--reception-border);
+        background: rgba(255, 255, 255, 0.02);
         display: flex;
         justify-content: space-between;
         align-items: center;
-    }
-
-    .modal-header h3 {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 500;
-    }
-
-    .close {
-        color: white;
-        font-size: 1.5rem;
-        font-weight: bold;
-        cursor: pointer;
-        line-height: 1;
-        opacity: 0.8;
-        transition: opacity 0.3s ease;
-    }
-
-    .close:hover {
-        opacity: 1;
     }
 
     .modal-body {
         padding: 2rem;
     }
 
-    .modal-body p {
-        margin: 0 0 1.5rem 0;
-        font-size: 1.1rem;
-        color: #374151;
-    }
-
-    .action-buttons {
+    .modal-footer {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--reception-border);
+        background: rgba(255, 255, 255, 0.02);
         display: flex;
+        justify-content: flex-end;
         gap: 1rem;
-        flex-wrap: wrap;
     }
 
-    .action-buttons .btn {
-        flex: 1;
-        min-width: 200px;
-        padding: 1rem;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .action-buttons .btn-primary {
-        background-color: var(--primary-color);
-        color: white;
-    }
-
-    .action-buttons .btn-primary:hover {
-        background-color: var(--primary-color-dark);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
-    }
-
-    .action-buttons .btn-success {
-        background-color: #10b981;
-        color: white;
-    }
-
-    .action-buttons .btn-success:hover {
-        background-color: #059669;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-    }
-
-    /* Patient Row Clickable */
-    .patient-row {
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .patient-row:hover {
-        background-color: #f0f9ff !important;
-    }
-
-    .patient-row:hover .patient-name {
-        color: var(--primary-color);
-    }
-
-    /* Triage Table Styles */
-    .triage-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .triage-table th,
-    .triage-table td {
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .triage-table th {
-        background: #f8fafc;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .triage-row {
-        transition: background-color 0.2s ease;
-    }
-
-    .triage-row:hover {
-        background-color: #f0f9ff !important;
-    }
-
-    .triage-row:hover .patient-name {
-        color: var(--primary-color);
-    }
-
-    /* Priority Badges */
-    .priority-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .priority-critical {
-        background-color: #fee2e2;
-        color: #dc2626;
-    }
-
-    .priority-high {
-        background-color: #fed7aa;
-        color: #ea580c;
-    }
-
-    .priority-medium {
-        background-color: #fef3c7;
-        color: #d97706;
-    }
-
-    .priority-low {
-        background-color: #dbeafe;
-        color: #2563eb;
-    }
-
-    /* Pending Visits Table */
-    .pending-visits-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .pending-visits-table th,
-    .pending-visits-table td {
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .pending-visits-table th {
-        background: #f8fafc;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .pending-visit-row {
-        transition: background-color 0.2s ease;
-    }
-
-    .pending-visit-row:hover {
-        background-color: #f0f9ff !important;
-    }
-
-    .pending-visit-row:hover .patient-name {
-        color: var(--primary-color);
-    }
-
-    .start-triage-btn {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .start-triage-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-    }
-
-    /* Premium Table Redesign */
-    .premium-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .premium-table th {
-        background: #f8fafc;
-        padding: 1rem 1.25rem;
-        text-align: left;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
-        color: #64748b;
-        border-bottom: 1px solid #e2e8f0;
-    }
-
-    .premium-table td {
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-
-    .patient-profile-inline {
-        display: flex;
-        align-items: center;
-        gap: 0.875rem;
-    }
-
-    .avatar-initials {
-        width: 40px;
-        height: 40px;
-        background: #94a3b8;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: white;
-        font-size: 0.875rem;
-        flex-shrink: 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    /* Avatar Color Groups */
-    .avatar-initials[data-name^="A"],
-    .avatar-initials[data-name^="B"],
-    .avatar-initials[data-name^="C"] {
-        background: #4f46e5;
-    }
-
-    .avatar-initials[data-name^="D"],
-    .avatar-initials[data-name^="E"],
-    .avatar-initials[data-name^="F"] {
-        background: #10b981;
-    }
-
-    .avatar-initials[data-name^="G"],
-    .avatar-initials[data-name^="H"],
-    .avatar-initials[data-name^="I"] {
-        background: #f59e0b;
-    }
-
-    .avatar-initials[data-name^="J"],
-    .avatar-initials[data-name^="K"],
-    .avatar-initials[data-name^="L"] {
-        background: #ef4444;
-    }
-
-    .avatar-initials[data-name^="M"],
-    .avatar-initials[data-name^="N"],
-    .avatar-initials[data-name^="O"] {
-        background: #8b5cf6;
-    }
-
-    .avatar-initials[data-name^="P"],
-    .avatar-initials[data-name^="Q"],
-    .avatar-initials[data-name^="R"] {
-        background: #ec4899;
-    }
-
-    .avatar-initials[data-name^="S"],
-    .avatar-initials[data-name^="T"],
-    .avatar-initials[data-name^="U"] {
-        background: #06b6d4;
-    }
-
-    .avatar-initials[data-name^="V"],
-    .avatar-initials[data-name^="W"],
-    .avatar-initials[data-name^="X"],
-    .avatar-initials[data-name^="Y"],
-    .avatar-initials[data-name^="Z"] {
-        background: #334155;
-    }
-
-    .name-id {
-        display: flex;
-        flex-direction: column;
-        line-height: 1.2;
-    }
-
-    .full-name {
-        font-weight: 600;
-        color: #1e293b;
-        font-size: 0.9375rem;
-    }
-
-    .patient-id {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        font-family: 'Courier New', Courier, monospace;
-    }
-
-    .visit-time {
-        font-size: 0.75rem;
-        color: #64748b;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    /* Vitals Display */
-    .vitals-display {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-
-    .vital-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-        background: #f8fafc;
-        padding: 0.375rem 0.625rem;
-        border-radius: 6px;
-        font-size: 0.8125rem;
-        color: #475569;
-        font-weight: 500;
-        border: 1px solid #e2e8f0;
-    }
-
-    .vital-item i {
-        color: var(--primary-color);
-        width: 12px;
-        text-align: center;
-    }
-
-    /* Modern Priority Badges */
-    .priority-badge-modern {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.375rem 0.875rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-
-    .priority-badge-modern i {
-        font-size: 0.5rem;
-    }
-
-    .priority-badge-modern.priority-critical {
-        background: #fef2f2;
-        color: #dc2626;
-        box-shadow: 0 0 0 1px #fee2e2;
-    }
-
-    .priority-badge-modern.priority-high {
-        background: #fff7ed;
-        color: #ea580c;
-        box-shadow: 0 0 0 1px #ffedd5;
-    }
-
-    .priority-badge-modern.priority-medium {
-        background: #fffbeb;
-        color: #d97706;
-        box-shadow: 0 0 0 1px #fef3c7;
-    }
-
-    .priority-badge-modern.priority-low {
-        background: #f0fdf4;
-        color: #16a34a;
-        box-shadow: 0 0 0 1px #dcfce7;
-    }
-
-    .time-cell {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    /* Visit Reason Box */
-    .visit-reason-box {
-        display: flex;
-        flex-direction: column;
-        gap: 0.375rem;
-    }
-
-    .reason-text {
-        font-size: 0.875rem;
-        color: #334155;
-        font-weight: 500;
-    }
-
-    .visit-type-tag {
-        font-size: 0.6875rem;
-        text-transform: uppercase;
-        color: #94a3b8;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-    }
-
-    /* Triage Action Button */
     .btn-triage-start {
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
+        background: var(--reception-gradient-1);
         color: white;
         border: none;
-        padding: 0.625rem 1.125rem;
-        border-radius: 10px;
-        font-size: 0.8125rem;
-        font-weight: 600;
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        transition: all 0.3s;
     }
 
     .btn-triage-start:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
-    }
-
-    .text-right {
-        text-align: right;
-    }
-
-    /* Empty States */
-    .empty-state-small {
-        padding: 2.5rem 1rem;
-        text-align: center;
-        color: #94a3b8;
-    }
-
-    .empty-state-small i {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    .empty-state-small p {
-        margin: 0;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-
-    /* Invoice Row Clickable */
-    .invoice-row {
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .invoice-row:hover {
-        background-color: #f0f9ff !important;
-    }
-
-    .invoice-row:hover .patient-name {
-        color: var(--primary-color);
-    }
-
-    .invoice-row:hover .service-name {
-        color: var(--primary-color);
-    }
-
-    /* Payment Modal Specific Styles */
-    .invoice-info {
-        background: #f8fafc;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid var(--primary-color);
-    }
-
-    .invoice-info p {
-        margin: 0.5rem 0;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .amount-highlight {
-        color: #059669;
-        font-weight: bold;
-        font-size: 1.1rem;
-    }
-
-    .payment-options h4 {
-        margin: 0 0 1rem 0;
-        color: #374151;
-        font-size: 1.1rem;
-    }
-
-    .payment-methods {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-    }
-
-    .payment-method-btn {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1.5rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        background: white;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-align: left;
-    }
-
-    .payment-method-btn:hover {
-        border-color: var(--primary-color);
-        background: #f0f9ff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-    }
-
-    .payment-method-btn i {
-        font-size: 2rem;
-        color: var(--primary-color);
-    }
-
-    .payment-method-btn div {
-        flex: 1;
-    }
-
-    .payment-method-btn strong {
-        display: block;
-        color: #1f2937;
-        font-size: 1rem;
-        margin-bottom: 0.25rem;
-    }
-
-    .payment-method-btn small {
-        color: #6b7280;
-        font-size: 0.875rem;
-    }
-
-    .already-paid {
-        text-align: center;
-        padding: 2rem;
-        color: #059669;
-    }
-
-    .already-paid i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        display: block;
-    }
-
-    .already-paid p {
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    /* Triage Modal Specific Styles */
-    .triage-modal-content {
-        max-width: 800px;
-        width: 95%;
-        max-height: 85vh;
-        margin: 2vh auto;
-    }
-
-    .triage-modal-content .modal-header,
-    .triage-modal-content .modal-footer {
-        flex-shrink: 0;
-    }
-
-    .triage-modal-content .modal-body {
-        overflow-y: auto;
-        flex-grow: 1;
-        padding: 1.5rem;
-    }
-
-    .patient-info {
-        background: #f8fafc;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid var(--primary-color);
-    }
-
-    .patient-info p {
-        margin: 0.5rem 0;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .form-section {
-        margin-bottom: 2rem;
-    }
-
-    .form-section h4 {
-        margin: 0 0 1rem 0;
-        color: #374151;
-        font-size: 1.1rem;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 0.5rem;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group label {
-        font-weight: 500;
-        color: #374151;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
+        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
     }
 
     .form-control {
-        padding: 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--reception-border);
+        border-radius: 12px;
+        color: var(--text-primary);
+        padding: 0.75rem 1rem;
+        width: 100%;
+        transition: all 0.3s;
     }
 
     .form-control:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #6366f1;
         outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 
-    .form-control:invalid {
-        border-color: #ef4444;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: flex-end;
-        padding-top: 1rem;
-        border-top: 1px solid #e5e7eb;
-    }
-
-    .btn-secondary {
-        background-color: #6b7280;
+    .btn-primary {
+        background: var(--reception-gradient-1);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
+        border-radius: 12px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
     }
 
     .btn-secondary:hover {
-        background-color: #4b5563;
-        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.15);
     }
 
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .stats-container {
-            grid-template-columns: 1fr;
-        }
-
-        .search-container {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .search-input {
-            min-width: auto;
-        }
-
-        .search-btn,
-        .clear-btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .invoice-table,
-        .patient-table {
-            font-size: 0.875rem;
-        }
-
-        .invoice-table th,
-        .invoice-table td,
-        .patient-table th,
-        .patient-table td {
-            padding: 0.5rem;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .content-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .stat-card {
-            flex-direction: column;
-            text-align: center;
-        }
-
-        .invoice-table th:nth-child(4),
-        .invoice-table td:nth-child(4),
-        .patient-table th:nth-child(3),
-        .patient-table td:nth-child(3),
-        .patient-table th:nth-child(4),
-        .patient-table td:nth-child(4) {
-            display: none;
-        }
-    }
-
-    .patient-row {
+    .close, .close-payment, .close-triage {
+        color: var(--text-secondary);
+        font-size: 1.5rem;
         cursor: pointer;
-        transition: background-color 0.2s ease;
+        transition: color 0.3s;
     }
 
-    .patient-row:hover {
-        background-color: #f1f5f9 !important;
+    .close:hover { color: white; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--reception-bg);
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
     }
 </style>
 

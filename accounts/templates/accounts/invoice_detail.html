@@ -213,7 +213,7 @@
                     {{ invoice.get_status_display }}
                 </span>
 
-                {% if can_record_payment and invoice.status != 'Paid' %}
+                {% if user.role == 'Receptionist' and invoice.status != 'Paid' %}
                 <button class="custom-btn btn-primary" onclick="showModal('recordPaymentModal')"
                     style="background: var(--accent-success);">
                     <i class="fas fa-money-bill-wave" style="margin-right: 0.5rem;"></i>

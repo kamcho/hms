@@ -84,8 +84,37 @@
             <div class="text-2xl font-black text-slate-900 mb-1">${{ total_pending_amount|floatformat:2 }}</div>
             <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Outstanding Revenue</div>
         </div>
+
+        <!-- Active Inpatients Stat (NEW) -->
+        <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex justify-between items-start mb-4">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white transition-all">
+                    <i class="fas fa-bed text-xl"></i>
+                </div>
+                <span
+                    class="px-2 py-1 bg-cyan-50 text-cyan-600 rounded-lg text-[10px] font-black uppercase tracking-wider">Active</span>
+            </div>
+            <div class="text-3xl font-black text-slate-900 mb-1">{{ active_inpatient_count }}</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Inpatients</div>
+        </div>
+
+        <!-- On The Table Stat (NEW) -->
+        <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex justify-between items-start mb-4">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition-all">
+                    <i class="fas fa-procedures text-xl"></i>
+                </div>
+                <span
+                    class="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase tracking-wider">On
+                    Table</span>
+            </div>
+            <div class="text-3xl font-black text-slate-900 mb-1">{{ on_the_table_count }}</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Bodies on Table</div>
+        </div>
     </div>
-<br><br>
+    <br><br>
     <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Patient Trends -->
@@ -116,7 +145,38 @@
             </div>
         </div>
     </div>
-<br><br>
+
+    <!-- Distribution Charts Section (NEW) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        <!-- Ward Occupancy -->
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Ward Occupancy</h3>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-cyan-500"></span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Patients</span>
+                </div>
+            </div>
+            <div class="h-[300px] w-full">
+                <canvas id="wardOccupancyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Storage Distribution -->
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Morgue Storage Area</h3>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-slate-500"></span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deceased</span>
+                </div>
+            </div>
+            <div class="h-[300px] w-full">
+                <canvas id="storageDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <br><br>
 
     <!-- Tables Section -->
     <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
@@ -437,6 +497,70 @@
             x: {
                 grid: { display: false },
                 ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+            }
+        }
+    }
+        });
+
+    // Ward Occupancy Chart (NEW)
+    const wardCtx = document.getElementById('wardOccupancyChart').getContext('2d');
+    new Chart(wardCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ ward_labels| safe }},
+        datasets: [{
+            data: {{ ward_data| safe }},
+        backgroundColor: [
+            '#06b6d4', '#4f46e5', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'
+        ],
+        borderWidth: 0,
+        hoverOffset: 20
+                }]
+            },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: { weight: 'bold', size: 10 }
+                }
+            }
+        }
+    }
+        });
+
+    // Storage Distribution Chart (NEW)
+    const storageCtx = document.getElementById('storageDistributionChart').getContext('2d');
+    new Chart(storageCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ storage_labels| safe }},
+        datasets: [{
+            data: {{ storage_data| safe }},
+        backgroundColor: [
+            '#334155', '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'
+        ],
+        borderWidth: 0,
+        hoverOffset: 20
+                }]
+            },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: { weight: 'bold', size: 10 }
+                }
             }
         }
     }

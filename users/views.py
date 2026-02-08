@@ -9,7 +9,8 @@ from django.db.models import Sum, Count, F
 from django.http import JsonResponse
 from home.models import Patient, Visit
 from accounts.models import Invoice
-from morgue.models import Deceased
+from morgue.models import Deceased, MorgueAdmission
+from inpatient.models import Admission, Ward, Bed
 from datetime import datetime, timedelta, date
 
 class CustomLoginView(LoginView):
@@ -88,12 +89,41 @@ def dashboard_view(request):
         patient_trends.append(p_count)
         deceased_trends.append(d_count)
 
+    # Inpatient Statistics
+    active_inpatient_count = Admission.objects.filter(status='Admitted').count()
+    
+    # Morgue "On the Table" Statistics
+    # Assuming 'TEMPORARY' storage area represents "on the table"
+    on_the_table_count = Deceased.objects.filter(is_released=False, storage_area='TEMPORARY').count()
+    
+    # Ward Occupancy Data for Charts
+    wards = Ward.objects.annotate(patient_count=Count('beds', filter=F('beds__is_occupied')))
+    ward_labels = [w.name for w in wards]
+    ward_data = [w.patient_count for w in wards]
+    
+    # Storage Area Distribution for Charts
+    storage_distributions = Deceased.objects.filter(is_released=False).values('storage_area').annotate(count=Count('id'))
+    storage_labels = []
+    storage_data = []
+    
+    # Map choice keys to display names
+    storage_area_map = dict(Deceased.STORAGE_AREA_CHOICES)
+    for entry in storage_distributions:
+        storage_labels.append(storage_area_map.get(entry['storage_area'], entry['storage_area']))
+        storage_data.append(entry['count'])
+
     context = {
         'total_patients': total_patients,
         'new_patients_30d': new_patients_30d,
         'total_deceased': total_deceased,
         'currently_admitted_deceased': currently_admitted_deceased,
         'released_deceased_30d': released_deceased_30d,
+        'active_inpatient_count': active_inpatient_count,
+        'on_the_table_count': on_the_table_count,
+        'ward_labels': ward_labels,
+        'ward_data': ward_data,
+        'storage_labels': storage_labels,
+        'storage_data': storage_data,
         'recent_patients': Patient.objects.all().order_by('-created_at')[:5],
         'recent_deceased': Deceased.objects.all().order_by('-created_at')[:5],
         'pending_invoices': pending_invoices,
