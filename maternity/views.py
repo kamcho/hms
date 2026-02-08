@@ -435,6 +435,21 @@ def pregnancy_detail(request, pregnancy_id):
             'price': str(test.price) if test.price else None
         })
     
+    # Lab results and reports
+    from lab.models import LabResult, LabReport
+    lab_results = LabResult.objects.filter(patient=pregnancy.patient).select_related('service', 'requested_by').order_by('-requested_at')
+    
+    # Get lab reports for this patient
+    lab_report_ids = lab_results.values_list('id', flat=True)
+    lab_reports = LabReport.objects.filter(lab_result_id__in=lab_report_ids).select_related('lab_result', 'created_by').order_by('-created_at')
+    
+    # Get maternity specific services for quick billing
+    maternity_dept = Departments.objects.filter(name='Maternity').first()
+    maternity_services = Service.objects.filter(
+        department=maternity_dept,
+        is_active=True
+    ).order_by('name')
+
     context = {
         'pregnancy': pregnancy,
         'anc_visits': anc_visits,
@@ -444,7 +459,10 @@ def pregnancy_detail(request, pregnancy_id):
         'discharge': discharge,
         'referrals': referrals,
         'available_departments': Departments.objects.all().order_by('name'),
+        'maternity_services': maternity_services,
         'medical_tests_json': json.dumps(medical_tests_data),
+        'lab_results': lab_results,
+        'lab_reports': lab_reports,
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)

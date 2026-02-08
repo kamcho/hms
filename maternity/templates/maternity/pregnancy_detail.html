@@ -22,15 +22,12 @@
         <div class="flex-1">
             <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-2">{{ pregnancy.patient.full_name }}</h1>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-500 font-semibold">
-                <span class="flex items-center gap-1.5"><i class="fas fa-id-card text-slate-400"></i> {{
-                    pregnancy.patient.patient_id }}</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-id-card text-slate-400"></i> {{ pregnancy.patient.patient_id }}</span>
                 <span class="text-slate-300">•</span>
-                <span class="flex items-center gap-1.5"><i class="fas fa-user text-slate-400"></i> {{
-                    pregnancy.patient.age }} Years</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-user text-slate-400"></i> {{ pregnancy.patient.age }} Years</span>
                 <span class="text-slate-300">•</span>
                 <span
-                    class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-black">{{
-                    pregnancy.para_code }}</span>
+                    class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-black">{{ pregnancy.para_code }}</span>
             </div>
         </div>
         <div class="flex flex-col items-end gap-3">
@@ -75,8 +72,7 @@
         <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
             <h2 class="text-xl font-bold text-slate-800">Pregnancy Details</h2>
             <div class="flex items-center gap-4">
-                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-black">{{ pregnancy.para_code
-                    }}</span>
+                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-black">{{ pregnancy.para_code }}</span>
                 {% if pregnancy.status %}
                 <div class="flex items-center gap-2">
                     {% if not delivery %}
@@ -126,8 +122,7 @@
             </div>
             <div class="space-y-1">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prev. C-Section</div>
-                <div class="text-sm font-bold text-slate-900">{% if pregnancy.previous_cs %}Yes{% else %}No{% endif %}
-                </div>
+                <div class="text-sm font-bold text-slate-900">{% if pregnancy.previous_cs %}Yes{% else %}No{% endif %}</div>
             </div>
         </div>
 
@@ -208,8 +203,7 @@
                                     <div
                                         class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
                                         BP</div>
-                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{
-                                        visit.bp_diastolic }}</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{ visit.bp_diastolic }}</div>
                                 </div>
                                 {% endif %}
                                 {% if visit.fetal_heart_rate %}
@@ -217,8 +211,7 @@
                                     <div
                                         class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
                                         FHR</div>
-                                    <div class="text-sm font-bold text-slate-700 text-center text-rose-600">{{
-                                        visit.fetal_heart_rate }} bpm</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center text-rose-600">{{ visit.fetal_heart_rate }} bpm</div>
                                 </div>
                                 {% endif %}
                                 {% if visit.fundal_height %}
@@ -226,8 +219,7 @@
                                     <div
                                         class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
                                         FH</div>
-                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.fundal_height }}
-                                        cm</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.fundal_height }} cm</div>
                                 </div>
                                 {% endif %}
                             </div>
@@ -307,13 +299,11 @@
                                     <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                                         Plan & Follow-up</h4>
                                     <div class="space-y-4">
-                                        <div class="text-sm font-bold text-slate-800">{{ visit.plan|default:"Continue
-                                            regular ANC protocol" }}</div>
+                                        <div class="text-sm font-bold text-slate-800">{{ visit.plan|default:"Continue regular ANC protocol" }}</div>
                                         {% if visit.next_visit_date %}
                                         <div
                                             class="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-xl font-black uppercase tracking-widest text-[10px] border border-amber-100">
-                                            <i class="fas fa-calendar-alt"></i> Next Visit: {{
-                                            visit.next_visit_date|date:"d M Y" }}
+                                            <i class="fas fa-calendar-alt"></i> Next Visit: {{ visit.next_visit_date|date:"d M Y" }}
                                         </div>
                                         {% endif %}
                                     </div>
@@ -382,13 +372,11 @@
                     <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Labor Progress</h4>
                     <div class="space-y-3 text-xs font-bold">
                         <div class="flex justify-between text-slate-500"><span>Rupture of Memb.</span><span
-                                class="text-slate-900">{{ delivery.rupture_of_membranes|date:"d M Y H:i"|default:"N/A"
-                                }}</span></div>
+                                class="text-slate-900">{{ delivery.rupture_of_membranes|date:"d M Y H:i"|default:"N/A" }}</span></div>
                         <div class="flex justify-between text-slate-500"><span>Labor Duration</span><span
                                 class="text-slate-900">{{ delivery.labor_duration|default:"N/A" }}</span></div>
                         <div class="flex justify-between text-slate-500"><span>Admission</span><span
-                                class="text-slate-900">{{ delivery.admission_date|date:"d M Y H:i"|default:"N/A"
-                                }}</span></div>
+                                class="text-slate-900">{{ delivery.admission_date|date:"d M Y H:i"|default:"N/A" }}</span></div>
                     </div>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -396,11 +384,11 @@
                     </h4>
                     <div class="space-y-3 text-xs font-bold">
                         <div class="flex justify-between text-slate-500"><span>Episiotomy</span><span
-                                class="{% if delivery.episiotomy %}text-rose-600{% else %}text-slate-900{% endif %}">{%if delivery.episiotomy %}Yes{% else %}No{% endif %}</span></div>
+                                class="{% if delivery.episiotomy %}text-rose-600{% else %}text-slate-900{% endif %}">{% if delivery.episiotomy %}Yes{% else %}No{% endif %}</span></div>
                         <div class="flex justify-between text-slate-500"><span>Perineal Tear</span><span
                                 class="text-slate-900">{{ delivery.perineal_tear|default:"None" }}</span></div>
                         <div class="flex justify-between text-slate-500"><span>Transfusion</span><span
-                                class="{% if delivery.blood_transfusion %}text-rose-600{% else %}text-slate-900{% endif %}">{%if delivery.blood_transfusion %}Yes{% else %}No{% endif %}</span></div>
+                                class="{% if delivery.blood_transfusion %}text-rose-600{% else %}text-slate-900{% endif %}">{% if delivery.blood_transfusion %}Yes{% else %}No{% endif %}</span></div>
                     </div>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -473,8 +461,7 @@
                                 {{ baby.get_gender_display }}
                             </span>
                             <span class="text-slate-300">•</span>
-                            <span class="text-[10px] font-bold text-slate-400">Born {{ baby.birth_datetime|date:"d M
-                                H:i" }}</span>
+                            <span class="text-[10px] font-bold text-slate-400">Born {{ baby.birth_datetime|date:"d M H:i" }}</span>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -506,8 +493,7 @@
                     <div class="p-3 bg-white rounded-xl border border-slate-50 shadow-sm">
                         <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Breastfeeding
                         </div>
-                        <div class="text-sm font-bold text-slate-900">{% if baby.breastfeeding_initiated %}Initiated{%
-                            else %}Pending{% endif %}</div>
+                        <div class="text-sm font-bold text-slate-900">{% if baby.breastfeeding_initiated %}Initiated{% else %}Pending{% endif %}</div>
                     </div>
                 </div>
 
@@ -570,22 +556,17 @@
                             <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <div class="text-xs font-bold text-slate-900">Day {{ visit.visit_day }}</div>
-                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{
-                                        visit.visit_date|date:"d M Y" }}</div>
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ visit.visit_date|date:"d M Y" }}</div>
                                 </div>
                                 <div class="flex gap-2">
-                                    <a href="{% url 'maternity:record_vaccination' baby.id %}?visit_id={{ visit.id }}"
-                                        title="Add vaccine to this visit"
-                                        class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all">
+                                    <a href="{% url 'maternity:record_vaccination' baby.id %}?visit_id={{ visit.id }}" title="Add vaccine to this visit" class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all">
                                         <i class="fas fa-syringe text-[10px]"></i>
                                     </a>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                                <div class="text-slate-500">Weight: <span class="text-slate-900">{{ visit.weight }}
-                                        kg</span></div>
-                                <div class="text-slate-500">Temp: <span class="text-slate-900">{{ visit.temperature
-                                        }}°C</span></div>
+                                <div class="text-slate-500">Weight: <span class="text-slate-900">{{ visit.weight }} kg</span></div>
+                                <div class="text-slate-500">Temp: <span class="text-slate-900">{{ visit.temperature }}°C</span></div>
                             </div>
                         </div>
                         {% endfor %}
@@ -650,8 +631,7 @@
                                     <div
                                         class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
                                         BP</div>
-                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{
-                                        visit.bp_diastolic }}</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.bp_systolic }}/{{ visit.bp_diastolic }}</div>
                                 </div>
                                 {% endif %}
                                 {% if visit.breastfeeding_status %}
@@ -659,8 +639,7 @@
                                     <div
                                         class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
                                         Breastfeeding</div>
-                                    <div class="text-sm font-bold text-slate-700 text-center">{{
-                                        visit.breastfeeding_status }}</div>
+                                    <div class="text-sm font-bold text-slate-700 text-center">{{ visit.breastfeeding_status }}</div>
                                 </div>
                                 {% endif %}
                                 {% if visit.lochia %}
@@ -766,6 +745,146 @@
     </div>
     {% endif %}
 
+    <!-- Lab Results & Investigations -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-microscope text-blue-600"></i> Lab Results & Investigations
+            </h2>
+        </div>
+        <div class="p-6">
+            {% if lab_results %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-slate-50">
+                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Test
+                            </th>
+                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status
+                            </th>
+                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Requested</th>
+                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Results/Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for result in lab_results %}
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-4 py-4">
+                                <div class="text-sm font-bold text-slate-900">{{ result.service.name }}</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ result.requested_by.get_full_name|default:result.requested_by.username }}</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest
+                                    {% if result.status == 'Completed' %}bg-emerald-100 text-emerald-700
+                                    {% elif result.status == 'Pending' %}bg-amber-100 text-amber-700
+                                    {% elif result.status == 'In Progress' %}bg-blue-100 text-blue-700
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                    {{ result.status }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-sm font-medium text-slate-600">
+                                {{ result.requested_at|date:"d M Y, H:i" }}
+                            </td>
+                            <td class="px-4 py-4">
+                                {% if result.results %}
+                                <div class="text-sm font-bold text-blue-600">{{ result.results|truncatewords:20 }}</div>
+                                {% elif result.clinical_notes %}
+                                <div class="text-xs text-slate-500 italic">Note: {{ result.clinical_notes|truncatewords:10 }}</div>
+                                {% else %}
+                                <span class="text-xs text-slate-300">No results recorded yet</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-10 flex flex-col items-center justify-center text-slate-400">
+                <i class="fas fa-flask text-5xl opacity-10 mb-4"></i>
+                <p class="font-bold tracking-tight">No lab investigations found for this patient</p>
+            </div>
+            {% endif %}
+
+            {% if lab_reports %}
+            <div class="mt-8 pt-8 border-t border-slate-50">
+                <h4
+                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-file-medical text-blue-500"></i> Uploaded Lab Reports
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for report in lab_reports %}
+                    <div
+                        class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-blue-500 shadow-sm">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-900">{{ report.lab_result.service.name }}</div>
+                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ report.created_at|date:"d M Y" }}</div>
+                            </div>
+                        </div>
+                        {% if report.report_file %}
+                        <a href="{{ report.report_file.url }}" target="_blank"
+                            class="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+                            <i class="fas fa-download text-xs"></i>
+                        </a>
+                        {% else %}
+                        <div
+                            class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-300">
+                            <i class="fas fa-ban text-xs"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Clinical Next Action - Service Requests -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-hand-holding-dollar text-emerald-600"></i> Maternity Services & Billing
+            </h2>
+        </div>
+        <div class="p-6">
+            {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
+            <form id="maternityBillingForm" class="mb-8">
+                {% csrf_token %}
+                <input type="hidden" name="patient_id" value="{{ pregnancy.patient.pk }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for service in maternity_services %}
+                    <label
+                        class="flex items-center gap-3 cursor-pointer p-4 border border-slate-100 rounded-2xl transition-all hover:bg-emerald-50 hover:border-emerald-200 bg-slate-50/30">
+                        <input type="checkbox" name="tests" value="{{ service.id }}"
+                            onchange="toggleExecuteButton('maternityBillingForm', 'maternity-bill-btn')"
+                            class="w-5 h-5 accent-emerald-600">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">{{ service.name }}</div>
+                            <div class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">KSh {{ service.price }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button type="button" id="maternity-bill-btn"
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-100 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="submitNextAction('maternityBillingForm')" disabled>
+                        <i class="fas fa-file-invoice-dollar"></i> Bill Selected Services
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Clinical Next Action - Service Requests -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
         <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
@@ -774,7 +893,7 @@
             </h2>
         </div>
         <div class="p-6">
-            {% if user.role == 'Doctor' %}
+            {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
             <form id="nextActionForm">
                 {% csrf_token %}
                 <input type="hidden" name="patient_id" value="{{ pregnancy.patient.pk }}">
@@ -789,7 +908,8 @@
                             <label
                                 class="flex items-center gap-3 cursor-pointer p-3 border border-slate-200 rounded-xl transition-all hover:bg-slate-50 hover:border-blue-300">
                                 <input type="checkbox" name="send_to" value="{{ dept.name|lower }}"
-                                    data-dept-id="{{ dept.id }}" onchange="updateServicesFilter()"
+                                    data-dept-id="{{ dept.id }}"
+                                    onchange="updateServicesFilter(); toggleExecuteButton('nextActionForm', 'execute-btn')"
                                     class="w-4 h-4 accent-blue-600">
                                 <span class="text-sm font-bold text-slate-700">{{ dept.name }}</span>
                             </label>
@@ -831,8 +951,8 @@
                     <i class="fas fa-lock"></i>
                 </div>
                 <h4 class="text-lg font-black text-slate-900 mb-2">Restricted Access</h4>
-                <p class="text-slate-600 text-sm">Clinical next actions (service requests/routing) are restricted to the
-                    <strong>Doctor</strong> role.
+                <p class="text-slate-600 text-sm">Clinical next actions (service requests/routing) are restricted to
+                    <strong>Doctor</strong>, <strong>Nurse</strong>, or <strong>Triage Nurse</strong> roles.
                 </p>
             </div>
             {% endif %}
@@ -872,8 +992,7 @@
                     <div class="text-right">
                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Authorized By
                         </div>
-                        <div class="text-sm font-bold text-slate-900">{{
-                            discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}</div>
+                        <div class="text-sm font-bold text-slate-900">{{ discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}</div>
                     </div>
                 </div>
 
@@ -881,8 +1000,7 @@
                     <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                         <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Mother
                             Condition</div>
-                        <div class="text-sm font-bold text-emerald-700">{{
-                            discharge.get_mother_condition_at_discharge_display }}</div>
+                        <div class="text-sm font-bold text-emerald-700">{{ discharge.get_mother_condition_at_discharge_display }}</div>
                     </div>
                     <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
                         <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Baby Condition
@@ -930,10 +1048,8 @@
                 <div class="p-5 bg-orange-50/50 rounded-2xl border border-orange-100 relative overflow-hidden group">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <div class="text-sm font-black text-orange-900 leading-tight">To: {{
-                                referral.referred_to_facility }}</div>
-                            <div class="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-1">{{
-                                referral.referral_date|date:"d M Y, H:i" }}</div>
+                            <div class="text-sm font-black text-orange-900 leading-tight">To: {{ referral.referred_to_facility }}</div>
+                            <div class="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-1">{{ referral.referral_date|date:"d M Y, H:i" }}</div>
                         </div>
                         {% if referral.urgent %}
                         <span
@@ -941,8 +1057,7 @@
                         {% endif %}
                     </div>
 
-                    <div class="text-sm text-slate-700 font-bold mb-3">Reason: <span class="font-medium italic">{{
-                            referral.reason_for_referral }}</span></div>
+                    <div class="text-sm text-slate-700 font-bold mb-3">Reason: <span class="font-medium italic">{{ referral.reason_for_referral }}</span></div>
 
                     <div
                         class="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-t border-orange-100 pt-3 mt-3">
@@ -974,7 +1089,7 @@
     };
 
     {% if anc_visits %}
-    const anc = [{% for v in anc_visits %}{ n: {{ v.visit_number|default:"null" } }, ga: {{ v.gestational_age|default:"null" } }, w: {{ v.weight|default:"null" } }, sys: {{ v.bp_systolic|default:"null" } }, dia: {{ v.bp_diastolic|default:"null" } }, fhr: {{ v.fetal_heart_rate|default:"null" } }, fh: {{ v.fundal_height|default:"null" } } } {% if not forloop.last %}, {% endif %} {% endfor %}];
+    const anc = [{% for v in anc_visits %}{ n: {{ v.visit_number|default:"null" }}, ga: {{ v.gestational_age|default:"null" }}, w: {{ v.weight|default:"null" }}, sys: {{ v.bp_systolic|default:"null" }}, dia: {{ v.bp_diastolic|default:"null" }}, fhr: {{ v.fetal_heart_rate|default:"null" }}, fh: {{ v.fundal_height|default:"null" }} } {% if not forloop.last %}, {% endif %} {% endfor %}];
     const lbl = anc.map(v => `${v.ga}w`);
 
     if (document.getElementById('weightChart')) {
@@ -992,7 +1107,7 @@
     {% endif %}
 
     {% if mother_pnc %}
-    const pnc = [{% for v in mother_pnc %}{ d: {{ v.visit_day|default:"null" } }, sys: {{ v.bp_systolic|default:"null" } }, dia: {{ v.bp_diastolic|default:"null" } }, t: {{ v.temperature|default:"null" } } } {% if not forloop.last %}, {% endif %} {% endfor %}];
+    const pnc = [{% for v in mother_pnc %}{ d: {{ v.visit_day|default:"null" }}, sys: {{ v.bp_systolic|default:"null" }}, dia: {{ v.bp_diastolic|default:"null" }}, t: {{ v.temperature|default:"null" }} } {% if not forloop.last %}, {% endif %} {% endfor %}];
     const plbl = pnc.map(v => `Day ${v.d}`);
 
     if (document.getElementById('postnatalBpChart')) {
@@ -1040,14 +1155,14 @@
      */
     const medicalTests = {{ medical_tests_json| safe }};
 
-    function submitNextAction() {
-        const form = document.getElementById('nextActionForm');
+    function submitNextAction(formId = 'nextActionForm') {
+        const form = document.getElementById(formId);
         const formData = new FormData(form);
         const url = "{% url 'home:submit_next_action' %}";
 
-        const executeBtn = document.getElementById('execute-btn');
+        const executeBtn = formId === 'nextActionForm' ? document.getElementById('execute-btn') : document.getElementById('maternity-bill-btn');
         executeBtn.disabled = true;
-        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
         fetch(url, {
             method: 'POST',
@@ -1174,10 +1289,12 @@
         }
     }
 
-    function toggleExecuteButton() {
-        const executeBtn = document.getElementById('execute-btn');
-        const anyTestSelected = document.querySelectorAll('input[name="tests"]:checked').length > 0;
-        const anyDeptSelected = document.querySelectorAll('input[name="send_to"]:checked').length > 0;
+    function toggleExecuteButton(formId = 'nextActionForm', btnId = 'execute-btn') {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        const executeBtn = document.getElementById(btnId);
+        const anyTestSelected = form.querySelectorAll('input[name="tests"]:checked').length > 0;
+        const anyDeptSelected = form.querySelectorAll('input[name="send_to"]:checked').length > 0;
         executeBtn.disabled = !(anyTestSelected || anyDeptSelected);
     }
 </script>
