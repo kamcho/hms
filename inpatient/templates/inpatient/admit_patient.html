@@ -4,171 +4,350 @@
 {% block title %}{{ title }} - HMS Admissions{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-[#f8fafc] px-4 py-8 md:px-8 lg:py-12">
-    <div class="max-w-5xl mx-auto">
-        <!-- Breadcrumbs & Back -->
-        <div class="mb-8 flex items-center justify-between">
-            <nav class="flex text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                <a href="{% url 'inpatient:dashboard' %}" class="hover:text-indigo-600 transition-colors">Inpatient</a>
-                <span class="mx-2 text-slate-300">/</span>
-                <span class="text-slate-600">Admission Process</span>
-            </nav>
+<style>
+    :root {
+        --dash-bg: #0b0f19;
+        --card-bg: #151b28;
+        --input-bg: #1a202c;
+        --border-color: rgba(255, 255, 255, 0.08);
+        --text-primary: #ffffff;
+        --text-secondary: #94a3b8;
+        --accent-primary: #6366f1;
+        --accent-success: #10b981;
+        --accent-warning: #f59e0b;
+        --accent-danger: #ef4444;
+        --clinical-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        --glass-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+        background-color: var(--dash-bg);
+        color: var(--text-primary);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .revamp-container {
+        min-height: 100vh;
+        padding: 2rem;
+        background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent),
+            radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.03), transparent);
+    }
+
+    /* Cinematic Layout */
+    .glass-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(12px);
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .glass-card:hover {
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    /* Patient Profile Card */
+    .profile-banner {
+        background: var(--clinical-gradient);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-banner::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 86c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm66-3c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-46-30c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm40-10c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-58 12c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm54 18c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM32 42c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm50-16c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM16 62c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm31 2c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm20 18c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM70 70c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM21 46c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm22 10c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-8-34c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm42 16c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM25 80c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm20-56c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM80 60c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-12 12c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM10 20c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm80 40c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-10-20c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-40 40c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zM10 10c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm80 80c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm-80 0c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm80-80c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+        opacity: 0.3;
+    }
+
+    .avatar-lg {
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: 800;
+        margin: 0 auto 1.5rem;
+        backdrop-filter: blur(8px);
+    }
+
+    /* Form Styling */
+    .form-section-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.2rem;
+        color: var(--accent-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .form-section-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    .input-group-modern {
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .input-group-modern:focus-within {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .input-group-modern i {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    .form-control-revamp {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-primary) !important;
+        padding: 1rem 0 !important;
+        width: 100% !important;
+        font-weight: 600 !important;
+        outline: none !important;
+        appearance: none !important;
+    }
+
+    .form-control-revamp::placeholder {
+        color: #4a5568;
+    }
+
+    select.form-control-revamp {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234a5568'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.5rem center !important;
+        background-size: 1.25rem !important;
+        cursor: pointer;
+    }
+
+    .form-control-revamp option {
+        background-color: var(--input-bg) !important;
+        color: white !important;
+    }
+
+    /* Bed Status Message */
+    .status-badge-modern {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        border-radius: 1.5rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05rem;
+        transition: all 0.3s ease;
+    }
+
+    /* Buttons */
+    .btn-premium {
+        background: var(--clinical-gradient);
+        color: white;
+        padding: 1.25rem 2rem;
+        border-radius: 1.5rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.6);
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    }
+
+    .btn-premium:active {
+        transform: scale(0.98);
+    }
+</style>
+
+<div class="revamp-container">
+    <div class="max-w-6xl mx-auto">
+        <!-- Navigation -->
+        <div class="flex items-center justify-between mb-12">
+            <div>
+                <nav class="flex gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    <a href="{% url 'inpatient:dashboard' %}" class="hover:text-indigo-400">Inpatient</a>
+                    <span>/</span>
+                    <span class="text-indigo-400">Admission Command</span>
+                </nav>
+                <h1 class="text-3xl font-black text-white tracking-tight">Clinical Admission</h1>
+            </div>
             <a href="{% url 'home:patient_detail' patient.pk %}"
-                class="group flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-indigo-600 transition-all">
-                <i class="fas fa-arrow-left transition-transform group-hover:-translate-x-1"></i>
-                Back to Profile
+                class="bg-white/5 hover:bg-white/10 text-white px-6 py-3 rounded-2xl flex items-center gap-3 transition-all border border-white/5">
+                <i class="fas fa-arrow-left"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest">Back to Profile</span>
             </a>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Left Column: Patient Profile Card -->
+            <!-- Patient Intel Side -->
             <div class="lg:col-span-4 space-y-6">
-                <div
-                    class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 overflow-hidden relative group">
-                    <div
-                        class="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16 blur-3xl transition-all group-hover:bg-indigo-100/50">
-                    </div>
-
-                    <div class="relative z-10 text-center">
-                        <div
-                            class="w-24 h-24 rounded-[2rem] bg-slate-900 mx-auto mb-6 flex items-center justify-center text-white text-3xl shadow-xl shadow-slate-200">
-                            {{ patient.first_name|slice:":1" }}{{ patient.last_name|slice:":1" }}
+                <div class="glass-card overflow-hidden">
+                    <div class="profile-banner">
+                        <div class="avatar-lg shadow-2xl">
+                            {{ patient.first_name|first }}{{ patient.last_name|first }}
                         </div>
-                        <h2 class="text-xl font-black text-slate-900 tracking-tight">{{ patient.full_name }}</h2>
-                        <div class="flex items-center justify-center gap-3 mt-2">
-                            <span
-                                class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-wider rounded-full">
-                                {{ patient.age }} Years
-                            </span>
-                            <span
-                                class="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider rounded-full">
-                                {{ patient.get_gender_display }}
-                            </span>
+                        <h2 class="text-2xl font-black text-white mb-2">{{ patient.full_name }}</h2>
+                        <div class="flex justify-center gap-3">
+                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{
+                                patient.age }} YRS</span>
+                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{
+                                patient.get_gender_display }}</span>
                         </div>
                     </div>
 
-                    <div class="mt-8 pt-8 border-t border-slate-50 space-y-4">
-                        <div class="flex items-center justify-between text-[11px]">
-                            <span class="font-bold text-slate-400 uppercase tracking-wider">Patient ID</span>
-                            <span class="font-black text-slate-900">#{{ patient.id }}</span>
+                    <div class="p-8 space-y-6">
+                        <div class="flex justify-between items-center py-4 border-b border-white/5">
+                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Patient
+                                ID</span>
+                            <span
+                                class="font-mono bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded text-sm font-bold">#PAT-{{
+                                patient.id|stringformat:"05d" }}</span>
                         </div>
-                        <div class="flex items-center justify-between text-[11px]">
-                            <span class="font-bold text-slate-400 uppercase tracking-wider">ID Number</span>
-                            <span class="font-black text-slate-900">{{ patient.id_number|default:"N/A" }}</span>
+                        <div class="flex justify-between items-center py-4 border-b border-white/5">
+                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">ID
+                                Number</span>
+                            <span class="text-white font-bold">{{ patient.id_number|default:"UNSPECIFIED" }}</span>
                         </div>
-                        <div class="flex items-center justify-between text-[11px]">
-                            <span class="font-bold text-slate-400 uppercase tracking-wider">Location</span>
-                            <span class="font-black text-slate-900">{{ patient.location }}</span>
+                        <div class="flex justify-between items-center py-4 border-b border-white/5">
+                            <span
+                                class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</span>
+                            <span class="text-white font-bold">{{ patient.location }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Info Card -->
                 <div
-                    class="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
-                    <div class="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mb-16 blur-3xl">
+                    class="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 relative overflow-hidden group">
+                    <div
+                        class="absolute -right-8 -bottom-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl transition-all group-hover:bg-indigo-500/20">
                     </div>
                     <div class="relative z-10">
-                        <i class="fas fa-info-circle text-2xl mb-4"></i>
-                        <h3 class="text-sm font-black uppercase tracking-wider mb-2">Notice</h3>
-                        <p class="text-xs text-indigo-100 font-medium leading-relaxed">
-                            Admitting this patient will automatically create a new inpatient visit and initialize their
-                            clinical chart.
+                        <div
+                            class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-600/20">
+                            <i class="fas fa-stethoscope text-xl"></i>
+                        </div>
+                        <h3 class="text-sm font-black text-indigo-400 uppercase tracking-widest mb-3">Clinical Action
+                        </h3>
+                        <p class="text-slate-400 text-xs leading-relaxed font-medium">
+                            Initializing clinical admission will create a secure inpatient chart and start the
+                            hospitalization logging protocol.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Column: Admission Form -->
+            <!-- Admission Control Center -->
             <div class="lg:col-span-8">
-                <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden relative">
-                    <div class="bg-slate-900 p-8 flex items-center justify-between">
-                        <div>
-                            <h1 class="text-xl font-black text-white tracking-tight">Clinical Admission</h1>
-                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Hospital
-                                Entry Process</p>
-                        </div>
-                        <div
-                            class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400">
-                            <i class="fas fa-hospital-alt text-xl"></i>
-                        </div>
-                    </div>
-
-                    <form method="post" autocomplete="off" id="admissionForm" class="p-8 md:p-10 space-y-8">
+                <div class="glass-card p-8 md:p-12">
+                    <form method="post" id="admissionForm">
                         {% csrf_token %}
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 font-poppins">
-                            <!-- Ward Selection -->
-                            <div class="space-y-3">
-                                <label
-                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Target
-                                    Ward</label>
-                                <div class="relative group">
-                                    <div
-                                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+                        <div class="mb-12">
+                            <h3 class="form-section-title"><i class="fas fa-bed"></i> Facility Logistics</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                <!-- Ward Selection -->
+                                <div class="space-y-4">
+                                    <label
+                                        class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Target
+                                        Ward</label>
+                                    <div class="input-group-modern">
                                         <i class="fas fa-door-open"></i>
+                                        {{ form.ward }}
                                     </div>
-                                    {{ form.ward }}
+                                    {% if form.ward.errors %}
+                                    <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.ward.errors.0 }}</p>
+                                    {% endif %}
                                 </div>
-                                {% if form.ward.errors %}
-                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.ward.errors.0 }}</p>
-                                {% endif %}
-                            </div>
 
-                            <!-- Bed Selection -->
-                            <div class="space-y-3">
-                                <label
-                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Available
-                                    Bed</label>
-                                <div class="relative group">
-                                    <div
-                                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+                                <!-- Bed Selection -->
+                                <div class="space-y-4">
+                                    <label
+                                        class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Assigned
+                                        Bed</label>
+                                    <div class="input-group-modern">
                                         <i class="fas fa-bed"></i>
+                                        {{ form.bed }}
                                     </div>
-                                    {{ form.bed }}
+                                    {% if form.bed.errors %}
+                                    <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.bed.errors.0 }}</p>
+                                    {% endif %}
                                 </div>
-                                {% if form.bed.errors %}
-                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.bed.errors.0 }}</p>
+                            </div>
+
+                            <!-- Dynamic Bed Status Message -->
+                            <div id="bed-status-message"
+                                class="status-badge-modern bg-slate-500/5 text-slate-400 border border-white/5">
+                                <i class="fas fa-search-location"></i>
+                                <span>Awaiting ward selection to probe available clinical beds</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-12">
+                            <h3 class="form-section-title"><i class="fas fa-clipboard-check"></i> Clinical Status</h3>
+                            <div class="space-y-4">
+                                <label
+                                    class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Provisional
+                                    Diagnosis</label>
+                                <div class="input-group-modern items-start pt-4">
+                                    <i class="fas fa-keyboard mt-1"></i>
+                                    {{ form.provisional_diagnosis }}
+                                </div>
+                                {% if form.provisional_diagnosis.errors %}
+                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{
+                                    form.provisional_diagnosis.errors.0 }}</p>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <!-- Bed Status Micro-Interaction -->
-                        <div id="bed-status-message"
-                            class="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
-                            <i class="fas fa-info-circle text-indigo-500"></i>
-                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Please select a
-                                ward to view available beds</span>
-                        </div>
-
-                        <!-- Diagnosis -->
-                        <div class="space-y-3">
-                            <label
-                                class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Provisional
-                                Diagnosis</label>
-                            <div class="relative group">
-                                <div
-                                    class="absolute left-5 top-6 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
-                                    <i class="fas fa-clipboard-list"></i>
-                                </div>
-                                {{ form.provisional_diagnosis }}
-                            </div>
-                            {% if form.provisional_diagnosis.errors %}
-                            <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.provisional_diagnosis.errors.0
-                                }}</p>
-                            {% endif %}
-                        </div>
-
-                        <!-- Footer Actions -->
-                        <div class="pt-10 flex flex-col sm:flex-row items-center gap-4">
-                            <button type="submit" id="submitBtn"
-                                class="w-full sm:flex-[2] bg-indigo-600 text-white px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-slate-900 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                                <span>Finalise Admission</span>
-                                <i class="fas fa-arrow-right"></i>
+                        <div class="flex items-center gap-6 pt-12">
+                            <button type="submit" class="btn-premium">
+                                <i class="fas fa-check-double"></i>
+                                <span>Execute Admission</span>
                             </button>
                             <a href="{% url 'home:patient_detail' patient.pk %}"
-                                class="w-full sm:flex-1 bg-slate-50 text-slate-400 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] text-center hover:bg-rose-50 hover:text-rose-600 transition-all">
-                                Cancel
+                                class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-rose-500 transition-colors">
+                                Abort Process
                             </a>
                         </div>
                     </form>
@@ -178,65 +357,14 @@
     </div>
 </div>
 
-<style>
-    /* Premium Input Styling */
-    select,
-    textarea {
-        appearance: none !important;
-        width: 100% !important;
-        background: #fdfdfd !important;
-        border: 2px solid #f1f5f9 !important;
-        border-radius: 1.25rem !important;
-        padding: 1.25rem 1.25rem 1.25rem 3.5rem !important;
-        font-size: 0.875rem !important;
-        font-weight: 700 !important;
-        color: #0f172a !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-
-    textarea {
-        padding-top: 1.25rem !important;
-        padding-left: 3.5rem !important;
-        min-height: 140px !important;
-        resize: none !important;
-    }
-
-    select:focus,
-    textarea:focus {
-        background: #ffffff !important;
-        border-color: #6366f1 !important;
-        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.05) !important;
-        outline: none !important;
-    }
-
-    /* Select Arrow */
-    select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-        background-repeat: no-repeat !important;
-        background-position: right 1.25rem center !important;
-        background-size: 1rem !important;
-    }
-
-    /* Animation */
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-slide-in {
-        animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-</style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Apply revamp class to form controls
+        const inputs = document.querySelectorAll('#admissionForm select, #admissionForm textarea');
+        inputs.forEach(input => {
+            input.classList.add('form-control-revamp');
+        });
+
         const wardSelect = document.getElementById('{{ form.ward.id_for_label }}');
         const bedSelect = document.getElementById('{{ form.bed.id_for_label }}');
         const bedMessage = document.getElementById('bed-status-message');
@@ -249,11 +377,11 @@
 
     function updateBeds() {
         const selectedWardId = wardSelect.value;
-        bedSelect.innerHTML = '<option value="">Choose a bed...</option>';
+        bedSelect.innerHTML = '<option value="">PROBE FOR BED...</option>';
 
         if (!selectedWardId) {
-            bedMessage.innerHTML = '<i class="fas fa-info-circle text-indigo-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Please select a ward to view available beds</span>';
-            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all";
+            bedMessage.innerHTML = '<i class="fas fa-search-location"></i> <span>Awaiting ward selection to probe available clinical beds</span>';
+            bedMessage.className = "status-badge-modern bg-slate-500/5 text-slate-400 border border-white/5";
             bedSelect.disabled = true;
             return;
         }
@@ -261,18 +389,18 @@
         const filteredBeds = availableBeds.filter(bed => bed.wardId === selectedWardId);
 
         if (filteredBeds.length === 0) {
-            bedMessage.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-rose-600">No available beds in this ward</span>';
-            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-rose-50 rounded-2xl border border-rose-100 transition-all";
+            bedMessage.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>Critical: No available clinical beds in target ward</span>';
+            bedMessage.className = "status-badge-modern bg-rose-500/10 text-rose-500 border border-rose-500/20";
             bedSelect.disabled = true;
         } else {
-            bedMessage.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i> <span class="text-[11px] font-black uppercase tracking-wider text-emerald-600">${filteredBeds.length} Clinical bed(s) available</span>`;
-            bedMessage.className = "flex items-center gap-3 px-6 py-4 bg-emerald-50 rounded-2xl border border-emerald-100 transition-all";
+            bedMessage.innerHTML = `<i class="fas fa-check-circle"></i> <span>Success: Detected ${filteredBeds.length} operational clinical bed(s)</span>`;
+            bedMessage.className = "status-badge-modern bg-emerald-500/10 text-emerald-500 border border-emerald-500/20";
             bedSelect.disabled = false;
 
             filteredBeds.forEach(bed => {
                 const option = document.createElement('option');
                 option.value = bed.id;
-                option.textContent = `Bed ${bed.number} (${bed.type})`;
+                option.textContent = `CRIT-BED-${bed.number} (${bed.type})`;
                 bedSelect.appendChild(option);
             });
         }

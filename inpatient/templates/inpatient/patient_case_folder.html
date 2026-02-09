@@ -14,6 +14,7 @@
     </div>
 
     <!-- Patient Header Card -->
+
     <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 p-8 mb-8 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-32 -mt-32 blur-3xl"></div>
 
@@ -1097,10 +1098,14 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ vitals_data|json_script:"vitals-data" }}
-{{ medical_tests_data|json_script:"services-data" }}
+{{ vitals_data|default:"{}"|json_script:"vitals-data" }}
+{{ medical_tests_data|default:"[]"|json_script:"services-data" }}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Safe Metadata Injection
+    const medMetadata = {{ med_metadata_json|default:"{}"|safe }};
+
     function showClinicalTab(tabName) {
         document.querySelectorAll('.clinical-pane').forEach(p => p.style.display = 'none');
         document.querySelectorAll('.clinical-tab').forEach(t => t.classList.remove('active', 'text-slate-900', 'border-indigo-600'));
@@ -1123,6 +1128,45 @@
             if (validTabs.includes(activeTab)) {
                 showClinicalTab(activeTab);
             }
+        }
+
+        // ==================== DYNAMIC BED LOADING ====================
+        const wardSelect = document.getElementById('id_ward');
+        const bedSelect = document.getElementById('id_to_bed');
+
+        if (wardSelect && bedSelect) {
+            // Style Django rendered fields
+            wardSelect.classList.add('form-select', 'form-control');
+            bedSelect.classList.add('form-select', 'form-control');
+
+            wardSelect.addEventListener('change', function () {
+                const wardId = this.value;
+                bedSelect.innerHTML = '<option value="">Loading beds...</option>';
+
+                if (wardId) {
+                    fetch(`/inpatient/wards/${wardId}/available-beds/`)
+                        .then(response => response.json())
+                        .then(data => {
+                            bedSelect.innerHTML = '<option value="" selected="">---------</option>';
+                            if (data.beds.length > 0) {
+                                data.beds.forEach(bed => {
+                                    const option = document.createElement('option');
+                                    option.value = bed.id;
+                                    option.textContent = `${bed.bed_number} (${bed.bed_type})`;
+                                    bedSelect.appendChild(option);
+                                });
+                            } else {
+                                bedSelect.innerHTML = '<option value="">No beds available</option>';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            bedSelect.innerHTML = '<option value="">Error loading beds</option>';
+                        });
+                } else {
+                    bedSelect.innerHTML = '<option value="" selected="">---------</option>';
+                }
+            });
         }
     });
 
@@ -1393,7 +1437,7 @@
     }
 
     // ==================== SMART PRESCRIPTION CALCULATION ====================
-    const medMetadata = {{ med_metadata_json| safe }};
+    // medMetadata is already defined safely at top of script block
 
     // Get form elements
     const doseInput = document.querySelector('#{{ med_form.dose_count.id_for_label }}');

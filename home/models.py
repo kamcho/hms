@@ -49,6 +49,7 @@ class Visit(models.Model):
     visit_date = models.DateTimeField(auto_now_add=True)
     visit_type = models.CharField(max_length=20, choices=[('IN-PATIENT', 'In-Patient'), ('OUT-PATIENT', 'Out-Patient')])
     visit_mode = models.CharField(max_length=20, choices=[('Appointment', 'Appointment'), ('Walk In', 'Walk In')])
+    is_active = models.BooleanField(default=True)
     def __str__(self):
         return f"Visit - {self.patient} ({self.visit_type})"
 

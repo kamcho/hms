@@ -382,8 +382,9 @@ def add_consultation_note(request):
 
 @login_required
 def submit_next_action(request):
-    if request.user.role != 'Doctor':
-        return JsonResponse({'success': False, 'error': 'Only doctors can dispatch clinical orders.'})
+    allowed_roles = ['Doctor', 'Receptionist', 'Triage Nurse', 'Admin']
+    if request.user.role not in allowed_roles:
+        return JsonResponse({'success': False, 'error': 'You are not authorized to perform this action.'})
     
     if request.method == 'POST':
         try:
@@ -586,7 +587,10 @@ def set_primary_emergency_contact(request, patient_pk, contact_pk):
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
+from django.views.decorators.csrf import ensure_csrf_cookie
+
 @login_required
+@ensure_csrf_cookie
 def reception_dashboard(request):
     """Reception dashboard view showing different content based on user role"""
     # Get search query for invoices (only for receptionists)
@@ -635,8 +639,8 @@ def reception_dashboard(request):
         'morgue_admissions': MorgueAdmission.objects.filter(status='ADMITTED').select_related('deceased'),
     }
     
-    if user_role == 'Receptionist':
-        # Receptionist sees invoices
+    if user_role == 'Receptionist' or user_role == 'Admin':
+        # Receptionist (and Admin) sees invoices
         # Get patient service invoices with search functionality
         invoices = Invoice.objects.filter(
             status__in=['Pending', 'Partial', 'Draft'],
@@ -748,13 +752,23 @@ def create_triage_entry(request):
             blood_glucose = request.POST.get('blood_glucose')
             weight = request.POST.get('weight')
             height = request.POST.get('height')
-            disposition = request.POST.get('disposition')
+            disposition = request.POST.get('disposition', '') # Default to empty string
             triage_notes = request.POST.get('triage_notes')
             
-            # Validate required fields
+            # Validate required fields (including User requested compulsory fields)
             if not visit_id or not category or not priority:
                 return JsonResponse({'success': False, 'error': 'Missing required fields'})
-            
+                
+            # Compulsory clinical fields check
+            if not blood_pressure_systolic or not blood_pressure_diastolic:
+                return JsonResponse({'success': False, 'error': 'Blood Pressure is required'})
+            if not weight:
+                return JsonResponse({'success': False, 'error': 'Weight is required'})
+            if not height:
+                return JsonResponse({'success': False, 'error': 'Height is required'})
+            if not oxygen_saturation:
+                return JsonResponse({'success': False, 'error': 'Oxygen Saturation is required'})
+
             # Get visit
             visit = get_object_or_404(Visit, pk=visit_id)
             
