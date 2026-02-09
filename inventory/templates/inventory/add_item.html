@@ -147,6 +147,12 @@
                         </div>
                         <div class="space-y-3">
                             <label
+                                class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Buying
+                                Price (Optional)</label>
+                            {{ form.buying_price }}
+                        </div>
+                        <div class="space-y-3">
+                            <label
                                 class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Selling
                                 Price</label>
                             {{ form.selling_price }}
@@ -443,6 +449,28 @@
 
         typeSelect.addEventListener('change', updateFlow);
         updateFlow();
+
+        // Auto-calculate buying price logic
+        const buyingPriceInput = document.getElementById('{{ form.buying_price.id_for_label }}');
+        const sellingPriceInput = document.getElementById('{{ form.selling_price.id_for_label }}');
+
+        if (buyingPriceInput && sellingPriceInput) {
+            buyingPriceInput.addEventListener('input', function () {
+                const buyingPrice = parseFloat(this.value);
+
+                if (!isNaN(buyingPrice) && buyingPrice > 0) {
+                    // Calculate 125% (25% profit)
+                    const sellingPrice = buyingPrice * 1.25;
+                    sellingPriceInput.value = sellingPrice.toFixed(2);
+                    // Optional: Make it read-only or visually indicate it's calculated
+                    // sellingPriceInput.readOnly = true; 
+                } else {
+                    // specific requirement: if 0 or empty, allow user to choose
+                    // sellingPriceInput.value = ''; 
+                    // sellingPriceInput.readOnly = false;
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

@@ -18,6 +18,14 @@ class InventoryItemForm(forms.ModelForm):
             'selling_price': forms.NumberInput(attrs={'step': '0.01', 'min': 0}),
         }
 
+    buying_price = forms.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={'step': '0.01', 'min': 0, 'placeholder': 'Optional: For Profit Calculation'})
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['packaging_unit'].required = False
