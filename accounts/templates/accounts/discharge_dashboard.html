@@ -61,8 +61,7 @@
                                     <div class="text-xs text-slate-400">ID: {{ admission.patient.id }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-600">
-                                    {{ admission.bed.ward.name|default:"N/A" }} - {{
-                                    admission.bed.bed_number|default:"N/A" }}
+                                    {{ admission.bed.ward.name|default:"N/A" }} - {{ admission.bed.bed_number|default:"N/A" }}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-600">
                                     {{ admission.admitted_at|date:"M d, Y" }}

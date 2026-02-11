@@ -131,3 +131,18 @@ class InventoryAcknowledgement(models.Model):
     received_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     def __str__(self):
         return f"{self.request.item.name} - {self.request.quantity} - {self.request.location}"
+
+class DispensedItem(models.Model):
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='dispensed_items')
+    patient = models.ForeignKey('home.Patient', on_delete=models.CASCADE, related_name='dispensed_items')
+    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='dispensed_items')
+    quantity = models.IntegerField(help_text="Quantity Dispensed")
+    dispensed_at = models.DateTimeField(auto_now_add=True)
+    dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='dispensed_items')
+    department = models.ForeignKey('home.Departments', on_delete=models.SET_NULL, null=True, related_name='dispensed_items')
+    
+    class Meta:
+        ordering = ['-dispensed_at']
+
+    def __str__(self):
+        return f"{self.item.name} x{self.quantity} to {self.patient}"

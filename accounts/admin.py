@@ -26,8 +26,8 @@ class InventoryPurchaseAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'is_active')
-    list_filter = ('category', 'is_active')
+    list_display = ('name', 'department', 'price', 'is_active')
+    list_filter = ('department', 'is_active')
     search_fields = ('name', 'description')
 
 class InvoiceItemInline(admin.TabularInline):

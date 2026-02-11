@@ -17,7 +17,6 @@ class Service(models.Model):
     ]
     name = models.CharField(max_length=200)
     department = models.ForeignKey('home.Departments', on_delete=models.PROTECT, related_name='services', null=True, blank=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, null=True, blank=True, help_text="Legacy field - use department instead")
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -31,6 +30,17 @@ class Service(models.Model):
     
     class Meta:
         ordering = ['department__name', 'name']
+
+class ServiceParameters(models.Model):
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='parameters')
+    name = models.CharField(max_length=100)
+    value = models.CharField(max_length=100)
+    ranges = models.CharField(max_length=100)
+    unit = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.name
+
 
 
 class Invoice(models.Model):

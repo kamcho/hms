@@ -10,4 +10,8 @@ urlpatterns = [
     path('requests/create/', views.create_request, name='create_request'),
     path('requests/', views.request_list, name='request_list'),
     path('requests/<int:request_id>/update/', views.update_request_status, name='update_request_status'),
+    
+    # Dispensing APIs
+    path('api/search/', views.search_inventory, name='search_inventory'),
+    path('api/dispense/', views.dispense_item, name='dispense_item'),
 ]

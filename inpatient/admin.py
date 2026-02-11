@@ -25,7 +25,7 @@ class MedicationChartAdmin(admin.ModelAdmin):
 @admin.register(ServiceAdmissionLink)
 class ServiceAdmissionLinkAdmin(admin.ModelAdmin):
     list_display = ('service', 'admission', 'quantity', 'date_provided')
-    list_filter = ('date_provided', 'service__category')
+    list_filter = ('date_provided', 'service__department')
 
 from .models import PatientVitals, ClinicalNote, FluidBalance, WardTransfer
 

@@ -66,3 +66,15 @@ class LabReport(models.Model):
     
     def __str__(self):
         return f"Report for {self.lab_result}"
+
+
+
+
+class AmbulanceCharge(models.Model):
+    from_location = models.CharField(max_length=100, default='Abossi')
+    to_location = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def __str__(self):
+        return f"{self.from_location} to {self.to_location}"
+        

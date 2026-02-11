@@ -272,3 +272,116 @@ def update_request_status(request, request_id):
         return redirect('inventory:item_list')
     
     return redirect('inventory:item_list')
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.db import transaction
+from .models import DispensedItem
+from home.models import Patient, Visit
+
+@login_required
+def search_inventory(request):
+    """
+    JSON API for searching inventory items.
+    """
+    query = request.GET.get('q', '')
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+        
+    items = InventoryItem.objects.filter(name__icontains=query).select_related('category')[:20]
+    results = []
+    for item in items:
+        results.append({
+            'id': item.id,
+            'text': f"{item.name} ({item.dispensing_unit})",
+            'category': item.category.name
+        })
+    return JsonResponse({'results': results})
+
+@login_required
+@require_POST
+def dispense_item(request):
+    """
+    Handle item dispensing via AJAX.
+    """
+    item_id = request.POST.get('item_id')
+    patient_id = request.POST.get('patient_id')
+    visit_id = request.POST.get('visit_id')
+    quantity_str = request.POST.get('quantity', '0')
+    department_id = request.POST.get('department_id')
+
+    try:
+        quantity = int(quantity_str)
+        if quantity <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Invalid quantity'}, status=400)
+            
+        with transaction.atomic():
+            item = get_object_or_404(InventoryItem, id=item_id)
+            patient = get_object_or_404(Patient, id=patient_id)
+            visit = Visit.objects.filter(id=visit_id).first() if visit_id else None
+            
+            # Determine Department (Default to Main Store if not provided for now, or error)
+            # In a real scenario, we should get the logged-in user's department.
+            department = None
+            if department_id:
+                department = Departments.objects.filter(id=department_id).first()
+            
+            if not department:
+                 # Fallback: Try to find 'Main Store'
+                department = Departments.objects.filter(name='Main Store').first()
+            
+            if not department:
+                return JsonResponse({'status': 'error', 'message': 'Department not identified'}, status=400)
+
+            # Check Stock in Department
+            stock_records = StockRecord.objects.filter(
+                item=item,
+                current_location=department,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(record.quantity for record in stock_records)
+            if total_available < quantity:
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': f'Insufficient stock in {department.name}. Available: {total_available}'
+                }, status=400)
+
+            # Deduct Stock (FEFO)
+            remaining_qty = quantity
+            for record in stock_records:
+                if remaining_qty <= 0:
+                    break
+                
+                take = min(record.quantity, remaining_qty)
+                record.quantity -= take
+                record.save()
+                
+                # Log Usage
+                StockAdjustment.objects.create(
+                    item=item,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Dispensed to {patient.full_name}',
+                    adjusted_by=request.user,
+                    adjusted_from=department
+                )
+                remaining_qty -= take
+            
+            # Create Dispensed Record
+            DispensedItem.objects.create(
+                item=item,
+                patient=patient,
+                visit=visit,
+                quantity=quantity,
+                dispensed_by=request.user,
+                department=department
+            )
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Successfully dispensed {quantity} {item.dispensing_unit}(s) of {item.name}'
+            })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

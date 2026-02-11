@@ -59,7 +59,7 @@ class NextOfKinAdmin(admin.ModelAdmin):
 @admin.register(PerformedMortuaryService)
 class PerformedMortuaryServiceAdmin(admin.ModelAdmin):
     list_display = ('service', 'deceased', 'quantity', 'date_performed')
-    list_filter = ('date_performed', 'service__category')
+    list_filter = ('date_performed', 'service__department')
     search_fields = ('deceased__surname', 'deceased__other_names', 'service__name')
 
 @admin.register(MortuaryDischarge)

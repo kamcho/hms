@@ -282,7 +282,12 @@ def patient_case_folder(request, admission_id):
             'selling_price': str(item.selling_price)
         }
 
+    # 8. Dispensed Items (Consumables)
+    from inventory.models import DispensedItem
+    dispensed_items = DispensedItem.objects.filter(visit=admission.visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+
     return render(request, 'inpatient/patient_case_folder.html', {
+        'dispensed_items': dispensed_items,
         'admission': admission,
         'vitals': vitals,
         'vitals_history': vitals_history,

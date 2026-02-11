@@ -91,57 +91,9 @@
                 </div>
             </div>
 
-            <!-- Lab Results -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Laboratory Results
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Hemoglobin (g/dL)</strong></label>
-                        {{ form.hemoglobin }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Blood Sugar (mmol/L)</strong></label>
-                        {{ form.blood_sugar }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Urine Protein</strong></label>
-                        {{ form.urine_protein }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>HIV Status</strong></label>
-                        {{ form.hiv_status }}
-                    </div>
-                </div>
-            </div>
+          
 
-            <!-- Treatment -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Treatment &
-                    Supplements</h3>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-                    <div class="form-check">
-                        {{ form.iron_supplements }}
-                        <label class="form-check-label" for="{{ form.iron_supplements.id_for_label }}">Iron
-                            Supplements</label>
-                    </div>
-                    <div class="form-check">
-                        {{ form.folate_supplements }}
-                        <label class="form-check-label" for="{{ form.folate_supplements.id_for_label }}">Folate
-                            Supplements</label>
-                    </div>
-                    <div class="form-check">
-                        {{ form.deworming }}
-                        <label class="form-check-label" for="{{ form.deworming.id_for_label }}">Deworming</label>
-                    </div>
-                    <div class="form-check">
-                        {{ form.tetanus_toxoid }}
-                        <label class="form-check-label" for="{{ form.tetanus_toxoid.id_for_label }}">Tetanus
-                            Toxoid</label>
-                    </div>
-                </div>
-            </div>
-
+         
             <!-- Clinical Notes -->
             <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                 <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Clinical Notes</h3>

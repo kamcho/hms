@@ -30,7 +30,7 @@ urlpatterns = [
          views.set_primary_emergency_contact, name='set_primary_emergency_contact'),
     
     # Prescription URLs
-    path('prescription/create/<int:patient_id>/', views.create_prescription, name='create_prescription'),
+    path('prescription/create/<int:visit_id>/', views.create_prescription, name='create_prescription'),
     path('prescription/<int:prescription_id>/', views.prescription_detail, name='prescription_detail'),
     path('prescription/patient/<int:patient_id>/', views.prescription_list, name='prescription_list'),
     
@@ -39,4 +39,7 @@ urlpatterns = [
     path('pharmacy/dispense/<int:item_id>/', views.dispense_medication, name='dispense_medication'),
     path('pharmacy/dispense-all/<int:prescription_id>/', views.dispense_all_medications, name='dispense_all_medications'),
     path('pharmacy/dispense-ipd/<int:item_id>/', views.dispense_ipd_medication, name='dispense_ipd_medication'),
+    
+    # Health Records
+    path('health-records/', views.health_records_view, name='health_records'),
 ]

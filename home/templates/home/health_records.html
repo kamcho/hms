@@ -1,0 +1,525 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Health Records - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="records-wrapper">
+    <!-- Page Header -->
+    <div class="page-header-premium">
+        <div class="header-main">
+            <div class="header-text">
+                <h1>Health Records Registry</h1>
+                <p>Comprehensive patient visit history and demographic records.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" onclick="window.print()" class="btn-secondary-modern">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <a href="{% url 'home:health_records' %}" class="btn-secondary-modern">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-card">
+        <form method="GET" class="filter-form">
+            <!-- Row 1: Search & Basic -->
+            <div class="filter-row">
+                <div class="filter-group flex-grow">
+                    <label>Search Patient</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-search"></i>
+                        <input type="text" name="search" value="{{ request.GET.search }}"
+                            placeholder="Name, ID, or Phone...">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Visit Type</label>
+                    <select name="visit_type">
+                        <option value="all">All Visits</option>
+                        <option value="OUT-PATIENT" {% if request.GET.visit_type == 'OUT-PATIENT' %}selected{% endif %}>
+                            Out-Patient</option>
+                        <option value="IN-PATIENT" {% if request.GET.visit_type == 'IN-PATIENT' %}selected{% endif %}>
+                            In-Patient</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Gender</label>
+                    <select name="gender">
+                        <option value="all">All Genders</option>
+                        <option value="M" {% if request.GET.gender == 'M' %}selected{% endif %}>Male</option>
+                        <option value="F" {% if request.GET.gender == 'F' %}selected{% endif %}>Female</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 2: Advanced (Dates & Age) -->
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Date From</label>
+                    <input type="date" name="start_date" value="{{ request.GET.start_date }}">
+                </div>
+                <div class="filter-group">
+                    <label>Date To</label>
+                    <input type="date" name="end_date" value="{{ request.GET.end_date }}">
+                </div>
+                <div class="filter-group">
+                    <label>Min Age</label>
+                    <input type="number" name="min_age" value="{{ request.GET.min_age }}" placeholder="0" min="0">
+                </div>
+                <div class="filter-group">
+                    <label>Max Age</label>
+                    <input type="number" name="max_age" value="{{ request.GET.max_age }}" placeholder="100" min="0">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="apply-filter-btn">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                    {% if has_filters %}
+                    <a href="{% url 'home:health_records' %}" class="clear-filter-btn">Clear</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Table -->
+    <div class="results-card">
+        <div class="table-responsive">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>Visit Date</th>
+                        <th>Patient Details</th>
+                        <th>Demographics</th>
+                        <th>Type & Mode</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits %}
+                    <tr>
+                        <td>
+                            <div class="date-col">
+                                <span class="visit-date">{{ visit.visit_date|date:"d M, Y" }}</span>
+                                <span class="visit-time">{{ visit.visit_date|date:"H:i" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="patient-info">
+                                <a href="{% url 'home:patient_detail' visit.patient.pk %}" class="patient-name">{{ visit.patient.full_name }}</a>
+                                <span class="patient-id">ID: {{ visit.patient.id_number|default:"--" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="demographics-badges">
+                                <span class="badge {{ visit.patient.gender|lower }}">{{ visit.patient.get_gender_display  }}</span>
+                                <span class="badge age">{{ visit.patient.age }} Yrs</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="visit-type-info">
+                                <span
+                                    class="type-pill {% if visit.visit_type == 'IN-PATIENT' %}inpatient{% else %}outpatient{% endif %}">
+                                    {{ visit.get_visit_type_display }}
+                                </span>
+                                <span class="mode-text">{{ visit.get_visit_mode_display }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if visit.is_active %}
+                            <span class="status-badge active">Active</span>
+                            {% else %}
+                            <span class="status-badge closed">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <a href="{% url 'home:patient_detail' visit.patient.pk %}?visit_id={{ visit.id }}"
+                                class="action-btn view" title="View Record">
+                                <i class="fas fa-file-medical"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-content">
+                                <i class="fas fa-filter"></i>
+                                <h3>No Records Found</h3>
+                                <p>Try adjusting your search filters to find records.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Simple Implementation) -->
+        {% if visits.has_other_pages %}
+        <div class="pagination-container">
+            <span class="step-links">
+                {% if visits.has_previous %}
+                <a href="?page=1{{ query_string }}">&laquo; First</a>
+                <a href="?page={{ visits.previous_page_number }}{{ query_string }}">Previous</a>
+                {% endif %}
+
+                <span class="current">
+                    Page {{ visits.number }} of {{ visits.paginator.num_pages }}.
+                </span>
+
+                {% if visits.has_next %}
+                <a href="?page={{ visits.next_page_number }}{{ query_string }}">Next</a>
+                <a href="?page={{ visits.paginator.num_pages }}{{ query_string }}">Last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    /* Styling variables */
+    :root {
+        --primary-color: #4f46e5;
+        --secondary-bg: #f8fafc;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+    }
+
+    .records-wrapper {
+        padding: 1.5rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    /* Page Header */
+    .page-header-premium {
+        margin-bottom: 2rem;
+    }
+
+    .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-text h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .header-text p {
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+
+    .btn-secondary-modern {
+        background: white;
+        border: 1px solid var(--border-color);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-secondary-modern:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    /* Filter Card */
+    .filter-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        align-items: flex-end;
+    }
+
+    .filter-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-group.flex-grow {
+        flex: 1;
+    }
+
+    .filter-group label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.05em;
+    }
+
+    .filter-form input,
+    .filter-form select {
+        padding: 0.6rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        background: white;
+        min-width: 140px;
+    }
+
+    .input-with-icon {
+        position: relative;
+    }
+
+    .input-with-icon i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .input-with-icon input {
+        padding-left: 2.5rem;
+        width: 100%;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 1rem;
+        margin-left: auto;
+    }
+
+    .apply-filter-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .apply-filter-btn:hover {
+        opacity: 0.9;
+    }
+
+    .clear-filter-btn {
+        padding: 0.6rem 1rem;
+        color: #ef4444;
+        text-decoration: none;
+        font-weight: 600;
+        border: 1px solid transparent;
+        border-radius: 8px;
+    }
+
+    .clear-filter-btn:hover {
+        background: #fef2f2;
+    }
+
+    /* Results Table */
+    .results-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .premium-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .premium-table th {
+        background: #f8fafc;
+        padding: 1rem 1.5rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .premium-table td {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .premium-table tr:hover {
+        background: #fdfcff;
+    }
+
+    /* Column Styles */
+    .date-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .visit-date {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .visit-time {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .patient-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .patient-name {
+        font-weight: 700;
+        color: #4f46e5;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+
+    .patient-id {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-family: monospace;
+    }
+
+    .demographics-badges {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .badge {
+        padding: 0.25rem 0.6rem;
+        border-radius: 99px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge.m {
+        background: #e0f2fe;
+        color: #0284c7;
+    }
+
+    .badge.f {
+        background: #fce7f3;
+        color: #db2777;
+    }
+
+    .badge.age {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .type-pill {
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-block;
+        margin-bottom: 0.25rem;
+    }
+
+    .type-pill.inpatient {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .type-pill.outpatient {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    .status-badge.active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-badge.closed {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #475569;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+        background: #4f46e5;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 0 !important;
+    }
+
+    .empty-content i {
+        font-size: 3rem;
+        color: #cbd5e1;
+        margin-bottom: 1rem;
+    }
+
+    .empty-content h3 {
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .empty-content p {
+        color: var(--text-secondary);
+    }
+
+    /* Layout breakdown for smaller screens */
+    @media (max-width: 1024px) {
+        .filter-row {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}

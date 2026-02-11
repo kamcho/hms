@@ -980,17 +980,20 @@ def admit_patient_visit(request):
 
 # Prescription Views
 @login_required
-def create_prescription(request, patient_id):
-    """Create a new prescription for a patient"""
+def create_prescription(request, visit_id):
+    """Create a new prescription for a patient linked to a specific visit"""
     if request.user.role != 'Doctor':
         messages.error(request, "Only doctors can create prescriptions.")
-        return redirect('home:patient_detail', pk=patient_id)
+        # We need to find the patient first to redirect, or just redirect to dashboard
+        visit = get_object_or_404(Visit, pk=visit_id)
+        return redirect('home:patient_detail', pk=visit.patient.id)
     
     from django.forms import inlineformset_factory
     from .forms import PrescriptionForm, PrescriptionItemForm
-    from .models import Prescription, PrescriptionItem
+    from .models import Prescription, PrescriptionItem, Visit
     
-    patient = get_object_or_404(Patient, pk=patient_id)
+    visit = get_object_or_404(Visit, pk=visit_id)
+    patient = visit.patient
     
     # Create formset for prescription items (medications)
     PrescriptionItemFormSet = inlineformset_factory(
@@ -1010,17 +1013,13 @@ def create_prescription(request, patient_id):
             prescription = form.save(commit=False)
             prescription.patient = patient
             prescription.prescribed_by = request.user
-            
-            # Try to link to current visit if available
-            current_visit = patient.visits.filter(visit_type='OUT-PATIENT').order_by('-visit_date').first()
-            if current_visit:
-                prescription.visit = current_visit
+            prescription.visit = visit
                 
-                # Close visit if requested
-                if request.POST.get('action') == 'prescribe_close':
-                    current_visit.is_active = False
-                    current_visit.save()
-                    messages.info(request, "Visit has been closed.")
+            # Close visit if requested
+            if request.POST.get('action') == 'prescribe_close':
+                visit.is_active = False
+                visit.save()
+                messages.info(request, "Visit has been closed.")
             
             prescription.save()
             
@@ -1056,7 +1055,7 @@ def create_prescription(request, patient_id):
             else:
                 messages.success(request, f'Prescription created successfully (no items) for {patient.full_name}')
                 
-            return redirect('home:patient_detail', pk=patient_id)
+            return redirect('home:patient_detail', pk=patient.id)
     else:
         form = PrescriptionForm()
         formset = PrescriptionItemFormSet()
@@ -1088,9 +1087,96 @@ def create_prescription(request, patient_id):
         'form': form,
         'formset': formset,
         'patient': patient,
+        'visit': visit,
         'med_metadata_json': json.dumps(med_metadata),
+        # Add Dispensed Items context for the widget
+        'dispensed_items': visit.dispensed_items.select_related('item', 'dispensed_by').order_by('-dispensed_at')
     }
     return render(request, 'home/create_prescription.html', context)
+
+@login_required
+def health_records_view(request):
+    """
+    Health Records Registry View.
+    Supports robust filtering for Visits and Patients.
+    """
+    # Simple role check for now (Admin, Receptionist, Doctor, Nurse, Triage Nurse)
+    # Adding Health Records access logic
+    allowed_roles = ['Admin', 'Receptionist', 'Doctor', 'Nurse', 'Triage Nurse', 'Health Records']
+    if request.user.role not in allowed_roles and not request.user.is_superuser:
+        messages.error(request, "Access denied. Health Records permission required.")
+        return redirect('home:reception_dashboard')
+
+    from django.db.models import Q
+    from django.core.paginator import Paginator
+    
+    # Start with all visits
+    visits = Visit.objects.select_related('patient').all().order_by('-visit_date')
+    
+    has_filters = False
+    
+    # 1. Search (Name, ID, Phone)
+    search_query = request.GET.get('search', '')
+    if search_query:
+        has_filters = True
+        visits = visits.filter(
+            Q(patient__first_name__icontains=search_query) |
+            Q(patient__last_name__icontains=search_query) |
+            Q(patient__id_number__icontains=search_query) |
+            Q(patient__phone__icontains=search_query)
+        )
+        
+    # 2. Visit Type
+    visit_type = request.GET.get('visit_type')
+    if visit_type and visit_type != 'all':
+        has_filters = True
+        visits = visits.filter(visit_type=visit_type)
+        
+    # 3. Gender
+    gender = request.GET.get('gender')
+    if gender and gender != 'all':
+        has_filters = True
+        visits = visits.filter(patient__gender=gender)
+        
+    # 4. Dates
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    if start_date:
+        has_filters = True
+        visits = visits.filter(visit_date__date__gte=start_date)
+    if end_date:
+        has_filters = True
+        visits = visits.filter(visit_date__date__lte=end_date)
+        
+    # 5. Age
+    # Note: Age is stored as an integer, but it's calculated on save. 
+    # This filter relies on the persisted 'age' field being accurate.
+    min_age = request.GET.get('min_age')
+    max_age = request.GET.get('max_age')
+    if min_age:
+        has_filters = True
+        visits = visits.filter(patient__age__gte=min_age)
+    if max_age:
+        has_filters = True
+        visits = visits.filter(patient__age__lte=max_age)
+
+    # Simple Pagination
+    paginator = Paginator(visits, 20) # 20 per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Preserve query params for pagination links
+    query_string = request.GET.copy()
+    if 'page' in query_string:
+        del query_string['page']
+    query_string = '&' + query_string.urlencode() if query_string else ''
+
+    context = {
+        'visits': page_obj,
+        'has_filters': has_filters,
+        'query_string': query_string
+    }
+    return render(request, 'home/health_records.html', context)
 
 
 @login_required
