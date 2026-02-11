@@ -160,8 +160,7 @@
 
         <div class="info-item">
             <span class="info-label">Prescribed By</span>
-            <span class="info-value">{{
-                prescription.prescribed_by.get_full_name|default:prescription.prescribed_by.username }}</span>
+            <span class="info-value">{{ prescription.prescribed_by.get_full_name|default:prescription.prescribed_by.username }}</span>
         </div>
 
         <div class="info-item">
@@ -172,6 +171,11 @@
         <div class="info-item">
             <span class="info-label">Status</span>
             <span class="info-value">{{ prescription.status }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-label">Total Cost</span>
+            <span class="info-value" style="color: #059669; font-weight: 700;">KES {{ prescription.total_amount }}</span>
         </div>
 
         <div class="info-item" style="grid-column: span 2;">
@@ -204,17 +208,20 @@
 
                 <div class="detail-item">
                     <span class="detail-label">Frequency:</span>
-                    <span class="detail-value">{{ item.frequency_count }} times/day</span>
-                </div>
-
-                <div class="detail-item">
-                    <span class="detail-label">Duration:</span>
-                    <span class="detail-value">{{ item.duration_days }} days</span>
+                    <span class="detail-value">{{ item.frequency }}</span>
                 </div>
 
                 <div class="detail-item">
                     <span class="detail-label">Quantity:</span>
-                    <span class="detail-value">{{ item.quantity }} {{ item.medication.unit }}</span>
+                    <span class="detail-value">{{ item.quantity }} units</span>
+                </div>
+
+                <div class="detail-item">
+                    <span class="detail-label">Cost:</span>
+                    <span class="detail-value font-medium text-emerald-600">
+                        KES {{ item.total_price }}
+                        <span class="text-xs text-slate-500 font-normal">(@ {{ item.medication.selling_price }})</span>
+                    </span>
                 </div>
 
                 {% if item.instructions %}

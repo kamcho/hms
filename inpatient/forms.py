@@ -43,7 +43,15 @@ class MedicationChartForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['item'].queryset = InventoryItem.objects.filter(item_type='Medicine').order_by('name')
+        from inventory.models import InventoryCategory
+        
+        # Try to get Pharmaceuticals category
+        pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+        
+        if pharma_category:
+            self.fields['item'].queryset = InventoryItem.objects.filter(category=pharma_category).order_by('name')
+        else:
+            self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
 
 class ServiceAdmissionLinkForm(forms.ModelForm):
     class Meta:

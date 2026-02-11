@@ -66,7 +66,7 @@
             <div class="search-box-premium">
                 <i class="fas fa-search"></i>
                 <input type="text" name="search" value="{{ request.GET.search }}"
-                    placeholder="Search by name, phone or location..." class="search-input-modern">
+                    placeholder="Search by name, ID number, phone or location..." class="search-input-modern">
                 {% if request.GET.search %}
                 <a href="{% url 'home:patient_list' %}" class="clear-search-btn" title="Clear Search">
                     <i class="fas fa-times"></i>
@@ -97,10 +97,10 @@
                             <td>
                                 <div class="patient-profile-inline">
                                     <div class="avatar-initials" data-name="{{ patient_data.patient.first_name }}">
-                                        {{ patient_data.patient.first_name|first }}{{ patient_data.patient.last_name|first }}
+                                        {{ patient_data.patient.first_name|first }}{{  patient_data.patient.last_name|first }}
                                     </div>
                                     <div class="name-id">
-                                        <span class="full-name">{{ patient_data.patient.first_name }} {{ patient_data.patient.last_name }}</span>
+                                        <span class="full-name">{{ patient_data.patient.first_name }} {{   patient_data.patient.last_name }}</span>
                                         <span class="patient-id">#PAT-{{ patient_data.patient.pk|stringformat:"05d" }}</span>
                                     </div>
                                 </div>
@@ -108,7 +108,7 @@
                             <td>
                                 <div class="contact-info">
                                     <span class="phone"><i class="fas fa-phone-alt"></i> {{ patient_data.patient.phone }}</span>
-                                    <span class="location"><i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.location }}</span>
+                                    <span class="location"><i class="fas fa-map-marker-alt"></i> {{  patient_data.patient.location }}</span>
                                 </div>
                             </td>
                             <td>

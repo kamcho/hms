@@ -5,16 +5,12 @@ class InventoryItemForm(forms.ModelForm):
     class Meta:
         model = InventoryItem
         fields = [
-            'name', 'category', 'item_type', 'description', 
-            'dispensing_unit', 'packaging_unit', 'units_per_pack', 
-            'is_dispensed_as_whole', 'reorder_level', 'selling_price'
+            'name', 'category', 'dispensing_unit', 
+            'is_dispensed_as_whole', 'selling_price'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'e.g. Paracetamol 500mg'}),
-            'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Optional description...'}),
             'dispensing_unit': forms.TextInput(attrs={'placeholder': 'e.g. Tablet, ml, Piece'}),
-            'packaging_unit': forms.TextInput(attrs={'placeholder': 'e.g. Box of 100'}),
-            'reorder_level': forms.NumberInput(attrs={'min': 0}),
             'selling_price': forms.NumberInput(attrs={'step': '0.01', 'min': 0}),
         }
 
@@ -28,19 +24,14 @@ class InventoryItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['packaging_unit'].required = False
-        self.fields['units_per_pack'].required = False
-        self.fields['description'].required = False
         self.fields['is_dispensed_as_whole'].widget.attrs.update({'class': 'peer'})
 
 class MedicationForm(forms.ModelForm):
     class Meta:
         model = Medication
-        fields = ['generic_name', 'drug_class', 'formulation', 'strength', 'is_controlled']
+        fields = ['generic_name', 'drug_class', 'formulation']
         widgets = {
             'generic_name': forms.TextInput(attrs={'placeholder': 'e.g. Paracetamol'}),
-            'strength': forms.TextInput(attrs={'placeholder': 'e.g. 500mg'}),
-            'is_controlled': forms.CheckboxInput(attrs={'class': 'peer'}),
         }
 
 class ConsumableDetailForm(forms.ModelForm):

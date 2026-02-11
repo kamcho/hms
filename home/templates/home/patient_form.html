@@ -53,6 +53,15 @@
                     </div>
 
                     <div class="form-group-premium">
+                        <label for="{{ form.id_number.id_for_label }}">ID Number</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-id-card input-icon"></i>
+                            {{ form.id_number }}
+                        </div>
+                        {{ form.id_number.errors }}
+                    </div>
+
+                    <div class="form-group-premium">
                         <label for="{{ form.gender.id_for_label }}">Gender</label>
                         <div class="input-wrapper">
                             <i class="fas fa-venus-mars input-icon"></i>

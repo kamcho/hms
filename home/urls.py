@@ -13,6 +13,9 @@ urlpatterns = [
     path('triage/create/', views.create_triage_entry, name='create_triage'),
     path('notes/add/', views.add_consultation_note, name='add_consultation_note'),
     path('next-action/submit/', views.submit_next_action, name='submit_next_action'),
+    path('symptoms/add/', views.add_symptoms, name='add_symptoms'),
+    path('impression/add/', views.add_impression, name='add_impression'),
+    path('diagnosis/add/', views.add_diagnosis, name='add_diagnosis'),
     path('patients/<int:pk>/delete/', views.PatientDeleteView.as_view(), name='patient_delete'),
     path('patients/admit/', views.admit_patient_visit, name='admit_patient_visit'),
     

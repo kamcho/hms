@@ -272,15 +272,9 @@
                             </div>
                             <div class="space-y-2">
                                 <label
-                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Times /
-                                    Day *</label>
-                                {{ form.frequency_count }}
-                            </div>
-                            <div class="space-y-2">
-                                <label
-                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Total
-                                    Days *</label>
-                                {{ form.duration_days }}
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Frequency
+                                    *</label>
+                                {{ form.frequency }}
                             </div>
                             <div class="space-y-2">
                                 <label
@@ -306,9 +300,14 @@
 
             <!-- Global Actions -->
             <div class="flex items-center justify-end gap-4 mt-12 pb-20">
-                <button type="submit" class="btn-action btn-indigo px-12">
-                    <i class="fas fa-check-circle"></i>
-                    Confirm & Prescribe
+                <button type="submit" name="action" value="prescribe" class="btn-action btn-indigo">
+                    <i class="fas fa-check"></i>
+                    Prescribe
+                </button>
+                <button type="submit" name="action" value="prescribe_close"
+                    class="btn-action bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-500/30">
+                    <i class="fas fa-check-double"></i>
+                    Prescribe & Close Visit
                 </button>
             </div>
         </form>
@@ -319,44 +318,6 @@
 {% block extra_js %}
 <script>
     const medMetadata = {{ med_metadata_json| safe }};
-
-    function calculateQuantity(entry) {
-        const drugId = entry.querySelector('select[name$="-medication"]').value;
-        const data = medMetadata[drugId];
-        const quantInput = entry.querySelector('input[name$="-quantity"]');
-        const daysInput = entry.querySelector('input[name$="-duration_days"]');
-
-        if (data && data.is_dispensed_as_whole) {
-            if (!quantInput.value || quantInput.value == 0) quantInput.value = 1;
-            quantInput.classList.add('bg-slate-50', 'opacity-60', 'cursor-not-allowed');
-            quantInput.readOnly = true;
-
-            // Updated for "Full Dosage"
-            daysInput.type = 'text';
-            daysInput.value = 'Full Dosage';
-            daysInput.readOnly = true;
-            daysInput.classList.add('bg-slate-50', 'opacity-80', 'font-black', 'text-slate-500', 'cursor-not-allowed', 'text-center');
-        } else {
-            quantInput.classList.remove('bg-slate-50', 'opacity-60', 'cursor-not-allowed');
-            quantInput.readOnly = false;
-
-            if (daysInput.type === 'text') {
-                daysInput.type = 'number';
-                daysInput.value = 1;
-                daysInput.readOnly = false;
-                daysInput.classList.remove('bg-slate-50', 'opacity-80', 'font-black', 'text-slate-500', 'cursor-not-allowed', 'text-center');
-            }
-
-            const dose = parseInt(entry.querySelector('input[name$="-dose_count"]').value) || 0;
-            const freq = parseInt(entry.querySelector('input[name$="-frequency_count"]').value) || 0;
-            const days = parseInt(daysInput.value) || 0;
-
-            if (dose > 0 && freq > 0 && days > 0) {
-                quantInput.value = dose * freq * days;
-            }
-        }
-        updatePricePreview(entry);
-    }
 
     function updatePricePreview(entry) {
         const drugId = entry.querySelector('select[name$="-medication"]').value;
@@ -372,7 +333,7 @@
             const price = (parseFloat(data.selling_price) * quant).toFixed(2);
             const pBadge = document.createElement('span');
             pBadge.className = 'price-badge px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black border border-emerald-100 flex items-center gap-1';
-            pBadge.innerHTML = `<i class="fas fa-tag opacity-50"></i> EST. $${price}`;
+            pBadge.innerHTML = `<i class="fas fa-tag opacity-50"></i> EST. KES ${price}`;
             hintDiv.appendChild(pBadge);
         }
     }
@@ -385,12 +346,12 @@
 
         hintDiv.innerHTML = '';
         if (data) {
-            // Add Strength Badge
-            if (data.strength) {
-                const sBadge = document.createElement('span');
-                sBadge.className = 'px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black border border-indigo-100';
-                sBadge.textContent = data.strength;
-                hintDiv.appendChild(sBadge);
+            // Add Generic Name Badge
+            if (data.generic_name) {
+                const gBadge = document.createElement('span');
+                gBadge.className = 'px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black border border-indigo-100';
+                gBadge.textContent = data.generic_name;
+                hintDiv.appendChild(gBadge);
             }
             // Add Formulation Badge
             if (data.formulation) {
@@ -399,15 +360,8 @@
                 fBadge.textContent = data.formulation;
                 hintDiv.appendChild(fBadge);
             }
-            // Add Controlled Badge
-            if (data.is_controlled) {
-                const cBadge = document.createElement('span');
-                cBadge.className = 'px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[9px] font-black border border-rose-100';
-                cBadge.textContent = 'CONTROLLED';
-                hintDiv.appendChild(cBadge);
-            }
 
-            calculateQuantity(entry);
+            updatePricePreview(entry);
         }
     }
 
@@ -419,19 +373,15 @@
     });
 
     document.addEventListener('input', (e) => {
-        if (e.target.matches('input[name$="-dose_count"], input[name$="-frequency_count"], input[name$="-duration_days"], input[name$="-quantity"]')) {
+        if (e.target.matches('input[name$="-quantity"]')) {
             const entry = e.target.closest('.medication-entry');
-            if (entry) calculateQuantity(entry);
+            if (entry) updatePricePreview(entry);
         }
     });
 
     // Form submission cleanup
     document.querySelector('form').addEventListener('submit', function (e) {
-        document.querySelectorAll('input[name$="-duration_days"]').forEach(input => {
-            if (input.value === 'Full Dosage') {
-                input.value = 1; // Backend requires integer
-            }
-        });
+        // No specific cleanup needed for duration_days with the new frequency field
     });
 
     // Initial load
@@ -440,6 +390,20 @@
         if (select && select.value) updateMedDetails(select);
     });
 
+    function confirmPrescribeClose() {
+        // Since modal is moved to body, we must find inputs carefully.
+        // The action input is inside the form, which is NOT in the modal.
+        const actionInput = document.getElementById('form-action');
+        const form = document.getElementById('prescription-form');
+
+        if (actionInput && form) {
+            actionInput.value = 'prescribe_close';
+            form.submit();
+        } else {
+            console.error('Form or action input not found');
+            alert('Error: Could not submit form. Please try again.');
+        }
+    }
     function addMedication() {
         const container = document.getElementById('medication-formset');
         const totalForms = document.getElementById('id_items-TOTAL_FORMS');
@@ -459,7 +423,6 @@
             el.value = '';
             el.readOnly = false;
             // Reset type if it was changed to text for "Full Dosage"
-            if (el.name.endsWith('-duration_days')) el.type = 'number';
             if (el.name.endsWith('-quantity')) el.type = 'number';
 
             el.classList.remove('bg-slate-50', 'opacity-60', 'opacity-80', 'font-black', 'text-slate-500', 'cursor-not-allowed', 'text-center');
@@ -491,6 +454,25 @@
             entry.remove();
             const totalForms = document.getElementById('id_items-TOTAL_FORMS');
             totalForms.value = parseInt(totalForms.value) - 1;
+        }
+    }
+
+    function showCloseVisitModal() {
+        const modal = document.getElementById('closeVisitModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block'; // Force display
+            document.body.appendChild(modal); // Ensure it's on top
+        } else {
+            console.error('Modal element not found');
+        }
+    }
+
+    function hideCloseVisitModal() {
+        const modal = document.getElementById('closeVisitModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none'; // Force hide
         }
     }
 </script>

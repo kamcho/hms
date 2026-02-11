@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, InventoryCategory, InventoryItem, StockRecord, StockAdjustment
+from .models import Supplier, InventoryCategory, InventoryItem, StockRecord, StockAdjustment, InventoryRequest
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
@@ -12,7 +12,7 @@ class InventoryCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'unit', 'selling_price', 'reorder_level')
+    list_display = ('name', 'category', 'dispensing_unit', 'selling_price', 'is_dispensed_as_whole')
     list_filter = ('category',)
     search_fields = ('name',)
 
@@ -27,3 +27,9 @@ class StockAdjustmentAdmin(admin.ModelAdmin):
     list_display = ('item', 'quantity', 'adjustment_type', 'adjusted_at', 'adjusted_by')
     list_filter = ('adjustment_type', 'adjusted_at')
     search_fields = ('item__name', 'reason')
+
+@admin.register(InventoryRequest)
+class InventoryRequestAdmin(admin.ModelAdmin):
+    list_display = ('item', 'quantity', 'location', 'status', 'requested_at', 'requested_by')
+    list_filter = ('status', 'requested_at', 'location')
+    search_fields = ('item__name', 'requested_by__username')

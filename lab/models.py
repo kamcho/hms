@@ -19,9 +19,19 @@ class LabResult(models.Model):
         ('High', 'High'),
         ('Urgent', 'Urgent'),
     ]
+    specimens = [
+        ('Blood', 'Blood'),
+        ('Urine', 'Urine'),
+        ('Stool', 'Stool'),
+        ('Sputum', 'Sputum'),
+        ('Swab', 'Swab'),
+        ('Tissue', 'Tissue'),
+        ('Other', 'Other'),
+    ]
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    specimen = models.CharField(max_length=100, null=True, blank=True, choices=specimens)
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, null=True, blank=True)
     invoice_item = models.ForeignKey('accounts.InvoiceItem', on_delete=models.SET_NULL, null=True, blank=True)
     requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_tests')

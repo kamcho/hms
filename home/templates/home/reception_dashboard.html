@@ -1270,18 +1270,7 @@
                     </select>
                 </div>
 
-                <div class="form-group" style="position: relative; z-index: 100003;">
-                    <label
-                        style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Payment
-                        Method</label>
-                    <select id="admitPaymentMethod" class="clinical-input"
-                        style="cursor: pointer; position: relative; z-index: 100004; pointer-events: auto !important;">
-                        <option value="Cash">Cash</option>
-                        <option value="M-Pesa">M-Pesa</option>
-                        <option value="Insurance">Insurance</option>
-                        <option value="Bank Transfer">Bank Transfer</option>
-                    </select>
-                </div>
+                <!-- Payment Method Removed for Free Revisit -->
 
                 <button id="admitVisitBtn" class="btn-primary"
                     style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); position: relative; z-index: 100005; pointer-events: auto; cursor: pointer;">
@@ -1451,10 +1440,7 @@
                         <label>Temperature (°C)</label>
                         <input type="number" name="temperature" class="clinical-input" step="0.1" placeholder="36.5">
                     </div>
-                    <div class="form-group">
-                        <label>Heart Rate (bpm)</label>
-                        <input type="number" name="heart_rate" class="clinical-input" placeholder="72">
-                    </div>
+
 
                     <div class="form-group">
                         <label>BP Systolic (mmHg) <span style="color: red;">*</span></label>
@@ -1480,10 +1466,7 @@
                         <label>Height (cm) <span style="color: red;">*</span></label>
                         <input type="number" name="height" class="clinical-input" placeholder="175" required>
                     </div>
-                    <div class="form-group">
-                        <label>Blood Glucose (mg/dL)</label>
-                        <input type="number" name="blood_glucose" class="clinical-input" placeholder="100" step="0.1">
-                    </div>
+
                     <div class="form-group">
                         <label>Assignment Room</label>
                         <select name="send_to" id="send_to" class="clinical-input" required
@@ -1700,25 +1683,24 @@
         admitVisitBtn.addEventListener('click', function () {
             if (currentPatientId) {
                 const consultationId = document.getElementById('admitConsultation').value;
-                const paymentMethod = document.getElementById('admitPaymentMethod').value;
 
-                if (!consultationId || !paymentMethod) {
-                    showNotification('Please select both consultation type and payment method.', 'error');
+                if (!consultationId) {
+                    showNotification('Please select a consultation type.', 'error');
                     return;
                 }
 
                 // Show processing notification
-                showNotification('Processing admission and billing...', 'info');
+                showNotification('Processing admission...', 'info');
                 admitVisitBtn.disabled = true;
 
-                // Create a new visit and process billing
+                // Create a new visit (Free Revisit)
                 fetch('{% url "home:admit_patient_visit" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: `patient_id=${currentPatientId}&consultation_id=${consultationId}&payment_method=${paymentMethod}`
+                    body: `patient_id=${currentPatientId}&consultation_id=${consultationId}`
                 })
                     .then(response => {
                         if (!response.ok) {

@@ -260,16 +260,24 @@ def patient_case_folder(request, admission_id):
     invoice_is_paid = invoice.status == 'Paid' if invoice else False
 
     # Prepare medication metadata for smart prescription JS
-    from inventory.models import InventoryItem
+    from inventory.models import InventoryItem, InventoryCategory
     import json
+    
+    # Get Pharmaceuticals category
+    pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+    
+    if pharma_category:
+        medications = InventoryItem.objects.filter(category=pharma_category).select_related('category')
+    else:
+        medications = InventoryItem.objects.all().select_related('category')
+    
     med_metadata = {}
-    for item in InventoryItem.objects.filter(item_type='Medicine').select_related('medication'):
+    for item in medications:
         details = getattr(item, 'medication', None)
         med_metadata[item.id] = {
             'name': item.name,
-            'strength': details.strength if details else '',
+            'generic_name': details.generic_name if details else '',
             'formulation': details.formulation if details else '',
-            'is_controlled': details.is_controlled if details else False,
             'is_dispensed_as_whole': item.is_dispensed_as_whole,
             'selling_price': str(item.selling_price)
         }

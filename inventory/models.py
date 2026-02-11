@@ -32,31 +32,20 @@ class InventoryCategory(models.Model):
         return self.name
 
 class InventoryItem(models.Model):
-    ITEM_TYPE_CHOICES = [
-        ('Medicine', 'Medicine'),
-        ('Consumable', 'Consumable'),
-        ('General', 'General Supply'),
-    ]
+
     
     name = models.CharField(max_length=200)
     category = models.ForeignKey(InventoryCategory, on_delete=models.CASCADE, related_name='items')
-    item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES, default='General')
-    description = models.TextField(blank=True, null=True)
     
     # Dispensing Logic
     dispensing_unit = models.CharField(max_length=50, help_text="Smallest unit sold (e.g., Tablet, ml, Piece)")
-    packaging_unit = models.CharField(max_length=100, blank=True, null=True, help_text="How it's bought (e.g., Box of 100)")
-    units_per_pack = models.PositiveIntegerField(default=1, help_text="Number of dispensing units in one packaging unit")
     is_dispensed_as_whole = models.BooleanField(default=False, help_text="If true, item is only sold as a whole unit (e.g., a small box)")
     
-    unit = models.CharField(max_length=50, help_text="e.g., pieces, ml, mg, boxes", blank=True, null=True) # Kept for legacy compatibility if needed
-    reorder_level = models.IntegerField(default=10)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Selling price per dispensing unit")
+    buying_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Cost price per dispensing unit")
+    reorder_level = models.IntegerField(default=10, help_text="Minimum stock level before reordering")
 
     def save(self, *args, **kwargs):
-        # Synchronize legacy unit field with dispensing_unit for backward compatibility
-        if self.dispensing_unit:
-            self.unit = self.dispensing_unit
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -78,11 +67,9 @@ class Medication(models.Model):
     generic_name = models.CharField(max_length=200)
     drug_class = models.ForeignKey(DrugClass, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications')
     formulation = models.CharField(max_length=50, choices=FORMULATION_CHOICES)
-    strength = models.CharField(max_length=100, help_text="e.g., 500mg, 125mg/5ml")
-    is_controlled = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.generic_name} ({self.strength})"
+        return f"{self.generic_name}"
 
 class ConsumableDetail(models.Model):
     item = models.OneToOneField(InventoryItem, on_delete=models.CASCADE, related_name='consumable_detail')

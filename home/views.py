@@ -28,7 +28,14 @@ class PatientListView(LoginRequiredMixin, ListView):
         queryset = Patient.objects.all().order_by('-created_at')
         search_query = self.request.GET.get('search')
         if search_query:
+            # Check if search query is a number for ID lookup
+            id_filter = Q()
+            if search_query.isdigit():
+                id_filter = Q(pk=int(search_query))
+
             queryset = queryset.filter(
+                id_filter |
+                Q(id_number__icontains=search_query) |
                 Q(first_name__icontains=search_query) |
                 Q(last_name__icontains=search_query) |
                 Q(phone__icontains=search_query)
@@ -206,6 +213,22 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             context['medication_form'] = MedicationChartForm()
             context['service_form'] = ServiceAdmissionLinkForm()
             
+        from .models import Symptoms, Impression, Diagnosis
+        
+        # Filter new clinical data
+        if selected_visit:
+            symptoms = Symptoms.objects.filter(visit=selected_visit).order_by('-created_at')
+            impressions = Impression.objects.filter(visit=selected_visit).order_by('-created_at')
+            diagnoses = Diagnosis.objects.filter(visit=selected_visit).order_by('-created_at')
+        else:
+            symptoms = Symptoms.objects.filter(visit__patient=patient).order_by('-created_at')
+            impressions = Impression.objects.filter(visit__patient=patient).order_by('-created_at')
+            diagnoses = Diagnosis.objects.filter(visit__patient=patient).order_by('-created_at')
+            
+        context['symptoms'] = symptoms
+        context['impressions'] = impressions
+        context['diagnoses'] = diagnoses
+            
         context['triage_entries'] = TriageEntry.objects.filter(**triage_filter).order_by('-entry_date')
         context['consultations'] = Consultation.objects.filter(**consultation_filter).order_by('-checkin_date')
         context['consultation_notes'] = ConsultationNotes.objects.filter(**notes_filter).order_by('-created_at')
@@ -245,8 +268,10 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             })
         context['medical_tests_json'] = json.dumps(medical_tests_data)
         
-        # Get all departments for the "Send To" options
-        context['available_departments'] = Departments.objects.all().order_by('name')
+        # Get departments for the "Send To" options (only Lab, Imaging, Procedure Room)
+        context['available_departments'] = Departments.objects.filter(
+            name__in=['Lab', 'Imaging', 'Procedure Room']
+        ).order_by('name')
         
         return context
 
@@ -472,6 +497,7 @@ def submit_next_action(request):
                         # Automatically create LabResult for Lab/Imaging/Procedure tests
                         if service.category in ['Lab', 'Imaging', 'Procedure']:
                             test_notes = request.POST.get(f'test_notes_{test_id}', '')
+                            test_specimen = request.POST.get(f'test_specimen_{test_id}', '')
                             LabResult.objects.create(
                                 patient=patient,
                                 service=service,
@@ -479,6 +505,7 @@ def submit_next_action(request):
                                 invoice_item=item,
                                 requested_by=request.user,
                                 clinical_notes=test_notes,
+                                specimen=test_specimen if test_specimen else None,
                                 status='Pending'
                             )
 
@@ -735,6 +762,71 @@ def reception_dashboard(request):
 
 
 @login_required
+def add_symptoms(request):
+    """Add symptoms to a visit"""
+    if request.method == 'POST':
+        try:
+            visit_id = request.POST.get('visit_id')
+            data = request.POST.get('data')
+            days = request.POST.get('days')
+            
+            visit = get_object_or_404(Visit, pk=visit_id)
+            from .models import Symptoms
+            
+            Symptoms.objects.create(
+                visit=visit,
+                data=data,
+                days=days,
+                created_by=request.user
+            )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def add_impression(request):
+    """Add impression to a visit"""
+    if request.method == 'POST':
+        try:
+            visit_id = request.POST.get('visit_id')
+            data = request.POST.get('data')
+            
+            visit = get_object_or_404(Visit, pk=visit_id)
+            from .models import Impression
+            
+            Impression.objects.create(
+                visit=visit,
+                data=data,
+                created_by=request.user
+            )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def add_diagnosis(request):
+    """Add diagnosis to a visit"""
+    if request.method == 'POST':
+        try:
+            visit_id = request.POST.get('visit_id')
+            data = request.POST.get('data')
+            
+            visit = get_object_or_404(Visit, pk=visit_id)
+            from .models import Diagnosis
+            
+            Diagnosis.objects.create(
+                visit=visit,
+                data=data,
+                created_by=request.user
+            )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
 def create_triage_entry(request):
     """Create a new triage entry from the modal form"""
     if request.method == 'POST':
@@ -781,10 +873,8 @@ def create_triage_entry(request):
                 temperature=float(temperature) if temperature else None,
                 blood_pressure_systolic=int(blood_pressure_systolic) if blood_pressure_systolic else None,
                 blood_pressure_diastolic=int(blood_pressure_diastolic) if blood_pressure_diastolic else None,
-                heart_rate=int(heart_rate) if heart_rate else None,
-                respiratory_rate=int(respiratory_rate) if respiratory_rate else None,
+                # Removed heart_rate, respiratory_rate, blood_glucose as requested
                 oxygen_saturation=int(oxygen_saturation) if oxygen_saturation else None,
-                blood_glucose=float(blood_glucose) if blood_glucose else None,
                 weight=float(weight) if weight else None,
                 height=float(height) if height else None,
                 disposition=disposition,
@@ -843,12 +933,11 @@ def create_triage_entry(request):
 
 @login_required
 def admit_patient_visit(request):
-    """Create a new visit and queue entry for an existing patient"""
+    """Create a new visit and queue entry for an existing patient (Free Revisit)"""
     if request.method == 'POST':
         try:
             patient_id = request.POST.get('patient_id')
             service_id = request.POST.get('consultation_id') # Kept the key for JS compatibility
-            payment_method = request.POST.get('payment_method')
             
             patient = get_object_or_404(Patient, pk=patient_id)
             main_service = get_object_or_404(Service, pk=service_id)
@@ -858,41 +947,6 @@ def admit_patient_visit(request):
                 patient=patient,
                 visit_type='OUT-PATIENT',
                 visit_mode='Walk In'
-            )
-            
-            # Integrated Billing
-            invoice = Invoice.objects.create(
-                patient=patient,
-                visit=visit,
-                status='Pending',
-                created_by=request.user
-            )
-            
-            invoice_item = InvoiceItem.objects.create(
-                invoice=invoice,
-                service=main_service,
-                name=main_service.name,
-                unit_price=main_service.price,
-                quantity=1
-            )
-            
-            # Automatically create LabResult for Lab/Imaging/Procedure tests during admission
-            if hasattr(main_service, 'category') and main_service.category in ['Lab', 'Imaging', 'Procedure']:
-                from lab.models import LabResult
-                LabResult.objects.create(
-                    patient=patient,
-                    service=main_service,
-                    invoice=invoice,
-                    invoice_item=invoice_item,
-                    requested_by=request.user,
-                    status='Pending'
-                )
-            
-            Payment.objects.create(
-                invoice=invoice,
-                amount=invoice_item.amount,
-                payment_method=payment_method,
-                created_by=request.user
             )
             
             # Create or get reception and triage departments
@@ -916,7 +970,7 @@ def admit_patient_visit(request):
             
             return JsonResponse({
                 'success': True, 
-                'message': f'Patient {patient.full_name} admitted and {main_service.name} billed via {payment_method}.'
+                'message': f'Patient {patient.full_name} admitted for {main_service.name} (Free Revisit).'
             })
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -961,6 +1015,12 @@ def create_prescription(request, patient_id):
             current_visit = patient.visits.filter(visit_type='OUT-PATIENT').order_by('-visit_date').first()
             if current_visit:
                 prescription.visit = current_visit
+                
+                # Close visit if requested
+                if request.POST.get('action') == 'prescribe_close':
+                    current_visit.is_active = False
+                    current_visit.save()
+                    messages.info(request, "Visit has been closed.")
             
             prescription.save()
             
@@ -1002,16 +1062,24 @@ def create_prescription(request, patient_id):
         formset = PrescriptionItemFormSet()
     
     # Prepare medication metadata for JS
-    from inventory.models import InventoryItem
+    from inventory.models import InventoryItem, InventoryCategory
     import json
+    
+    # Get Pharmaceuticals category
+    pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+    
+    if pharma_category:
+        medications = InventoryItem.objects.filter(category=pharma_category).select_related('category')
+    else:
+        medications = InventoryItem.objects.all().select_related('category')
+    
     med_metadata = {}
-    for item in InventoryItem.objects.filter(item_type='Medicine').select_related('medication'):
+    for item in medications:
         details = getattr(item, 'medication', None)
         med_metadata[item.id] = {
             'name': item.name,
-            'strength': details.strength if details else '',
+            'generic_name': details.generic_name if details else '',
             'formulation': details.formulation if details else '',
-            'is_controlled': details.is_controlled if details else False,
             'is_dispensed_as_whole': item.is_dispensed_as_whole,
             'selling_price': str(item.selling_price)
         }

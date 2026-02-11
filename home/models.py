@@ -186,6 +186,33 @@ class Consultation(models.Model):
     def __str__(self):
         return f"Consultation - {self.visit.patient} ({self.doctor}) - {self.checkin_date.strftime('%Y-%m-%d %H:%M')}"
 
+
+class Symptoms(models.Model):
+    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='symptoms')
+    data = models.TextField()
+    days = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='symptoms_created')
+    updated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='symptoms_updated')
+
+class Impression(models.Model):
+    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='impressions')
+    data = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='impressions_created')
+    updated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='impressions_updated')
+
+
+class Diagnosis(models.Model):
+    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='diagnoses')
+    data = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='diagnoses_created')
+    updated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='diagnoses_updated')
+
 class ConsultationNotes(models.Model):
     consultation = models.ForeignKey(Consultation, on_delete=models.CASCADE, related_name='consultation_notes')
     notes = models.TextField()
@@ -254,18 +281,33 @@ class Prescription(models.Model):
         verbose_name = "Prescription"
         verbose_name_plural = "Prescriptions"
     
+    @property
+    def total_amount(self):
+        return sum(item.total_price for item in self.items.all())
+
     def __str__(self):
         return f"Prescription for {self.patient.full_name} - {self.prescribed_at.strftime('%Y-%m-%d')}"
 
 
 class PrescriptionItem(models.Model):
+
+    frequency_choices = [
+        ('Once Daily', 'Once Daily'),
+        ('Twice Daily', 'Twice Daily'),
+        ('Thrice Daily', 'Thrice Daily'),
+        ('Four Times Daily', 'Four Times Daily'),
+        ('Every 6 Hours', 'Every 6 Hours'),
+        ('Every 8 Hours', 'Every 8 Hours'),
+        ('Every 12 Hours', 'Every 12 Hours'),
+        ('Every 24 Hours', 'Every 24 Hours'),
+        ('As Needed', 'As Needed'),
+    ]
     prescription = models.ForeignKey('Prescription', on_delete=models.CASCADE, related_name='items')
     medication = models.ForeignKey('inventory.InventoryItem', on_delete=models.PROTECT, related_name='prescription_items')
     
     # Numeric components for auto-calculation and record keeping
     dose_count = models.PositiveIntegerField(default=1, help_text="Units per dose (e.g., 2 tablets)")
-    frequency_count = models.PositiveIntegerField(default=1, help_text="Times per day (e.g., 3 times)")
-    duration_days = models.PositiveIntegerField(default=1, help_text="Total days (e.g., 7 days)")
+    frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     
     quantity = models.IntegerField(help_text="Total units to dispense")
     instructions = models.TextField(blank=True, help_text="Special instructions for this medication")
@@ -277,5 +319,11 @@ class PrescriptionItem(models.Model):
         verbose_name = "Prescription Item"
         verbose_name_plural = "Prescription Items"
     
+    @property
+    def total_price(self):
+        if self.medication and self.medication.selling_price:
+            return self.quantity * self.medication.selling_price
+        return 0
+
     def __str__(self):
-        return f"{self.medication.name} - {self.dose_count} x {self.frequency_count} x {self.duration_days} days"
+        return f"{self.medication.name} - {self.dose_count} x {self.frequency}"

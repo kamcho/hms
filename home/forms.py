@@ -85,12 +85,11 @@ class PrescriptionItemForm(forms.ModelForm):
     
     class Meta:
         model = PrescriptionItem
-        fields = ['medication', 'dose_count', 'frequency_count', 'duration_days', 'quantity', 'instructions']
+        fields = ['medication', 'dose_count', 'frequency', 'quantity', 'instructions']
         widgets = {
             'medication': forms.Select(attrs={'class': 'medication-select'}),
             'dose_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Pills/Dose'}),
-            'frequency_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Times/Day'}),
-            'duration_days': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Days'}),
+            'frequency': forms.Select(attrs={'class': 'frequency-select'}),
             'quantity': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Total quantity'}),
             'instructions': forms.Textarea(attrs={
                 'rows': 2,
@@ -100,16 +99,24 @@ class PrescriptionItemForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter to show only medications from inventory using the new item_type
-        from inventory.models import InventoryItem
-        self.fields['medication'].queryset = InventoryItem.objects.filter(
-            item_type='Medicine'
-        ).select_related('medication').order_by('name')
+        # Filter to show medications from inventory (Pharmaceuticals category)
+        from inventory.models import InventoryItem, InventoryCategory
         
-        # Customize labels to show strength and formulation if available
+        # Try to get Pharmaceuticals category, fallback to all items if not found
+        pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+        
+        if pharma_category:
+            queryset = InventoryItem.objects.filter(category=pharma_category)
+        else:
+            # Fallback: show items with medication object OR all items
+            queryset = InventoryItem.objects.all()
+        
+        self.fields['medication'].queryset = queryset.select_related('category').order_by('name')
+        
+        # Customize labels to show category and formulation if available
         self.fields['medication'].label_from_instance = lambda obj: (
-            f"{obj.name} ({obj.medication.strength} - {obj.medication.formulation})" 
-            if hasattr(obj, 'medication') else obj.name
+            f"{obj.name} ({obj.medication.generic_name} - {obj.medication.formulation})" 
+            if hasattr(obj, 'medication') and obj.medication else obj.name
         )
         
         self.fields['medication'].empty_label = "Select a medication"
@@ -134,10 +141,11 @@ class PatientForm(forms.ModelForm):
 
     class Meta:
         model = Patient
-        fields = ['first_name', 'last_name', 'date_of_birth', 'phone', 'location', 'gender']
+        fields = ['first_name', 'last_name', 'id_number', 'date_of_birth', 'phone', 'location', 'gender']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'id_number': forms.TextInput(attrs={'class': 'form-control'}),
             'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
@@ -151,3 +159,30 @@ class PatientForm(forms.ModelForm):
             self.fields['consultation_type'].required = False
             self.fields['payment_method'].required = False
             # Hide them in the template or just leave them as optional
+
+from .models import Symptoms, Impression, Diagnosis
+
+class SymptomsForm(forms.ModelForm):
+    class Meta:
+        model = Symptoms
+        fields = ['data', 'days']
+        widgets = {
+            'data': forms.Textarea(attrs={'class': 'clinical-input', 'rows': 3, 'placeholder': 'Describe symptoms...'}),
+            'days': forms.NumberInput(attrs={'class': 'clinical-input', 'placeholder': 'Duration in days'}),
+        }
+
+class ImpressionForm(forms.ModelForm):
+    class Meta:
+        model = Impression
+        fields = ['data']
+        widgets = {
+            'data': forms.Textarea(attrs={'class': 'clinical-input', 'rows': 3, 'placeholder': 'Clinical impression...'}),
+        }
+
+class DiagnosisForm(forms.ModelForm):
+    class Meta:
+        model = Diagnosis
+        fields = ['data']
+        widgets = {
+            'data': forms.Textarea(attrs={'class': 'clinical-input', 'rows': 3, 'placeholder': 'Final diagnosis...'}),
+        }

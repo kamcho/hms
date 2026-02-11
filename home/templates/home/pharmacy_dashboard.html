@@ -541,16 +541,12 @@
                         <div class="patient-info">
                             <div class="patient-avatar">{{ group.grouper.patient.full_name|slice:":1" }}</div>
                             <div class="patient-details">
-                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{
-                                        group.grouper.patient.full_name }}</a></h3>
+                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{ group.grouper.patient.full_name }}</a></h3>
                                 <div class="patient-meta">
-                                    <span><i class="far fa-clock"></i> {{ group.grouper.prescribed_at|date:"M d, H:i"
-                                        }}</span>
-                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.grouper.prescribed_by.last_name
-                                        }}</span>
+                                    <span><i class="far fa-clock"></i> {{ group.grouper.prescribed_at|date:"M d, H:i" }}</span>
+                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.grouper.prescribed_by.last_name }}</span>
                                     {% if group.grouper.invoice %}
-                                    <span><i class="fas fa-file-invoice-dollar"></i> {{
-                                        group.grouper.invoice.status|upper }}</span>
+                                    <span><i class="fas fa-file-invoice-dollar"></i> {{ group.grouper.invoice.status|upper }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -661,10 +657,8 @@
                                 <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{
                                         group.grouper.patient.full_name }}</a></h3>
                                 <div class="patient-meta">
-                                    <span><i class="fas fa-procedures"></i> {{ group.grouper.bed.ward.name }} / Bed {{
-                                        group.grouper.bed.bed_number }}</span>
-                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.list.0.prescribed_by.last_name
-                                        }}</span>
+                                    <span><i class="fas fa-procedures"></i> {{ group.grouper.bed.ward.name }} / Bed {{   group.grouper.bed.bed_number }}</span>
+                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.list.0.prescribed_by.last_name  }}</span>
                                 </div>
                             </div>
                         </div>
@@ -688,8 +682,7 @@
                                 </td>
                                 <td>
                                     <div class="badge badge-primary"
-                                        style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">{{
-                                        item.frequency_count }}x daily</div>
+                                        style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">{{ item.frequency_count }}x daily</div>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
                                         {{ item.duration_days }} days</div>
                                 </td>
@@ -697,13 +690,10 @@
                                     {% if item.quantity > 0 %}
                                     <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
                                     {% else %}
-                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">{{
-                                        item.dose_count|multiply:item.frequency_count|multiply:item.duration_days
-                                        }}</span>
+                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">{{ item.dose_count|multiply:item.frequency_count|multiply:item.duration_days }}</span>
                                     <i class="fas fa-magic text-[10px]" title="Calculated from regimen"></i>
                                     {% endif %}
-                                    <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units"
-                                        }}</span>
+                                    <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units" }}</span>
                                 </td>
                                 <td style="text-align: right;">
                                     <button class="btn btn-primary dispense-ipd-btn" data-item-id="{{ item.id }}"
