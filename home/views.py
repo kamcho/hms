@@ -11,12 +11,12 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta
-from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem
+from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from lab.models import LabResult
 from inpatient.models import Admission
 from morgue.models import MorgueAdmission
-from .forms import EmergencyContactForm, PatientForm
+from .forms import EmergencyContactForm, PatientForm, ReferralForm
 from django.db.models import Q
 
 class PatientListView(LoginRequiredMixin, ListView):
@@ -266,12 +266,21 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 'department_name': test.department.name.lower(),
                 'price': str(test.price) if test.price else None
             })
+        context['medical_tests_data'] = medical_tests_data
         context['medical_tests_json'] = json.dumps(medical_tests_data)
         
         # Get departments for the "Send To" options (only Lab, Imaging, Procedure Room)
         context['available_departments'] = Departments.objects.filter(
             name__in=['Lab', 'Imaging', 'Procedure Room']
         ).order_by('name')
+        
+        # Get dispensed items history
+        from inventory.models import DispensedItem
+        if selected_visit:
+            dispensed_items = DispensedItem.objects.filter(visit=selected_visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+        else:
+            dispensed_items = DispensedItem.objects.filter(patient=patient).order_by('-dispensed_at')[:20]
+        context['dispensed_items'] = dispensed_items
         
         return context
 
@@ -320,8 +329,15 @@ def quick_triage_entry(request):
             
             # Determine department name and abbreviation
             if send_to == "Maternity":
+                # Fallback purely for legacy
                 dept_name = "Maternity"
                 dept_abbr = "MAT"
+            elif send_to == "ANC":
+                dept_name = "ANC"
+                dept_abbr = "ANC"
+            elif send_to == "PNC":
+                dept_name = "PNC"
+                dept_abbr = "PNC"
             elif send_to.isdigit():
                 dept_name = f'Consultation Room {send_to}'
                 dept_abbr = f'CR{send_to}'
@@ -431,6 +447,12 @@ def submit_next_action(request):
                 if dept == 'pharmacy':
                     dept_name = 'Pharmacy'
                     dept_abbr = 'PHR'
+                elif dept == 'ANC':
+                    dept_name = 'ANC'
+                    dept_abbr = 'ANC'
+                elif dept == 'PNC':
+                    dept_name = 'PNC'
+                    dept_abbr = 'PNC'
                 else:
                     # Use the actual service type name
                     try:
@@ -495,7 +517,7 @@ def submit_next_action(request):
                         )
 
                         # Automatically create LabResult for Lab/Imaging/Procedure tests
-                        if service.category in ['Lab', 'Imaging', 'Procedure']:
+                        if service.department.name in ['Lab', 'Imaging', 'Procedure Room']:
                             test_notes = request.POST.get(f'test_notes_{test_id}', '')
                             test_specimen = request.POST.get(f'test_specimen_{test_id}', '')
                             LabResult.objects.create(
@@ -773,6 +795,7 @@ def add_symptoms(request):
             visit = get_object_or_404(Visit, pk=visit_id)
             from .models import Symptoms
             
+                
             Symptoms.objects.create(
                 visit=visit,
                 data=data,
@@ -782,7 +805,111 @@ def add_symptoms(request):
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def refer_patient(request, visit_id):
+    visit = get_object_or_404(Visit, pk=visit_id)
+    patient = visit.patient
+    
+    # Check if a referral already exists for this visit
+    referral = Referral.objects.filter(visit=visit).first()
+    
+    if request.method == 'POST':
+        form = ReferralForm(request.POST, instance=referral)
+        if form.is_valid():
+            referral = form.save(commit=False)
+            referral.visit = visit
+            referral.doctor = request.user
+            referral.save()
+            messages.success(request, 'Referral generated successfully.')
+            return redirect('home:refer_patient', visit_id=visit.id)
+    else:
+        # Pre-fill clinical summary from existing data if creating new
+        initial_data = {}
+        if not referral:
+            # Aggregate clinical info
+            summary_parts = []
+            
+            # Impressions
+            impressions = visit.impressions.all()
+            if impressions:
+                summary_parts.append("Impressions: " + "; ".join([i.data for i in impressions]))
+                
+            # Diagnoses
+            diagnoses = visit.diagnoses.all()
+            if diagnoses:
+                summary_parts.append("Diagnoses: " + "; ".join([d.data for d in diagnoses]))
+            
+            if summary_parts:
+                initial_data['clinical_summary'] = "\n\n".join(summary_parts)
+                
+        form = ReferralForm(instance=referral, initial=initial_data)
+
+    # Gather Context Data
+    triage = TriageEntry.objects.filter(visit=visit).first()
+    symptoms = visit.symptoms.all() # Correct related_name from Symptoms model
+    impressions = visit.impressions.all()
+    diagnoses = visit.diagnoses.all()
+    
+    # Consultation Notes
+    consultations = Consultation.objects.filter(visit=visit)
+    notes = ConsultationNotes.objects.filter(consultation__in=consultations)
+    
+    # Lab Results - connected via Invoice
+    # Find invoices for this visit
+    invoices = Invoice.objects.filter(visit=visit)
+    # Find lab results for these invoices
+    lab_results = LabResult.objects.filter(invoice__in=invoices)
+
+    # Inpatient data
+    admission = None
+    if visit.visit_type == 'IN-PATIENT':
+        try:
+            from inpatient.models import Admission, PatientVitals
+            admission = Admission.objects.filter(visit=visit).first()
+            if admission and not triage:
+                # Try to get vitals from inpatient records if no triage entry
+                latest_vitals = PatientVitals.objects.filter(admission=admission).order_by('-recorded_at').first()
+                if latest_vitals:
+                    # Mock a triage object for template compatibility
+                    triage = {
+                        'entry_date': latest_vitals.recorded_at,
+                        'blood_pressure_systolic': latest_vitals.systolic_bp,
+                        'blood_pressure_diastolic': latest_vitals.diastolic_bp,
+                        'heart_rate': latest_vitals.pulse_rate,
+                        'temperature': latest_vitals.temperature,
+                        'oxygen_saturation': latest_vitals.spo2,
+                    }
+        except ImportError:
+            pass
+
+    # Determine back URL
+    if admission:
+        from django.urls import reverse
+        back_url = reverse('inpatient:patient_case_folder', kwargs={'admission_id': admission.id})
+    else:
+        from django.urls import reverse
+        back_url = reverse('home:patient_detail', kwargs={'pk': patient.pk})
+
+    context = {
+        'visit': visit,
+        'patient': patient,
+        'form': form,
+        'referral': referral,
+        'triage': triage,
+        'symptoms': symptoms,
+        'impressions': impressions,
+        'diagnoses': diagnoses,
+        'notes': notes,
+        'lab_results': lab_results,
+        'today': timezone.now().date(),
+        'admission': admission,
+        'back_url': back_url,
+    }
+    
+    return render(request, 'home/refer_patient.html', context)
 
 @login_required
 def add_impression(request):
@@ -959,12 +1086,26 @@ def admit_patient_visit(request):
                 name='Triage',
                 defaults={'abbreviation': 'TRI'}
             )
+
+            # Route based on Service Name (Smart Routing)
+            destination_dept = triage_dept # Default to Triage
             
-            # Create PatientQue from reception to triage
+            service_name_upper = main_service.name.upper()
+            if "ANC" in service_name_upper:
+                anc_dept, _ = Departments.objects.get_or_create(name='ANC', defaults={'abbreviation': 'ANC'})
+                destination_dept = anc_dept
+            elif "PNC" in service_name_upper:
+                pnc_dept, _ = Departments.objects.get_or_create(name='PNC', defaults={'abbreviation': 'PNC'})
+                destination_dept = pnc_dept
+            elif "CWC" in service_name_upper:
+                cwc_dept, _ = Departments.objects.get_or_create(name='CWC', defaults={'abbreviation': 'CWC'})
+                destination_dept = cwc_dept
+            
+            # Create PatientQue from reception to destination (Triage or Direct Maternity)
             PatientQue.objects.create(
                 visit=visit,
                 qued_from=reception_dept,
-                sent_to=triage_dept,
+                sent_to=destination_dept,
                 created_by=request.user
             )
             
@@ -1006,7 +1147,7 @@ def create_prescription(request, visit_id):
     
     if request.method == 'POST':
         form = PrescriptionForm(request.POST)
-        formset = PrescriptionItemFormSet(request.POST)
+        formset = PrescriptionItemFormSet(request.POST, prefix='items')
         
         if form.is_valid() and formset.is_valid():
             # Save prescription
@@ -1043,22 +1184,30 @@ def create_prescription(request, visit_id):
                 prescription.save()
                 
                 for item in prescription_items:
-                    InvoiceItem.objects.create(
-                        invoice=invoice,
-                        inventory_item=item.medication,
-                        name=item.medication.name,
-                        unit_price=item.medication.selling_price,
-                        quantity=item.quantity
-                    )
+                    # Skip creating invoice items for free medications
+                    if item.medication.selling_price > 0:
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            inventory_item=item.medication,
+                            name=item.medication.name,
+                            unit_price=item.medication.selling_price,
+                            quantity=item.quantity
+                        )
                 
+                # Update invoice totals and handle free prescriptions
+                invoice.update_totals()
+                if invoice.total_amount == 0:
+                    invoice.status = 'Paid'
+                    invoice.save()
+
                 messages.success(request, f'Prescription and invoice created successfully for {patient.full_name}')
             else:
                 messages.success(request, f'Prescription created successfully (no items) for {patient.full_name}')
                 
-            return redirect('home:patient_detail', pk=patient.id)
+            return redirect('home:prescription_detail', prescription_id=prescription.id)
     else:
         form = PrescriptionForm()
-        formset = PrescriptionItemFormSet()
+        formset = PrescriptionItemFormSet(prefix='items')
     
     # Prepare medication metadata for JS
     from inventory.models import InventoryItem, InventoryCategory
@@ -1213,7 +1362,7 @@ def prescription_list(request, patient_id):
     }
     return render(request, 'home/prescription_list.html', context)
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Sum, Count
@@ -1273,30 +1422,25 @@ def pharmacy_dashboard(request):
         )
     
     # Get recently dispensed items (last 30 days)
+    # Use the central DispensedItem model
+    from inventory.models import DispensedItem
+    
     thirty_days_ago = timezone.now() - timedelta(days=30)
-    dispensed_items = PrescriptionItem.objects.filter(
-        dispensed=True,
+    dispensed_items = DispensedItem.objects.filter(
         dispensed_at__gte=thirty_days_ago
     ).select_related(
-        'prescription__patient',
-        'medication',
+        'patient',
+        'item',
         'dispensed_by'
     ).order_by('-dispensed_at')[:50]  # Limit to 50 recent items
     
     # Apply dispensed search filter
     if dispensed_search:
-        dispensed_items = PrescriptionItem.objects.filter(
-            dispensed=True,
-            dispensed_at__gte=thirty_days_ago
-        ).filter(
-            Q(prescription__patient__first_name__icontains=dispensed_search) |
-            Q(prescription__patient__last_name__icontains=dispensed_search) |
-            Q(medication__name__icontains=dispensed_search)
-        ).select_related(
-            'prescription__patient',
-            'medication',
-            'dispensed_by'
-        ).order_by('-dispensed_at')[:50]
+        dispensed_items = dispensed_items.filter(
+            Q(patient__first_name__icontains=dispensed_search) |
+            Q(patient__last_name__icontains=dispensed_search) |
+            Q(item__name__icontains=dispensed_search)
+        )
     
     # Get pharmacy stock
     pharmacy_stock = StockRecord.objects.filter(
@@ -1357,11 +1501,7 @@ def pharmacy_dashboard(request):
         'pending_ipd_count': pending_ipd_items.count(),
         'low_stock_count': len(set(low_stock_items)),
         'pending_requests': pending_requests_count,
-        'dispensed_today': PrescriptionItem.objects.filter(
-            dispensed=True,
-            dispensed_at__date=today
-        ).count() + MedicationChart.objects.filter(
-            is_dispensed=True,
+        'dispensed_today': DispensedItem.objects.filter(
             dispensed_at__date=today
         ).count(),
     }
@@ -1437,7 +1577,8 @@ def dispense_medication(request, item_id):
         available_stock.save()
         
         # Create stock adjustment record
-        from inventory.models import StockAdjustment
+        # Create stock adjustment record
+        from inventory.models import StockAdjustment, DispensedItem
         StockAdjustment.objects.create(
             item=prescription_item.medication,
             quantity=-prescription_item.quantity,
@@ -1445,6 +1586,16 @@ def dispense_medication(request, item_id):
             reason=f'Dispensed to {prescription_item.prescription.patient.full_name}',
             adjusted_by=request.user,
             adjusted_from=pharmacy_dept
+        )
+        
+        # Create Dispensed Item Record
+        DispensedItem.objects.create(
+            item=prescription_item.medication,
+            patient=prescription_item.prescription.patient,
+            visit=prescription_item.prescription.visit,
+            quantity=prescription_item.quantity,
+            dispensed_by=request.user,
+            department=pharmacy_dept
         )
         
         return JsonResponse({
@@ -1489,7 +1640,7 @@ def dispense_all_medications(request, prescription_id):
         dispensed_count = 0
         errors = []
         
-        from inventory.models import StockAdjustment
+        from inventory.models import StockAdjustment, DispensedItem
         
         for item in pending_items:
             # Check stock for each item
@@ -1521,6 +1672,16 @@ def dispense_all_medications(request, prescription_id):
                 quantity=-item.quantity,
                 reason=f'Bulk Dispensed for Prescription #{prescription.id}',
                 adjusted_by=request.user
+            )
+            
+            # Create Dispensed Item Record
+            DispensedItem.objects.create(
+                item=item.medication,
+                patient=item.prescription.patient,
+                visit=item.prescription.visit,
+                quantity=item.quantity,
+                dispensed_by=request.user,
+                department=pharmacy_dept
             )
             dispensed_count += 1
             
@@ -1600,7 +1761,7 @@ def dispense_ipd_medication(request, item_id):
         available_stock.save()
         
         # Create stock adjustment record
-        from inventory.models import StockAdjustment
+        from inventory.models import StockAdjustment, DispensedItem
         StockAdjustment.objects.create(
             item=med_item.item,
             quantity=-qty_to_dispense,
@@ -1608,6 +1769,16 @@ def dispense_ipd_medication(request, item_id):
             reason=f'Dispensed to IPD: {med_item.admission.patient.full_name}',
             adjusted_by=request.user,
             adjusted_from=pharmacy_dept
+        )
+        
+        # Create Dispensed Item Record
+        DispensedItem.objects.create(
+            item=med_item.item,
+            patient=med_item.admission.patient,
+            visit=med_item.admission.visit,
+            quantity=qty_to_dispense,
+            dispensed_by=request.user,
+            department=pharmacy_dept
         )
         
         # Add to Invoice (Provisional Billing)
@@ -1629,14 +1800,15 @@ def dispense_ipd_medication(request, item_id):
                     notes=f"IPD Billing for Admission {med_item.admission.id}"
                 )
             
-            # Create invoice item
-            InvoiceItem.objects.create(
-                invoice=invoice,
-                inventory_item=med_item.item,
-                name=f"{med_item.item.name} (IPD Dispense)",
-                quantity=qty_to_dispense,
-                unit_price=med_item.item.selling_price
-            )
+            # Create invoice item only if price > 0
+            if med_item.item.selling_price > 0:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    inventory_item=med_item.item,
+                    name=f"{med_item.item.name} (IPD Dispense)",
+                    quantity=qty_to_dispense,
+                    unit_price=med_item.item.selling_price
+                )
         except Exception as inv_err:
             # Don't fail the dispense if invoicing fails, but log it
             print(f"Invoicing failed for med {med_item.id}: {str(inv_err)}")
@@ -1677,7 +1849,8 @@ def opd_dashboard(request):
     # Filter departments that look like consultation rooms and are PENDING
     consultation_queues = PatientQue.objects.filter(
         sent_to__name__icontains='Consultation',
-        status='PENDING'
+        status='PENDING',
+        visit__is_active=True
     ).select_related('visit__patient', 'sent_to', 'qued_from')
 
     # Apply Search Filter
@@ -1748,3 +1921,189 @@ def opd_dashboard(request):
     context['recent_consultations'] = recent_consultations
     
     return render(request, 'home/opd_dashboard.html', context)
+
+@login_required
+def procedure_room_dashboard(request):
+    """Dashboard for Procedure Room to view requested procedures"""
+    # Procedures are InvoiceItems with a linked procedure
+    # Filter for items where procedure is not null
+    service_items = InvoiceItem.objects.filter(
+        procedure__isnull=False
+    ).select_related('invoice', 'invoice__patient', 'procedure', 'service')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        service_items = service_items.filter(
+            Q(invoice__patient__first_name__icontains=search_query) |
+            Q(invoice__patient__last_name__icontains=search_query) |
+            Q(procedure__name__icontains=search_query) |
+            Q(name__icontains=search_query)
+        )
+    
+    # Order by most recent
+    service_items = service_items.order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(service_items, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'title': 'Procedure Room Dashboard'
+    }
+    return render(request, 'home/procedure_room_dashboard.html', context)
+
+@login_required
+def procedure_detail(request, visit_id):
+    """Detail view for procedure requests for a specific visit"""
+    visit = get_object_or_404(Visit, id=visit_id)
+    patient = visit.patient
+    
+    # Get all procedure items for this visit
+    procedures = InvoiceItem.objects.filter(
+        invoice__visit=visit,
+        procedure__isnull=False
+    ).select_related('invoice', 'service', 'procedure').order_by('created_at')
+    
+    # Get dispensed items history for this visit
+    from inventory.models import DispensedItem
+    dispensed_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+        
+    context = {
+        'procedures': procedures,
+        'patient': patient,
+        'visit': visit,
+        'dispensed_items': dispensed_items,
+        'title': f'Procedures: {patient.full_name}'
+    }
+    return render(request, 'home/procedure_detail.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def ambulance_dashboard(request):
+    """
+    Dashboard for Ambulance Usage and Revenue Analysis
+    """
+    from lab.models import AmbulanceActivity, AmbulanceCharge
+    from accounts.models import Invoice, InvoiceItem
+    from django.db.models.functions import TruncDate
+    from django.db.models import Count, Sum
+    from datetime import timedelta
+    from django.utils import timezone
+    import json
+
+    # Handle New Trip Creation
+    if request.method == 'POST':
+        try:
+            patient_id = request.POST.get('patient')
+            route_id = request.POST.get('route')
+            driver = request.POST.get('driver')
+            notes = request.POST.get('notes')
+            
+            patient = get_object_or_404(Patient, pk=patient_id)
+            route = get_object_or_404(AmbulanceCharge, pk=route_id)
+            
+            # Create Invoice
+            invoice = Invoice.objects.create(
+                patient=patient,
+                status='Pending',
+                created_by=request.user,
+                notes=f"Ambulance Trip: {route.from_location} to {route.to_location}"
+            )
+            
+            # Create Invoice Item
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                name=f"Ambulance: {route.from_location} to {route.to_location}",
+                quantity=1,
+                unit_price=route.price
+            )
+            invoice.update_totals()
+            
+            # Record Activity
+            AmbulanceActivity.objects.create(
+                patient=patient,
+                route=route,
+                driver=driver,
+                invoice=invoice,
+                amount=route.price,
+                notes=notes
+            )
+            messages.success(request, 'Ambulance trip recorded successfully.')
+        except Exception as e:
+            messages.error(request, f'Error creating trip: {str(e)}')
+            
+        return redirect('home:ambulance_dashboard')
+
+    # Fetch Data
+    today = timezone.now().date()
+    start_date = today - timedelta(days=30)
+    
+    # Summary Stats
+    total_trips = AmbulanceActivity.objects.count()
+    total_revenue = AmbulanceActivity.objects.aggregate(total=Sum('amount'))['total'] or 0
+    trips_today = AmbulanceActivity.objects.filter(date__date=today).count()
+    
+    # Recent Activities
+    activities = AmbulanceActivity.objects.all().select_related('patient', 'route', 'invoice').order_by('-date')[:20]
+    
+    # Routes for Dropdown
+    routes = AmbulanceCharge.objects.all()
+    
+    # Patients for Dropdown (Limit to 50 recent)
+    patients = Patient.objects.all().order_by('-updated_at')[:50]
+
+    # Chart Data (Last 30 Days)
+    chart_qs = AmbulanceActivity.objects.filter(date__date__gte=start_date)\
+        .annotate(day=TruncDate('date'))\
+        .values('day')\
+        .annotate(count=Count('id'), revenue=Sum('amount'))\
+        .order_by('day')
+        
+    dates = []
+    counts = []
+    revenues = []
+    
+    # Create dictionary for quick lookup
+    # Need to handle date/datetime comparison carefully
+    chart_data_dict = {}
+    for item in chart_qs:
+        d_val = item['day']
+        if hasattr(d_val, 'strftime'):
+             key = d_val.strftime('%Y-%m-%d')
+        else:
+             key = str(d_val)
+        chart_data_dict[key] = item
+    
+    # Fill in all days for smooth chart
+    for i in range(30):
+        d = start_date + timedelta(days=i)
+        d_str = d.strftime('%Y-%m-%d')
+        # item = chart_data_dict.get(d_str, {'count': 0, 'revenue': 0})
+        # Handle lookup logic
+        item = None
+        if d_str in chart_data_dict:
+            item = chart_data_dict[d_str]
+        else:
+            item = {'count': 0, 'revenue': 0}
+            
+        dates.append(d.strftime('%b %d'))
+        counts.append(item['count'])
+        revenues.append(float(item['revenue'] or 0))
+
+    context = {
+        'total_trips': total_trips,
+        'total_revenue': total_revenue,
+        'trips_today': trips_today,
+        'activities': activities,
+        'routes': routes,
+        'patients': patients,
+        'chart_labels': json.dumps(dates),
+        'chart_counts': json.dumps(counts),
+        'chart_revenues': json.dumps(revenues),
+    }
+    
+    return render(request, 'home/ambulance_dashboard.html', context)

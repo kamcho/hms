@@ -18,6 +18,7 @@ urlpatterns = [
     path('diagnosis/add/', views.add_diagnosis, name='add_diagnosis'),
     path('patients/<int:pk>/delete/', views.PatientDeleteView.as_view(), name='patient_delete'),
     path('patients/admit/', views.admit_patient_visit, name='admit_patient_visit'),
+    path('visit/<int:visit_id>/refer/', views.refer_patient, name='refer_patient'),
     
     # Emergency Contact URLs
     path('patients/<int:patient_pk>/emergency-contact/add/', 
@@ -42,4 +43,9 @@ urlpatterns = [
     
     # Health Records
     path('health-records/', views.health_records_view, name='health_records'),
+    path('procedure-room/', views.procedure_room_dashboard, name='procedure_room_dashboard'),
+    path('procedure-room/visit/<int:visit_id>/', views.procedure_detail, name='procedure_detail'),
+    
+    # Ambulance URLs
+    path('ambulance/dashboard/', views.ambulance_dashboard, name='ambulance_dashboard'),
 ]

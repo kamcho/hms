@@ -94,8 +94,7 @@
                                     Patient Details</th>
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                                     Location</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                    Clinical Status</th>
+                              
                                 <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                                     Stay Duration</th>
                                 <th
@@ -120,10 +119,9 @@
                                             </div>
                                         </div>
                                         <div>
-                                            <div class="text-sm font-black text-slate-900">{{
-                                                admission.patient.full_name }}</div>
-                                            <div class="text-[10px] font-bold text-slate-400 mt-0.5">VISIT #{{
-                                                admission.visit.id }}</div>
+                                            <div class="text-sm font-black text-slate-900">
+                                                {{ admission.patient.full_name }}</div>
+                                            <div class="text-[10px] font-bold text-slate-400 mt-0.5">VISIT #{{ admission.visit.id }}</div>
                                         </div>
                                     </div>
                                 </td>
@@ -134,38 +132,13 @@
                                     </span>
                                     <div
                                         class="text-[11px] font-black text-slate-900 mt-1.5 ml-1 flex items-center gap-2">
-                                        <i class="fas fa-bed text-indigo-400 text-[10px]"></i> {{
-                                        admission.bed.bed_number }}
+                                        <i class="fas fa-bed text-indigo-400 text-[10px]"></i> {{ admission.bed.bed_number }}
                                     </div>
                                 </td>
-                                <td class="px-6 py-5">
-                                    {% if admission.latest_vitals %}
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex flex-col gap-1">
-                                            <span
-                                                class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                                                <i class="fas fa-heartbeat text-rose-500"></i> {{
-                                                admission.latest_vitals.pulse_rate }} bpm
-                                            </span>
-                                            <span
-                                                class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                                                <i class="fas fa-tachometer-alt text-blue-500"></i> {{
-                                                admission.latest_vitals.systolic_bp }}/{{
-                                                admission.latest_vitals.diastolic_bp }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {% else %}
-                                    <span
-                                        class="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Vitals
-                                        Pending</span>
-                                    {% endif %}
-                                </td>
+                           
                                 <td class="px-6 py-5 whitespace-nowrap">
-                                    <div class="text-[11px] font-black text-slate-900">{{ admission.admitted_at|date:"d
-                                        M Y" }}</div>
-                                    <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase">{{
-                                        admission.admitted_at|timesince }}</div>
+                                    <div class="text-[11px] font-black text-slate-900">{{ admission.admitted_at|date:"d M Y" }}</div>
+                                    <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase">{{ admission.admitted_at|timesince }}</div>
                                 </td>
                                 <td class="px-8 py-5 text-right">
                                     <a href="{% url 'inpatient:patient_case_folder' admission.id %}"
@@ -214,8 +187,7 @@
                                 <div
                                     class="text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
                                     {{ ward.name }}</div>
-                                <div class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{{
-                                    ward.occupied }} Units Occupied</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{{ ward.occupied }} Units Occupied</div>
                             </div>
                             <div class="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
                                 {% widthratio ward.occupied ward.total 100 %}%

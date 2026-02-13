@@ -1,0 +1,97 @@
+{% extends 'users/dashboard_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Procedures: {{ patient.full_name }} - HMS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8 flex items-center gap-4">
+        <a href="{% url 'home:procedure_room_dashboard' %}" class="text-slate-400 hover:text-slate-600 transition">
+            <i class="fas fa-arrow-left text-lg"></i>
+        </a>
+        <h1 class="text-2xl font-black text-slate-800 tracking-tight">{{ patient.full_name }}</h1>
+        <span
+            class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100">
+            Procedure Visit #{{ visit.id }}
+        </span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Procedure Information -->
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fas fa-user-injured text-indigo-500"></i> Patient Details
+                </h2>
+
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-lg">
+                            {{ patient.first_name|first }}{{ patient.last_name|first }}
+                        </div>
+                        <div>
+                            <div class="font-black text-slate-800 text-lg">{{ patient.full_name }}</div>
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">ID: {{
+                                patient.id_number }}</div>
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">{{
+                                patient.get_gender_display }}, {{ patient.age }} yrs</div>
+                        </div>
+                    </div>
+
+                    <div class="h-px bg-slate-50 my-4"></div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Visit
+                            Check-in</label>
+                        <div class="text-sm font-bold text-slate-700">{{ visit.checkin_date|date:"M d, Y @ H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
+                <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fas fa-list text-purple-500"></i> Requested Procedures
+                </h2>
+                <div class="space-y-4">
+                    {% for item in procedures %}
+                    <div
+                        class="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-800">{{ item.name }}</span>
+                            <span class="text-sm font-black text-slate-600">{{ item.unit_price }}</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">
+                            Req. by {{ item.invoice.created_by.get_full_name|default:item.invoice.created_by.username }}
+                        </div>
+                        <div class="flex justify-between items-center border-t border-slate-200 pt-3">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">{{ item.created_at|date:"H:i"
+                                }}</span>
+                            {% if item.invoice.status == 'Paid' %}
+                            <span
+                                class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide flex items-center gap-1">
+                                <i class="fas fa-check-circle"></i> Paid
+                            </span>
+                            {% else %}
+                            <span
+                                class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide flex items-center gap-1">
+                                <i class="fas fa-clock"></i> {{ item.invoice.status }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Dispensing Widget -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
+                <!-- Use the partial widget -->
+                {% include 'inventory/partials/dispense_widget.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,944 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --dash-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --clinical-primary: #6366f1;
+        --clinical-success: #10b981;
+        --clinical-danger: #ef4444;
+        --clinical-warning: #f59e0b;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-light: #f1f5f9;
+    }
+
+    .insurance-container {
+        background: var(--dash-bg);
+        min-height: 100vh;
+        padding: 2rem;
+    }
+
+    .glass-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .section-header {
+        padding: 1.5rem 2rem;
+        background: white;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title {
+        font-size: 0.875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .invoice-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .invoice-table th {
+        background: #fdfdfd;
+        padding: 1rem 1.5rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .invoice-table td {
+        padding: 1.25rem 1.5rem;
+        font-size: 0.875rem;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border-light);
+        vertical-align: middle;
+    }
+
+    .invoice-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .invoice-table tr:hover td {
+        background-color: #fcfcfd;
+    }
+
+    .patient-cell {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .patient-name {
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .invoice-id {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--clinical-primary);
+    }
+
+    .amount-cell {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+    }
+
+    .balance-tag {
+        padding: 0.375rem 0.75rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+
+    .tag-pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--clinical-warning);
+    }
+
+    .tag-partial {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--clinical-primary);
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-view {
+        background: white;
+        border: 1px solid var(--border-light);
+        color: var(--text-muted);
+    }
+
+    .btn-view:hover {
+        border-color: var(--clinical-primary);
+        color: var(--clinical-primary);
+    }
+
+    .search-input {
+        background: white;
+        border: 1px solid var(--border-light);
+        border-radius: 16px;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        width: 320px;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .search-input:focus {
+        border-color: var(--clinical-primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    .badge-count {
+        background: var(--clinical-primary);
+        color: white;
+        padding: 0.125rem 0.625rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Standardized Table */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        background: #f8fafc;
+        padding: 1rem 1.5rem;
+        text-align: left;
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    .custom-table td {
+        padding: 1.25rem 1.5rem;
+        font-size: 0.875rem;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border-light);
+        transition: background-color 0.2s;
+    }
+
+    .custom-table tr:hover td {
+        background-color: #f1f5f9;
+    }
+
+    .custom-table tr.active td {
+        background-color: rgba(99, 102, 241, 0.03);
+    }
+
+    /* Modal Enhancements */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 2rem;
+    }
+
+    .modal-content {
+        background: white;
+        width: 100%;
+        max-width: 640px;
+        border-radius: 40px;
+        box-shadow: 0 25px 70px -12px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        overflow: hidden;
+        animation: modalScale 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    @keyframes modalScale {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        padding: 2rem;
+        background: #fdfdfd;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .modal-body {
+        padding: 2rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 1.5rem 2rem;
+        background: #fdfdfd;
+        border-top: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .item-row {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.25rem;
+        border-radius: 20px;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .item-row:hover {
+        background: #f8fafc;
+        border-color: var(--border-light);
+    }
+
+    .item-row.selected {
+        background: rgba(99, 102, 241, 0.04);
+        border-color: rgba(99, 102, 241, 0.1);
+    }
+
+    .item-checkbox:disabled {
+        background: #f1f5f9;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .settled-badge {
+        background: #f1f5f9;
+        color: #64748b;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .partial-badge {
+        background: #f0fdf4;
+        color: #16a34a;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid #dcfce7;
+    }
+
+    .item-row.is-settled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: #f8fafc;
+    }
+
+    .item-row.is-settled:hover {
+        border-color: transparent;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 4px;
+        background: #f1f5f9;
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--clinical-primary);
+        transition: width 0.3s ease;
+    }
+
+    .item-checkbox {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        appearance: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .item-checkbox:checked {
+        background: var(--clinical-primary);
+        border-color: var(--clinical-primary);
+    }
+
+    .item-checkbox:checked::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        color: white;
+        font-size: 12px;
+    }
+
+    .claim-summary {
+        background: var(--text-main);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 20px;
+        margin-top: 1rem;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .claim-footer {
+        padding: 2rem;
+        background: #f8fafc;
+        border-top: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .claim-amount-input {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid var(--border-light);
+        font-size: 1.875rem;
+        font-weight: 900;
+        color: var(--text-main);
+        width: 100%;
+        max-width: 240px;
+        padding: 0.5rem 0;
+        margin-top: 0.25rem;
+        transition: border-color 0.2s;
+        position: relative;
+        z-index: 20;
+        pointer-events: auto;
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    .claim-amount-input:focus {
+        outline: none;
+        border-color: var(--clinical-primary);
+        background: rgba(99, 102, 241, 0.02);
+    }
+
+    .hidden {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="insurance-container">
+    <!-- Header -->
+    <div class="flex justify-between items-end mb-10">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">{{ title }}</h1>
+            <p class="text-slate-500 font-medium italic">Monitor and manage outstanding patient claims & insurance
+                balances</p>
+        </div>
+
+        <form method="GET" class="flex items-center gap-3">
+            <div class="relative">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" name="search" value="{{ search_query }}"
+                    placeholder="Search patient, ID or invoice..." class="search-input pl-11">
+            </div>
+            <button type="submit"
+                class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">
+                Search
+            </button>
+            {% if search_query %}
+            <a href="{% url 'accounts:insurance_manager' %}"
+                class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="space-y-12">
+        <!-- OPD Section -->
+        <section>
+            <div class="glass-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                            <i class="fas fa-user-clock"></i>
+                        </span>
+                        Out-Patient (OPD) Pending Claims
+                        <span class="badge-count">{{ opd_invoices.count }}</span>
+                    </h2>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Settlement
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>Invoice Date</th>
+                                <th>Total Bill</th>
+                                <th>Paid</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in opd_invoices %}
+                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
+                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span
+                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
+                                        {{ inv.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
+                                        <i class="fas fa-eye text-[10px]"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <div
+                                            class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <p class="font-bold text-slate-400">No pending OPD invoices found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- IPD Section -->
+        <section>
+            <div class="glass-card border-indigo-100/50">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span
+                            class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                            <i class="fas fa-bed"></i>
+                        </span>
+                        In-Patient (IPD) Pending Claims
+                        <span class="badge-count">{{ ipd_invoices.count }}</span>
+                    </h2>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding Hospital
+                        Bills</div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>Admission Date</th>
+                                <th>Ward/Bed</th>
+                                <th>Current Bill</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in ipd_invoices %}
+                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
+                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                <td>
+                                    {% if inv.visit.admissions.first %}
+                                    <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">
+                                        {{ inv.visit.admissions.first.bed.ward.name }} / {{
+                                        inv.visit.admissions.first.bed.bed_number }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-slate-300 italic">No Active Admission</span>
+                                    {% endif %}
+                                </td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span
+                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
+                                        {{ inv.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
+                                        <i class="fas fa-eye text-[10px]"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <div
+                                            class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <p class="font-bold text-slate-400">No pending IPD invoices found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        {% if other_invoices %}
+        <!-- Other/Morgue Section -->
+        <section>
+            <div class="glass-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                            <i class="fas fa-folder-open"></i>
+                        </span>
+                        Other Pending Claims
+                        <span class="badge-count">{{ other_invoices.count }}</span>
+                    </h2>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Miscellaneous &
+                        External</div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Entity/Patient</th>
+                                <th>Date</th>
+                                <th>Total Bill</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in other_invoices %}
+                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
+                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name|default:inv.deceased.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">
+                                            {% if inv.deceased %}
+                                            {{ inv.deceased.full_name }} (Deceased)
+                                            {% elif inv.patient %}
+                                            {{ inv.patient.full_name }}
+                                            {% else %}
+                                            Unspecified Entity
+                                            {% endif %}
+                                        </span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span
+                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
+                                        {{ inv.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}"
+                                        onclick="event.stopPropagation()" class="action-btn btn-view">
+                                        <i class="fas fa-eye text-[10px]"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Claim Processing Modal -->
+<div id="claimModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 mb-1">Process Insurance Claim</h3>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest" id="modalPatientName">
+                        Loading...</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body">
+            <div id="itemsContainer" class="space-y-1">
+                <!-- Items will be injected here -->
+                <div class="flex justify-center py-12">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+                </div>
+            </div>
+
+            <div id="claimInputs" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                <div class="mt-8 pt-8 border-t border-slate-100">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Claim
+                        Reference / ID</label>
+                    <div class="relative">
+                        <i class="fas fa-shield-alt absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                        <input type="text" id="claimReference" placeholder="e.g. NHIF-CLAIM-8829"
+                            class="w-100 p-5 pl-12 rounded-3xl border border-slate-100 bg-slate-50 font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="claim-footer">
+            <div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total to Claim
+                    (Editable)</span>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-black text-slate-900">Ksh</span>
+                    <input type="text" id="claimAmountInput" class="claim-amount-input" inputmode="decimal"
+                        placeholder="0.00" onclick="this.focus(); event.stopPropagation();">
+                </div>
+            </div>
+            <button onclick="submitInsurancePayment()" id="confirmBtn"
+                class="hidden bg-slate-900 text-white px-10 py-5 rounded-[24px] font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+                Confirm Insurance Claim
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentInvoiceId = null;
+    let selectedItemIds = new Set();
+    let invoiceItems = [];
+
+    function openClaimModal(invoiceId, patientName, balance) {
+        currentInvoiceId = invoiceId;
+        // Strip commas if any (though floatformat:2 usually avoids them depending on locale settings)
+        window.currentInvoiceBalance = parseFloat(balance.toString().replace(/,/g, ''));
+        document.getElementById('modalPatientName').textContent = patientName;
+        document.getElementById('claimModal').style.display = 'flex';
+        document.getElementById('itemsContainer').innerHTML = `
+            <div class="flex justify-center py-12">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+            </div>
+        `;
+        document.getElementById('claimAmountInput').value = "0.00";
+        document.getElementById('confirmBtn').classList.add('hidden'); // Initially hidden
+        document.getElementById('claimInputs').classList.add('hidden'); // Initially hidden
+        selectedItemIds.clear();
+
+        fetch(`/accounts/api/insurance/invoice-items/${invoiceId}/`)
+            .then(res => res.json())
+            .then(data => {
+                invoiceItems = data.items;
+                // Smart Defaulting: Select all non-settled items by default
+                invoiceItems.forEach(item => {
+                    if (!item.is_settled) {
+                        selectedItemIds.add(item.id.toString());
+                    }
+                });
+                renderItems();
+                calculateTotal();
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('itemsContainer').innerHTML = `<p class="text-rose-500 font-bold text-center">Failed to load items.</p>`;
+            });
+    }
+
+    function renderItems() {
+        const container = document.getElementById('itemsContainer');
+        if (invoiceItems.length === 0) {
+            container.innerHTML = `<p class="text-slate-400 font-bold text-center italic">No items found for this invoice.</p>`;
+            return;
+        }
+
+        container.innerHTML = invoiceItems.map(item => {
+            const isSettled = item.is_settled;
+            const progress = (item.paid_amount / item.amount) * 100;
+            const balanceLabel = isSettled ? 'Fully Paid' : `Ksh ${item.paid_amount.toLocaleString()} / ${item.amount.toLocaleString()} paid`;
+
+            return `
+                <div class="item-row ${selectedItemIds.has(item.id.toString()) ? 'selected' : ''} ${isSettled ? 'is-settled' : ''}" 
+                     id="row-${item.id}" 
+                     onclick="${isSettled ? '' : `toggleItem('${item.id}')`}">
+                    
+                    <input type="checkbox" class="item-checkbox" id="check-${item.id}" 
+                           ${selectedItemIds.has(item.id.toString()) ? 'checked' : ''} 
+                           ${isSettled ? 'disabled' : ''}
+                           onclick="event.stopPropagation(); toggleItem('${item.id}')">
+                    
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <div class="font-bold text-slate-800">${item.name}</div>
+                            ${isSettled ? '<span class="settled-badge">Settled</span>' : item.paid_amount > 0 ? '<span class="partial-badge">Partial</span>' : ''}
+                        </div>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                            ${balanceLabel} | Qty: ${item.quantity}
+                        </div>
+                        ${item.paid_amount > 0 && !isSettled ? `
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: ${progress}%"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="font-black text-slate-900">Ksh ${parseFloat(item.amount).toLocaleString()}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function toggleItem(id) {
+        const idStr = id.toString();
+        if (selectedItemIds.has(idStr)) {
+            selectedItemIds.delete(idStr);
+            document.getElementById(`row-${id}`).classList.remove('selected');
+        } else {
+            selectedItemIds.add(idStr);
+            document.getElementById(`row-${id}`).classList.add('selected');
+        }
+
+        const checkbox = document.getElementById(`check-${id}`);
+        if (checkbox) checkbox.checked = selectedItemIds.has(idStr);
+
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let totalSelected = 0;
+        let invoiceBalance = 0;
+
+        // Find the current invoice data from somewhere or we need to pass it from openClaimModal
+        // Let's assume we store invoice balance when fetching items
+        invoiceBalance = window.currentInvoiceBalance || 0;
+
+        invoiceItems.forEach(item => {
+            if (selectedItemIds.has(item.id.toString())) {
+                totalSelected += parseFloat(item.balance);
+            }
+        });
+
+        const amountInput = document.getElementById('claimAmountInput');
+        amountInput.value = totalSelected.toFixed(2);
+
+        validateAmount();
+
+        const inputs = document.getElementById('claimInputs');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        if (selectedItemIds.size > 0) {
+            inputs.classList.remove('hidden');
+            confirmBtn.classList.remove('hidden');
+        } else {
+            inputs.classList.add('hidden');
+            confirmBtn.classList.add('hidden');
+        }
+    }
+
+    function validateAmount() {
+        const amountInput = document.getElementById('claimAmountInput');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const val = parseFloat(amountInput.value) || 0;
+        const max = window.currentInvoiceBalance || 0;
+
+        if (val <= 0 || val > max) {
+            amountInput.classList.add('border-rose-500', 'text-rose-600');
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-50', 'grayscale');
+        } else {
+            amountInput.classList.remove('border-rose-500', 'text-rose-600');
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('opacity-50', 'grayscale');
+        }
+    }
+
+    // Add listener for manual edits
+    document.getElementById('claimAmountInput').addEventListener('input', validateAmount);
+
+    function closeModal() {
+        document.getElementById('claimModal').style.display = 'none';
+        document.getElementById('claimReference').value = '';
+    }
+
+    function submitInsurancePayment() {
+        const btn = document.getElementById('confirmBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        const data = {
+            invoice_id: currentInvoiceId,
+            item_ids: Array.from(selectedItemIds),
+            claim_id: document.getElementById('claimReference').value,
+            amount: document.getElementById('claimAmountInput').value
+        };
+
+        fetch('/accounts/api/insurance/process-claim/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Success animation or redirect
+                    location.reload();
+                } else {
+                    alert(data.error || 'Something went wrong');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Network error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+    }
+
+    // Close on outside click
+    window.onclick = function (event) {
+        const modal = document.getElementById('claimModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+</script>
+{% endblock %}

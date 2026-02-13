@@ -4,6 +4,8 @@ from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse, JsonResponse
+from decimal import Decimal
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from .models import (
     Invoice, Payment, Service, Expense, InventoryPurchase, 
@@ -27,7 +29,7 @@ def is_receptionist(user):
     return user.is_authenticated and (user.role == 'Receptionist' or user.is_superuser)
 
 def is_billing_staff(user):
-    return user.is_authenticated and (user.role in ['Accountant', 'Receptionist'] or user.is_superuser)
+    return user.is_authenticated and (user.role in ['Accountant', 'Receptionist', 'SHA Manager', 'SHA'] or user.is_superuser)
 
 @login_required
 @user_passes_test(is_accountant)
@@ -144,12 +146,12 @@ def accountant_dashboard(request):
         
     # Service Type Breakdown (Revenue by Service Category)
     service_breakdown = invoices.filter(items__service__isnull=False).values(
-        'items__service__category'
+        'items__service__department__name'
     ).annotate(
         revenue=Sum(F('items__quantity') * F('items__unit_price'))
     ).order_by('-revenue')
     
-    service_labels = [item['items__service__category'] for item in service_breakdown]
+    service_labels = [item['items__service__department__name'] for item in service_breakdown]
     service_data = [float(item['revenue']) for item in service_breakdown]
 
     # Recent Transactions
@@ -188,6 +190,104 @@ def accountant_dashboard(request):
     }
     
     return render(request, 'accounts/accountant_dashboard.html', context)
+
+@login_required
+@user_passes_test(is_billing_staff)
+def insurance_manager(request):
+    search_query = request.GET.get('search', '')
+    
+    # Filter for unpaid or partially paid invoices
+    unpaid_invoices = Invoice.objects.filter(
+        status__in=['Pending', 'Partial']
+    ).select_related('patient', 'visit', 'deceased').order_by('-created_at')
+    
+    if search_query:
+        unpaid_invoices = unpaid_invoices.filter(
+            Q(patient__first_name__icontains=search_query) |
+            Q(patient__last_name__icontains=search_query) |
+            Q(deceased__first_name__icontains=search_query) |
+            Q(deceased__last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+
+    # Grouping by visit type
+    opd_invoices = unpaid_invoices.filter(visit__visit_type='OUT-PATIENT')
+    ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT')
+    
+    # Invoices without a visit (e.g., external lab requests or mortuary)
+    other_invoices = unpaid_invoices.filter(visit__isnull=True)
+
+    context = {
+        'opd_invoices': opd_invoices,
+        'ipd_invoices': ipd_invoices,
+        'other_invoices': other_invoices,
+        'search_query': search_query,
+        'title': 'Insurance & Credit Manager'
+    }
+    
+    return render(request, 'accounts/insurance_manager.html', context)
+
+@login_required
+@user_passes_test(is_billing_staff)
+def get_invoice_items(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    items_data = []
+    for item in invoice.items.all().order_by('created_at'):
+        items_data.append({
+            'id': item.id,
+            'name': item.name,
+            'quantity': item.quantity,
+            'unit_price': float(item.unit_price),
+            'amount': float(item.amount),
+            'paid_amount': float(item.paid_amount),
+            'balance': float(item.balance),
+            'is_settled': item.is_settled
+        })
+    return JsonResponse({'items': items_data})
+
+@login_required
+@user_passes_test(is_billing_staff)
+@require_POST
+def process_insurance_claim(request):
+    try:
+        data = json.loads(request.body)
+        invoice_id = data.get('invoice_id')
+        item_ids = data.get('item_ids')
+        claim_id = data.get('claim_id', '')
+        custom_amount = data.get('amount')
+
+        invoice = get_object_or_404(Invoice, id=invoice_id)
+        selected_items = invoice.items.filter(id__in=item_ids)
+        
+        # Calculate selected items total as a sanity check
+        selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Use custom amount if provided, otherwise fallback to selected total
+        claim_amount = Decimal(str(custom_amount)) if custom_amount is not None else selected_total
+        
+        if claim_amount <= 0:
+            return JsonResponse({'success': False, 'error': 'Claim amount must be greater than zero.'})
+            
+        if claim_amount > invoice.balance:
+            return JsonResponse({'success': False, 'error': f'Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}).'})
+
+        # Create Payment
+        payment = Payment.objects.create(
+            invoice=invoice,
+            amount=claim_amount,
+            payment_method='Insurance',
+            transaction_reference=claim_id,
+            notes=f"Insurance claim for items: {', '.join([item.name for item in selected_items])}",
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'payment_id': payment.id,
+            'amount': float(claim_amount)
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 def export_accountant_csv(payments, invoices, total_revenue, total_expenses, payment_methods):
     response = HttpResponse(content_type='text/csv')
@@ -489,6 +589,7 @@ def expense_dashboard(request):
         'payment_form': SupplierPaymentForm(),
         'from_date': from_date,
         'to_date': to_date,
+        'today': today,
     }
     return render(request, 'accounts/expense_dashboard.html', context)
 
@@ -534,19 +635,6 @@ def add_expense(request):
             messages.error(request, f"Error recording expense: {form.errors}")
     return redirect('accounts:expense_dashboard')
 
-@login_required
-@user_passes_test(is_accountant)
-def add_inventory_purchase(request):
-    if request.method == 'POST':
-        form = InventoryPurchaseForm(request.POST)
-        if form.is_valid():
-            purchase = form.save(commit=False)
-            purchase.recorded_by = request.user
-            purchase.save()
-            messages.success(request, "Inventory purchase recorded successfully.")
-        else:
-            messages.error(request, f"Error recording purchase: {form.errors}")
-    return redirect('accounts:expense_dashboard')
 
 @login_required
 @user_passes_test(is_accountant)
@@ -647,7 +735,7 @@ def discharge_billing_detail(request, admission_type, admission_id):
 
     # 1. Sync Accommodation/Stay Charges if not already present
     # Check for any item that looks like a stay charge (Daily, Bed, Ward, Accommodation)
-    has_stay_charges = existing_items.filter(service__category='Admission').exists() or any(
+    has_stay_charges = existing_items.filter(service__department__name='Inpatient').exists() or any(
         keyword in name.lower() 
         for keyword in ['daily', 'bed', 'ward', 'accommodation', 'stay'] 
         for name in existing_names
@@ -769,3 +857,74 @@ def authorize_discharge(request, pk):
         messages.error(request, f"Error during authorization: {str(e)}")
         
     return redirect('accounts:discharge_billing_dashboard')
+@login_required
+def search_procedures(request):
+    """
+    JSON API for searching procedures.
+    """
+    from .models import Service
+    query = request.GET.get('q', '')
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+        
+    procedures = Service.objects.filter(department__name='Procedure Room', name__icontains=query, is_active=True)[:20]
+    results = []
+    for proc in procedures:
+        results.append({
+            'id': proc.id,
+            'text': f"{proc.name} (KES {proc.price})",
+            'price': str(proc.price)
+        })
+    return JsonResponse({'results': results})
+
+@login_required
+@require_POST
+def charge_procedure(request):
+    """
+    Handle procedure charging via AJAX.
+    """
+    from .models import Service, Invoice, InvoiceItem
+    
+    procedure_id = request.POST.get('procedure_id')
+    patient_id = request.POST.get('patient_id')
+    visit_id = request.POST.get('visit_id')
+    notes = request.POST.get('notes', '')
+
+    try:
+        service = get_object_or_404(Service, id=procedure_id, department__name='Procedure Room')
+        patient = get_object_or_404(Patient, id=patient_id)
+        visit = Visit.objects.filter(id=visit_id).first() if visit_id else None
+
+        # Find or Create Active Invoice for this Visit
+        invoice = None
+        if visit:
+            invoice = Invoice.objects.filter(visit=visit).exclude(status='Cancelled').first()
+        
+        if not invoice:
+            invoice = Invoice.objects.create(
+                patient=patient,
+                visit=visit,
+                status='Pending',
+                created_by=request.user,
+                notes=f"Procedure Charge: {service.name}"
+            )
+
+        # Create Invoice Item
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            service=service,
+            name=service.name,
+            unit_price=service.price,
+            quantity=1
+        )
+        
+        # Update Invoice Totals
+        invoice.update_totals()
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'Successfully charged {procedure.name}'
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

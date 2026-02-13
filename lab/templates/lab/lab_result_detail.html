@@ -314,7 +314,7 @@
             </div>
             <div class="patient-meta">
                 <h1>{{ lab_result.patient.full_name }}</h1>
-                <p><i class="fas fa-microscope"></i> {{ lab_result.service.name }} • {{lab_result.service.get_category_display }}</p>
+                <p><i class="fas fa-microscope"></i> {{ lab_result.service.name }}</p>
             </div>
         </div>
         <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
@@ -334,6 +334,81 @@
     <div class="detail-grid">
         <!-- Left Column: Test Results & Update -->
         <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Service Parameters Card -->
+            <div class="modern-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-list-ul"></i> Service Parameters</h2>
+                </div>
+                <div class="card-body">
+                    {% if lab_result.parameters.all %}
+                    <div class="table-responsive" style="margin-bottom: 2rem;">
+                        <table class="table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr
+                                    style="background: #f8fafc; border-bottom: 2px solid var(--clinical-border); text-align: left;">
+                                    <th
+                                        style="padding: 0.75rem; font-size: 0.75rem; text-transform: uppercase; color: var(--clinical-text-muted);">
+                                        Parameter</th>
+                                    <th
+                                        style="padding: 0.75rem; font-size: 0.75rem; text-transform: uppercase; color: var(--clinical-text-muted);">
+                                        Value</th>
+                                    <th
+                                        style="padding: 0.75rem; font-size: 0.75rem; text-transform: uppercase; color: var(--clinical-text-muted);">
+                                        Unit</th>
+                                    <th
+                                        style="padding: 0.75rem; font-size: 0.75rem; text-transform: uppercase; color: var(--clinical-text-muted);">
+                                        Ref. Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for param in lab_result.parameters.all %}
+                                <tr style="border-bottom: 1px solid var(--clinical-border);">
+                                    <td style="padding: 0.75rem; font-weight: 600; color: var(--clinical-text-main);">{{
+                                        param.name }}</td>
+                                    <td style="padding: 0.75rem; font-weight: 700; color: var(--clinical-primary);">{{
+                                        param.value }}</td>
+                                    <td style="padding: 0.75rem; color: var(--clinical-text-muted);">{{ param.unit }}
+                                    </td>
+                                    <td style="padding: 0.75rem; color: var(--clinical-text-muted);">{{ param.ranges }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div
+                        style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 1px dashed var(--clinical-border); margin-bottom: 2rem;">
+                        <p style="margin: 0; color: var(--clinical-text-muted); font-size: 0.85rem;">No parameters added
+                            yet.</p>
+                    </div>
+                    {% endif %}
+
+                    <h3 class="form-label" style="margin-bottom: 1rem;"><i class="fas fa-plus"></i> Add Parameter</h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                {{ parameter_form.name }}
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                {{ parameter_form.value }}
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                {{ parameter_form.unit }}
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                {{ parameter_form.ranges }}
+                            </div>
+                        </div>
+                        <button type="submit" name="create_parameter" class="modern-btn"
+                            style="background: white; border: 1px solid var(--clinical-primary); color: var(--clinical-primary); width: 100%; justify-content: center;">
+                            <i class="fas fa-plus-circle"></i> Add Parameter
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <div class="modern-card">
                 <div class="card-header">
                     <h2 class="card-title"><i class="fas fa-vial"></i> Test Specifications</h2>
@@ -355,7 +430,8 @@
                         style="background: #eff6ff; padding: 1.25rem; border-radius: 12px; border: 1px solid #dbeafe; margin-bottom: 2rem;">
                         <span class="item-label" style="color: #1d4ed8;"><i class="fas fa-comment-medical"></i>
                             Clinician's Notes</span>
-                        <p style="margin: 0.5rem 0 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">{{ lab_result.clinical_notes }}</p>
+                        <p style="margin: 0.5rem 0 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">{{
+                            lab_result.clinical_notes }}</p>
                     </div>
                     {% endif %}
 
@@ -406,7 +482,8 @@
                             <div>
                                 <h4 style="margin: 0; color: #065f46; font-size: 0.95rem; font-weight: 800;">Report
                                     Finalized</h4>
-                                <p style="margin: 0.2rem 0 0; color: #059669; font-size: 0.8rem; font-weight: 600;">{{ lab_report.created_at|date:"M d, Y • H:i" }}</p>
+                                <p style="margin: 0.2rem 0 0; color: #059669; font-size: 0.8rem; font-weight: 600;">{{
+                                    lab_report.created_at|date:"M d, Y • H:i" }}</p>
                             </div>
                         </div>
 

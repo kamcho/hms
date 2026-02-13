@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import LabResult, LabReport
+from .models import LabResult, LabReport, ServiceParameters
 from accounts.models import Invoice
 
 User = get_user_model()
@@ -39,7 +39,16 @@ class LabResultUpdateForm(forms.ModelForm):
         model = LabResult
         fields = ['status', 'performed_by', 'results', 'interpretation']
         widgets = {
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'results': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
             'interpretation': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
+
+class ServiceParameterForm(forms.ModelForm):
+    class Meta:
+        model = ServiceParameters
+        fields = ['name', 'value', 'unit', 'ranges']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Parameter Name (e.g. Hemoglobin)'}),
+            'value': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Result Value'}),
+            'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unit (e.g. g/dL)'}),
+            'ranges': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Reference Range (e.g. 12-16)'}),
         }

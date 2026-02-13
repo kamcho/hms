@@ -60,7 +60,7 @@ class ServiceAdmissionLinkForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['service'].queryset = Service.objects.all().order_by('category', 'name')
+        self.fields['service'].queryset = Service.objects.all().order_by('name')
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'form-control'})
 

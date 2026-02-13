@@ -1,6 +1,9 @@
 from django import forms
+from django.db.models import Q
 from .models import Patient, EmergencyContact, Prescription, PrescriptionItem
 from accounts.models import Service, Payment
+
+# ... (skip to PatientForm)
 
 
 class EmergencyContactForm(forms.ModelForm):
@@ -110,6 +113,15 @@ class PrescriptionItemForm(forms.ModelForm):
         else:
             # Fallback: show items with medication object OR all items
             queryset = InventoryItem.objects.all()
+
+        self.fields['medication'].queryset = queryset.order_by('name')
+        
+        # Add Tailwind styling to all fields
+        for field_name, field in self.fields.items():
+            current_classes = field.widget.attrs.get('class', '')
+            field.widget.attrs.update({
+                'class': f'{current_classes} w-full rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500 text-slate-700 text-sm font-bold placeholder-slate-400 shadow-sm transition-all bg-slate-50 focus:bg-white'
+            })
         
         self.fields['medication'].queryset = queryset.select_related('category').order_by('name')
         
@@ -122,11 +134,52 @@ class PrescriptionItemForm(forms.ModelForm):
         self.fields['medication'].empty_label = "Select a medication"
 
 
+class DispenseInventoryForm(forms.ModelForm):
+    """Form for dispensing general inventory items (consumables, etc.)"""
+    
+    class Meta:
+        from inventory.models import DispensedItem
+        model = DispensedItem
+        fields = ['item', 'quantity']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'item-select'}),
+            'quantity': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Quantity'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from inventory.models import InventoryItem, InventoryCategory
+        
+        # Filter for Consumables or non-pharmaceuticals
+        consumable_category = InventoryCategory.objects.filter(name__icontains='Consumable').first()
+        pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+        
+        if consumable_category:
+            queryset = InventoryItem.objects.filter(category=consumable_category)
+        elif pharma_category:
+            queryset = InventoryItem.objects.exclude(category=pharma_category)
+        else:
+            queryset = InventoryItem.objects.all()
+            
+        self.fields['item'].queryset = queryset.order_by('name')
+        self.fields['item'].empty_label = "Select an item"
+        
+        # Add Tailwind styling
+        for field_name, field in self.fields.items():
+            current_classes = field.widget.attrs.get('class', '')
+            field.widget.attrs.update({
+                'class': f'{current_classes} w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-slate-700 text-sm font-bold placeholder-slate-400 shadow-sm transition-all bg-slate-50 focus:bg-white'
+            })
+
+
 class PatientForm(forms.ModelForm):
     """Form for creating and updating patient records with integrated billing"""
     
     consultation_type = forms.ModelChoiceField(
-        queryset=Service.objects.filter(name__icontains='Consultation', is_active=True),
+        queryset=Service.objects.filter(
+            name__in=['OPD Consultation', 'ANC', 'PNC', 'CWC'],
+            is_active=True
+        ).order_by('name'),
         required=True,
         label="Consultation Type",
         widget=forms.Select(attrs={'class': 'form-control'})
@@ -160,7 +213,7 @@ class PatientForm(forms.ModelForm):
             self.fields['payment_method'].required = False
             # Hide them in the template or just leave them as optional
 
-from .models import Symptoms, Impression, Diagnosis
+from .models import Symptoms, Impression, Diagnosis, Referral
 
 class SymptomsForm(forms.ModelForm):
     class Meta:
@@ -185,4 +238,15 @@ class DiagnosisForm(forms.ModelForm):
         fields = ['data']
         widgets = {
             'data': forms.Textarea(attrs={'class': 'clinical-input', 'rows': 3, 'placeholder': 'Final diagnosis...'}),
+        }
+
+class ReferralForm(forms.ModelForm):
+    class Meta:
+        model = Referral
+        fields = ['destination', 'reason', 'clinical_summary', 'notes']
+        widgets = {
+            'destination': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Kenyatta National Hospital'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Reason for referral...'}),
+            'clinical_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Summary of findings, treatment given...'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes...'}),
         }

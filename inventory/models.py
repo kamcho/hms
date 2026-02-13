@@ -88,6 +88,8 @@ class StockRecord(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     received_date = models.DateField(auto_now_add=True)
+    receiving_notes = models.TextField(blank=True, null=True, help_text="Notes on condition during receipt")
+    purchase_ref = models.ForeignKey('accounts.InventoryPurchase', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_records')
     current_location = models.ForeignKey('home.Departments', on_delete=models.CASCADE, related_name='stock_records')
 
     def __str__(self):

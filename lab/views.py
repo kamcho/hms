@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.generic import ListView, DetailView
 from django.urls import reverse_lazy
 from .models import LabResult, LabReport
-from .forms import LabResultForm, LabReportForm, LabResultUpdateForm
+from .forms import LabResultForm, LabReportForm, LabResultUpdateForm, ServiceParameterForm
 from accounts.models import Invoice, InvoiceItem, Service
 from inventory.models import StockRecord, InventoryRequest
 from home.models import PatientQue
@@ -37,20 +37,20 @@ def radiology_dashboard(request):
     payment_filter = request.GET.get('payment_status', '')
 
     # Get all InvoiceItems related to Diagnostics
-    categories = ['Lab', 'Imaging', 'Procedure', 'Physiological Test']
+    categories = ['Lab', 'Imaging', 'Procedure Room']
     if dept_focus:
         categories = [dept_focus]
 
     from django.db.models import Prefetch
     lab_items = InvoiceItem.objects.filter(
-        service__category__in=categories,
+        service__department__name__in=categories,
         labresult__labreport__isnull=True
     ).select_related('invoice', 'invoice__patient', 'invoice__visit', 'service').prefetch_related(
         Prefetch('labresult_set', queryset=LabResult.objects.all(), to_attr='related_results')
     ).order_by('-created_at')
     
     # Get lab/radiology results
-    lab_results = LabResult.objects.filter(service__category__in=categories).select_related('patient', 'service', 'requested_by').order_by('-requested_at')
+    lab_results = LabResult.objects.filter(service__department__name__in=categories).select_related('patient', 'service', 'requested_by').order_by('-requested_at')
     
     # Inventory Section - Filter by location name matching the focus
     stock_location = 'Lab' # Default
@@ -77,8 +77,8 @@ def radiology_dashboard(request):
         lab_results = lab_results.filter(status=status_filter)
     
     if service_type_filter and not dept_focus: # Only allow manual override if not locked by role
-        lab_items = lab_items.filter(service__category=service_type_filter)
-        lab_results = lab_results.filter(service__category=service_type_filter)
+        lab_items = lab_items.filter(service__department__name=service_type_filter)
+        lab_results = lab_results.filter(service__department__name=service_type_filter)
     
     if payment_filter:
         lab_items = lab_items.filter(invoice__status=payment_filter)
@@ -108,7 +108,7 @@ def radiology_dashboard(request):
         'service_types': [
             ('Lab', 'Laboratory'),
             ('Imaging', 'Imaging/Radiology'),
-            ('Procedure', 'Procedure'),
+            ('Procedure Room', 'Procedure'),
             ('Other', 'Other'),
         ],
         'status_choices': LabResult.STATUS_CHOICES,
@@ -256,6 +256,19 @@ def lab_result_detail(request, result_id):
                 for field, errors in report_form.errors.items():
                     for error in errors:
                         messages.error(request, f"Report Form Error ({field}): {error}")
+
+        elif 'create_parameter' in request.POST:
+            parameter_form = ServiceParameterForm(request.POST)
+            if parameter_form.is_valid():
+                parameter = parameter_form.save(commit=False)
+                parameter.service = lab_result
+                parameter.save()
+                messages.success(request, 'Parameter added successfully')
+                return redirect('lab:lab_result_detail', result_id=result_id)
+            else:
+                for field, errors in parameter_form.errors.items():
+                   for error in errors:
+                       messages.error(request, f"Parameter Form Error ({field}): {error}")
     else:
         initial_data = {}
         if not lab_result.performed_by:
@@ -263,12 +276,14 @@ def lab_result_detail(request, result_id):
             
         form = LabResultUpdateForm(instance=lab_result, initial=initial_data)
         report_form = LabReportForm(instance=lab_report)
+        parameter_form = ServiceParameterForm()
     
     return render(request, 'lab/lab_result_detail.html', {
         'lab_result': lab_result,
         'lab_report': lab_report,
         'form': form,
         'report_form': report_form,
+        'parameter_form': parameter_form,
         'title': f'Lab Result - {lab_result.patient.full_name}'
     })
 

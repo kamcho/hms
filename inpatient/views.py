@@ -286,7 +286,15 @@ def patient_case_folder(request, admission_id):
     from inventory.models import DispensedItem
     dispensed_items = DispensedItem.objects.filter(visit=admission.visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
 
+    # 9. Procedures (Invoiced items linked to a Service in Procedure Room)
+    from accounts.models import InvoiceItem
+    performed_procedures = InvoiceItem.objects.filter(
+        invoice__visit=admission.visit, 
+        service__department__name='Procedure Room'
+    ).select_related('service').order_by('-created_at')
+
     return render(request, 'inpatient/patient_case_folder.html', {
+        'performed_procedures': performed_procedures,
         'dispensed_items': dispensed_items,
         'admission': admission,
         'vitals': vitals,
@@ -509,7 +517,7 @@ def discharge_patient(request, admission_id):
     
     # Calculate Billing based on logged services (now includes daily bed charges)
     ward_cost = admission.services.filter(
-        service__category='Admission/Accommodation'
+        service__department__name='Inpatient'
     ).aggregate(
         total=Sum(F('service__price') * F('quantity'))
     )['total'] or 0
@@ -519,7 +527,7 @@ def discharge_patient(request, admission_id):
     )['total'] or 0
     
     service_cost = admission.services.exclude(
-        service__category='Admission/Accommodation'
+        service__department__name='Inpatient'
     ).aggregate(
         total=Sum(F('service__price') * F('quantity'))
     )['total'] or 0

@@ -24,7 +24,9 @@
             </div>
 
             <div class="sidebar-menu">
+
                 {% if user.role == 'Doctor' %}
+               
                 <a href="{% url 'home:opd_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
                     <i class="fas fa-stethoscope"></i>
@@ -40,22 +42,14 @@
                     <i class="fas fa-procedures"></i>
                     <span>Patients</span>
                 </a>
-                <a href="{% url 'users:profile' %}" class="menu-item">
-                    <i class="fas fa-user"></i>
-                    <span>Profile</span>
+
+                <a href="{% url 'inventory:create_request' %}" class="menu-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Request</span>
                 </a>
-                <a href="{% url 'users:logout' %}" class="menu-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
+          
                 {% endif %}
-                {% if user.is_staff %}
-                <a href="{% url 'users:dashboard' %}"
-                    class="menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-                {% endif %}
+
                 {% if user.role == 'Admin' or user.role == 'Receptionist' %}
                 <a href="{% url 'home:reception_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'reception_dashboard' %}active{% endif %}">
@@ -74,7 +68,7 @@
                     <i class="fas fa-user-plus"></i>
                     <span>Add Patient</span>
                 </a>
-                  <a href="{% url 'accounts:discharge_dashboard' %}"
+                <a href="{% url 'accounts:discharge_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Discharge Billing</span>
@@ -82,7 +76,7 @@
                 {% endif %}
 
 
-                {% if user.role == 'Admin' or user.role == 'Triage Nurse'   %}
+                {% if user.role == 'Admin' or user.role == 'Triage Nurse' %}
                 <a href="{% url 'home:reception_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'triage_dashboard' %}active{% endif %}">
                     <i class="fas fa-heartbeat"></i>
@@ -90,7 +84,7 @@
                 </a>
                 {% endif %}
 
-                {% if user.role == 'Admin' or user.role == 'Doctor' or user.role == 'Morgue Attendant' %}
+                {% if user.role == 'Admin' or user.role == 'Morgue Attendant' %}
                 <a href="{% url 'morgue:dashboard' %}"
                     class="menu-item {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}">
                     <i class="fas fa-skull-crossbones"></i>
@@ -98,19 +92,19 @@
                 </a>
                 {% endif %}
 
-                {% if user.role == 'Admin' or user.role == 'Doctor' or user.role == 'Nurse' %}
+                {% if user.role == 'Admin' or user.role == 'Nurse' %}
                 <a href="{% url 'inpatient:dashboard' %}"
                     class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
                     <i class="fas fa-procedures"></i>
                     <span>Inpatient</span>
                 </a>
                 <a href="{% url 'inventory:create_request' %}" class="btn-add"
-            style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-            <i class="fas fa-plus"></i>Miny Pharmacy
-        </a>
+                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    <i class="fas fa-plus"></i>Miny Pharmacy
+                </a>
                 {% endif %}
 
-                {% if user.role == 'Admin' or user.role == 'Doctor' or user.role == 'Lab Technician' %}
+                {% if user.role == 'Admin' or user.role == 'Lab Technician' %}
                 <a href="{% url 'lab:radiology_dashboard' %}"
                     class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
                     <i class="fas fa-flask"></i>
@@ -126,7 +120,15 @@
                 </a>
                 {% endif %}
 
-                {% if user.role == 'Admin' or user.role == 'Doctor' or user.role == 'Nurse' %}
+                {% if user.role == 'Admin' or user.role == 'Receptionist' or user.role == 'Lab Technician' %}
+                <a href="{% url 'home:ambulance_dashboard' %}"
+                    class="menu-item {% if request.resolver_match.url_name == 'ambulance_dashboard' %}active{% endif %}">
+                    <i class="fas fa-ambulance"></i>
+                    <span>Ambulance</span>
+                </a>
+                {% endif %}
+
+                {% if user.role == 'Admin' or user.role == 'Nurse' %}
                 <a href="javascript:void(0)"
                     class="menu-item has-submenu {% if request.resolver_match.namespace == 'maternity' %}active{% endif %}"
                     id="maternityMenu">
@@ -159,50 +161,47 @@
                 </div>
                 {% endif %}
 
-            
 
-                {% if user.role == 'Admin' or user.role == 'Doctor' %}
-                <a href="{% url 'home:opd_dashboard' %}"
-                    class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
-                    <i class="fas fa-stethoscope"></i>
-                    <span>Doctor's Dashboard</span>
+
+
+                {% if user.role == 'Admin' or user.role == 'Accountant' or user.role == 'Store Manager' %}
+                <a href="{% url 'accounts:expense_dashboard' %}"
+                    class="menu-item {% if request.resolver_match.url_name == 'expense_dashboard' %}active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Expenses & Purchases</span>
+                </a>
+                <a href="{% url 'inventory:procurement_dashboard' %}"
+                    class="menu-item {% if request.resolver_match.url_name == 'procurement_dashboard' %}active{% endif %}">
+                    <i class="fas fa-truck-loading"></i>
+                    <span>Procurement & Stock</span>
+                </a>
+                <a href="{% url 'inventory:create_request' %}" class="menu-item submenu-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Create Request</span>
+                </a>
+                <a href="{% url 'inventory:request_list' %}" class="menu-item submenu-item">
+                    <i class="fas fa-list"></i>
+                    <span>View Requests</span>
                 </a>
                 {% endif %}
 
-                {% if user.role == 'Admin' or user.role == 'Accountant' %}
-                <a href="{% url 'inventory:item_list' %}"
-                    class="menu-item {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}">
-                    <i class="fas fa-boxes"></i>
-                    <span>Inventory</span>
-                </a>
-                <div class="submenu">
-                    <a href="{% url 'inventory:create_request' %}" class="menu-item submenu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Create Request</span>
-                    </a>
-                    <a href="{% url 'inventory:request_list' %}" class="menu-item submenu-item">
-                        <i class="fas fa-list"></i>
-                        <span>View Requests</span>
-                    </a>
-                </div>
-                {% endif %}
-
-                {% if user.role == 'Admin' or user.role == 'Accountant' %}
+                {% if user.role == 'Admin' or user.role == 'SHA' %}
                 <a href="{% url 'accounts:accountant_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'accountant_dashboard' %}active{% endif %}">
                     <i class="fas fa-calculator"></i>
                     <span>Accountant Dashboard</span>
+                </a>
+                <a href="{% url 'accounts:insurance_manager' %}"
+                    class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Insurance Manager</span>
                 </a>
                 <a href="{% url 'accounts:discharge_dashboard' %}"
                     class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Discharge Billing</span>
                 </a>
-                <a href="{% url 'accounts:expense_dashboard' %}"
-                    class="menu-item {% if request.resolver_match.url_name == 'expense_dashboard' %}active{% endif %}">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Expenses & Purchases</span>
-                </a>
+
 
                 <a href="#" class="menu-item">
                     <i class="fas fa-file-medical"></i>
@@ -214,13 +213,13 @@
             <div class="sidebar-footer">
                 {% if user.role != 'Doctors' %}
                 <a href="{% url 'inventory:create_request' %}" class="btn-add"
-            style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-            <i class="fas fa-plus"></i> New Request
-        </a>
-         <a href="{% url 'home:health_records' %}" class="btn-add"
-            style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-            <i class="fas fa-plus"></i> HR
-        </a>
+                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    <i class="fas fa-plus"></i> New Request
+                </a>
+                <a href="{% url 'home:health_records' %}" class="btn-add"
+                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    <i class="fas fa-plus"></i> HR
+                </a>
                 <a href="{% url 'users:profile' %}" class="menu-item">
                     <i class="fas fa-user"></i>
                     <span>Profile</span>

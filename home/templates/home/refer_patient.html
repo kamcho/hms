@@ -1,0 +1,288 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6 no-print">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800">Refer Patient</h1>
+            <p class="text-slate-500">Create a referral letter for external services</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="window.print()"
+                class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2">
+                <i class="fas fa-print"></i> Print Referral
+            </button>
+            <a href="{{ back_url }}"
+                class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-slate-700">
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Patient Clinical Summary (Left Column) -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Patient Info Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-circle text-blue-500"></i> Patient Information
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                        <span class="text-slate-500">Name</span>
+                        <span class="font-medium text-slate-800">{{ patient.full_name }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                        <span class="text-slate-500">Gender/Age</span>
+                        <span class="font-medium text-slate-800">{{ patient.get_gender_display }} / {{ patient.age }}
+                            yrs</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                        <span class="text-slate-500">File Number</span>
+                        <span class="font-medium text-slate-800">{{ patient.id_number }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vitals Card -->
+            {% if triage %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-heartbeat text-red-500"></i> Vitals ({{ triage.entry_date|date:"H:i" }})
+                </h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-slate-500 text-xs">BP</span>
+                        <span class="font-medium text-slate-800">{{ triage.blood_pressure_systolic }}/{{
+                            triage.blood_pressure_diastolic }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-slate-500 text-xs">Pulse</span>
+                        <span class="font-medium text-slate-800">{{ triage.heart_rate }} bpm</span>
+                    </div>
+                    <div>
+                        <span class="block text-slate-500 text-xs">Temp</span>
+                        <span class="font-medium text-slate-800">{{ triage.temperature }}°C</span>
+                    </div>
+                    <div>
+                        <span class="block text-slate-500 text-xs">SpO2</span>
+                        <span class="font-medium text-slate-800">{{ triage.oxygen_saturation }}%</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Lab Results -->
+            {% if lab_results %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-flask text-purple-500"></i> Recent Labs
+                </h3>
+                <ul class="space-y-3 text-sm">
+                    {% for result in lab_results %}
+                    <li class="border-b border-slate-100 pb-2 last:border-0">
+                        <div class="font-medium text-slate-800">{{ result.service.name }}</div>
+                        <div class="text-slate-600 text-xs mt-1">
+                            {{ result.results|default:"Pending/In Progress"|truncatechars:100 }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Referral Form (Right Column - Wider) -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                {% if referral %}
+                <div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+                    <i class="fas fa-check-circle text-xl"></i>
+                    <div>
+                        <p class="font-bold">Referral Letter Generated</p>
+                        <p class="text-sm">Created on {{ referral.created_at|date:"M d, Y H:i" }} by {{
+                            referral.doctor.get_full_name }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" class="space-y-6 no-print">
+                    {% csrf_token %}
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Refer To (Destination)</label>
+                        {{ form.destination }}
+                        {% if form.destination.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.destination.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Reason for Referral</label>
+                        {{ form.reason }}
+                        <p class="text-xs text-slate-400 mt-1">State the primary reason for referring the patient.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Clinical Summary</label>
+                        {{ form.clinical_summary }}
+                        <p class="text-xs text-slate-400 mt-1">Auto-filled with impressions and diagnoses. Edit as
+                            needed.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Additional Notes</label>
+                        {{ form.notes }}
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <button type="submit"
+                            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2">
+                            <i class="fas fa-save"></i>
+                            {% if referral %}Update Referral{% else %}Generate Referral{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Printable Preview Area -->
+                <div class="print-only mt-8">
+                    <!-- Letterhead Placeholder -->
+                    <div class="text-center mb-8 border-b-2 border-slate-800 pb-4">
+                        <h1 class="text-3xl font-bold uppercase tracking-wide">Hospital Name</h1>
+                        <p class="text-sm text-slate-600">Address Line 1, City, Country</p>
+                        <p class="text-sm text-slate-600">Phone: +123 456 7890 | Email: info@hospital.com</p>
+                    </div>
+
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <p class="text-sm text-slate-500">Date</p>
+                            <p class="font-bold border-b border-black inline-block min-w-[150px]">{{ today|date:"d M Y"
+                                }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-slate-500">Referring Doctor</p>
+                            <p class="font-bold">{{ request.user.get_full_name }}</p>
+                        </div>
+                    </div>
+
+                    <h2 class="text-xl font-bold text-center uppercase border-y border-slate-300 py-2 mb-8">Medical
+                        Referral Letter</h2>
+
+                    <div class="mb-8">
+                        <p class="mb-2"><strong>To:</strong> <span class="print-destination">{{
+                                referral.destination|default:"_____________________" }}</span></p>
+                        <p class="mb-6"><strong>Re:</strong> {{ patient.full_name }} ({{ patient.get_gender_display }},
+                            {{ patient.age }} yrs) - ID: {{ patient.id_number }}</p>
+
+                        <p class="mb-4">Dear Colleague,</p>
+                        <p class="mb-4">Thank you for seeing this patient who is being referred for:</p>
+                        <p class="font-medium ml-4 mb-6 print-reason">{{ referral.reason|default:"_____________________"
+                            }}</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="font-bold border-b border-slate-200 mb-2">Clinical Summary & History</h3>
+                        <p class="whitespace-pre-line text-sm print-summary">{{ referral.clinical_summary|default:"(See
+                            attached notes)" }}</p>
+                    </div>
+
+                    {% if triage %}
+                    <div class="mb-6">
+                        <h3 class="font-bold border-b border-slate-200 mb-2">Vitals on Exam</h3>
+                        <p class="text-sm">BP: {{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic
+                            }} mmHg, HR: {{ triage.heart_rate }} bpm, Temp: {{ triage.temperature }}°C, SpO2: {{
+                            triage.oxygen_saturation }}%</p>
+                    </div>
+                    {% endif %}
+
+                    {% if lab_results %}
+                    <div class="mb-6">
+                        <h3 class="font-bold border-b border-slate-200 mb-2">Key Investigations</h3>
+                        <ul class="text-sm list-disc pl-5">
+                            {% for result in lab_results %}
+                            <li>{{ result.service.name }}: {{ result.results|truncatechars:50 }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if referral.notes %}
+                    <div class="mb-8">
+                        <h3 class="font-bold border-b border-slate-200 mb-2">Notes</h3>
+                        <p class="whitespace-pre-line text-sm">{{ referral.notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-12 pt-8 border-t border-slate-200">
+                        <p class="mb-4">Sincerely,</p>
+                        <div class="h-16"></div> <!-- Signature space -->
+                        <p class="font-bold">{{ request.user.get_full_name }}</p>
+                        <p class="text-xs text-slate-500">{{ request.user.role }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-only,
+        .print-only * {
+            visibility: visible;
+        }
+
+        .print-only {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 2cm;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+
+    @media screen {
+        .print-only {
+            display: none;
+        }
+    }
+</style>
+
+<script>
+    // Simple script to update print preview in real-time
+    const destinationInput = document.querySelector('input[name="destination"]');
+    const reasonInput = document.querySelector('textarea[name="reason"]');
+    const summaryInput = document.querySelector('textarea[name="clinical_summary"]');
+
+    if (destinationInput) {
+        destinationInput.addEventListener('input', (e) => {
+            const preview = document.querySelector('.print-destination');
+            if (preview) preview.textContent = e.target.value;
+        });
+    }
+
+    if (reasonInput) {
+        reasonInput.addEventListener('input', (e) => {
+            const preview = document.querySelector('.print-reason');
+            if (preview) preview.textContent = e.target.value;
+        });
+    }
+
+    if (summaryInput) {
+        summaryInput.addEventListener('input', (e) => {
+            const preview = document.querySelector('.print-summary');
+            if (preview) preview.textContent = e.target.value;
+        });
+    }
+</script>
+{% endblock %}

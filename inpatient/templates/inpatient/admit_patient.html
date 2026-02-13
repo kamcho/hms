@@ -229,10 +229,8 @@
                         </div>
                         <h2 class="text-2xl font-black text-white mb-2">{{ patient.full_name }}</h2>
                         <div class="flex justify-center gap-3">
-                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{
-                                patient.age }} YRS</span>
-                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{
-                                patient.get_gender_display }}</span>
+                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{ patient.age }} YRS</span>
+                            <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest">{{ patient.get_gender_display }}</span>
                         </div>
                     </div>
 
@@ -241,8 +239,7 @@
                             <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Patient
                                 ID</span>
                             <span
-                                class="font-mono bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded text-sm font-bold">#PAT-{{
-                                patient.id|stringformat:"05d" }}</span>
+                                class="font-mono bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded text-sm font-bold">#PAT-{{ patient.id|stringformat:"05d" }}</span>
                         </div>
                         <div class="flex justify-between items-center py-4 border-b border-white/5">
                             <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">ID
@@ -334,8 +331,7 @@
                                     {{ form.provisional_diagnosis }}
                                 </div>
                                 {% if form.provisional_diagnosis.errors %}
-                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{
-                                    form.provisional_diagnosis.errors.0 }}</p>
+                                <p class="text-[10px] font-bold text-rose-500 ml-1">{{ form.provisional_diagnosis.errors.0 }}</p>
                                 {% endif %}
                             </div>
                         </div>

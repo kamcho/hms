@@ -35,7 +35,6 @@ def seed_services():
                 name=item['name'],
                 department=dept,
                 defaults={
-                    'category': item['cat'],
                     'price': item['price'],
                     'is_active': True
                 }

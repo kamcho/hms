@@ -80,3 +80,39 @@ class InventoryRequestForm(forms.ModelForm):
         self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
         self.fields['item'].empty_label = "Select an item"
         self.fields['location'].empty_label = "Select a location"
+
+class InventoryPurchaseForm(forms.ModelForm):
+    invoice_number = forms.CharField(
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. INV-001'}),
+        help_text='Supplier invoice number for this delivery',
+    )
+
+    class Meta:
+        from accounts.models import InventoryPurchase
+        model = InventoryPurchase
+        fields = ['date', 'supplier', 'total_amount', 'notes']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'supplier': forms.Select(attrs={'class': 'form-control'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+class PurchaseItemForm(forms.ModelForm):
+    class Meta:
+        model = StockRecord
+        fields = ['item', 'batch_number', 'expiry_date', 'quantity', 'purchase_price', 'current_location']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'form-control purchase-item-select'}), # Add class for select2 if needed
+            'batch_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Batch #'}),
+            'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'purchase_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0, 'placeholder': 'Total Cost'}),
+            'current_location': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')

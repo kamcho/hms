@@ -327,3 +327,18 @@ class PrescriptionItem(models.Model):
 
     def __str__(self):
         return f"{self.medication.name} - {self.dose_count} x {self.frequency}"
+
+class Referral(models.Model):
+    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='referrals')
+    doctor = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='referrals_created')
+    referral_date = models.DateTimeField(auto_now_add=True)
+    destination = models.CharField(max_length=255, help_text="Where the patient is being referred to (Hospital/Clinic Name)")
+    reason = models.TextField(help_text="Reason for referral")
+    clinical_summary = models.TextField(blank=True, help_text="Summary of clinical findings")
+    notes = models.TextField(blank=True, help_text="Additional notes for the receiving doctor")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Referral for {self.visit.patient.full_name} to {self.destination}"

@@ -1,0 +1,101 @@
+{% load static %}
+{% if lab_results %}
+<div class="space-y-4">
+    {% for result in lab_results %}
+    <div
+        class="bg-white border border-slate-100 rounded-2xl p-5 hover:border-indigo-200 transition-all shadow-sm group">
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-3">
+            <div>
+                <h6 class="text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    {{ result.service.name }}
+                </h6>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                        <i class="fas fa-calendar-alt mr-1"></i> {{ result.requested_at|date:"d M, H:i" }}
+                    </span>
+                    {% if result.is_abnormal %}
+                    <span
+                        class="bg-rose-100 text-rose-600 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">Abnormal</span>
+                    {% endif %}
+                </div>
+            </div>
+            <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest
+                {% if result.status == 'Completed' %}bg-emerald-100 text-emerald-700
+                {% elif result.status == 'Pending' %}bg-amber-100 text-amber-700
+                {% elif result.status == 'In Progress' %}bg-blue-100 text-blue-700
+                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                {{ result.status }}
+            </span>
+        </div>
+
+        <!-- Service Parameters -->
+        {% if result.service.parameters.exists %}
+        <div class="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-100">
+            <h6
+                class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-200 pb-1">
+                Parameters
+            </h6>
+            <div class="space-y-2">
+                {% for param in result.service.parameters.all %}
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-bold text-slate-600">{{ param.name }}</span>
+                    <div class="text-right">
+                        <!-- Ideally, we'd fetch the specific result value here. For now, showing reference range/unit -->
+                        <span class="font-medium text-slate-500">{{ param.unit }}</span>
+                        <span class="text-[10px] text-slate-400 ml-1">({{ param.ranges }})</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Results Text / Report Link -->
+        <div class="mt-4 pt-3 border-t border-slate-50 flex justify-between items-center">
+            <div class="flex-1 mr-4">
+                {% if result.results %}
+                <p class="text-xs font-medium text-slate-600 line-clamp-2" title="{{ result.results }}">
+                    {{ result.results }}
+                </p>
+                {% elif result.clinical_notes %}
+                <p class="text-[10px] text-slate-400 italic line-clamp-1">
+                    Note: {{ result.clinical_notes }}
+                </p>
+                {% else %}
+                <p class="text-[10px] text-slate-300 italic">No results yet</p>
+                {% endif %}
+            </div>
+
+            {% if result.labreport %}
+            <a href="{% url 'lab:lab_result_detail' result.id %}"
+                class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest flex items-center gap-1 whitespace-nowrap">
+                Report <i class="fas fa-file-pdf"></i>
+            </a>
+            {% elif result.status == 'Completed' %}
+            <a href="{% url 'lab:lab_result_detail' result.id %}"
+                class="text-[10px] font-black text-emerald-600 hover:text-emerald-800 uppercase tracking-widest flex items-center gap-1 whitespace-nowrap">
+                View <i class="fas fa-eye"></i>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-2 text-[8px] font-bold text-slate-300 uppercase flex justify-between">
+            <span>Req: {{ result.requested_by.last_name|default:"System" }}</span>
+            {% if result.performed_by %}
+            <span>Lab: {{ result.performed_by.last_name }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div
+    class="py-12 flex flex-col items-center justify-center text-center opacity-50 border-2 border-dashed border-slate-100 rounded-3xl">
+    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300 text-2xl">
+        <i class="fas fa-microscope"></i>
+    </div>
+    <p class="font-black text-slate-300 uppercase tracking-widest text-xs">No Recent Lab Results</p>
+</div>
+{% endif %}

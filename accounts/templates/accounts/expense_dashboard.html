@@ -35,14 +35,6 @@
                 </div>
                 RECORD SUPPLIER INVOICE
             </button>
-            <button data-open-modal="modal-purchase"
-                class="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all flex items-center gap-3 shadow-xl shadow-slate-300 group border-b-4 border-slate-700">
-                <div
-                    class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <i class="fas fa-truck-loading text-[10px] text-white"></i>
-                </div>
-                STOCK INTAKE (GRN)
-            </button>
         </div>
     </div>
 
@@ -140,8 +132,9 @@
                             class="w-10 h-10 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
                             <i class="fas fa-tag text-[10px]"></i>
                         </div>
-                        <span class="text-slate-900 font-black text-sm tracking-tight">KES {{ cat.total|floatformat:0
+                        <span class="text-slate-900 font-black text-sm tracking-tight">KES {{ cat.total|floatformat:2
                             }}</span>
+                        }}</span>
                     </div>
                     <span class="text-xs font-black text-slate-400 uppercase tracking-widest block text-left">{{
                         cat.category__name|default:"Uncategorized" }}</span>
@@ -174,12 +167,30 @@
                 </button>
             </div>
             <div class="flex items-center gap-4">
-                <div class="relative group">
-                    <i
-                        class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                    <input type="text" placeholder="Filter logs..."
-                        class="bg-slate-50 border-slate-100 rounded-2xl pl-12 pr-6 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-64 border transition-all">
-                </div>
+                <form method="GET" class="flex items-center gap-2">
+                    <div class="relative group">
+                        <i
+                            class="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
+                        <input type="date" name="from_date" value="{{ from_date|default:'' }}"
+                            class="bg-slate-50 border-slate-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all"
+                            placeholder="From">
+                    </div>
+                    <div class="relative group">
+                        <input type="date" name="to_date" value="{{ to_date|default:'' }}"
+                            class="bg-slate-50 border-slate-100 rounded-2xl px-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all"
+                            placeholder="To">
+                    </div>
+                    <button type="submit"
+                        class="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">
+                        FILTER
+                    </button>
+                    {% if from_date or to_date %}
+                    <a href="{% url 'accounts:expense_dashboard' %}"
+                        class="px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs hover:bg-rose-100 transition-all">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </form>
             </div>
         </div>
 
@@ -227,8 +238,18 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="py-32 text-center text-slate-300">
-                            <i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i>
-                            <p class="font-black uppercase tracking-widest text-[10px]">Financial ledger is empty</p>
+                            <div class="flex flex-col items-center justify-center gap-4">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                    <i class="fas fa-wallet text-2xl text-slate-300"></i>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-sm">No Expenses Recorded</h3>
+                                <p class="text-slate-400 text-xs max-w-xs text-center mb-4">Start tracking operational
+                                    costs by adding your first expense entry.</p>
+                                <button data-open-modal="modal-expense"
+                                    class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                                    ADD FIRST EXPENSE
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -276,16 +297,20 @@
                                 {% elif inv.status == 'Partial' %}
                                 <span
                                     class="px-3 py-1 bg-amber-50 text-amber-600 text-[9px] font-black rounded-lg border border-amber-100 self-start">PARTIAL</span>
-                                {% else %}
-                                <span
-                                    class="px-3 py-1 bg-rose-50 text-rose-600 text-[9px] font-black rounded-lg border border-rose-100 self-start">UNPAID</span>
-                                {% endif %}
-                                <div class="flex items-center gap-2">
+                                {% elif inv.status == 'Pending' and inv.due_date and inv.due_date < today %} <span
+                                    class="px-3 py-1 bg-rose-50 text-rose-600 text-[9px] font-black rounded-lg border border-rose-100 self-start flex items-center gap-1">
+                                    <i class="fas fa-clock"></i> OVERDUE
+                                    </span>
+                                    {% else %}
                                     <span
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Balance:</span>
-                                    <span class="text-sm font-black text-slate-900 tracking-tighter">KES {{
-                                        inv.balance_due|floatformat:2 }}</span>
-                                </div>
+                                        class="px-3 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg border border-slate-200 self-start">UNPAID</span>
+                                    {% endif %}
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Balance:</span>
+                                        <span class="text-sm font-black text-slate-900 tracking-tighter">KES {{
+                                            inv.balance_due|floatformat:2 }}</span>
+                                    </div>
                             </div>
                         </td>
                         <td class="px-10 py-7 text-right">
@@ -307,9 +332,18 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="py-32 text-center text-slate-300">
-                            <i class="fas fa-file-invoice-dollar text-4xl mb-4 block opacity-20"></i>
-                            <p class="font-black uppercase tracking-widest text-[10px]">No outstanding invoices found
-                            </p>
+                            <div class="flex flex-col items-center justify-center gap-4">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                    <i class="fas fa-file-invoice-dollar text-2xl text-slate-300"></i>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-sm">No Outstanding Invoices</h3>
+                                <p class="text-slate-400 text-xs max-w-xs text-center mb-4">Great! There are no unpaid
+                                    supplier bills at the moment.</p>
+                                <button data-open-modal="modal-invoice"
+                                    class="px-6 py-3 bg-rose-600 text-white rounded-xl font-black text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-100">
+                                    RECORD BILL
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -317,8 +351,13 @@
             </table>
         </div>
 
-        <!-- Procurement Table -->
+        <!-- Procurement (GRN Verification) Table -->
         <div id="tab-inventory" class="tab-content hidden overflow-x-auto text-left">
+            <div class="px-10 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <i class="fas fa-search text-emerald-600"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">GRN Verification Only - Go
+                    to Inventory Dashboard to Record New Stock</span>
+            </div>
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr
@@ -363,9 +402,18 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="py-32 text-center text-slate-300">
-                            <i class="fas fa-truck-loading text-4xl mb-4 block opacity-20"></i>
-                            <p class="font-black uppercase tracking-widest text-[10px]">No procurement logs discovered
-                            </p>
+                            <div class="flex flex-col items-center justify-center gap-4">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                    <i class="fas fa-truck-loading text-2xl text-slate-300"></i>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-sm">No Procurement Logs</h3>
+                                <p class="text-slate-400 text-xs max-w-xs text-center mb-4">Track physical inventory
+                                    received from suppliers here.</p>
+                                <button data-open-modal="modal-purchase"
+                                    class="px-6 py-3 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">
+                                    LOG STOCK INTAKE
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -619,55 +667,6 @@
     </div>
 </div>
 
-<!-- Add Procurement Modal (GRN) -->
-<div id="modal-purchase" class="hms-modal-backdrop">
-    <div class="hms-modal-content max-w-lg">
-        <div class="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-            <div class="text-left">
-                <h3 class="text-xl font-black text-slate-900 tracking-tight text-left">Goods Received Note</h3>
-                <p class="text-[10px] text-emerald-600 font-extrabold uppercase tracking-widest mt-1 text-left">Physical
-                    Stock Intake</p>
-            </div>
-            <button data-close-modal
-                class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:scale-110 transition-all shadow-sm">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <form action="{% url 'accounts:add_inventory_purchase' %}" method="POST" class="p-10 space-y-6">
-            {% csrf_token %}
-            <div class="grid grid-cols-2 gap-6 text-left">
-                <div class="text-left">
-                    <label>Receipt Date</label>
-                    {{ purchase_form.date }}
-                </div>
-                <div class="text-left">
-                    <label>Supplier Vendor</label>
-                    {{ purchase_form.supplier }}
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-6 text-left">
-                <div class="text-left">
-                    <label>Total Value of Items</label>
-                    {{ purchase_form.total_amount }}
-                </div>
-                <div class="text-left">
-                    <label>Link to Invoice (Optional)</label>
-                    {{ purchase_form.invoice_ref }}
-                </div>
-            </div>
-            <div class="text-left">
-                <label>Delivery Remarks / Manifest</label>
-                {{ purchase_form.notes }}
-            </div>
-            <div class="pt-6">
-                <button type="submit"
-                    class="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm hover:bg-black transition-all shadow-2xl border-b-4 border-slate-600 flex items-center justify-center gap-3">
-                    <i class="fas fa-save"></i> RECORD STOCK INTAKE
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <!-- Add Category Modal -->
 <div id="modal-category" class="hms-modal-backdrop">

@@ -26,20 +26,10 @@ class Service(models.Model):
     def __str__(self):
         if self.department:
             return f"{self.name} ({self.department.name})"
-        return f"{self.name} ({self.category or 'N/A'})"
+        return f"{self.name}"
     
     class Meta:
         ordering = ['department__name', 'name']
-
-class ServiceParameters(models.Model):
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='parameters')
-    name = models.CharField(max_length=100)
-    value = models.CharField(max_length=100)
-    ranges = models.CharField(max_length=100)
-    unit = models.CharField(max_length=100)
-    
-    def __str__(self):
-        return self.name
 
 
 
@@ -98,6 +88,32 @@ class Invoice(models.Model):
         """Calculate remaining balance"""
         return self.total_amount - self.paid_amount
 
+    def distribute_payments(self):
+        """
+        Distributes the total paid amount across invoice items using FIFO logic.
+        """
+        total_paid = self.payments.aggregate(total=models.Sum('amount'))['total'] or 0
+        self.paid_amount = total_paid
+        
+        remaining_pool = total_paid
+        items = self.items.all().order_by('created_at')
+        
+        for item in items:
+            if remaining_pool <= 0:
+                item.paid_amount = 0
+            elif remaining_pool >= item.amount:
+                item.paid_amount = item.amount
+                remaining_pool -= item.amount
+            else:
+                item.paid_amount = remaining_pool
+                remaining_pool = 0
+            
+            # Using update to avoid recursive save calls
+            self.items.filter(id=item.id).update(paid_amount=item.paid_amount)
+        
+        # After distributing, update the status without triggering distribute again
+        self.update_totals()
+
 
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
@@ -110,6 +126,15 @@ class InvoiceItem(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    @property
+    def balance(self):
+        return self.amount - self.paid_amount
+
+    @property
+    def is_settled(self):
+        return self.paid_amount >= self.amount
 
     def save(self, *args, **kwargs):
         # Auto-calculate amount
@@ -140,7 +165,12 @@ class Payment(models.Model):
     created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True)
     
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        
+        # Distribute payment to invoice items (FIFO)
+        self.invoice.distribute_payments()
+        
         # Updates invoice paid amount
         total_paid = self.invoice.payments.aggregate(total=models.Sum('amount'))['total'] or 0
         self.invoice.paid_amount = total_paid

@@ -3,18 +3,18 @@
         <i class="fas fa-syringe"></i> Dispense Consumables / Items
     </h5>
 
-    <form id="dispenseForm" class="space-y-6" onsubmit="handleDispense(event)">
+    <div id="dispenseContainer" class="space-y-6">
         <!-- Hidden Context Fields -->
         {% if patient %}
-        <input type="hidden" name="patient_id" value="{{ patient.id }}">
+        <input type="hidden" id="dispense_patient_id" value="{{ patient.id }}">
         {% elif admission %}
-        <input type="hidden" name="patient_id" value="{{ admission.patient.id }}">
+        <input type="hidden" id="dispense_patient_id" value="{{ admission.patient.id }}">
         {% endif %}
 
         {% if visit %}
-        <input type="hidden" name="visit_id" value="{{ visit.id }}">
+        <input type="hidden" id="dispense_visit_id" value="{{ visit.id }}">
         {% elif admission %}
-        <input type="hidden" name="visit_id" value="{{ admission.visit.id|default:'' }}">
+        <input type="hidden" id="dispense_visit_id" value="{{ admission.visit.id|default:'' }}">
         {% endif %}
 
         <!-- Search -->
@@ -25,7 +25,7 @@
                 class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                 placeholder="Type to search (e.g. Syringe, Gloves)..." oninput="debouncedSearch(this.value)"
                 autocomplete="off">
-            <input type="hidden" name="item_id" id="selectedItemId">
+            <input type="hidden" id="selectedItemId">
 
             <!-- Dropdown Results -->
             <div id="searchResults"
@@ -44,7 +44,7 @@
                 <div>
                     <label
                         class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Quantity</label>
-                    <input type="number" name="quantity" value="1" min="1"
+                    <input type="number" id="dispense_quantity" value="1" min="1"
                         class="w-20 px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold text-center">
                 </div>
                 <button type="button" onclick="clearSelection()"
@@ -54,11 +54,11 @@
             </div>
         </div>
 
-        <button type="submit" id="dispenseBtn" disabled
+        <button type="button" id="dispenseBtn" disabled onclick="handleDispense()"
             class="w-full py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all">
             Dispense to Patient
         </button>
-    </form>
+    </div>
 </div>
 
 <!-- History of Dispensed Items -->
@@ -138,11 +138,20 @@
         document.getElementById('dispenseBtn').disabled = true;
     }
 
-    function handleDispense(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
+    function handleDispense() {
         const btn = document.getElementById('dispenseBtn');
+
+        // Manual data gathering since we removed the form
+        const patientId = document.getElementById('dispense_patient_id')?.value;
+        const visitId = document.getElementById('dispense_visit_id')?.value;
+        const itemId = document.getElementById('selectedItemId').value;
+        const quantity = document.getElementById('dispense_quantity').value;
+
+        const formData = new FormData();
+        if (patientId) formData.append('patient_id', patientId);
+        if (visitId) formData.append('visit_id', visitId);
+        formData.append('item_id', itemId);
+        formData.append('quantity', quantity);
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         formData.append('csrfmiddlewaretoken', csrfToken);

@@ -1247,21 +1247,20 @@
                     id="modalPatientName" style="color: white; font-size: 1.2rem;"></strong></p>
 
             <div class="action-card"
-                style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 2rem; position: relative; z-index: 100002;">
+                style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
                 <h4
                     style="margin: 0; color: #10b981; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
                     <i class="fas fa-hospital-user"></i> ADMIT FOR CONSULTATION
                 </h4>
 
-                <div class="form-group" style="position: relative; z-index: 100003;">
-                    <label
+                <div class="form-group">
+                    <label for="admitConsultation"
                         style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Consultation
                         Type</label>
-                    <select id="admitConsultation" class="clinical-input"
-                        style="cursor: pointer; position: relative; z-index: 100004; pointer-events: auto !important;">
+                    <select id="admitConsultation" class="clinical-input" style="cursor: pointer;">
                         <option value="">-- Select Consultation --</option>
                         {% for service in services %}
-                        {% if "Consultation" in service.name %}
+                        {% if "Consultation" in service.name or "PNC" in service.name or "ANC" in service.name or "CWC" in service.name %}
                         <option value="{{ service.pk }}">
                             {{ service.name }} (Ksh {{ service.price|format_number:0 }})
                         </option>
@@ -1270,10 +1269,8 @@
                     </select>
                 </div>
 
-                <!-- Payment Method Removed for Free Revisit -->
-
                 <button id="admitVisitBtn" class="btn-primary"
-                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); position: relative; z-index: 100005; pointer-events: auto; cursor: pointer;">
+                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
                     <i class="fas fa-check-circle"></i> Complete Admission
                 </button>
             </div>
@@ -1286,17 +1283,16 @@
             </div>
 
             <div class="action-card"
-                style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem; position: relative; z-index: 100002;">
+                style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
                 <h4
                     style="margin: 0; color: #6366f1; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
                     <i class="fas fa-bolt"></i> QUICK SERVICE INVOICE
                 </h4>
-                <div class="form-group" style="position: relative; z-index: 100003;">
-                    <label
+                <div class="form-group">
+                    <label for="quickService"
                         style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Select
                         Service / Item</label>
-                    <select id="quickService" class="clinical-input"
-                        style="cursor: pointer; position: relative; z-index: 100004; pointer-events: auto !important;">
+                    <select id="quickService" class="clinical-input" style="cursor: pointer;">
                         <option value="">-- Choose a service --</option>
                         {% regroup services by department as services_by_dept %}
                         {% for dept in services_by_dept %}
@@ -1304,8 +1300,9 @@
                         <optgroup label="{{ dept.grouper.name }}">
                             {% for service in dept.list %}
                             {% if "Consultation" not in service.name %}
-                            <option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2
-                                }})</option>
+                            <option value="{{ service.pk }}">
+                                {{ service.name }} (Ksh {{ service.price|format_number:2 }})
+                            </option>
                             {% endif %}
                             {% endfor %}
                         </optgroup>
@@ -1314,7 +1311,7 @@
                     </select>
                 </div>
                 <button id="generateInvoiceBtn" class="btn-primary" onclick="submitQuickInvoice()"
-                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4); position: relative; z-index: 100005; pointer-events: auto; cursor: pointer;">
+                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
                     <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
                 </button>
             </div>
@@ -1477,7 +1474,8 @@
                             <option value="3">Consultation Room 3</option>
                             <option value="4">Consultation Room 4</option>
                             <option value="5">Consultation Room 5</option>
-                            <option value="Maternity">Maternity (ANC/PNC)</option>
+                            <option value="ANC">Maternity - ANC</option>
+                            <option value="PNC">Maternity - PNC</option>
                         </select>
                     </div>
                 </div>

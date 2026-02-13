@@ -34,11 +34,11 @@ class Command(BaseCommand):
             # Try to find a matching service in the 'Admission' category
             # We'll try to match ward name or ward type
             service = Service.objects.filter(
-                Q(name__icontains=ward.ward_type) & Q(category='Admission')
+                Q(name__icontains=ward.ward_type) & Q(department__name='Inpatient')
             ).first() or Service.objects.filter(
-                Q(name__icontains='General Ward') & Q(category='Admission')
+                Q(name__icontains='General Ward') & Q(department__name='Inpatient')
             ).first() or Service.objects.filter(
-                Q(name__icontains='Bed') & Q(category='Admission')
+                Q(name__icontains='Bed') & Q(department__name='Inpatient')
             ).first()
 
             if not service:
@@ -90,7 +90,7 @@ class Command(BaseCommand):
 
     def process_morgue_charges(self, today, system_user):
         active_deceased = Deceased.objects.filter(is_released=False)
-        storage_service = Service.objects.filter(name__icontains='Storage', category='Mortuary').first()
+        storage_service = Service.objects.filter(name__icontains='Storage', department__name='Morgue').first()
         from datetime import timedelta
 
         if not storage_service:

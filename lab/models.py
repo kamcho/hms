@@ -51,6 +51,7 @@ class LabResult(models.Model):
     def __str__(self):
         return f"{self.patient.full_name} - {self.service.name} ({self.status})"
 
+
 class LabReport(models.Model):
     lab_result = models.OneToOneField(LabResult, on_delete=models.CASCADE)
     report_file = models.FileField(upload_to='lab_reports/%Y/%m/', null=True, blank=True)
@@ -68,6 +69,15 @@ class LabReport(models.Model):
         return f"Report for {self.lab_result}"
 
 
+class ServiceParameters(models.Model):
+    service = models.ForeignKey(LabResult, on_delete=models.CASCADE, related_name='parameters')
+    name = models.CharField(max_length=100)
+    value = models.CharField(max_length=100)
+    ranges = models.CharField(max_length=100)
+    unit = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.name
 
 
 class AmbulanceCharge(models.Model):
@@ -77,4 +87,15 @@ class AmbulanceCharge(models.Model):
     
     def __str__(self):
         return f"{self.from_location} to {self.to_location}"
-        
+
+class AmbulanceActivity(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='ambulance_trips')
+    route = models.ForeignKey(AmbulanceCharge, on_delete=models.SET_NULL, null=True, related_name='trips')
+    date = models.DateTimeField(auto_now_add=True)
+    driver = models.CharField(max_length=100, blank=True)
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='ambulance_trips')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.route.to_location if self.route else 'Trip'} ({self.date.date()})"

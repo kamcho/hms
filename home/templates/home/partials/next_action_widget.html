@@ -1,0 +1,310 @@
+<div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <i class="fas fa-stethoscope text-indigo-600"></i> Clinical Next Action
+        </h3>
+        <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-widest">
+            New Request
+        </span>
+    </div>
+
+    <form id="nextActionForm" method="POST" action="{% url 'home:submit_next_action' %}">
+        {% csrf_token %}
+        <input type="hidden" name="patient_id" value="{{ patient_id }}">
+
+        <!-- Priority Level -->
+        <div class="mb-6">
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Priority
+                Level</label>
+            <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="radio" name="priority" value="Routine" checked
+                        class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                    <span
+                        class="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">Routine</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="radio" name="priority" value="Urgent"
+                        class="w-4 h-4 text-amber-500 focus:ring-amber-500 border-slate-300">
+                    <span
+                        class="text-xs font-bold text-slate-600 group-hover:text-amber-600 transition-colors">Urgent</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="radio" name="priority" value="Emergency"
+                        class="w-4 h-4 text-rose-600 focus:ring-rose-500 border-slate-300">
+                    <span
+                        class="text-xs font-bold text-slate-600 group-hover:text-rose-600 transition-colors">Emergency</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Destination Selection -->
+        <div class="mb-6">
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Department
+                Routing</label>
+            <div class="grid grid-cols-2 gap-3">
+                {% for dept in available_departments %}
+                <label
+                    class="flex items-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-200 hover:bg-slate-50 transition-all group">
+                    <input type="checkbox" name="send_to" value="{{ dept.name }}" onchange="updateServicesFilter()"
+                        class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                    <span class="ml-2 text-xs font-bold text-slate-600 group-hover:text-indigo-700">{{ dept.name
+                        }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Dynamic Services Container -->
+        <div class="mb-6">
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                <i class="fas fa-list-ul mr-1"></i> Available Investigations
+            </label>
+            <div id="tests-container"
+                class="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[100px] flex items-center justify-center relative">
+                <p id="no-destination-message"
+                    class="text-slate-400 text-xs font-bold text-center uppercase tracking-wide">
+                    Select a department above
+                </p>
+                <div id="dynamic-test-categories" class="w-full hidden space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onclick="clearNextActionForm()"
+                class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex-1">
+                Reset
+            </button>
+            <button type="button" id="execute-btn" onclick="submitNextAction()" disabled
+                class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex-1">
+                Execute Action
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Context Data -->
+{{ medical_tests_data|default:"[]"|json_script:"services-data" }}
+
+<script>
+    /**
+     * Shared Clinical Next Action Logic
+     */
+
+    // Initialize on load if needed
+    document.addEventListener('DOMContentLoaded', function () {
+        // Any init logic
+    });
+
+    function updateServicesFilter() {
+        const selectedDepts = Array.from(document.querySelectorAll('input[name="send_to"]:checked'))
+            .map(cb => cb.value.toLowerCase());
+
+        const servicesDataEl = document.getElementById('services-data');
+        const allServices = servicesDataEl ? JSON.parse(servicesDataEl.textContent) : [];
+
+        const noDestMsg = document.getElementById('no-destination-message');
+        const dynamicCategories = document.getElementById('dynamic-test-categories');
+
+        if (selectedDepts.length === 0) {
+            noDestMsg.style.display = 'block';
+            dynamicCategories.classList.add('hidden');
+            dynamicCategories.innerHTML = '';
+            toggleExecuteButton();
+            return;
+        }
+
+        noDestMsg.style.display = 'none';
+        dynamicCategories.classList.remove('hidden');
+
+        // Preserve previous checkbox states and notes
+        const previousState = {};
+        document.querySelectorAll('input[name="tests"]:checked').forEach(cb => {
+            const noteArea = document.querySelector(`textarea[name="test_notes_${cb.value}"]`);
+            const specimenSelect = document.querySelector(`select[name="test_specimen_${cb.value}"]`);
+            previousState[cb.value] = {
+                checked: true,
+                note: noteArea ? noteArea.value : '',
+                specimen: specimenSelect ? specimenSelect.value : ''
+            };
+        });
+
+        // Filter services by selected departments (case-insensitive)
+        const filteredTests = allServices.filter(s => {
+            if (!s.department_name) return false;
+            return selectedDepts.includes(s.department_name.toLowerCase());
+        });
+
+        if (filteredTests.length === 0) {
+            dynamicCategories.innerHTML = `
+                <div class="text-center py-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No available services found for the selected department(s).</p>
+                </div>`;
+            toggleExecuteButton();
+            return;
+        }
+
+        // Group by department
+        const grouped = filteredTests.reduce((acc, test) => {
+            const deptName = test.department_name.charAt(0).toUpperCase() + test.department_name.slice(1);
+            if (!acc[deptName]) acc[deptName] = [];
+            acc[deptName].push(test);
+            return acc;
+        }, {});
+
+        let html = '';
+        const specimenRequiredDepts = ['lab', 'imaging', 'procedure room'];
+
+        for (const [dept, tests] of Object.entries(grouped)) {
+            html += `
+                <div class="space-y-2">
+                    <h6 class="text-[9px] font-black text-indigo-600 uppercase tracking-widest border-b border-indigo-50 pb-1">${dept}</h6>
+                    <div class="space-y-2">
+            `;
+            tests.forEach(test => {
+                const isChecked = previousState[test.id] ? 'checked' : '';
+                const displayStyle = previousState[test.id] ? '' : 'hidden';
+                const noteValue = previousState[test.id] ? previousState[test.id].note : '';
+                const specimenValue = previousState[test.id] ? previousState[test.id].specimen : '';
+                const deptLower = (test.department_name || "").toLowerCase();
+                const showSpecimen = deptLower === 'lab' || deptLower === 'imaging' || deptLower === 'procedure room';
+
+                html += `
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-100 transition-colors">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="tests" value="${test.id}" ${isChecked}
+                                onchange="toggleTestNotes(${test.id}); toggleExecuteButton()"
+                                class="w-4 h-4 mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <div class="flex-1">
+                                <span class="text-xs font-bold text-slate-700 block">${test.name}</span>
+                                <div id="test-notes-container-${test.id}" class="${displayStyle} mt-4 space-y-4 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 shadow-inner">
+                                    ${showSpecimen ? `
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Specimen Type</label>
+                                        <div class="relative group">
+                                            <select name="test_specimen_${test.id}" 
+                                                class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer group-hover:border-indigo-300">
+                                                <option value="">Select Specimen Type...</option>
+                                                <option value="Blood" ${specimenValue === 'Blood' ? 'selected' : ''}>Blood</option>
+                                                <option value="Urine" ${specimenValue === 'Urine' ? 'selected' : ''}>Urine</option>
+                                                <option value="Stool" ${specimenValue === 'Stool' ? 'selected' : ''}>Stool</option>
+                                                <option value="Sputum" ${specimenValue === 'Sputum' ? 'selected' : ''}>Sputum</option>
+                                                <option value="Swab" ${specimenValue === 'Swab' ? 'selected' : ''}>Swab</option>
+                                                <option value="Tissue" ${specimenValue === 'Tissue' ? 'selected' : ''}>Tissue</option>
+                                                <option value="Pus" ${specimenValue === 'Pus' ? 'selected' : ''}>Pus</option>
+                                                <option value="CSF" ${specimenValue === 'CSF' ? 'selected' : ''}>CSF</option>
+                                                <option value="Other" ${specimenValue === 'Other' ? 'selected' : ''}>Other</option>
+                                            </select>
+                                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                                <i class="fas fa-chevron-down text-[10px]"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Clinical Indications</label>
+                                        <textarea name="test_notes_${test.id}" rows="2" 
+                                            class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none resize-none hover:border-indigo-300"
+                                            placeholder="Provide specific clinical reasons for ${test.name}...">${noteValue}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        }
+        dynamicCategories.innerHTML = html;
+        toggleExecuteButton();
+    }
+
+    function toggleTestNotes(id) {
+        const checkbox = document.querySelector(`input[name="tests"][value="${id}"]`);
+        const container = document.getElementById(`test-notes-container-${id}`);
+        if (checkbox && container) {
+            if (checkbox.checked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+    }
+
+    function toggleExecuteButton(formId = 'nextActionForm', btnId = 'execute-btn') {
+        const form = document.getElementById(formId);
+        const btn = document.getElementById(btnId);
+        if (!form || !btn) return;
+
+        const hasDept = form.querySelectorAll('input[name="send_to"]:checked').length > 0;
+        const hasTest = form.querySelectorAll('input[name="tests"]:checked').length > 0;
+        btn.disabled = !(hasDept || hasTest);
+    }
+
+    function clearNextActionForm() {
+        const form = document.getElementById('nextActionForm');
+        if (form) form.reset();
+
+        // Uncheck all depts and tests
+        document.querySelectorAll('input[name="send_to"]').forEach(cb => cb.checked = false);
+        document.querySelectorAll('input[name="tests"]').forEach(cb => cb.checked = false);
+
+        updateServicesFilter();
+    }
+
+    function submitNextAction(formId = 'nextActionForm', btnId = 'execute-btn') {
+        const form = document.getElementById(formId);
+        const btn = document.getElementById(btnId);
+
+        if (!form || !btn) return;
+
+        // Check if patient_id is present
+        const patientIdInput = form.querySelector('input[name="patient_id"]');
+        if (!patientIdInput || !patientIdInput.value) {
+            alert("Error: Patient ID missing.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Action executed successfully');
+                    if (data.invoice_id) {
+                        window.location.href = `/accounts/invoice/${data.invoice_id}/`;
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                    btn.disabled = false;
+                    // Reset button text based on ID or default
+                    if (btnId === 'maternity-bill-btn') {
+                        btn.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Bill Selected Services';
+                    } else {
+                        btn.innerHTML = 'Execute Action';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('System Error: Could not process request.');
+                btn.disabled = false;
+                if (btnId === 'maternity-bill-btn') {
+                    btn.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Bill Selected Services';
+                } else {
+                    btn.innerHTML = 'Execute Action';
+                }
+            });
+    }
+</script>

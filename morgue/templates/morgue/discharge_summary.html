@@ -68,7 +68,7 @@
                                 <tr>
                                     <td>
                                         <div class="fw-bold">{{ item.service.name }}</div>
-                                        <div class="small text-muted">{{ item.service.category }}</div>
+                                        <div class="small text-muted">{{ item.service.department.name }}</div>
                                     </td>
                                     <td>{{ item.date_performed|date:"M d" }}</td>
                                     <td class="text-end">${{ item.service.price }}</td>

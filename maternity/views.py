@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib import messages # Added messages
 from .models import (
     Pregnancy, AntenatalVisit, LaborDelivery, Newborn, 
     PostnatalMotherVisit, PostnatalBabyVisit, MaternityDischarge, MaternityReferral,
@@ -14,7 +15,8 @@ from .forms import (
     MaternityReferralForm, ImmunizationRecordForm
 )
 from accounts.models import InvoiceItem, Service
-from home.models import PatientQue, Departments
+from home.models import PatientQue, Departments, Visit, Prescription, PrescriptionItem # Added Visit, Prescription, PrescriptionItem
+from home.forms import PrescriptionItemForm # Added PrescriptionItemForm
 
 
 @login_required
@@ -102,21 +104,30 @@ def anc_dashboard(request):
     ).select_related('pregnancy__patient').order_by('created_at')
 
     # New Arrivals from Triage (using PatientQue)
-    maternity_dept = Departments.objects.filter(name='Maternity').first()
+    # We now filter by explicit 'ANC' department OR fallback to 'Maternity' (legacy) if needed,
+    # but primarily 'ANC'.
     new_arrivals_raw = PatientQue.objects.filter(
-        sent_to=maternity_dept,
+        Q(sent_to__name='ANC') | Q(sent_to__name='Maternity'), # Keep Maternity for fallback/legacy
         visit__visit_date__date=today
     ).select_related('visit__patient').prefetch_related('visit__invoices__items').order_by('-created_at')
 
     new_arrivals = []
-    # Identify which are ANC based on services
+    # Identify which are ANC based on Department OR Services (Legacy)
     for que in new_arrivals_raw:
         is_anc = False
-        for inv in que.visit.invoices.all():
-            for item in inv.items.all():
-                if item.service and "ANC" in item.service.name.upper():
-                    is_anc = True
-                    break
+        
+        # 1. Explicit Department Routing (New Way)
+        if que.sent_to and que.sent_to.name == 'ANC':
+            is_anc = True
+            
+        # 2. Service-based fallback (Old Way - for legacy 'Maternity' queue items)
+        elif que.sent_to and que.sent_to.name == 'Maternity':
+            for inv in que.visit.invoices.all():
+                for item in inv.items.all():
+                    if item.service and "ANC" in item.service.name.upper():
+                        is_anc = True
+                        break
+                if is_anc: break
         
         if is_anc:
             # Check if an AntenatalVisit already exists for this visit - if so, it's already in anc_queue or completed
@@ -191,20 +202,28 @@ def pnc_dashboard(request):
     ).select_related('newborn__delivery__pregnancy__patient').order_by('created_at')
 
     # New Arrivals from Triage (using PatientQue)
-    maternity_dept = Departments.objects.filter(name='Maternity').first()
+    # Filter by explicit 'PNC' or fallback to 'Maternity' (legacy)
     new_arrivals_raw = PatientQue.objects.filter(
-        sent_to=maternity_dept,
+        Q(sent_to__name='PNC') | Q(sent_to__name='Maternity'), 
         visit__visit_date__date=today
     ).select_related('visit__patient').prefetch_related('visit__invoices__items').order_by('-created_at')
 
     new_pnc_arrivals = []
     for que in new_arrivals_raw:
         is_pnc = False
-        for inv in que.visit.invoices.all():
-            for item in inv.items.all():
-                if item.service and "PNC" in item.service.name.upper():
-                    is_pnc = True
-                    break
+        
+        # 1. Explicit Department Routing
+        if que.sent_to and que.sent_to.name == 'PNC':
+            is_pnc = True
+        
+        # 2. Service-based fallback (Legacy)
+        elif que.sent_to and que.sent_to.name == 'Maternity':
+            for inv in que.visit.invoices.all():
+                for item in inv.items.all():
+                    if item.service and "PNC" in item.service.name.upper():
+                        is_pnc = True
+                        break
+                if is_pnc: break
         
         if is_pnc:
             patient = que.visit.patient
@@ -450,6 +469,144 @@ def pregnancy_detail(request, pregnancy_id):
         is_active=True
     ).order_by('name')
 
+    # Handle Dispense Medication (Widget)
+    from home.forms import DispenseInventoryForm
+    
+    if request.method == 'POST' and 'dispense_medication' in request.POST:
+        dispense_form = PrescriptionItemForm(request.POST)
+        if dispense_form.is_valid():
+            p_item = dispense_form.save(commit=False)
+            
+            # 1. Find or create active visit
+            today = timezone.now().date()
+            visit = Visit.objects.filter(
+                patient=pregnancy.patient,
+                visit_date__date=today,
+                is_active=True
+            ).last()
+            
+            if not visit:
+                visit = Visit.objects.create(
+                    patient=pregnancy.patient,
+                    visit_type='Maternity',
+                    visit_date=timezone.now(),
+                    is_active=True,
+                    notes="Auto-created for dispensing"
+                )
+                
+            # 2. Find or create active prescription for this visit
+            prescription = Prescription.objects.filter(
+                patient=pregnancy.patient,
+                visit=visit,
+                status='Active',
+                prescribed_by=request.user
+            ).last()
+            
+            if not prescription:
+                prescription = Prescription.objects.create(
+                    patient=pregnancy.patient,
+                    visit=visit,
+                    prescribed_by=request.user,
+                    status='Active',
+                    diagnosis="Maternity Care"
+                )
+            
+            p_item.prescription = prescription
+            p_item.save()
+            
+            messages.success(request, f"Dispensed {p_item.medication.name} successfully.")
+            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+        else:
+            messages.error(request, "Error dispensing medication. Please check the form.")
+            # Re-initialize other forms to avoid errors in context
+            inventory_form = DispenseInventoryForm()
+
+    # Handle Dispense Inventory (Consumables)
+    elif request.method == 'POST' and 'dispense_inventory' in request.POST:
+        
+        inventory_form = DispenseInventoryForm(request.POST)
+        dispense_form = PrescriptionItemForm() # Reset the other form
+        
+        if inventory_form.is_valid():
+            d_item = inventory_form.save(commit=False)
+            d_item.patient = pregnancy.patient
+            d_item.dispensed_by = request.user
+            
+            # 1. Find or create visit
+            today = timezone.now().date()
+            visit = Visit.objects.filter(
+                patient=pregnancy.patient,
+                visit_date__date=today,
+                is_active=True
+            ).last()
+            
+            if not visit:
+                visit = Visit.objects.create(
+                    patient=pregnancy.patient,
+                    visit_type='Maternity',
+                    visit_date=timezone.now(),
+                    is_active=True,
+                    notes="Auto-created for dispensing consumables"
+                )
+            d_item.visit = visit
+            
+            # 2. Check Stock
+            # Simple stock check for now (Finding any stock record with enough quantity)
+            # ideally we should implement FIFO/FEFO but for now let's just find *a* record
+            stock_record = StockRecord.objects.filter(
+                item=d_item.item,
+                quantity__gte=d_item.quantity
+            ).order_by('expiry_date').first()
+            
+            if stock_record:
+                # Deduct Stock
+                stock_record.quantity -= d_item.quantity
+                stock_record.save()
+                
+                # Create Stock Adjustment
+                StockAdjustment.objects.create(
+                    item=d_item.item,
+                    quantity=-d_item.quantity,
+                    adjustment_type='Usage',
+                    reason=f"Dispensed to {pregnancy.patient.full_name} (Maternity)",
+                    adjusted_by=request.user,
+                    adjusted_from=stock_record.current_location
+                )
+                
+                d_item.department = stock_record.current_location
+                d_item.save()
+                
+                # 3. Billing (Invoice)
+                # Check for pending invoice for this visit or create new
+                invoice = Invoice.objects.filter(visit=visit, status='Pending').last()
+                if not invoice:
+                    invoice = Invoice.objects.create(
+                        patient=pregnancy.patient,
+                        visit=visit,
+                        status='Pending',
+                        created_by=request.user,
+                        notes="Maternity Consumables"
+                    )
+                
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    inventory_item=d_item.item,
+                    name=d_item.item.name,
+                    unit_price=d_item.item.selling_price,
+                    quantity=d_item.quantity
+                )
+                
+                messages.success(request, f"Dispensed {d_item.item.name} successfully.")
+                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+            else:
+                messages.error(request, f"Insufficient stock for {d_item.item.name}.")
+        else:
+            messages.error(request, "Error dispensing item. Please check the form.")
+
+    else:
+        dispense_form = PrescriptionItemForm()
+        inventory_form = DispenseInventoryForm()
+
     context = {
         'pregnancy': pregnancy,
         'anc_visits': anc_visits,
@@ -460,7 +617,9 @@ def pregnancy_detail(request, pregnancy_id):
         'referrals': referrals,
         'available_departments': Departments.objects.all().order_by('name'),
         'maternity_services': maternity_services,
-        'medical_tests_json': json.dumps(medical_tests_data),
+        'dispense_form': dispense_form,
+        'inventory_form': inventory_form,
+        'medical_tests_data': medical_tests_data,
         'lab_results': lab_results,
         'lab_reports': lab_reports,
     }

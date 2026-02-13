@@ -240,7 +240,7 @@ class PerformedMortuaryServiceForm(forms.ModelForm):
         from accounts.models import Service
         # Filter services to only show Mortuary category services
         self.fields['service'].queryset = Service.objects.filter(
-            category='Mortuary'
+            department__name='Morgue'
         ).order_by('name')
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'

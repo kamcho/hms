@@ -385,3 +385,143 @@ def dispense_item(request):
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+@login_required
+def procurement_dashboard(request):
+    """Dashboard for managing Stock Intake (GRN)"""
+    from datetime import datetime
+    
+    # Imports inside function to avoid circular imports if any
+    from accounts.models import InventoryPurchase, SupplierInvoice
+    
+    # Get date filters
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    
+    purchases = InventoryPurchase.objects.all().select_related('supplier', 'invoice_ref', 'recorded_by').order_by('-date')
+    
+    if from_date:
+        purchases = purchases.filter(date__gte=from_date)
+    if to_date:
+        purchases = purchases.filter(date__lte=to_date)
+        
+    # Form for adding purchase (GRN)
+    # We need to import the form here or ensure it's available
+    from .forms import InventoryPurchaseForm
+    
+    context = {
+        'purchases': purchases,
+        'from_date': from_date,
+        'to_date': to_date,
+        'purchase_form': InventoryPurchaseForm(),
+    }
+    return render(request, 'inventory/procurement_dashboard.html', context)
+
+@login_required
+def add_inventory_purchase(request):
+    from .forms import InventoryPurchaseForm
+    from accounts.models import SupplierInvoice
+    if request.method == 'POST':
+        form = InventoryPurchaseForm(request.POST)
+        if form.is_valid():
+            purchase = form.save(commit=False)
+            purchase.recorded_by = request.user
+
+            # Auto-create a SupplierInvoice for this GRN
+            invoice_number = form.cleaned_data.get('invoice_number', '').strip()
+            invoice = SupplierInvoice.objects.create(
+                supplier=purchase.supplier,
+                invoice_number=invoice_number,
+                date=purchase.date,
+                total_amount=purchase.total_amount,
+                status='Pending',
+                recorded_by=request.user,
+            )
+            purchase.invoice_ref = invoice
+            purchase.save()
+
+            messages.success(request, f"GRN Created: {purchase.supplier.name} on {purchase.date}. Invoice #{invoice_number} recorded. Now add items.")
+            return redirect('inventory:add_grn_item', grn_id=purchase.id)
+        else:
+            messages.error(request, f"Error recording purchase: {form.errors}")
+    return redirect('inventory:procurement_dashboard')
+
+@login_required
+def add_grn_item(request, grn_id):
+    """View to add Stock Record items to a specific GRN (InventoryPurchase).
+    Mirrors the add_stock view's full workflow: StockRecordForm with
+    profit/loss calculator and selling price update option.
+    """
+    from accounts.models import InventoryPurchase
+    from .forms import StockRecordForm
+    
+    purchase = get_object_or_404(InventoryPurchase, id=grn_id)
+    
+    if request.method == 'POST':
+        form = StockRecordForm(request.POST)
+        # Supplier comes from the GRN header, not the form
+        form.fields['supplier'].required = False
+        if form.is_valid():
+            stock = form.save(commit=False)
+            stock.purchase_ref = purchase
+            # Override supplier with GRN supplier
+            stock.supplier = purchase.supplier
+            
+            # Manually set item (not in StockRecordForm fields)
+            item_id = request.POST.get('item')
+            if item_id:
+                stock.item = get_object_or_404(InventoryItem, id=item_id)
+            
+            # Calculate purchase price per unit from total purchase price
+            quantity = form.cleaned_data.get('quantity')
+            total_purchase_price = form.cleaned_data.get('purchase_price')
+            
+            if quantity and total_purchase_price:
+                stock.purchase_price = total_purchase_price / quantity
+            
+            stock.save()
+            
+            # Check if user wants to update selling price
+            new_selling_price = request.POST.get('new_selling_price')
+            item = stock.item
+            if new_selling_price:
+                try:
+                    new_price = float(new_selling_price)
+                    old_price = item.selling_price
+                    item.selling_price = new_price
+                    item.save()
+                    messages.success(
+                        request,
+                        f'Stock for "{item.name}" added to GRN. '
+                        f'Selling price updated from KES {old_price} to KES {new_price}.'
+                    )
+                except (ValueError, TypeError):
+                    messages.warning(request, 'Invalid selling price provided. Stock added but price not updated.')
+            else:
+                messages.success(request, f'Stock for "{item.name}" added to GRN successfully.')
+            
+            return redirect('inventory:add_grn_item', grn_id=purchase.id)
+        else:
+            messages.error(request, f"Error adding stock: {form.errors}")
+    else:
+        form = StockRecordForm()
+        form.fields['supplier'].required = False
+    
+    # Get items already added to this GRN
+    added_items = purchase.stock_records.all().select_related('item', 'item__category', 'current_location')
+    
+    # All items for the dropdown and JS profit calculator
+    import json
+    inventory_items = InventoryItem.objects.all().order_by('name')
+    all_items_prices_json = json.dumps({
+        str(item.id): float(item.selling_price) if item.selling_price else 0
+        for item in inventory_items
+    })
+    
+    context = {
+        'purchase': purchase,
+        'form': form,
+        'added_items': added_items,
+        'inventory_items': inventory_items,
+        'all_items_prices_json': all_items_prices_json,
+    }
+    return render(request, 'inventory/add_grn_item.html', context)
