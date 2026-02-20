@@ -1120,7 +1120,7 @@ def record_maternity_discharge(request, pregnancy_id):
     if hasattr(pregnancy, 'delivery') and pregnancy.delivery.visit:
         if hasattr(pregnancy.delivery.visit, 'invoice'):
             invoice = pregnancy.delivery.visit.invoice
-            if invoice.status != 'PAID':
+            if invoice.status != 'Paid':
                 messages.error(request, f"Cannot discharge patient. There is an unpaid invoice for the delivery visit (Invoice #{invoice.id}). Please clear it first.")
                 return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     
