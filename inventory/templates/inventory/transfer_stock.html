@@ -1,0 +1,171 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block content %}
+    <div class="p-6 lg:p-10 space-y-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Stock Transfer</h1>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Transfer Form -->
+            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900">Transfer Details</h2>
+                </div>
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="p-4 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 font-medium text-sm">
+                            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="space-y-4">
+                        <!-- Source Location -->
+                        <div>
+                            <label for="{{ form.source_location.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.source_location.label }}</label>
+                            {{ form.source_location }}
+                            {% if form.source_location.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.source_location.errors.0 }}</p>{% endif %}
+                        </div>
+                        <!-- Destination Location -->
+                        <div>
+                            <label for="{{ form.destination_location.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.destination_location.label }}</label>
+                            {{ form.destination_location }}
+                            {% if form.destination_location.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.destination_location.errors.0 }}</p>{% endif %}
+                        </div>
+                        <!-- Item -->
+                        <div>
+                            <label for="{{ form.item.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.item.label }}</label>
+                            {{ form.item }}
+                            {% if form.item.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.item.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Quantity -->
+                            <div>
+                                <label for="{{ form.quantity.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.quantity.label }}</label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.quantity.errors.0 }}</p>{% endif %}
+                            </div>
+                            <!-- Batch Number -->
+                            <div>
+                                <label for="{{ form.batch_number.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.batch_number.label }}</label>
+                                {{ form.batch_number }}
+                                {% if form.batch_number.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.batch_number.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-1">Transfer Stock</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Instructions -->
+            <div class="space-y-8">
+                <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-900">Instructions</h2>
+                    </div>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                Select the <strong>Source</strong> and
+                                <strong>Destination</strong> departments for the transfer.
+                            </p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                Choose the <strong>Item</strong> to be moved.
+                            </p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                Enter the <strong>Quantity</strong>. The
+                                system will validate that the source department has sufficient stock.
+                            </p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                Optionally specify a <strong>Batch
+                                Number</strong>. If left empty, the system uses <strong>FEFO</strong> (First Expired,
+                                First Out) logic.
+                            </p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+    /* Styling for Django Form Widgets */
+    select,
+    input[type="text"],
+    input[type="number"] {
+        @apply w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-600/20 transition-all outline-none;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #f8fafc;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid transparent;
+    }
+
+    select:focus,
+    input:focus {
+        background-color: #ffffff;
+        border-color: #e2e8f0;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Select2 Overrides */
+    .select2-container--bootstrap-5 .select2-selection {
+        border: none !important;
+        background-color: #f8fafc !important;
+        border-radius: 1rem !important;
+        padding: 0.75rem 1rem !important;
+        height: auto !important;
+    }
+
+    .select2-container--bootstrap-5 .select2-selection--single,
+    .select2-container--default .select2-selection--single {
+        background-color: #f8fafc !important;
+        border: none !important;
+        border-radius: 1rem !important;
+        height: 50px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal !important;
+        padding-left: 0 !important;
+        color: #0f172a !important;
+        font-weight: 500 !important;
+        font-size: 0.875rem !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 48px !important;
+        right: 10px !important;
+    }
+    </style>
+    <script>
+    $(document).ready(function () {
+        if ($('.select2').length > 0) {
+            $('.select2').select2({
+                width: '100%',
+                placeholder: 'Search for an item...',
+                allowClear: true
+            });
+        }
+    });
+    </script>
+{% endblock %}

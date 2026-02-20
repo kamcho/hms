@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -213,95 +211,86 @@
         border-color: #dc2626;
         background: rgba(239, 68, 68, 0.05);
     }
-</style>
-
-<div class="form-container">
-    <div class="form-card">
-        <div class="form-header">
-            <h2>{{ title }}</h2>
-            <p style="color: var(--text-secondary); font-size: 1rem;">Create a new lab result for this patient service.</p>
+    </style>
+    <div class="form-container">
+        <div class="form-card">
+            <div class="form-header">
+                <h2>{{ title }}</h2>
+                <p style="color: var(--text-secondary); font-size: 1rem;">Create a new lab result for this patient service.</p>
+            </div>
+            <div class="invoice-info">
+                <h3>
+                    <i class="fas fa-file-invoice"></i>
+                    Service Invoice Information
+                </h3>
+                <div class="invoice-details">
+                    <div class="invoice-item">
+                        <span class="invoice-label">Patient</span>
+                        <span class="invoice-value">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</span>
+                    </div>
+                    <div class="invoice-item">
+                        <span class="invoice-label">Service</span>
+                        <span class="invoice-value">{{ invoice.service.name }}</span>
+                    </div>
+                    <div class="invoice-item">
+                        <span class="invoice-label">Service Type</span>
+                        <span class="invoice-value">{{ invoice.service.service_type }}</span>
+                    </div>
+                    <div class="invoice-item">
+                        <span class="invoice-label">Price</span>
+                        <span class="invoice-value">${{ invoice.service.price }}</span>
+                    </div>
+                    <div class="invoice-item">
+                        <span class="invoice-label">Created</span>
+                        <span class="invoice-value">{{ invoice.created_at|date:"F d, Y H:i" }}</span>
+                    </div>
+                    <div class="invoice-item">
+                        <span class="invoice-label">Created By</span>
+                        <span class="invoice-value">{{ invoice.created_by.id_number }}</span>
+                    </div>
+                </div>
+            </div>
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="{{ form.patient.id_for_label }}">Patient</label>
+                        {{ form.patient }}
+                        {{ form.patient.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.service.id_for_label }}">Service</label>
+                        {{ form.service }}
+                        {{ form.service.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.priority.id_for_label }}">Priority</label>
+                        {{ form.priority }}
+                        {{ form.priority.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.scheduled_for.id_for_label }}">Scheduled For</label>
+                        {{ form.scheduled_for }}
+                        {{ form.scheduled_for.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.invoice.id_for_label }}">Invoice</label>
+                        {{ form.invoice }}
+                        {{ form.invoice.errors }}
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="{{ form.clinical_notes.id_for_label }}">Clinical Notes</label>
+                        {{ form.clinical_notes }}
+                        {{ form.clinical_notes.errors }}
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <a href="{% url 'lab:radiology_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> Create Lab Result
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <div class="invoice-info">
-            <h3>
-                <i class="fas fa-file-invoice"></i>
-                Service Invoice Information
-            </h3>
-            <div class="invoice-details">
-                <div class="invoice-item">
-                    <span class="invoice-label">Patient</span>
-                    <span class="invoice-value">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</span>
-                </div>
-                <div class="invoice-item">
-                    <span class="invoice-label">Service</span>
-                    <span class="invoice-value">{{ invoice.service.name }}</span>
-                </div>
-                <div class="invoice-item">
-                    <span class="invoice-label">Service Type</span>
-                    <span class="invoice-value">{{ invoice.service.service_type }}</span>
-                </div>
-                <div class="invoice-item">
-                    <span class="invoice-label">Price</span>
-                    <span class="invoice-value">${{ invoice.service.price }}</span>
-                </div>
-                <div class="invoice-item">
-                    <span class="invoice-label">Created</span>
-                    <span class="invoice-value">{{ invoice.created_at|date:"F d, Y H:i" }}</span>
-                </div>
-                <div class="invoice-item">
-                    <span class="invoice-label">Created By</span>
-                    <span class="invoice-value">{{ invoice.created_by.id_number }}</span>
-                </div>
-            </div>
-        </div>
-
-        <form method="post" autocomplete="off">
-            {% csrf_token %}
-            <div class="form-grid">
-                <div class="form-group full-width">
-                    <label for="{{ form.patient.id_for_label }}">Patient</label>
-                    {{ form.patient }}
-                    {{ form.patient.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.service.id_for_label }}">Service</label>
-                    {{ form.service }}
-                    {{ form.service.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.priority.id_for_label }}">Priority</label>
-                    {{ form.priority }}
-                    {{ form.priority.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.scheduled_for.id_for_label }}">Scheduled For</label>
-                    {{ form.scheduled_for }}
-                    {{ form.scheduled_for.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.invoice.id_for_label }}">Invoice</label>
-                    {{ form.invoice }}
-                    {{ form.invoice.errors }}
-                </div>
-
-                <div class="form-group full-width">
-                    <label for="{{ form.clinical_notes.id_for_label }}">Clinical Notes</label>
-                    {{ form.clinical_notes }}
-                    {{ form.clinical_notes.errors }}
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'lab:radiology_dashboard' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> Create Lab Result
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 {% endblock %}

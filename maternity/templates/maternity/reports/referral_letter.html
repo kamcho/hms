@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Maternity Referral Letter - {{ referral.pregnancy.patient.full_name }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <title>Maternity Referral Letter - {{ referral.pregnancy.patient.full_name }}</title>
+        <style>
         @page {
             size: A4;
             margin: 2cm;
@@ -147,74 +146,99 @@
                 display: none;
             }
         }
-    </style>
-</head>
-
-<body>
-    <button class="print-btn" onclick="window.print()">Print Referral Letter</button>
-
-    <div class="header">
-        <div class="hospital-info">
-            <div class="hospital-name">Maternity Health System</div>
-            <div class="hospital-contact">123 Clinical Way, Medical District • Tel: +254 700 000 000</div>
+        </style>
+    </head>
+    <body>
+        <button class="print-btn" onclick="window.print()">Print Referral Letter</button>
+        <div class="header">
+            <div class="hospital-info">
+                <div class="hospital-name">Maternity Health System</div>
+                <div class="hospital-contact">123 Clinical Way, Medical District • Tel: +254 700 000 000</div>
+            </div>
+            {% if referral.urgent %}<div class="urgent-tag">URGENT REFERRAL</div>{% endif %}
         </div>
-        {% if referral.urgent %}
-        <div class="urgent-tag">URGENT REFERRAL</div>
-        {% endif %}
-    </div>
-
-    <div class="title">Clinical Referral Letter</div>
-
-    <div class="info-grid">
-        <div>
-            <div class="label">Date of Referral</div>
-            <div class="value">{{ referral.referral_date|date:"d M Y, H:i" }}</div>
-        </div>
-        <div>
-            <div class="label">Referred To</div>
-            <div class="value">{{ referral.referred_to_facility }} ({{ referral.department|default:"General Intake" }})
+        <div class="title">Clinical Referral Letter</div>
+        <div class="info-grid">
+            <div>
+                <div class="label">Date of Referral</div>
+                <div class="value">{{ referral.referral_date|date:"d M Y, H:i" }}</div>
+            </div>
+            <div>
+                <div class="label">Referred To</div>
+                <div class="value">{{ referral.referred_to_facility }} ({{ referral.department|default:"General Intake" }})</div>
+            </div>
+            <div>
+                <div class="label">Patient Name</div>
+                <div class="value">{{ referral.pregnancy.patient.full_name }}</div>
+            </div>
+            <div>
+                <div class="label">Age / Gender / Gravida / Para</div>
+                <div class="value">{{ referral.pregnancy.patient.age }} yrs • {{ referral.pregnancy.patient.get_gender_display }} • {{ referral.pregnancy.para_code }}</div>
             </div>
         </div>
-        <div>
-            <div class="label">Patient Name</div>
-            <div class="value">{{ referral.pregnancy.patient.full_name }}</div>
+        <div class="content-section">
+            <div class="section-header">Reason for Referral</div>
+            <div class="narrative">{{ referral.reason_for_referral }}</div>
         </div>
-        <div>
-            <div class="label">Age / Gravida / Para</div>
-            <div class="value">{{ referral.pregnancy.patient.age }} yrs • {{ referral.pregnancy.para_code }}</div>
+        
+        {% if latest_triage %}
+        <div class="content-section">
+            <div class="section-header">Latest Triage Assessment</div>
+            <div style="font-size: 9pt; color: #64748b; margin-bottom: 8px;">Recorded on: {{ latest_triage.entry_date|date:"d M Y, H:i" }}</div>
+            <div class="info-grid" style="grid-template-columns: repeat(4, 1fr); padding: 15px; margin-bottom: 15px;">
+                <div>
+                    <div class="label" style="font-size: 8pt;">BP (mmHg)</div>
+                    <div class="value" style="font-size: 10pt;">{{ latest_triage.get_blood_pressure }}</div>
+                </div>
+                <div>
+                    <div class="label" style="font-size: 8pt;">Temp (°C)</div>
+                    <div class="value" style="font-size: 10pt;">{{ latest_triage.temperature|default:"-" }}</div>
+                </div>
+                <div>
+                    <div class="label" style="font-size: 8pt;">Heart Rate</div>
+                    <div class="value" style="font-size: 10pt;">{{ latest_triage.heart_rate|default:"-" }} bpm</div>
+                </div>
+                <div>
+                    <div class="label" style="font-size: 8pt;">SpO2</div>
+                    <div class="value" style="font-size: 10pt;">{{ latest_triage.oxygen_saturation|default:"-" }}%</div>
+                </div>
+            </div>
+            {% if latest_triage.triage_notes %}
+            <div class="narrative" style="margin-top: 10px;">{{ latest_triage.triage_notes }}</div>
+            {% endif %}
         </div>
-    </div>
-
-    <div class="content-section">
-        <div class="section-header">Reason for Referral</div>
-        <div class="narrative">{{ referral.reason_for_referral }}</div>
-    </div>
-
-    <div class="content-section">
-        <div class="section-header">Clinical Summary & Findings</div>
-        <div class="narrative">{{ referral.clinical_clinical_summary }}</div>
-    </div>
-
-    <div class="content-section">
-        <div class="section-header">Transport Details</div>
-        <div class="value" style="font-size: 11pt;">Mode of Transport: <strong>{{ referral.transport_mode }}</strong>
+        {% endif %}
+        <div class="content-section">
+            <div class="section-header">Clinical Summary & Findings</div>
+            <div class="narrative">{{ referral.clinical_clinical_summary }}</div>
         </div>
-    </div>
-
-    <div class="footer">
-        <div class="sign-area">
-            <div class="label">Referring Clinician</div>
-            <div class="value" style="margin-top: 10px;">{{
-                referral.referred_by.get_full_name|default:referral.referred_by.username }}</div>
-            <div style="font-size: 8pt; color: #64748b; margin-top: 4px;">Reg No: #{{
-                referral.referred_by.id_number|default:"N/A" }}</div>
+        <div class="content-section">
+            <div class="section-header">Transport Details</div>
+            <div class="value" style="font-size: 11pt;">
+                Mode of Transport: <strong>{{ referral.transport_mode }}</strong>
+            </div>
         </div>
-        <div class="sign-area">
-            <div class="label">Receiving Officer Signature</div>
-            <div style="height: 40px;"></div>
-            <div style="font-size: 8pt; color: #64748b;">Date & Time of Arrival</div>
+        <div class="footer">
+            <div class="sign-area">
+                <div class="label">Referring Clinician</div>
+                <div class="value" style="margin-top: 10px;">
+                    {{ referral.referred_by.get_full_name|default:referral.referred_by.username }}
+                </div>
+                {% if referral.referred_by.phone %}
+                <div style="font-size: 9pt; color: #334155; margin-top: 2px;">
+                    Tel: {{ referral.referred_by.phone }}
+                </div>
+                {% endif %}
+                <div style="font-size: 8pt; color: #64748b; margin-top: 4px;">
+                    Reg No: #{{ referral.referred_by.id_number|default:"N/A" }}
+                </div>
+            </div>
+            <div class="sign-area">
+                <div class="label">Receiving Officer Signature</div>
+                <div style="height: 40px;"></div>
+                <div style="font-size: 8pt; color: #64748b;">Date & Time of Arrival</div>
+            </div>
         </div>
-    </div>
-</body>
-
+    </body>
 </html>
+

@@ -1,0 +1,322 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Inventory Distribution - {{ item.name }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .distribution-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .distribution-title h1 {
+        font-size: 2.5rem;
+        background: var(--primary-gradient);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-back {
+        background: white;
+        color: var(--text-primary);
+        padding: 0.75rem 1.5rem;
+        border-radius: 14px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-back:hover {
+        transform: translateX(-4px);
+        background: #f8fafc;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 24px;
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--primary-gradient);
+        opacity: 0.03;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    /* Distribution Table */
+    .glass-container {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 28px;
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+        backdrop-filter: blur(12px);
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .table-header h2 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #1e293b;
+    }
+
+    .distribution-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.75rem;
+    }
+
+    .distribution-table th {
+        text-align: left;
+        padding: 1rem 1.5rem;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .distribution-table tr td {
+        background: white;
+        padding: 1.25rem 1.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .distribution-table tr td:first-child {
+        border-radius: 16px 0 0 16px;
+        border-left: 1px solid var(--glass-border);
+        border-top: 1px solid var(--glass-border);
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .distribution-table tr td:last-child {
+        border-radius: 0 16px 16px 0;
+        border-right: 1px solid var(--glass-border);
+        border-top: 1px solid var(--glass-border);
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .distribution-table tr:hover td {
+        background: #f8fafc;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+
+    .dept-name {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .qty-badge {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 0.875rem;
+    }
+
+    .progress-bar-container {
+        height: 8px;
+        background: #f1f5f9;
+        border-radius: 999px;
+        overflow: hidden;
+        width: 100px;
+        margin-left: auto;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--primary-gradient);
+        border-radius: 999px;
+    }
+</style>
+
+<div class="distribution-header">
+    <div class="distribution-title">
+        <nav
+            style="display: flex; gap: 0.5rem; font-size: 0.625rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 1rem;">
+            <a href="{% url 'inventory:item_list' %}" style="text-decoration: none; color: inherit;">Inventory</a>
+            <span>/</span>
+            <span style="color: #6366f1;">Distribution Details</span>
+        </nav>
+        <h1>{{ item.name }}</h1>
+        <p style="color: var(--text-secondary); font-weight: 600;">Stock Allocation Across Facilities</p>
+    </div>
+    <a href="{% url 'inventory:item_list' %}" class="btn-back">
+        <i class="fas fa-arrow-left"></i>
+        <span>Return to List</span>
+    </a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Inventory</div>
+        <div class="stat-value">{{ total_stock }} <span
+                style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">{{ item.dispensing_unit
+                }}</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Reporting Departments</div>
+        <div class="stat-value">{{ distribution|length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Selling Price</div>
+        <div class="stat-value">KES {{ item.selling_price }}</div>
+    </div>
+    <div class="stat-card" style="background: var(--primary-gradient); color: white;">
+        <div class="stat-label" style="color: rgba(255,255,255,0.8);">Category</div>
+        <div class="stat-value" style="color: white;">{{ item.category.name }}</div>
+    </div>
+</div>
+
+<div class="glass-container">
+    <div class="table-header">
+        <h2>Departmental Breakdown</h2>
+        <div
+            style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-info-circle"></i>
+            Real-time stock levels per facility
+        </div>
+    </div>
+
+    <table class="distribution-table">
+        <thead>
+            <tr>
+                <th>Department Name</th>
+                <th>Batches</th>
+                <th>Units Allocated</th>
+                <th style="text-align: right;">Distribution %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dist in distribution %}
+            <tr>
+                <td class="dept-name">{{ dist.current_location__name }}</td>
+                <td style="font-weight: 600; color: var(--text-secondary);">{{ dist.batch_count }} Batches</td>
+                <td><span class="qty-badge">{{ dist.total_quantity }} {{ item.dispensing_unit }}</span></td>
+                <td>
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
+                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-primary);">
+                            {% widthratio dist.total_quantity total_stock 100 %}%
+                        </span>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar"
+                                style="width: {% widthratio dist.total_quantity total_stock 100 %}%"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4"
+                    style="text-align: center; padding: 4rem; color: var(--text-secondary); font-weight: 600;">
+                    No stock currently distributed for this item.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="glass-container" style="margin-top: 2rem;">
+    <div class="table-header">
+        <h2>Recent Movements & Adjustments</h2>
+    </div>
+    <table class="distribution-table">
+        <thead>
+            <tr>
+                <th>Action Date</th>
+                <th>Location</th>
+                <th>Qty Change</th>
+                <th>Adjustment Type</th>
+                <th>Logged By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for adj in recent_adjustments %}
+            <tr>
+                <td style="color: var(--text-secondary); font-weight: 600;">{{ adj.adjusted_at|date:"M d, Y H:i" }}</td>
+                <td class="dept-name">{{ adj.adjusted_from.name|default:"Main Store" }}</td>
+                <td style="font-weight: 800; color: {% if adj.quantity > 0 %}#10b981{% else %}#ef4444{% endif %};">
+                    {% if adj.quantity > 0 %}+{% endif %}{{ adj.quantity }}
+                </td>
+                <td><span
+                        style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-secondary);">{{
+                        adj.adjustment_type }}</span></td>
+                <td style="color: var(--text-primary); font-weight: 600;">{{
+                    adj.adjusted_by.get_full_name|default:adj.adjusted_by.username }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5"
+                    style="text-align: center; padding: 4rem; color: var(--text-secondary); font-weight: 600;">
+                    No recent adjustments recorded for this item.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

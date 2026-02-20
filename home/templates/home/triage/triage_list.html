@@ -1,151 +1,137 @@
 {% extends 'users/dashboard_base.html' %}
-
 {% block title %}Triage Entries - HMS{% endblock %}
-
 {% block content %}
-<div class="dashboard-content">
-    <div class="page-header">
-        <h1><i class="fas fa-ambulance"></i> Triage Entries</h1>
-        <div class="header-actions">
-            <a href="{% url 'home:triage:add' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add Triage Entry
-            </a>
-            <a href="{% url 'home:triage:dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-ambulance"></i> Triage Entries
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'home:triage:add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Triage Entry
+                </a>
+                <a href="{% url 'home:triage:dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </div>
         </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="card">
-        <div class="card-body">
-            <form method="get" class="filter-form">
-                <div class="filter-grid">
-                    <div class="filter-group">
-                        <label for="priority">Priority</label>
-                        <select name="priority" id="priority">
-                            <option value="">All Priorities</option>
-                            {% for value, label in triage_entries.model.PRIORITY_CHOICES %}
-                            <option value="{{ value }}" {% if request.GET.priority == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-                        </select>
+        <!-- Filters -->
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="filter-form">
+                    <div class="filter-grid">
+                        <div class="filter-group">
+                            <label for="priority">Priority</label>
+                            <select name="priority" id="priority">
+                                <option value="">All Priorities</option>
+                                {% for value, label in triage_entries.model.PRIORITY_CHOICES %}
+                                    <option value="{{ value }}" {% if request.GET.priority == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="status">Status</label>
+                            <select name="status" id="status">
+                                <option value="">All Status</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="search">Search</label>
+                            <input type="text" name="search" id="search" value="{{ request.GET.search }}" placeholder="Search patient or complaint...">
+                        </div>
+                        <div class="filter-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-secondary">Filter</button>
+                            <a href="{% url 'home:triage:list' %}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
                     </div>
-                    
-                    <div class="filter-group">
-                        <label for="status">Status</label>
-                        <select name="status" id="status">
-                            <option value="">All Status</option>
-                            <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
-                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="search">Search</label>
-                        <input type="text" name="search" id="search" value="{{ request.GET.search }}" placeholder="Search patient or complaint...">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>&nbsp;</label>
-                        <button type="submit" class="btn btn-secondary">Filter</button>
-                        <a href="{% url 'home:triage:list' %}" class="btn btn-outline-secondary">Clear</a>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
-
-    <!-- Triage Entries List -->
-    <div class="card">
-        <div class="card-body">
-            {% if triage_entries %}
-            <div class="table-responsive">
-                <table class="triage-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Priority</th>
-                            <th>Chief Complaint</th>
-                            <th>Triage Nurse</th>
-                            <th>Date/Time</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in triage_entries %}
-                        <tr class="{% if not entry.is_active %}completed-entry{% endif %}">
-                            <td>
-                                <strong>{{ entry.patient.first_name }} {{ entry.patient.last_name }}</strong>
-                                <br><small class="text-muted">{{ entry.patient.age }} years, {{ entry.patient.get_gender_display }}</small>
-                            </td>
-                            <td>
-                                <span class="priority-badge" style="background-color: {{ entry.get_priority_color }}; color: white;">
-                                    {{ entry.get_priority_display }}
-                                </span>
-                            </td>
-                            <td>{{ entry.chief_complaint|truncatechars:50 }}</td>
-                            <td>{{ entry.triage_nurse.get_full_name|default:entry.triage_nurse.username }}</td>
-                            <td>{{ entry.entry_date|date:"M d, Y H:i" }}</td>
-                            <td>
-                                {% if entry.is_active %}
-                                    <span class="badge badge-success">Active</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">Completed</span>
+        <!-- Triage Entries List -->
+        <div class="card">
+            <div class="card-body">
+                {% if triage_entries %}
+                    <div class="table-responsive">
+                        <table class="triage-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Priority</th>
+                                    <th>Chief Complaint</th>
+                                    <th>Triage Nurse</th>
+                                    <th>Date/Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in triage_entries %}
+                                    <tr class="{% if not entry.is_active %}completed-entry{% endif %}">
+                                        <td>
+                                            <strong>{{ entry.patient.first_name }} {{ entry.patient.last_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ entry.patient.age }} years, {{ entry.patient.get_gender_display }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="priority-badge" style="background-color: {{ entry.get_priority_color }}; color: white;">{{ entry.get_priority_display }}</span>
+                                        </td>
+                                        <td>{{ entry.chief_complaint|truncatechars:50 }}</td>
+                                        <td>{{ entry.triage_nurse.get_full_name|default:entry.triage_nurse.username }}</td>
+                                        <td>{{ entry.entry_date|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            {% if entry.is_active %}
+                                                <span class="badge badge-success">Active</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">Completed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <a href="{% url 'home:triage:detail' entry.pk %}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if entry.is_active %}
+                                                    <a href="{% url 'home:triage:edit' entry.pk %}" class="btn btn-sm btn-warning">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'home:triage:complete' entry.pk %}" class="btn btn-sm btn-success">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                        <div class="pagination-wrapper">
+                            <div class="pagination">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">&laquo; First</a>
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Previous</a>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <a href="{% url 'home:triage:detail' entry.pk %}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    {% if entry.is_active %}
-                                    <a href="{% url 'home:triage:edit' entry.pk %}" class="btn btn-sm btn-warning">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'home:triage:complete' entry.pk %}" class="btn btn-sm btn-success">
-                                        <i class="fas fa-check"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            {% if is_paginated %}
-            <div class="pagination-wrapper">
-                <div class="pagination">
-                    {% if page_obj.has_previous %}
-                        <a href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">&laquo; First</a>
-                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Previous</a>
+                                <span class="page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Next</a>
+                                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Last &raquo;</a>
+                                {% endif %}
+                            </div>
+                        </div>
                     {% endif %}
-                    
-                    <span class="page-current">
-                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                    </span>
-                    
-                    {% if page_obj.has_next %}
-                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Next</a>
-                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="page-link">Last &raquo;</a>
-                    {% endif %}
-                </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-ambulance fa-3x text-muted"></i>
+                        <p>No triage entries found.</p>
+                        <a href="{% url 'home:triage:add' %}" class="btn btn-primary">Add First Triage Entry</a>
+                    </div>
+                {% endif %}
             </div>
-            {% endif %}
-            
-            {% else %}
-            <div class="no-data">
-                <i class="fas fa-ambulance fa-3x text-muted"></i>
-                <p>No triage entries found.</p>
-                <a href="{% url 'home:triage:add' %}" class="btn btn-primary">Add First Triage Entry</a>
-            </div>
-            {% endif %}
         </div>
     </div>
-</div>
 {% endblock %}

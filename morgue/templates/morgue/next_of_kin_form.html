@@ -1,132 +1,108 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Add Next of Kin - Morgue{% endblock %}
-
 {% block content %}
-<div class="container">
-    <div class="header-row">
-        <h2><i class="fas fa-user-plus"></i> Add Next of Kin</h2>
-        <div class="header-actions">
-            <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Deceased
-            </a>
-        </div>
-    </div>
-
-    <!-- Deceased Info -->
-    <div class="deceased-info-card">
-        <div class="info-header">
-            <h3><i class="fas fa-user"></i> Deceased Information</h3>
-        </div>
-        <div class="info-content">
-            <div class="info-row">
-                <span class="label">Name:</span>
-                <span class="value">{{ deceased.full_name }}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Tag:</span>
-                <span class="value tag-badge">{{ deceased.tag }}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Date of Death:</span>
-                <span class="value">{{ deceased.date_of_death|date:"F d, Y" }}</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Next of Kin Form -->
-    <div class="form-container">
-        <form method="post" id="next-of-kin-form">
-            {% csrf_token %}
-            
-            <div class="form-section">
-                <h3><i class="fas fa-users"></i> Next of Kin Details</h3>
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label for="{{ form.name.id_for_label }}">Full Name *</label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                            <div class="error">{{ form.name.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.id_type.id_for_label }}">ID Type *</label>
-                        {{ form.id_type }}
-                        {% if form.id_type.errors %}
-                            <div class="error">{{ form.id_type.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.id_number.id_for_label }}">ID Number *</label>
-                        {{ form.id_number }}
-                        {% if form.id_number.errors %}
-                            <div class="error">{{ form.id_number.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.relationship.id_for_label }}">Relationship *</label>
-                        {{ form.relationship }}
-                        {% if form.relationship.errors %}
-                            <div class="error">{{ form.relationship.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.phone.id_for_label }}">Phone Number</label>
-                        {{ form.phone }}
-                        {% if form.phone.errors %}
-                            <div class="error">{{ form.phone.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.email.id_for_label }}">Email Address</label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="error">{{ form.email.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="{{ form.address.id_for_label }}">Physical Address</label>
-                        {{ form.address }}
-                        {% if form.address.errors %}
-                            <div class="error">{{ form.address.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            {{ form.is_primary }}
-                            <span class="checkmark"></span>
-                            <span class="checkbox-text">Primary Contact Person</span>
-                        </label>
-                        <small class="form-help">Check if this is the primary next of kin to contact</small>
-                        {% if form.is_primary.errors %}
-                            <div class="error">{{ form.is_primary.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save Next of Kin
-                </button>
+    <div class="container">
+        <div class="header-row">
+            <h2>
+                <i class="fas fa-user-plus"></i> Add Next of Kin
+            </h2>
+            <div class="header-actions">
                 <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancel
+                    <i class="fas fa-arrow-left"></i> Back to Deceased
                 </a>
             </div>
-        </form>
+        </div>
+        <!-- Deceased Info -->
+        <div class="deceased-info-card">
+            <div class="info-header">
+                <h3>
+                    <i class="fas fa-user"></i> Deceased Information
+                </h3>
+            </div>
+            <div class="info-content">
+                <div class="info-row">
+                    <span class="label">Name:</span>
+                    <span class="value">{{ deceased.full_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Tag:</span>
+                    <span class="value tag-badge">{{ deceased.tag }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Date of Death:</span>
+                    <span class="value">{{ deceased.date_of_death|date:"F d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+        <!-- Next of Kin Form -->
+        <div class="form-container">
+            <form method="post" id="next-of-kin-form">
+                {% csrf_token %}
+                <div class="form-section">
+                    <h3>
+                        <i class="fas fa-users"></i> Next of Kin Details
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.name.id_for_label }}">Full Name *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="error">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.id_type.id_for_label }}">ID Type *</label>
+                            {{ form.id_type }}
+                            {% if form.id_type.errors %}<div class="error">{{ form.id_type.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.id_number.id_for_label }}">ID Number *</label>
+                            {{ form.id_number }}
+                            {% if form.id_number.errors %}<div class="error">{{ form.id_number.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.relationship.id_for_label }}">Relationship *</label>
+                            {{ form.relationship }}
+                            {% if form.relationship.errors %}<div class="error">{{ form.relationship.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.phone.id_for_label }}">Phone Number</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<div class="error">{{ form.phone.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<div class="error">{{ form.email.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="{{ form.address.id_for_label }}">Physical Address</label>
+                            {{ form.address }}
+                            {% if form.address.errors %}<div class="error">{{ form.address.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                {{ form.is_primary }}
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">Primary Contact Person</span>
+                            </label>
+                            <small class="form-help">Check if this is the primary next of kin to contact</small>
+                            {% if form.is_primary.errors %}<div class="error">{{ form.is_primary.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Next of Kin
+                    </button>
+                    <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-
-<style>
+    <style>
 .deceased-info-card {
     background: white;
     border-radius: 12px;
@@ -368,5 +344,5 @@
         justify-content: center;
     }
 }
-</style>
+    </style>
 {% endblock %}

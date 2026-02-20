@@ -1,11 +1,9 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% load custom_filters %}
-
 {% block title %}Pharmacy Operations - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --pharm-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         --pharm-gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -477,319 +475,354 @@
             grid-template-columns: 1fr;
         }
     }
-</style>
-
-<div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
-    <!-- Hero Header -->
-    <div class="pharmacy-hero">
-        <div class="quick-actions">
-            <h1><i class="fas fa-pills"></i> Pharmacy Operations Center</h1>
-            <p>Manage prescriptions, monitor stock levels, and ensure optimal patient care delivery</p>
+    </style>
+    <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
+        <!-- Hero Header -->
+        <div class="pharmacy-hero">
+            <div class="quick-actions">
+                <h1>
+                    <i class="fas fa-pills"></i> Pharmacy Operations Center
+                </h1>
+                <p>Manage prescriptions, monitor stock levels, and ensure optimal patient care delivery</p>
+            </div>
         </div>
-    </div>
-
-    <!-- Statistics Dashboard -->
-    <div class="stats-grid">
-        <div class="stat-card pending">
-            <div class="stat-icon"><i class="fas fa-file-prescription"></i></div>
-            <div class="stat-label">OPD Pending</div>
-            <div class="stat-value">{{ stats.pending_prescriptions }}</div>
-        </div>
-        <div class="stat-card requests" style="--gradient: var(--pharm-gradient-3)">
-            <div class="stat-icon"><i class="fas fa-bed-pulse"></i></div>
-            <div class="stat-label">IPD Pending</div>
-            <div class="stat-value">{{ stats.pending_ipd_count }}</div>
-        </div>
-        <div class="stat-card low-stock">
-            <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
-            <div class="stat-label">Stock Alerts</div>
-            <div class="stat-value">{{ stats.low_stock_count }}</div>
-        </div>
-        <div class="stat-card requests">
-            <div class="stat-icon"><i class="fas fa-truck-ramp-box"></i></div>
-            <div class="stat-label">Pending Requests</div>
-            <div class="stat-value">{{ stats.pending_requests }}</div>
-        </div>
-        <div class="stat-card dispensed">
-            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
-            <div class="stat-label">Dispensed Today</div>
-            <div class="stat-value">{{ stats.dispensed_today }}</div>
-        </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-        <div>
-            <!-- Prescription Queue -->
-            <div class="section-card">
-                <div class="section-header">
-                    <h2><i class="fas fa-clinic-medical"></i> OPD Prescription Queue</h2>
-                    <span class="badge badge-primary">{{ stats.pending_prescriptions }} Active</span>
+        <!-- Statistics Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card pending">
+                <div class="stat-icon">
+                    <i class="fas fa-file-prescription"></i>
                 </div>
-
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <form method="GET">
-                        <input type="text" name="search" placeholder="Search by patient name or medication..."
-                            value="{{ search_query }}">
-                    </form>
+                <div class="stat-label">OPD Pending</div>
+                <div class="stat-value">{{ stats.pending_prescriptions }}</div>
+            </div>
+            <div class="stat-card requests" style="--gradient: var(--pharm-gradient-3)">
+                <div class="stat-icon">
+                    <i class="fas fa-bed-pulse"></i>
                 </div>
-
-                {% regroup pending_items by prescription as prescription_groups %}
-                {% for group in prescription_groups %}
-                <div class="prescription-group">
-                    <div class="patient-header">
-                        <div class="patient-info">
-                            <div class="patient-avatar">{{ group.grouper.patient.full_name|slice:":1" }}</div>
-                            <div class="patient-details">
-                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{ group.grouper.patient.full_name }}</a></h3>
-                                <div class="patient-meta">
-                                    <span><i class="far fa-clock"></i> {{ group.grouper.prescribed_at|date:"M d, H:i" }}</span>
-                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.grouper.prescribed_by.last_name }}</span>
-                                    {% if group.grouper.invoice %}
-                                    <span><i class="fas fa-file-invoice-dollar"></i> {{ group.grouper.invoice.status|upper }}</span>
+                <div class="stat-label">IPD Pending</div>
+                <div class="stat-value">{{ stats.pending_ipd_count }}</div>
+            </div>
+            <div class="stat-card low-stock">
+                <div class="stat-icon">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="stat-label">Stock Alerts</div>
+                <div class="stat-value">{{ stats.low_stock_count }}</div>
+            </div>
+            <div class="stat-card requests">
+                <div class="stat-icon">
+                    <i class="fas fa-truck-ramp-box"></i>
+                </div>
+                <div class="stat-label">Pending Requests</div>
+                <div class="stat-value">{{ stats.pending_requests }}</div>
+            </div>
+            <div class="stat-card dispensed">
+                <div class="stat-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="stat-label">Dispensed Today</div>
+                <div class="stat-value">{{ stats.dispensed_today }}</div>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <div>
+                <!-- OPD Prescription & Consumable Queue -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-clinic-medical"></i> OPD Dispensing Queue
+                        </h2>
+                        <span class="badge badge-primary">{{ stats.pending_prescriptions }} Pending Items</span>
+                    </div>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <form method="GET">
+                            <input type="text" name="search" placeholder="Search by patient name or medication..." value="{{ search_query }}">
+                        </form>
+                    </div>
+                    {% for group in opd_groups %}
+                        <div class="prescription-group">
+                            <div class="patient-header">
+                                <div class="patient-info">
+                                    <div class="patient-avatar">{{ group.patient.full_name|slice:":1" }}</div>
+                                    <div class="patient-details">
+                                        <h3>
+                                            <a href="{% url 'home:patient_detail' group.patient.pk %}">{{
+                                            group.patient.full_name }}</a>
+                                        </h3>
+                                        <div class="patient-meta">
+                                            {% if group.prescribed_at %}<span><i class="far fa-clock"></i> {{ group.prescribed_at|date:"M d, H:i" }}</span>{% endif %}
+                                            {% if group.prescribed_by %}<span><i class="fas fa-user-md"></i> Dr. {{ group.prescribed_by.last_name }}</span>{% endif %}
+                                            <span><i class="fas fa-file-invoice-dollar"></i> {{ group.invoice_status|upper
+                                            }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="action-btn-group">
+                                    {% if group.invoice_status == 'Paid' %}
+                                        <button class="btn btn-success dispense-all-btn" data-visit-id="{{ group.visit.id }}" data-patient="{{ group.patient.full_name }}">
+                                            <i class="fas fa-check-double"></i> Dispense All
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-ghost" disabled title="Payment Required">
+                                            <i class="fas fa-lock"></i> Payment Pending
+                                        </button>
                                     {% endif %}
                                 </div>
                             </div>
+                            <table class="med-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Type</th>
+                                        <th>Details</th>
+                                        <th>Quantity</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in group.prescriptions %}
+                                        <tr>
+                                            <td>
+                                                <div class="med-name">{{ item.medication.name }}</div>
+                                                <div class="med-dosage">{{ item.dose_count }} units / dose</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-primary"><i class="fas fa-pills"></i> Medication</span>
+                                            </td>
+                                            <td>
+                                                <div class="badge badge-primary">{{ item.frequency }}</div>
+                                            </td>
+                                            <td>
+                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
+                                                <span style="color: var(--text-secondary);">{{ item.medication.unit }}</span>
+                                            </td>
+                                            <td>
+                                                {% if group.invoice_status == 'Paid' %}
+                                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
+                                                    group.invoice_status }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    {% for ci in group.consumables %}
+                                        <tr>
+                                            <td>
+                                                <div class="med-name">{{ ci.inventory_item.name }}</div>
+                                                <div class="med-dosage">Consumable</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-warning"><i class="fas fa-box-open"></i> Consumable</span>
+                                            </td>
+                                            <td>&mdash;</td>
+                                            <td>
+                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ ci.quantity }}</span>
+                                                <span style="color: var(--text-secondary);"> {{
+                                                ci.inventory_item.unit|default:"units" }}</span>
+                                            </td>
+                                            <td>
+                                                {% if group.invoice_status == 'Paid' %}
+                                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
+                                                    group.invoice_status }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="action-btn-group">
-                            {% if group.grouper.invoice.status == 'Paid' %}
-                            <button class="btn btn-success dispense-all-btn"
-                                data-prescription-id="{{ group.grouper.id }}"
-                                data-patient="{{ group.grouper.patient.full_name }}">
-                                <i class="fas fa-check-double"></i> Dispense All
-                            </button>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h4>All Clear</h4>
+                            <p>No pending prescriptions or consumables. Queue is empty.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+                <!-- IPD Dispensing Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-bed-pulse"></i> IPD Dispensing Queue
+                        </h2>
+                        <span class="badge badge-success">{{ stats.pending_ipd_count }} Pending Items</span>
+                    </div>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <form method="GET">
+                            <input type="text" name="search" placeholder="Search inpatient or medication..." value="{{ search_query }}">
+                        </form>
+                    </div>
+                    {% for group in ipd_groups %}
+                        <div class="prescription-group">
+                            <div class="patient-header">
+                                <div class="patient-info">
+                                    <div class="patient-avatar" style="background: var(--pharm-gradient-3)">
+                                        {{
+                                        group.patient.full_name|slice:":1" }}
+                                    </div>
+                                    <div class="patient-details">
+                                        <h3>
+                                            <a href="{% url 'home:patient_detail' group.patient.pk %}">{{
+                                            group.patient.full_name }}</a>
+                                        </h3>
+                                        <div class="patient-meta">
+                                            {% if group.admission and group.admission.bed %}
+                                                <span><i class="fas fa-procedures"></i> {{ group.admission.bed.ward.name }} / Bed {{
+                                                group.admission.bed.bed_number }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="action-btn-group">
+                                    <button class="btn btn-success dispense-all-btn" data-visit-id="{{ group.visit.id }}" data-patient="{{ group.patient.full_name }}">
+                                        <i class="fas fa-check-double"></i> Dispense All
+                                    </button>
+                                </div>
+                            </div>
+                            <table class="med-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Type</th>
+                                        <th>Regimen</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in group.medications %}
+                                        <tr>
+                                            <td>
+                                                <div class="med-name">{{ item.item.name }}</div>
+                                                <div class="med-dosage">{{ item.dose_count }} units / dose</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-primary"><i class="fas fa-pills"></i> Medication</span>
+                                            </td>
+                                            <td>
+                                                <div class="badge badge-primary" style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">
+                                                    {{ item.frequency
+                                                    }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if item.quantity > 0 %}
+                                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
+                                                {% else %}
+                                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">Auto</span>
+                                                {% endif %}
+                                                <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units"
+                                                }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    {% for ci in group.consumables %}
+                                        <tr>
+                                            <td>
+                                                <div class="med-name">{{ ci.inventory_item.name|default:ci.item.name }}</div>
+                                                <div class="med-dosage">Consumable</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-warning"><i class="fas fa-box-open"></i> Consumable</span>
+                                            </td>
+                                            <td>&mdash;</td>
+                                            <td>
+                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ ci.quantity }}</span>
+                                                <span style="color: var(--text-secondary);">
+                                                    {% if ci.inventory_item %}
+                                                        {{ ci.inventory_item.dispensing_unit|default:"units" }}
+                                                    {% else %}
+                                                        {{ ci.item.dispensing_unit|default:"units" }}
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="fas fa-bed"></i>
+                            <h4>No IPD Orders</h4>
+                            <p>No pending medications or consumables for inpatients.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- Sidebar: Alerts & Requests -->
+            <div>
+                <!-- Stock Alerts -->
+                <div class="side-card">
+                    <h3>
+                        <i class="fas fa-triangle-exclamation"></i> Stock Alerts
+                    </h3>
+                    {% for stock in pharmacy_stock %}
+                        {% if stock in low_stock_items or stock in expiring_soon_items %}
+                            <div class="alert-item {% if stock in expiring_soon_items %}danger{% else %}warning{% endif %}">
+                                <div>
+                                    <div style="font-weight: 700; color: var(--text-primary);">{{ stock.item.name }}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Stock: {{ stock.quantity }} | Exp: {{ stock.expiry_date|date:"M Y"|default:"N/A" }}</div>
+                                </div>
+                                {% if stock in expiring_soon_items %}
+                                    <span class="badge badge-danger">Expiring</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Low</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% empty %}
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                            <div>All stock levels healthy</div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <!-- Inventory Requests -->
+                <div class="side-card">
+                    <h3>
+                        <i class="fas fa-history"></i> Recent Requests
+                    </h3>
+                    {% for request in inventory_requests %}
+                        <div class="alert-item" style="border-left-color: {% if request.status == 'Pending' %}#fee140{% elif request.status == 'Approved' %}#43e97b{% else %}#f5576c{% endif %};">
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary);">{{ request.item.name }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Qty: {{ request.quantity }} | {{ request.requested_at|date:"M d" }}</div>
+                            </div>
+                            {% if request.status == 'Pending' %}
+                                <span class="badge badge-warning">Waiting</span>
+                            {% elif request.status == 'Approved' %}
+                                <span class="badge badge-success">Approved</span>
                             {% else %}
-                            <button class="btn btn-ghost" disabled title="Payment Required">
-                                <i class="fas fa-lock"></i> Payment Pending
-                            </button>
+                                <span class="badge badge-danger">Declined</span>
                             {% endif %}
-                            <a href="{% url 'home:prescription_detail' group.grouper.id %}" class="btn btn-ghost">
-                                <i class="fas fa-external-link-alt"></i> Details
-                            </a>
                         </div>
-                    </div>
-
-                    <table class="med-table">
-                        <thead>
-                            <tr>
-                                <th>Medication</th>
-                                <th>Regimen</th>
-                                <th>Quantity</th>
-                                <th>Status</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in group.list %}
-                            <tr>
-                                <td>
-                                    <div class="med-name">{{ item.medication.name }}</div>
-                                    <div class="med-dosage">{{ item.dose_count }} units / dose</div>
-                                </td>
-                                <td>
-                                    <div class="badge badge-primary">{{ item.frequency_count }}x daily</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                        {{ item.duration_days }} days</div>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
-                                    <span style="color: var(--text-secondary);"> {{ item.medication.unit }}</span>
-                                </td>
-                                <td>
-                                    {% if group.grouper.invoice.status == 'Paid' %}
-                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
-                                    {% elif group.grouper.invoice %}
-                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
-                                        group.grouper.invoice.status }}</span>
-                                    {% else %}
-                                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> No
-                                        Invoice</span>
-                                    {% endif %}
-                                </td>
-                                <td style="text-align: right;">
-                                    {% if group.grouper.invoice.status == 'Paid' %}
-                                    <button class="btn btn-success dispense-btn" data-item-id="{{ item.id }}"
-                                        data-medication="{{ item.medication.name }}"
-                                        data-patient="{{ group.grouper.patient.full_name }}">
-                                        <i class="fas fa-check"></i> Dispense
-                                    </button>
-                                    {% else %}
-                                    <button class="btn btn-ghost" disabled><i class="fas fa-lock"></i> Locked</button>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% empty %}
-                <div class="empty-state">
-                    <i class="fas fa-clipboard-check"></i>
-                    <h4>All Clear</h4>
-                    <p>No pending prescriptions. Queue is empty.</p>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- IPD Dispensing Section -->
-            <div class="section-card">
-                <div class="section-header">
-                    <h2><i class="fas fa-bed-pulse"></i> Dispense to IPD</h2>
-                    <span class="badge badge-success">{{ stats.pending_ipd_count }} Prescribed</span>
-                </div>
-
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <form method="GET">
-                        <input type="text" name="search" placeholder="Search inpatient or medication..."
-                            value="{{ search_query }}">
-                    </form>
-                </div>
-
-                {% regroup pending_ipd_items by admission as admission_groups %}
-                {% for group in admission_groups %}
-                <div class="prescription-group">
-                    <div class="patient-header">
-                        <div class="patient-info">
-                            <div class="patient-avatar" style="background: var(--pharm-gradient-3)">{{
-                                group.grouper.patient.full_name|slice:":1" }}</div>
-                            <div class="patient-details">
-                                <h3><a href="{% url 'home:patient_detail' group.grouper.patient.pk %}">{{
-                                        group.grouper.patient.full_name }}</a></h3>
-                                <div class="patient-meta">
-                                    <span><i class="fas fa-procedures"></i> {{ group.grouper.bed.ward.name }} / Bed {{   group.grouper.bed.bed_number }}</span>
-                                    <span><i class="fas fa-user-md"></i> Dr. {{ group.list.0.prescribed_by.last_name  }}</span>
-                                </div>
-                            </div>
+                    {% empty %}
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                            <div>No recent requests</div>
                         </div>
-                    </div>
-
-                    <table class="med-table">
-                        <thead>
-                            <tr>
-                                <th>Medication</th>
-                                <th>Regimen</th>
-                                <th>Quantity (Auto)</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in group.list %}
-                            <tr>
-                                <td>
-                                    <div class="med-name">{{ item.item.name }}</div>
-                                    <div class="med-dosage">{{ item.dose_count }} units / dose</div>
-                                </td>
-                                <td>
-                                    <div class="badge badge-primary"
-                                        style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">{{ item.frequency_count }}x daily</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                        {{ item.duration_days }} days</div>
-                                </td>
-                                <td>
-                                    {% if item.quantity > 0 %}
-                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
-                                    {% else %}
-                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">{{ item.dose_count|multiply:item.frequency_count|multiply:item.duration_days }}</span>
-                                    <i class="fas fa-magic text-[10px]" title="Calculated from regimen"></i>
-                                    {% endif %}
-                                    <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units" }}</span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <button class="btn btn-primary dispense-ipd-btn" data-item-id="{{ item.id }}"
-                                        data-medication="{{ item.item.name }}"
-                                        data-patient="{{ group.grouper.patient.full_name }}">
-                                        <i class="fas fa-truck-medical"></i> Dispense to Ward
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <div class="empty-state">
-                    <i class="fas fa-bed"></i>
-                    <h4>No IPD Orders</h4>
-                    <p>No pending medications for inpatients.</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Sidebar: Alerts & Requests -->
-        <div>
-            <!-- Stock Alerts -->
-            <div class="side-card">
-                <h3><i class="fas fa-triangle-exclamation"></i> Stock Alerts</h3>
-                {% for stock in pharmacy_stock %}
-                {% if stock in low_stock_items or stock in expiring_soon_items %}
-                <div class="alert-item {% if stock in expiring_soon_items %}danger{% else %}warning{% endif %}">
-                    <div>
-                        <div style="font-weight: 700; color: var(--text-primary);">{{ stock.item.name }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Stock: {{ stock.quantity }} | Exp: {{ stock.expiry_date|date:"M Y"|default:"N/A" }}
-                        </div>
-                    </div>
-                    {% if stock in expiring_soon_items %}
-                    <span class="badge badge-danger">Expiring</span>
-                    {% else %}
-                    <span class="badge badge-warning">Low</span>
-                    {% endif %}
-                </div>
-                {% endif %}
-                {% empty %}
-                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                    <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                    <div>All stock levels healthy</div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Inventory Requests -->
-            <div class="side-card">
-                <h3><i class="fas fa-history"></i> Recent Requests</h3>
-                {% for request in inventory_requests %}
-                <div class="alert-item"
-                    style="border-left-color: {% if request.status == 'Pending' %}#fee140{% elif request.status == 'Approved' %}#43e97b{% else %}#f5576c{% endif %};">
-                    <div>
-                        <div style="font-weight: 700; color: var(--text-primary);">{{ request.item.name }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Qty: {{ request.quantity }} | {{ request.requested_at|date:"M d" }}
-                        </div>
-                    </div>
-                    {% if request.status == 'Pending' %}
-                    <span class="badge badge-warning">Waiting</span>
-                    {% elif request.status == 'Approved' %}
-                    <span class="badge badge-success">Approved</span>
-                    {% else %}
-                    <span class="badge badge-danger">Declined</span>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                    <div>No recent requests</div>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </div>
-</div>
-
-<script>
-    // Dispense individual item
-    document.querySelectorAll('.dispense-btn').forEach(button => {
+    <script>
+    // Dispense All items for a visit
+    document.querySelectorAll('.dispense-all-btn').forEach(button => {
         button.addEventListener('click', function () {
-            const itemId = this.dataset.itemId;
-            const medication = this.dataset.medication;
+            const visitId = this.dataset.visitId;
             const patient = this.dataset.patient;
 
-            if (confirm(`Dispense ${medication} for ${patient}?`)) {
+            if (confirm(`Dispense all pending items for ${patient}?`)) {
                 this.disabled = true;
                 this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
 
-                fetch(`/home/pharmacy/dispense/${itemId}/`, {
+                fetch(`/home/pharmacy/dispense-all/${visitId}/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
@@ -800,44 +833,8 @@
                     .then(data => {
                         if (data.success) {
                             this.innerHTML = '<i class="fas fa-check"></i> Done';
-                            setTimeout(() => location.reload(), 800);
-                        } else {
-                            alert('Error: ' + data.error);
-                            this.disabled = false;
-                            this.innerHTML = '<i class="fas fa-check"></i> Dispense';
-                        }
-                    })
-                    .catch(error => {
-                        alert('System error: ' + error);
-                        this.disabled = false;
-                        this.innerHTML = '<i class="fas fa-check"></i> Dispense';
-                    });
-            }
-        });
-    });
-
-    // Dispense all items in prescription
-    document.querySelectorAll('.dispense-all-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const prescriptionId = this.dataset.prescriptionId;
-            const patient = this.dataset.patient;
-
-            if (confirm(`Dispense all medications for ${patient}?`)) {
-                this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
-
-                fetch(`/home/pharmacy/dispense-all/${prescriptionId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
                             alert(data.message);
-                            location.reload();
+                            setTimeout(() => location.reload(), 500);
                         } else {
                             alert('Error: ' + data.error);
                             this.disabled = false;
@@ -852,43 +849,5 @@
             }
         });
     });
-
-    // Dispense IPD item
-    document.querySelectorAll('.dispense-ipd-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const itemId = this.dataset.itemId;
-            const medication = this.dataset.medication;
-            const patient = this.dataset.patient;
-
-            if (confirm(`Dispense ${medication} to ward for ${patient}?`)) {
-                this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
-
-                fetch(`/home/pharmacy/dispense-ipd/${itemId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.innerHTML = '<i class="fas fa-check"></i> Sent';
-                            setTimeout(() => location.reload(), 800);
-                        } else {
-                            alert('Error: ' + data.error);
-                            this.disabled = false;
-                            this.innerHTML = '<i class="fas fa-truck-medical"></i> Dispense to Ward';
-                        }
-                    })
-                    .catch(error => {
-                        alert('System error: ' + error);
-                        this.disabled = false;
-                        this.innerHTML = '<i class="fas fa-truck-medical"></i> Dispense to Ward';
-                    });
-            }
-        });
-    });
-</script>
+    </script>
 {% endblock %}

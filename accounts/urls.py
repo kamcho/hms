@@ -10,6 +10,7 @@ urlpatterns = [
     path('invoice/<int:pk>/', views.invoice_detail, name='invoice_detail'),
     path('invoice/<int:pk>/payment/', views.record_payment, name='record_payment'),
     path('invoice/<int:pk>/delete/', views.delete_invoice, name='delete_invoice'),
+    path('invoice/item/<int:item_id>/delete/', views.delete_invoice_item, name='delete_invoice_item'),
     
     # Expense Module
     path('expenses/', views.expense_dashboard, name='expense_dashboard'),

@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Add Items to GRN | HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -387,42 +385,37 @@
             transform: translateY(0);
         }
     }
-</style>
-
-<div class="grn-page">
-    <!-- Header -->
-    <div class="grn-header-bar">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <a href="{% url 'inventory:procurement_dashboard' %}" class="back-btn">
-                <i class="fas fa-arrow-left"></i>
-            </a>
-            <h1>
-                Stock Intake (GRN)
-                <small>Record items received in this shipment</small>
-            </h1>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div class="badge-muted"
-                style="padding: 0.6rem 1.25rem; border-radius: 12px; font-size: 0.8rem; font-weight: 800;">
-                TOTAL: <strong style="color: #1e293b; margin-left: 0.25rem;">KES {{ purchase.total_amount|floatformat:2
-                    }}</strong>
+    </style>
+    <div class="grn-page">
+        <!-- Header -->
+        <div class="grn-header-bar">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="{% url 'inventory:procurement_dashboard' %}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1>
+                    Stock Intake (GRN)
+                    <small>Record items received in this shipment</small>
+                </h1>
             </div>
-            <div
-                style="padding: 0.6rem 1.25rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; font-size: 0.75rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.05em;">
-                {{ purchase.status|default:"Draft" }}
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="badge-muted" style="padding: 0.6rem 1.25rem; border-radius: 12px; font-size: 0.8rem; font-weight: 800;">
+                    TOTAL: <strong style="color: #1e293b; margin-left: 0.25rem;">KES {{ purchase.total_amount|floatformat:2
+                }}</strong>
             </div>
+            <div style="padding: 0.6rem 1.25rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; font-size: 0.75rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.05em;">{{ purchase.status|default:"Draft" }}</div>
             {% if added_items %}
-            <a href="{% url 'inventory:procurement_dashboard' %}" class="finish-btn">
-                FINISH & CLOSE <i class="fas fa-check"></i>
-            </a>
+                <a href="{% url 'inventory:procurement_dashboard' %}" class="finish-btn">
+                    FINISH & CLOSE <i class="fas fa-check"></i>
+                </a>
             {% endif %}
         </div>
     </div>
-
     <!-- GRN Info Strip -->
     <div class="grn-info-strip">
         <div class="info-chip">
-            <div class="chip-icon" style="background: #f1f5f9; color: #64748b;"><i class="fas fa-calendar-alt"></i>
+            <div class="chip-icon" style="background: #f1f5f9; color: #64748b;">
+                <i class="fas fa-calendar-alt"></i>
             </div>
             <div>
                 <div class="chip-label">Receipt Date</div>
@@ -430,31 +423,41 @@
             </div>
         </div>
         <div class="info-chip">
-            <div class="chip-icon" style="background: #1e293b; color: white; font-weight: 900; font-size: 0.75rem;">{{
-                purchase.supplier.name|slice:":1"|upper }}</div>
+            <div class="chip-icon" style="background: #1e293b; color: white; font-weight: 900; font-size: 0.75rem;">
+                {{
+                purchase.supplier.name|slice:":1"|upper }}
+            </div>
             <div>
                 <div class="chip-label">Supplier</div>
                 <div class="chip-value">{{ purchase.supplier.name }}</div>
             </div>
         </div>
         <div class="info-chip">
-            <div class="chip-icon" style="background: #eef2ff; color: #6366f1;"><i class="fas fa-file-invoice"></i>
+            <div class="chip-icon" style="background: #eef2ff; color: #6366f1;">
+                <i class="fas fa-file-invoice"></i>
             </div>
             <div>
                 <div class="chip-label">Invoice Ref</div>
-                <div class="chip-value">{% if purchase.invoice_ref %}#{{ purchase.invoice_ref.invoice_number }}{% else
-                    %}Not Linked{% endif %}</div>
+                <div class="chip-value">
+                    {% if purchase.invoice_ref %}
+                        #{{ purchase.invoice_ref.invoice_number }}
+                    {% else
+                        %}
+                        Not Linked
+                    {% endif %}
+                </div>
             </div>
         </div>
         <div class="info-chip">
-            <div class="chip-icon" style="background: #f0fdf4; color: #16a34a;"><i class="fas fa-boxes"></i></div>
+            <div class="chip-icon" style="background: #f0fdf4; color: #16a34a;">
+                <i class="fas fa-boxes"></i>
+            </div>
             <div>
                 <div class="chip-label">Items Added</div>
                 <div class="chip-value">{{ added_items|length }}</div>
             </div>
         </div>
     </div>
-
     <!-- Main Layout -->
     <div class="grn-layout">
         <!-- Add Stock Form (Left) — mirrors add_stock.html exactly -->
@@ -463,133 +466,103 @@
                 <h2>Add Physical Stock</h2>
                 <p>Enter details for the batch/shipment received.</p>
             </div>
-
             <form method="post" autocomplete="off" id="addStockForm">
                 {% csrf_token %}
                 <div class="form-grid">
                     <!-- Item Selector (full width) -->
                     <div class="form-group full-width">
                         <label>Select Item</label>
-                        <select name="item" id="id_item" required
-                            style="width:100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 0.95rem; font-weight: 500; color: #1e293b; background: white;">
+                        <select name="item" id="id_item" required style="width:100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 0.95rem; font-weight: 500; color: #1e293b; background: white;">
                             <option value="">-- Select an item --</option>
-                            {% for inv_item in inventory_items %}
-                            <option value="{{ inv_item.id }}"
-                                data-selling-price="{{ inv_item.selling_price|default:0 }}">{{ inv_item.name }}
-                            </option>
-                            {% endfor %}
+                            {% for inv_item in inventory_items %}<option value="{{ inv_item.id }}" data-selling-price="{{ inv_item.selling_price|default:0 }}">{{ inv_item.name }}</option>{% endfor %}
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="{{ form.batch_number.id_for_label }}">Batch Number</label>
                         {{ form.batch_number }}
                         {{ form.batch_number.errors }}
                     </div>
-
                     <div class="form-group">
                         <label for="{{ form.quantity.id_for_label }}">Quantity</label>
                         {{ form.quantity }}
                         {{ form.quantity.errors }}
                     </div>
-
                     <div class="form-group">
                         <label for="{{ form.expiry_date.id_for_label }}">Expiry Date</label>
                         {{ form.expiry_date }}
                         {{ form.expiry_date.errors }}
                     </div>
-
                     <div class="form-group">
                         <label for="{{ form.purchase_price.id_for_label }}">Total Purchase Price (entire batch)</label>
                         {{ form.purchase_price }}
                         {{ form.purchase_price.errors }}
-                        <small style="color: #94a3b8; font-size: 0.7rem; margin-top: 0.2rem; display: block;">
-                            💰 Enter total cost paid for this batch
-                        </small>
+                        <small style="color: #94a3b8; font-size: 0.7rem; margin-top: 0.2rem; display: block;">💰 Enter total cost paid for this batch</small>
                     </div>
-
                     <div class="form-group">
                         <label for="{{ form.current_location.id_for_label }}">Storage Location</label>
                         {{ form.current_location }}
                         {{ form.current_location.errors }}
                     </div>
-
                     <!-- Profit/Loss Calculator Section (hidden by default, shown via JS) -->
-                    <div class="form-group full-width" id="profitSection"
-                        style="display: none; margin-top: 0.5rem; padding: 1.25rem; border-radius: 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%); border: 2px solid rgba(16, 185, 129, 0.2);">
-                        <div
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+                    <div class="form-group full-width" id="profitSection" style="display: none; margin-top: 0.5rem; padding: 1.25rem; border-radius: 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%); border: 2px solid rgba(16, 185, 129, 0.2);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
                             <div>
-                                <small
-                                    style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Price
-                                    per Unit</small>
-                                <div id="pricePerUnit" style="font-size: 1.1rem; font-weight: 700; color: #059669;">-
-                                </div>
+                                <small style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Price
+                                per Unit</small>
+                                <div id="pricePerUnit" style="font-size: 1.1rem; font-weight: 700; color: #059669;">-</div>
                             </div>
                             <div>
-                                <small
-                                    style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Selling
-                                    Price</small>
-                                <div id="currentSellingPrice"
-                                    style="font-size: 1.1rem; font-weight: 700; color: #6366f1;">-</div>
+                                <small style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Selling
+                                Price</small>
+                                <div id="currentSellingPrice" style="font-size: 1.1rem; font-weight: 700; color: #6366f1;">-</div>
                             </div>
                             <div>
-                                <small
-                                    style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Profit/Unit</small>
+                                <small style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Profit/Unit</small>
                                 <div id="profitPerUnit" style="font-size: 1.1rem; font-weight: 700;">-</div>
                             </div>
                             <div>
-                                <small
-                                    style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Margin</small>
+                                <small style="display: block; color: #64748b; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Margin</small>
                                 <div id="profitMargin" style="font-size: 1.1rem; font-weight: 700;">-</div>
                             </div>
                         </div>
                     </div>
-
                     <!-- Loss Warning -->
-                    <div class="form-group full-width" id="lossWarning"
-                        style="display: none; margin-top: 0.5rem; padding: 1rem 1.25rem; border-radius: 16px; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3);">
+                    <div class="form-group full-width" id="lossWarning" style="display: none; margin-top: 0.5rem; padding: 1rem 1.25rem; border-radius: 16px; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3);">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; color: #dc2626;"></i>
                             <div>
-                                <div style="font-weight: 700; color: #dc2626; font-size: 1rem; margin-bottom: 0.15rem;">
-                                    ⚠️ LOSS DETECTED!</div>
-                                <div style="color: #991b1b; font-size: 0.8rem;">Your purchase price is higher than the
-                                    selling price. Consider updating the selling price below.</div>
+                                <div style="font-weight: 700; color: #dc2626; font-size: 1rem; margin-bottom: 0.15rem;">⚠️ LOSS DETECTED!</div>
+                                <div style="color: #991b1b; font-size: 0.8rem;">
+                                    Your purchase price is higher than the
+                                    selling price. Consider updating the selling price below.
+                                </div>
                             </div>
                         </div>
                     </div>
-
                     <!-- Update Selling Price Option -->
-                    <div class="form-group full-width" id="updatePriceSection"
-                        style="display: none; margin-top: 0.5rem; padding: 1.25rem; border-radius: 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%); border: 2px dashed rgba(99, 102, 241, 0.3);">
+                    <div class="form-group full-width" id="updatePriceSection" style="display: none; margin-top: 0.5rem; padding: 1.25rem; border-radius: 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%); border: 2px dashed rgba(99, 102, 241, 0.3);">
                         <div style="margin-bottom: 0.75rem;">
                             <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                                <input type="checkbox" id="updateSellingPriceCheck"
-                                    style="width: 18px; height: 18px; cursor: pointer;">
+                                <input type="checkbox" id="updateSellingPriceCheck" style="width: 18px; height: 18px; cursor: pointer;">
                                 <span style="font-weight: 700; color: #6366f1; font-size: 0.9rem;">
                                     <i class="fas fa-sync-alt"></i> Update Selling Price
                                 </span>
                             </label>
-                            <small
-                                style="color: #64748b; margin-left: 2.25rem; display: block; margin-top: 0.15rem; font-size: 0.75rem;">Check
-                                to update selling price on the item</small>
+                            <small style="color: #64748b; margin-left: 2.25rem; display: block; margin-top: 0.15rem; font-size: 0.75rem;">Check
+                            to update selling price on the item</small>
                         </div>
                         <div id="newPriceInput" style="display: none;">
-                            <label for="new_selling_price"
-                                style="display: block; color: #1e293b; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.85rem;">New
-                                Selling Price (KES)</label>
-                            <input type="number" name="new_selling_price" id="newSellingPrice" step="0.01" min="0"
-                                placeholder="Enter new selling price"
-                                style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #6366f1; border-radius: 12px; font-size: 0.95rem; font-weight: 600; color: #1e293b; background: white;">
+                            <label for="new_selling_price" style="display: block; color: #1e293b; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                                New
+                                Selling Price (KES)
+                            </label>
+                            <input type="number" name="new_selling_price" id="newSellingPrice" step="0.01" min="0" placeholder="Enter new selling price" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #6366f1; border-radius: 12px; font-size: 0.95rem; font-weight: 600; color: #1e293b; background: white;">
                             <small style="display: block; margin-top: 0.35rem; color: #64748b; font-size: 0.8rem;">
-                                💡 Suggested: <span id="suggestedPrice"
-                                    style="font-weight: 700; color: #059669;">-</span> (25% margin)
+                                💡 Suggested: <span id="suggestedPrice" style="font-weight: 700; color: #059669;">-</span> (25% margin)
                             </small>
                         </div>
                     </div>
                 </div>
-
                 <div class="form-actions">
                     <a href="{% url 'inventory:procurement_dashboard' %}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">
@@ -598,72 +571,78 @@
                 </div>
             </form>
         </div>
-
         <!-- Added Items List (Right) -->
         <div class="items-panel">
             <div class="panel-header">
-                <h3><i class="fas fa-list-ul" style="margin-right: 0.5rem; color: #6366f1;"></i> Received Items ({{
-                    added_items|length }})</h3>
+                <h3>
+                    <i class="fas fa-list-ul" style="margin-right: 0.5rem; color: #6366f1;"></i> Received Items ({{
+                    added_items|length }})
+                </h3>
                 {% if added_items %}
-                <a href="{% url 'inventory:procurement_dashboard' %}" class="finish-btn">
-                    FINISH & CLOSE <i class="fas fa-check"></i>
-                </a>
+                    <a href="{% url 'inventory:procurement_dashboard' %}" class="finish-btn">
+                        FINISH & CLOSE <i class="fas fa-check"></i>
+                    </a>
                 {% endif %}
             </div>
-
             {% if added_items %}
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Product</th>
-                        <th>Batch</th>
-                        <th style="text-align: center;">Qty</th>
-                        <th style="text-align: right;">Unit Cost</th>
-                        <th style="text-align: right;">Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in added_items %}
-                    <tr>
-                        <td><span class="badge badge-muted">{{ forloop.counter }}</span></td>
-                        <td>
-                            <div style="font-weight: 700; color: #1e293b;">{{ record.item.name }}</div>
-                            <div
-                                style="font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-                                {{ record.item.category.name }}</div>
-                        </td>
-                        <td>
-                            <div style="font-weight: 600; color: #475569; font-size: 0.85rem;">{{ record.batch_number }}
-                            </div>
-                            {% if record.expiry_date %}
-                            <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; margin-top: 0.2rem;">Exp:
-                                {{ record.expiry_date|date:"M Y" }}</div>
-                            {% endif %}
-                        </td>
-                        <td style="text-align: center;"><span class="badge badge-dark">{{ record.quantity }}</span></td>
-                        <td style="text-align: right; font-weight: 600; color: #475569;">KES {{
-                            record.purchase_price|floatformat:2 }}</td>
-                        <td style="text-align: right;"><span class="badge badge-muted">{{ record.current_location.name
-                                }}</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>Batch</th>
+                            <th style="text-align: center;">Qty</th>
+                            <th style="text-align: right;">Unit Cost</th>
+                            <th style="text-align: right;">Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in added_items %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-muted">{{ forloop.counter }}</span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 700; color: #1e293b;">{{ record.item.name }}</div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">{{ record.item.category.name }}</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #475569; font-size: 0.85rem;">{{ record.batch_number }}</div>
+                                    {% if record.expiry_date %}
+                                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; margin-top: 0.2rem;">
+                                            Exp:
+                                            {{ record.expiry_date|date:"M Y" }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    <span class="badge badge-dark">{{ record.quantity }}</span>
+                                </td>
+                                <td style="text-align: right; font-weight: 600; color: #475569;">
+                                    KES {{
+                                    record.purchase_price|floatformat:2 }}
+                                </td>
+                                <td style="text-align: right;">
+                                    <span class="badge badge-muted">{{ record.current_location.name
+                                    }}</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
-            <div class="empty-state">
-                <i class="fas fa-box-open"></i>
-                <p>No items added to this GRN yet.</p>
-                <small style="color: #cbd5e1;">Use the form on the left to record each item received.</small>
-            </div>
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <p>No items added to this GRN yet.</p>
+                    <small style="color: #cbd5e1;">Use the form on the left to record each item received.</small>
+                </div>
             {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
         const itemSelect = document.getElementById('id_item');
         const quantityInput = document.getElementById('id_quantity');
@@ -813,5 +792,5 @@
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

@@ -1,41 +1,47 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- Summary Header -->
-            <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 20px;">
-                <div class="card-header bg-success text-white py-4 text-center">
-                    <i class="fas fa-check-circle fa-3x mb-3"></i>
-                    <h2 class="fw-bold mb-0">Discharge Successful</h2>
-                    <p class="mb-0 opacity-75">Formal Mortuary Release Completed</p>
-                </div>
-                <div class="card-body p-5">
-                    <div class="row mb-5">
-                        <div class="col-sm-6">
-                            <h5 class="text-uppercase text-muted small fw-bold mb-3">Deceased Details</h5>
-                            <h4 class="mb-1">{{ discharge.deceased.full_name }}</h4>
-                            <p class="text-muted mb-0">Tag: <span class="badge bg-secondary">{{ discharge.deceased.tag
-                                    }}</span></p>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Summary Header -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 20px;">
+                    <div class="card-header bg-success text-white py-4 text-center">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h2 class="fw-bold mb-0">Discharge Successful</h2>
+                        <p class="mb-0 opacity-75">Formal Mortuary Release Completed</p>
+                    </div>
+                    <div class="card-body p-5">
+                        <div class="row mb-5">
+                            <div class="col-sm-6">
+                                <h5 class="text-uppercase text-muted small fw-bold mb-3">Deceased Details</h5>
+                                <h4 class="mb-1">{{ discharge.deceased.full_name }}</h4>
+                                <p class="text-muted mb-0">
+                                    Tag: <span class="badge bg-secondary">{{ discharge.deceased.tag
+                                }}</span>
+                            </p>
                             <p class="text-muted mb-0">ID: {{ discharge.deceased.id_number }}</p>
                         </div>
                         <div class="col-sm-6 text-sm-end mt-4 mt-sm-0">
                             <h5 class="text-uppercase text-muted small fw-bold mb-3">Release Info</h5>
-                            <p class="mb-1"><strong>Date:</strong> {{ discharge.discharge_date|date:"F d, Y" }}</p>
-                            <p class="mb-1"><strong>Time:</strong> {{ discharge.discharge_date|date:"H:i" }}</p>
-                            <p class="mb-0"><strong>Ref:</strong> MD-{{ discharge.id|stringformat:"04d" }}</p>
+                            <p class="mb-1">
+                                <strong>Date:</strong> {{ discharge.discharge_date|date:"F d, Y" }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Time:</strong> {{ discharge.discharge_date|date:"H:i" }}
+                            </p>
+                            <p class="mb-0">
+                                <strong>Ref:</strong> MD-{{ discharge.id|stringformat:"04d" }}
+                            </p>
                         </div>
                     </div>
-
                     <hr class="my-4">
-
                     <!-- Receiver Info -->
                     <div class="bg-light p-4 rounded-3 mb-5">
-                        <h5 class="fw-bold mb-3"><i class="fas fa-user-check me-2"></i> Received By</h5>
+                        <h5 class="fw-bold mb-3">
+                            <i class="fas fa-user-check me-2"></i> Received By
+                        </h5>
                         <div class="row">
                             <div class="col-md-6 mb-2">
                                 <strong>Name:</strong> {{ discharge.released_to }}
@@ -51,9 +57,10 @@
                             </div>
                         </div>
                     </div>
-
                     <!-- Billing Summary -->
-                    <h5 class="fw-bold mb-3"><i class="fas fa-file-invoice-dollar me-2"></i> Billing Summary</h5>
+                    <h5 class="fw-bold mb-3">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> Billing Summary
+                    </h5>
                     <div class="table-responsive mb-4">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
@@ -65,54 +72,44 @@
                             </thead>
                             <tbody>
                                 {% for item in services %}
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold">{{ item.service.name }}</div>
-                                        <div class="small text-muted">{{ item.service.department.name }}</div>
-                                    </td>
-                                    <td>{{ item.date_performed|date:"M d" }}</td>
-                                    <td class="text-end">${{ item.service.price }}</td>
-                                </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold">{{ item.service.name }}</div>
+                                            <div class="small text-muted">{{ item.service.department.name }}</div>
+                                        </td>
+                                        <td>{{ item.date_performed|date:"M d" }}</td>
+                                        <td class="text-end">${{ item.service.price }}</td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold border-top">
                                     <td colspan="2" class="text-end py-3">Total Amount Settled:</td>
-                                    <td class="text-end py-3 text-success fs-4">${{ discharge.total_bill_snapshot }}
-                                    </td>
+                                    <td class="text-end py-3 text-success fs-4">${{ discharge.total_bill_snapshot }}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-
                     {% if discharge.notes %}
-                    <div class="mb-5">
-                        <h6 class="text-uppercase text-muted small fw-bold mb-2">Internal Notes</h6>
-                        <div class="p-3 border rounded bg-white small">{{ discharge.notes }}</div>
-                    </div>
+                        <div class="mb-5">
+                            <h6 class="text-uppercase text-muted small fw-bold mb-2">Internal Notes</h6>
+                            <div class="p-3 border rounded bg-white small">{{ discharge.notes }}</div>
+                        </div>
                     {% endif %}
-
                     <!-- Footer Actions -->
                     <div class="d-flex gap-2 justify-content-center pt-4 border-top">
                         <button onclick="window.print()" class="btn btn-outline-dark px-4">
                             <i class="fas fa-print me-2"></i> Print Summary
                         </button>
-                        <a href="{% url 'morgue:deceased_detail' discharge.deceased.pk %}" class="btn btn-primary px-5">
-                            Return to Record
-                        </a>
-                        <a href="{% url 'morgue:dashboard' %}" class="btn btn-secondary">
-                            Dashboard
-                        </a>
+                        <a href="{% url 'morgue:deceased_detail' discharge.deceased.pk %}" class="btn btn-primary px-5">Return to Record</a>
+                        <a href="{% url 'morgue:dashboard' %}" class="btn btn-secondary">Dashboard</a>
                     </div>
                 </div>
-                <div class="card-footer bg-white py-3 text-center text-muted small">
-                    Authorized by {{ discharge.authorized_by.get_full_name|default:discharge.authorized_by.username }}
-                </div>
+                <div class="card-footer bg-white py-3 text-center text-muted small">Authorized by {{ discharge.authorized_by.get_full_name|default:discharge.authorized_by.username }}</div>
             </div>
         </div>
     </div>
 </div>
-
 <style>
     @media print {
 

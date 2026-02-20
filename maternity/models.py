@@ -145,6 +145,7 @@ class AntenatalVisit(models.Model):
     visit_number = models.PositiveIntegerField(null=True, blank=True)
     gestational_age = models.PositiveIntegerField(help_text="Weeks", null=True, blank=True)
     service_received = models.BooleanField(default=False)
+    is_closed = models.BooleanField(default=False, help_text="Whether this visit record is complete/closed")
     
     # Vitals
     weight = models.DecimalField(max_digits=5, decimal_places=2, help_text="kg", null=True, blank=True)
@@ -218,6 +219,7 @@ class LaborDelivery(models.Model):
     
     pregnancy = models.OneToOneField(Pregnancy, on_delete=models.CASCADE, related_name='delivery')
     admission = models.OneToOneField(Admission, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery')
+    visit = models.OneToOneField('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='labor_delivery')
     
     # Admission Details
     admission_date = models.DateTimeField(default=timezone.now)
@@ -544,7 +546,8 @@ class Vaccine(models.Model):
 
 class ImmunizationRecord(models.Model):
     """Tracks specific doses administered to newborns"""
-    newborn = models.ForeignKey(Newborn, on_delete=models.CASCADE, related_name='vaccinations')
+    newborn = models.ForeignKey(Newborn, on_delete=models.CASCADE, related_name='vaccinations', null=True, blank=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='vaccinations', null=True, blank=True)
     visit = models.ForeignKey(PostnatalBabyVisit, on_delete=models.SET_NULL, null=True, blank=True, related_name='vaccinations')
     vaccine = models.ForeignKey(Vaccine, on_delete=models.CASCADE)
     dose_number = models.PositiveIntegerField(default=1, help_text="1st Dose, 2nd Dose, Booster, etc.")
@@ -569,4 +572,4 @@ class ImmunizationRecord(models.Model):
         verbose_name_plural = 'Immunization Records'
 
     def __str__(self):
-        return f"{self.vaccine.abbreviation} Dose {self.dose_number} - {self.newborn.delivery.pregnancy.patient.full_name}"
+        return f"{self.vaccine.abbreviation} Dose {self.dose_number}"

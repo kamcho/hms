@@ -1,340 +1,336 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Release Deceased - Morgue{% endblock %}
-
 {% block content %}
-<div class="container">
-    <!-- Header -->
-    <div class="release-header">
-        <div class="header-content">
-            <h1><i class="fas fa-sign-out-alt"></i> Release Deceased</h1>
-            <p>Process the release of {{ deceased.full_name }} from the morgue</p>
+    <div class="container">
+        <!-- Header -->
+        <div class="release-header">
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-sign-out-alt"></i> Release Deceased
+                </h1>
+                <p>Process the release of {{ deceased.full_name }} from the morgue</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Details
+                </a>
+            </div>
         </div>
-        <div class="header-actions">
-            <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Details
-            </a>
-        </div>
-    </div>
-
-    <!-- Deceased Summary -->
-    <div class="summary-card">
-        <div class="summary-header">
-            <h3><i class="fas fa-user"></i> Deceased Information</h3>
-        </div>
-        <div class="summary-body">
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <span class="label">Name:</span>
-                    <span class="value">{{ deceased.full_name }}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Tag:</span>
-                    <span class="value tag-badge">{{ deceased.tag }}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Date of Death:</span>
-                    <span class="value">{{ deceased.date_of_death|date:"F d, Y" }} at {{
+        <!-- Deceased Summary -->
+        <div class="summary-card">
+            <div class="summary-header">
+                <h3>
+                    <i class="fas fa-user"></i> Deceased Information
+                </h3>
+            </div>
+            <div class="summary-body">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">Name:</span>
+                        <span class="value">{{ deceased.full_name }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Tag:</span>
+                        <span class="value tag-badge">{{ deceased.tag }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Date of Death:</span>
+                        <span class="value">{{ deceased.date_of_death|date:"F d, Y" }} at {{
                         deceased.time_of_death|time:"g:i A" }}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Admitted:</span>
-                    <span class="value">{{ deceased.created_at|date:"F d, Y H:i" }}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Storage:</span>
-                    <span class="value">{{ deceased.get_storage_chamber_display }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Admitted:</span>
+                        <span class="value">{{ deceased.created_at|date:"F d, Y H:i" }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Storage:</span>
+                        <span class="value">{{ deceased.get_storage_chamber_display }}</span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Service & Billing Summary -->
-    <div class="summary-card mb-4" style="border-left: 5px solid #28a745;">
-        <div class="summary-header">
-            <h3><i class="fas fa-receipt"></i> Service & Billing Summary</h3>
-        </div>
-        <div class="summary-body">
-            <!-- Invoice Status Summary -->
-            {% if invoices %}
-            <div class="invoice-status-summary mb-3">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <div class="stat-card">
-                            <div class="stat-label">Total Invoiced</div>
-                            <div class="stat-value">${{ total_invoiced|floatformat:2 }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card">
-                            <div class="stat-label">Amount Paid</div>
-                            <div class="stat-value paid">${{ total_paid|floatformat:2 }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card">
-                            <div class="stat-label">Outstanding Balance</div>
-                            <div class="stat-value {% if outstanding_balance > 0 %}unpaid{% else %}paid{% endif %}">
-                                ${{ outstanding_balance|floatformat:2 }}
+        <!-- Service & Billing Summary -->
+        <div class="summary-card mb-4" style="border-left: 5px solid #28a745;">
+            <div class="summary-header">
+                <h3>
+                    <i class="fas fa-receipt"></i> Service & Billing Summary
+                </h3>
+            </div>
+            <div class="summary-body">
+                <!-- Invoice Status Summary -->
+                {% if invoices %}
+                    <div class="invoice-status-summary mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Invoiced</div>
+                                    <div class="stat-value">${{ total_invoiced|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Amount Paid</div>
+                                    <div class="stat-value paid">${{ total_paid|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Outstanding Balance</div>
+                                    <div class="stat-value {% if outstanding_balance > 0 %}unpaid{% else %}paid{% endif %}">${{ outstanding_balance|floatformat:2 }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Invoice Details -->
-            <div class="table-responsive mb-3">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Invoice #</th>
-                            <th>Status</th>
-                            <th>Amount</th>
-                            <th>Paid</th>
-                            <th>Balance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for invoice in invoices %}
-                        <tr>
-                            <td><strong>INV-{{ invoice.id }}</strong></td>
-                            <td>
-                                <span class="status-badge status-{{ invoice.status|lower }}">
-                                    {{ invoice.get_status_display }}
-                                </span>
-                            </td>
-                            <td>${{ invoice.total_amount|floatformat:2 }}</td>
-                            <td>${{ invoice.paid_amount|floatformat:2 }}</td>
-                            <td class="{% if invoice.total_amount > invoice.paid_amount %}text-danger{% endif %}">
-                                ${{ invoice.balance|floatformat:2 }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                No invoices have been created for this deceased yet. 
-                {% if total_charges > 0 %}
-                Please create invoices for the services before proceeding with release.
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Service Details -->
-            {% if performed_services %}
-            <h5 class="mt-4 mb-3"><i class="fas fa-list"></i> Service Details</h5>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Service</th>
-                            <th>Qty</th>
-                            <th class="text-end">Price</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in performed_services %}
-                        <tr>
-                            <td>{{ record.service.name }}</td>
-                            <td>{{ record.quantity }}</td>
-                            <td class="text-end">${{ record.service.price }}</td>
-                            <td class="text-end">${{ record.subtotal }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="fw-bold" style="font-size: 1.1rem; border-top: 2px solid #dee2e6;">
-                            <td colspan="3" class="text-end">Total Charges:</td>
-                            <td class="text-end text-success">${{ total_charges }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Uninvoiced Services Alert -->
-    {% if has_uninvoiced_services %}
-    <div class="payment-block-alert" style="border-left: 5px solid #dc3545;">
-        <div class="alert-content">
-            <div class="alert-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="alert-text">
-                <h4>Uninvoiced Services Detected</h4>
-                <p><strong>{{ deceased.full_name }}</strong> has services that have not been invoiced yet. Release cannot be authorized until all services are properly invoiced.</p>
-                
-                <!-- List of uninvoiced services -->
-                {% if uninvoiced_services %}
-                <div class="mt-3">
-                    <h6>Uninvoiced Services:</h6>
-                    <ul class="list-unstyled mb-0">
-                        {% for service_item in uninvoiced_services %}
-                        <li class="mb-2">
-                            <strong>{{ service_item.name }}</strong> - 
-                            Qty: {{ service_item.quantity }} - 
-                            ${{ service_item.subtotal|floatformat:2 }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    <div class="mt-3">
-                        <strong>Total Uninvoiced Amount:</strong> 
-                        <span class="text-danger">${{ uninvoiced_total|floatformat:2 }}</span>
+                    <!-- Invoice Details -->
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Paid</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <strong>INV-{{ invoice.id }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-{{ invoice.status|lower }}">{{ invoice.get_status_display }}</span>
+                                        </td>
+                                        <td>${{ invoice.total_amount|floatformat:2 }}</td>
+                                        <td>${{ invoice.paid_amount|floatformat:2 }}</td>
+                                        <td class="{% if invoice.total_amount > invoice.paid_amount %}text-danger{% endif %}">${{ invoice.balance|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        No invoices have been created for this deceased yet.
+                        {% if total_charges > 0 %}Please create invoices for the services before proceeding with release.{% endif %}
+                    </div>
                 {% endif %}
-                
-                <div class="alert-actions mt-3">
-                    <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Go to Deceased Details to Invoice Services
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Payment Status Alert -->
-    {% if has_unpaid_invoices and outstanding_balance > 0 %}
-    <div class="payment-block-alert">
-        <div class="alert-content">
-            <div class="alert-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="alert-text">
-                <h4>Payment Required Before Release</h4>
-                <p><strong>{{ deceased.full_name }}</strong> has an outstanding balance of 
-                   <strong>${{ outstanding_balance|floatformat:2 }}</strong> that must be paid before release can be authorized.</p>
-                <p>Please ensure all invoices are fully paid or contact the accounts department to process payment.</p>
-                {% if invoices %}
-                <div class="invoice-actions">
-                    <a href="/accounts/invoices/?deceased={{ deceased.pk }}" class="btn btn-outline-primary">
-                        <i class="fas fa-list"></i> View Invoice Details
-                    </a>
-                </div>
+                <!-- Service Details -->
+                {% if performed_services %}
+                    <h5 class="mt-4 mb-3">
+                        <i class="fas fa-list"></i> Service Details
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Qty</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in performed_services %}
+                                    <tr>
+                                        <td>{{ record.service.name }}</td>
+                                        <td>{{ record.quantity }}</td>
+                                        <td class="text-end">${{ record.service.price }}</td>
+                                        <td class="text-end">${{ record.subtotal }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold" style="font-size: 1.1rem; border-top: 2px solid #dee2e6;">
+                                    <td colspan="3" class="text-end">Total Charges:</td>
+                                    <td class="text-end text-success">${{ total_charges }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 {% endif %}
             </div>
         </div>
-    </div>
-    {% elif fully_paid %}
-    <div class="payment-success-alert">
-        <div class="alert-content">
-            <div class="alert-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="alert-text">
-                <h4>All Payments Complete</h4>
-                <p>All invoices for <strong>{{ deceased.full_name }}</strong> have been fully paid. Release can be authorized.</p>
-            </div>
-        </div>
-    </div>
-    {% elif total_charges == 0 %}
-    <div class="payment-info-alert">
-        <div class="alert-content">
-            <div class="alert-icon">
-                <i class="fas fa-info-circle"></i>
-            </div>
-            <div class="alert-text">
-                <h4>No Charges Applied</h4>
-                <p>No services have been billed for <strong>{{ deceased.full_name }}</strong>. Release can proceed.</p>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Release Form -->
-    <div class="release-form-card {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}disabled-form{% endif %}">
-        <div class="form-header">
-            <h3><i class="fas fa-file-signature"></i> Final Release Authorization</h3>
-            {% if has_unpaid_invoices and outstanding_balance > 0 %}
-            <span class="form-disabled-badge">
-                <i class="fas fa-lock"></i> Disabled - Payment Required
-            </span>
-            {% elif has_uninvoiced_services %}
-            <span class="form-disabled-badge">
-                <i class="fas fa-lock"></i> Disabled - Uninvoiced Services
-            </span>
-            {% endif %}
-        </div>
-        <div class="p-4">
-            {% if has_unpaid_invoices and outstanding_balance > 0 %}
-            <div class="form-overlay">
-                <div class="overlay-message">
-                    <i class="fas fa-lock fa-3x"></i>
-                    <h4>Release Authorization Locked</h4>
-                    <p>Complete payment processing to enable release authorization</p>
-                </div>
-            </div>
-            {% elif has_uninvoiced_services %}
-            <div class="form-overlay">
-                <div class="overlay-message">
-                    <i class="fas fa-lock fa-3x"></i>
-                    <h4>Release Authorization Locked</h4>
-                    <p>Invoice all services to enable release authorization</p>
-                </div>
-            </div>
-            {% endif %}
-            
-            <form method="post" id="release-form" {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}style="pointer-events: none; opacity: 0.6;"{% endif %}>
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Released To (Full Name)</label>
-                        {{ form.released_to }}
+        <!-- Uninvoiced Services Alert -->
+        {% if has_uninvoiced_services %}
+            <div class="payment-block-alert" style="border-left: 5px solid #dc3545;">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Relationship to Deceased</label>
-                        {{ form.relationship }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Receiver ID/Passport Number</label>
-                        {{ form.receiver_id_number }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Receiver Phone Number</label>
-                        {{ form.receiver_phone }}
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Discharge Notes</label>
-                        {{ form.notes }}
+                    <div class="alert-text">
+                        <h4>Uninvoiced Services Detected</h4>
+                        <p>
+                            <strong>{{ deceased.full_name }}</strong> has services that have not been invoiced yet. Release cannot be authorized until all services are properly invoiced.
+                        </p>
+                        <!-- List of uninvoiced services -->
+                        {% if uninvoiced_services %}
+                            <div class="mt-3">
+                                <h6>Uninvoiced Services:</h6>
+                                <ul class="list-unstyled mb-0">
+                                    {% for service_item in uninvoiced_services %}
+                                        <li class="mb-2">
+                                            <strong>{{ service_item.name }}</strong> -
+                                            Qty: {{ service_item.quantity }} -
+                                            ${{ service_item.subtotal|floatformat:2 }}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="mt-3">
+                                    <strong>Total Uninvoiced Amount:</strong>
+                                    <span class="text-danger">${{ uninvoiced_total|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="alert-actions mt-3">
+                            <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Go to Deceased Details to Invoice Services
+                            </a>
+                        </div>
                     </div>
                 </div>
-
-                <div class="form-actions mt-4">
-                    <button type="submit" class="btn btn-success btn-lg px-5" 
-                            {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}disabled{% endif %}>
-                        <i class="fas fa-check-double"></i> Authorize & Discharge
-                    </button>
-                    <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary btn-lg">
-                        Cancel
-                    </a>
+            </div>
+        {% endif %}
+        <!-- Payment Status Alert -->
+        {% if has_unpaid_invoices and outstanding_balance > 0 %}
+            <div class="payment-block-alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <h4>Payment Required Before Release</h4>
+                        <p>
+                            <strong>{{ deceased.full_name }}</strong> has an outstanding balance of
+                            <strong>${{ outstanding_balance|floatformat:2 }}</strong> that must be paid before release can be authorized.
+                        </p>
+                        <p>Please ensure all invoices are fully paid or contact the accounts department to process payment.</p>
+                        {% if invoices %}
+                            <div class="invoice-actions">
+                                <a href="/accounts/invoices/?deceased={{ deceased.pk }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-list"></i> View Invoice Details
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Warning Section -->
-    <div class="warning-card">
-        <div class="warning-content">
-            <div class="warning-icon">
-                <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <div class="warning-text">
-                <h4>Important Notice</h4>
-                <p>This action will permanently mark {{ deceased.full_name }} as released from the morgue system. This
-                    action cannot be undone. Please ensure all necessary documentation and approvals have been completed
-                    before proceeding.</p>
+        {% elif fully_paid %}
+            <div class="payment-success-alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <h4>All Payments Complete</h4>
+                        <p>
+                            All invoices for <strong>{{ deceased.full_name }}</strong> have been fully paid. Release can be authorized.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% elif total_charges == 0 %}
+            <div class="payment-info-alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <h4>No Charges Applied</h4>
+                        <p>
+                            No services have been billed for <strong>{{ deceased.full_name }}</strong>. Release can proceed.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <!-- Release Form -->
+        <div class="release-form-card {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}disabled-form{% endif %}">
+            <div class="form-header">
+                <h3>
+                    <i class="fas fa-file-signature"></i> Final Release Authorization
+                </h3>
+                {% if has_unpaid_invoices and outstanding_balance > 0 %}
+                    <span class="form-disabled-badge">
+                        <i class="fas fa-lock"></i> Disabled - Payment Required
+                    </span>
+                {% elif has_uninvoiced_services %}
+                    <span class="form-disabled-badge">
+                        <i class="fas fa-lock"></i> Disabled - Uninvoiced Services
+                    </span>
+                {% endif %}
+            </div>
+            <div class="p-4">
+                {% if has_unpaid_invoices and outstanding_balance > 0 %}
+                    <div class="form-overlay">
+                        <div class="overlay-message">
+                            <i class="fas fa-lock fa-3x"></i>
+                            <h4>Release Authorization Locked</h4>
+                            <p>Complete payment processing to enable release authorization</p>
+                        </div>
+                    </div>
+                {% elif has_uninvoiced_services %}
+                    <div class="form-overlay">
+                        <div class="overlay-message">
+                            <i class="fas fa-lock fa-3x"></i>
+                            <h4>Release Authorization Locked</h4>
+                            <p>Invoice all services to enable release authorization</p>
+                        </div>
+                    </div>
+                {% endif %}
+                <form method="post" id="release-form" {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}style="pointer-events: none; opacity: 0.6;"{% endif %}>
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Released To (Full Name)</label>
+                            {{ form.released_to }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Relationship to Deceased</label>
+                            {{ form.relationship }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Receiver ID/Passport Number</label>
+                            {{ form.receiver_id_number }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Receiver Phone Number</label>
+                            {{ form.receiver_phone }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Discharge Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                    <div class="form-actions mt-4">
+                        <button type="submit" class="btn btn-success btn-lg px-5" {% if has_unpaid_invoices and outstanding_balance > 0 or has_uninvoiced_services %}disabled{% endif %}>
+                            <i class="fas fa-check-double"></i> Authorize & Discharge
+                        </button>
+                        <a href="{% url 'morgue:deceased_detail' deceased.pk %}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
-
-<style>
+        <!-- Warning Section -->
+        <div class="warning-card">
+            <div class="warning-content">
+                <div class="warning-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="warning-text">
+                    <h4>Important Notice</h4>
+                    <p>
+                        This action will permanently mark {{ deceased.full_name }} as released from the morgue system. This
+                        action cannot be undone. Please ensure all necessary documentation and approvals have been completed
+                        before proceeding.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <style>
     /* Header Styles */
     .release-header {
         background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
@@ -899,5 +895,5 @@
     .modal-footer > * {
         margin: 0.25rem;
     }
-</style>
-{% endblock %}
+        </style>
+    {% endblock %}

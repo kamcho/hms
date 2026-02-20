@@ -39,6 +39,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('SHA Manager', 'SHA Manager'),
     ]
     id_number = models.CharField(max_length=20, unique=True)
+    first_name = models.CharField(max_length=50, blank=True, null=True)
+    last_name = models.CharField(max_length=50, blank=True, null=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    
     role = models.CharField(max_length=20, choices=roles)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -54,7 +58,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     @property
     def username(self):
-        return self.id_number
+        return f"{self.first_name} {self.last_name}".strip() if self.first_name or self.last_name else self.id_number
     
     def get_full_name(self):
-        return self.id_number
+        return self.username

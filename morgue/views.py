@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from .models import Deceased, NextOfKin, MorgueAdmission, PerformedMortuaryService, MortuaryDischarge
 from .forms import DeceasedForm, DeceasedAdmissionForm, NextOfKinForm, MorgueAdmissionForm, PerformedMortuaryServiceForm, MortuaryDischargeForm
+from accounts.utils import get_or_create_invoice
 
 
 class DeceasedListView(LoginRequiredMixin, ListView):
@@ -53,10 +54,9 @@ class DeceasedDetailView(LoginRequiredMixin, DetailView):
         # Invoice data
         from accounts.models import Invoice, InvoiceItem
         
-        # Get invoices related to this deceased using the deceased ForeignKey
-        invoices = Invoice.objects.filter(
-            deceased=self.object
-        ).prefetch_related('items').order_by('-created_at')
+        # Get invoice related to this deceased
+        invoice = getattr(self.object, 'invoice', None)
+        invoices = [invoice] if invoice else []
         
         # Calculate financial summary
         total_services_cost = sum(
@@ -113,47 +113,21 @@ def log_mortuary_service(request, deceased_pk):
             # Automatically update invoice
             from accounts.models import Invoice, InvoiceItem
             
-            # Get the existing invoice for this deceased (regardless of status)
-            existing_invoice = Invoice.objects.filter(deceased=deceased).first()
+            # Get or Create Visit Invoice (Consolidated)
+            invoice = get_or_create_invoice(deceased=deceased, user=request.user)
             
-            if existing_invoice:
-                # Update existing invoice
-                invoice = existing_invoice
-                
-                # Add new service to invoice items
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    service=service_record.service,
-                    name=service_record.service.name,
-                    quantity=service_record.quantity,
-                    unit_price=service_record.service.price
-                )
-                
-                # Update invoice totals
-                invoice.update_totals()
-                message = 'Service logged and invoice updated successfully.'
-                
-            else:
-                # Create new invoice (only if none exists)
-                invoice = Invoice.objects.create(
-                    deceased=deceased,
-                    created_by=request.user,
-                    status='Draft',
-                    notes=f"Auto-generated invoice for {deceased.full_name}\nPerformed Service IDs: {service_record.id}"
-                )
-                
-                # Add service to invoice items
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    service=service_record.service,
-                    name=service_record.service.name,
-                    quantity=service_record.quantity,
-                    unit_price=service_record.service.price
-                )
-                
-                # Update invoice totals
-                invoice.update_totals()
-                message = 'Service logged and new invoice created successfully.'
+            # Add new service to invoice items
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                service=service_record.service,
+                name=service_record.service.name,
+                quantity=service_record.quantity,
+                unit_price=service_record.service.price
+            )
+            
+            # Update invoice totals
+            invoice.update_totals()
+            message = 'Service logged and invoice updated successfully.'
             
             return JsonResponse({'success': True, 'message': message})
         return JsonResponse({'success': False, 'errors': form.errors.as_json()})
@@ -184,43 +158,26 @@ def create_deceased_invoice(request, deceased_pk):
         if not selected_services.exists():
             return JsonResponse({'success': False, 'message': 'No valid services found'})
         
-        # Check if an invoice already exists for this deceased
-        existing_invoice = Invoice.objects.filter(
-            deceased=deceased,
-            status__in=['Draft', 'Pending', 'Partial']  # Don't update paid/cancelled invoices
-        ).first()
+        # Get or Create Visit Invoice (Consolidated)
+        invoice = get_or_create_invoice(deceased=deceased, user=request.user)
+        message_prefix = "Updated"
         
-        if existing_invoice:
-            # Update existing invoice
-            invoice = existing_invoice
-            message_prefix = "Updated"
-            
-            # Extract existing performed service IDs from notes
-            existing_ids = set()
-            if invoice.notes:
-                for line in invoice.notes.split('\n'):
-                    if line.startswith('Performed Service IDs:'):
-                        ids_str = line.replace('Performed Service IDs:', '').strip()
-                        if ids_str:
-                            existing_ids.update(int(id_str) for id_str in ids_str.split(',') if id_str.strip())
-            
-            # Add new performed service IDs
-            new_ids = {s.id for s in selected_services}
-            all_ids = existing_ids | new_ids
-            
-            # Update notes with all performed service IDs
-            invoice.notes = f"Mortuary services for {deceased.full_name}\nPerformed Service IDs: {','.join(str(id) for id in sorted(all_ids))}"
-            invoice.save()
-        else:
-            # Create new invoice
-            performed_service_ids = ','.join(str(s.id) for s in selected_services)
-            invoice = Invoice.objects.create(
-                deceased=deceased,
-                status='Pending',
-                created_by=request.user,
-                notes=f"Mortuary services for {deceased.full_name}\nPerformed Service IDs: {performed_service_ids}"
-            )
-            message_prefix = "Created"
+        # Extract existing performed service IDs from notes
+        existing_ids = set()
+        if invoice.notes:
+            for line in invoice.notes.split('\n'):
+                if line.startswith('Performed Service IDs:'):
+                    ids_str = line.replace('Performed Service IDs:', '').strip()
+                    if ids_str:
+                        existing_ids.update(int(id_str) for id_str in ids_str.split(',') if id_str.strip())
+        
+        # Add new performed service IDs
+        new_ids = {s.id for s in selected_services}
+        all_ids = existing_ids | new_ids
+        
+        # Update notes with all performed service IDs
+        invoice.notes = f"Mortuary services for {deceased.full_name}\nPerformed Service IDs: {','.join(str(id) for id in sorted(all_ids))}"
+        invoice.save()
         
         # Add invoice items for the new services
         for performed_service in selected_services:

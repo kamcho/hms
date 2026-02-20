@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load custom_filters %}
-
 {% block title %}Reception Dashboard - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --reception-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --reception-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
@@ -622,598 +620,560 @@
         background: rgba(255, 255, 255, 0.05);
         color: white;
     }
-</style>
-
-<div class="container">
-
-    <!-- Hero Section -->
-    <div class="reception-hero">
-        <div class="hero-content">
-            <h1><i class="fas fa-hospital-user"></i> Reception Dashboard</h1>
-            <p>Streamlined patient intake and coordination hub</p>
-        </div>
-        <div class="hero-actions">
-            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-            <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
-                <i class="fas fa-plus-circle"></i> Add New Patient
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Analytics Cards -->
-    <div class="analytics-grid">
-        <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
-            <div class="stat-icon">
-                <i class="fas fa-calendar-day"></i>
+    </style>
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="reception-hero">
+            <div class="hero-content">
+                <h1>
+                    <i class="fas fa-hospital-user"></i> Reception Dashboard
+                </h1>
+                <p>Streamlined patient intake and coordination hub</p>
             </div>
-            <div class="stat-info">
-                <h3>Today's Visits</h3>
-                <div class="number">{{ today_visits }}</div>
+            <div class="hero-actions">
+                {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+                    <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
+                        <i class="fas fa-plus-circle"></i> Add New Patient
+                    </a>
+                {% endif %}
             </div>
         </div>
-
-        <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
-            <div class="stat-icon">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Total Patients</h3>
-                <div class="number">{{ total_patients }}</div>
-            </div>
-        </div>
-
-        {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-        <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
-            <div class="stat-icon">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Unpaid Invoices</h3>
-                <div class="number">{{ unpaid_invoices }}</div>
-            </div>
-        </div>
-        {% elif user_role == 'Triage Nurse' %}
-        <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
-            <div class="stat-icon">
-                <i class="fas fa-clipboard-check"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Today's Triage</h3>
-                <div class="number">{{ today_triage_entries }}</div>
-            </div>
-        </div>
-
-        <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
-            <div class="stat-icon">
-                <i class="fas fa-user-clock"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Pending Triage</h3>
-                <div class="number">{{ pending_triage_count }}</div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="content-grid">
-        {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-        <div class="section">
-            <div class="section-header">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Patient Service Invoices</h3>
-                <button id="reloadInvoices" class="reload-btn" title="Reload Invoice Data">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            <div class="search-section">
-                <form method="GET" class="search-form">
-                    <div class="search-container" style="position: relative;">
-                        <i class="fas fa-search"
-                            style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                        <input type="text" name="invoice_search" class="search-input"
-                            placeholder="Search by patient name or service name..." value="{{ invoice_search }}">
-                        {% if invoice_search %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                        {% endif %}
-                    </div>
-                </form>
-            </div>
-            {% if invoice_search %}
-            <div class="search-results-info">
-                Found <strong>{{ invoices|length }}</strong> invoice(s) matching "<strong>{{ invoice_search }}</strong>"
-            </div>
-            {% endif %}
-            <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Service</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="invoiceTableBody">
-                        {% for invoice in invoices %}
-                        <tr class="invoice-row" data-invoice-id="{{ invoice.pk }}" style="cursor: pointer;"
-                            data-patient-name="{% if invoice.patient %}{{ invoice.patient.full_name }}{% else %}{{ invoice.deceased.full_name }}{% endif %}"
-                            data-service-name="{% for item in invoice.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% empty %}No services{% endfor %}"
-                            data-price="{{ invoice.total_amount }}" data-status="{{ invoice.status }}">
-                            <td class="patient-name">
-                                <div class="patient-profile-inline">
-                                    <div class="avatar-initials"
-                                        data-name="{% if invoice.patient %}{{ invoice.patient.first_name }}{% else %}{{ invoice.deceased.first_name }}{% endif %}">
-                                        {% if invoice.patient %}{{ invoice.patient.first_name|first }}{{
-                                        invoice.patient.last_name|first }}{% else %}{{ invoice.deceased.first_name|first
-                                        }}{{ invoice.deceased.last_name|first }}{% endif %}
-                                    </div>
-                                    <div class="name-id">
-                                        <span class="full-name">
-                                            {% if invoice.patient %}
-                                            {{ invoice.patient.full_name }}
-                                            {% elif invoice.deceased %}
-                                            <span class="text-danger">{{ invoice.deceased.full_name }}</span>
-                                            {% else %}
-                                            Unknown
-                                            {% endif %}
-                                        </span>
-                                        <span class="patient-id">#INV-{{ invoice.pk|stringformat:"05d" }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="service-name-cell">
-                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                    {% for item in invoice.items.all %}
-                                    <span style="font-size: 0.85rem; font-weight: 600; color: #6366f1;">{{ item.name
-                                        }}</span>
-                                    {% empty %}
-                                    <span class="text-secondary">No services</span>
-                                    {% endfor %}
-
-                                </div>
-                            </td>
-                            <td class="price">Ksh {{ invoice.total_amount|format_number:2 }}</td>
-                            <td>
-                                <span class="invoice-status status-{{ invoice.status|lower }}">
-                                    <i
-                                        class="fas {% if invoice.status == 'Paid' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
-                                    {{ invoice.status }}
-                                </span>
-                            </td>
-                            <td class="date">
-                                <div class="time-cell">
-                                    <i class="far fa-calendar-alt"></i> {{ invoice.created_at|date:"M d, Y" }}
-                                    <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
-                                        invoice.created_at|date:"H:i" }}</span>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="no-records">
-                                <div class="empty-state-small">
-                                    <i class="fas fa-file-invoice"></i>
-                                    <p>No invoices found matching your criteria.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% elif user_role == 'Triage Nurse' %}
-        <div class="section">
-            <div class="section-header">
-                <h3><i class="fas fa-clipboard-list"></i> Recent Triage Entries</h3>
-                <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            <div class="search-section">
-                <form method="GET" class="search-form">
-                    <div class="search-container" style="position: relative;">
-                        <i class="fas fa-search"
-                            style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                        <input type="text" name="triage_search" class="search-input"
-                            placeholder="Search by patient name or phone..." value="{{ triage_search }}">
-                        {% if triage_search %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                        {% endif %}
-                    </div>
-                </form>
-            </div>
-            {% if triage_search %}
-            <div class="search-results-info">
-                Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search
-                    }}</strong>"
-            </div>
-            {% endif %}
-            <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Vitals</th>
-                            <th>Priority Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for triage in triage_entries %}
-                        <tr class="triage-row" data-triage-id="{{ triage.pk }}">
-                            <td>
-                                <div class="patient-profile-inline">
-                                    <div class="avatar-initials" data-name="{{ triage.visit.patient.first_name }}">
-                                        {{ triage.visit.patient.first_name|first
-                                        }}{{triage.visit.patient.last_name|first }}
-                                    </div>
-                                    <div class="name-id">
-                                        <span class="full-name">{{ triage.visit.patient.first_name }}
-                                            {{triage.visit.patient.last_name }}</span>
-                                        <span
-                                            class="patient-id">#PAT-{{triage.visit.patient.pk|stringformat:"05d"}}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="vitals-display">
-                                    <span class="vital-item" title="Temperature">
-                                        <i class="fas fa-thermometer-half"></i> {{ triage.temperature }}°C
-                                    </span>
-                                    <span class="vital-item" title="Blood Pressure">
-                                        <i class="fas fa-heartbeat"></i> {{ triage.blood_pressure }}
-                                    </span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="priority-badge-modern priority-{{ triage.priority|lower }}">
-                                    <i class="fas fa-circle"></i> {{ triage.get_priority_display }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="no-records">
-                                <div class="empty-state-small">
-                                    <i class="fas fa-clipboard-list"></i>
-                                    <p>No triage entries found today.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="section">
-            <div class="section-header">
-                <h3><i class="fas fa-hourglass-half"></i> Visits Pending Triage</h3>
-                <button class="reload-btn" onclick="location.reload()" title="Refresh visits">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            <div class="search-section">
-                <form method="GET" class="search-form">
-                    <div class="search-container" style="position: relative;">
-                        <i class="fas fa-search"
-                            style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                        <input type="text" name="pending_search" class="search-input"
-                            placeholder="Search by patient name or phone..." value="{{ pending_search }}">
-                        {% if pending_search %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                        {% endif %}
-                    </div>
-                </form>
-            </div>
-            {% if pending_search %}
-            <div class="search-results-info">
-                Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search
-                    }}</strong>"
-            </div>
-            {% endif %}
-            <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Patient Info</th>
-                            <th>Visit Reason</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for visit in visits_without_triage %}
-                        <tr class="pending-visit-row" data-visit-id="{{ visit.pk }}">
-                            <td>
-                                <div class="patient-profile-inline">
-                                    <div class="avatar-initials" data-name="{{ visit.patient.first_name }}">
-                                        {{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}
-                                    </div>
-                                    <div class="name-id">
-                                        <span class="full-name">{{ visit.patient.full_name }}</span>
-                                        <span class="visit-time"><i class="far fa-clock"></i> {{
-                                            visit.visit_date|date:"H:i" }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="visit-reason-box">
-                                    <span class="reason-text">{{ visit.services_summary|default:"Standard
-                                        Check-up"|truncatechars:60 }}</span>
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                                        <span class="visit-type-tag">{{ visit.get_visit_type_display }}</span>
-                                        {% if visit.is_maternity %}
-                                        <span class="badge"
-                                            style="background: rgba(231, 84, 128, 0.15); color: #e75480; border: 1px solid rgba(231, 84, 128, 0.3); font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">
-                                            <i class="fas fa-baby-carriage"></i> MATERNITY
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-right">
-                                <button class="btn-triage-start" data-visit-id="{{ visit.pk }}"
-                                    data-patient-name="{{ visit.patient.full_name }}"
-                                    data-visit-date="{{ visit.visit_date|date:'M d, Y H:i' }}"
-                                    data-is-maternity="{{ visit.is_maternity|yesno:'true,false' }}"
-                                    data-services="{{ visit.services_summary }}">
-                                    <i class="fas fa-stethoscope"></i> Triage
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="no-records">
-                                <div class="empty-state-small">
-                                    <i class="fas fa-check-double"></i>
-                                    <p>All clear! No visits pending triage.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-        <!-- IPD & Morgue Section -->
-        <div class="section admission-morgue-section" style="grid-column: span 2;">
-            <div class="tab-container">
-                <div class="tabs-header">
-                    <button class="dashboard-tab active" onclick="switchDashboardTab(event, 'ipd-tab')">
-                        <i class="fas fa-procedures"></i> IPD Admissions
-                    </button>
-                    <button class="dashboard-tab" onclick="switchDashboardTab(event, 'morgue-tab')">
-                        <i class="fas fa-box"></i> Morgue Cases
-                    </button>
+        <!-- Analytics Cards -->
+        <div class="analytics-grid">
+            <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-day"></i>
                 </div>
-
-                <div id="ipd-tab" class="tab-content active">
+                <div class="stat-info">
+                    <h3>Today's Visits</h3>
+                    <div class="number">{{ today_visits }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Patients</h3>
+                    <div class="number">{{ total_patients }}</div>
+                </div>
+            </div>
+            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+                <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Unpaid Invoices</h3>
+                        <div class="number">{{ unpaid_invoices }}</div>
+                    </div>
+                </div>
+            {% elif user_role == 'Triage Nurse' %}
+                <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
+                    <div class="stat-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Today's Triage</h3>
+                        <div class="number">{{ today_triage_entries }}</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Pending Triage</h3>
+                        <div class="number">{{ pending_triage_count }}</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="content-gid">
+            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+                <div class="section">
+                    <div class="section-header">
+                        <h3>
+                            <i class="fas fa-file-invoice-dollar"></i> Patient Service Invoices
+                        </h3>
+                        <button id="reloadInvoices" class="reload-btn" title="Reload Invoice Data">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="search-section">
+                        <form method="GET" class="search-form">
+                            <div class="search-container" style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <input type="text" name="invoice_search" class="search-input" placeholder="Search by patient name or service name..." value="{{ invoice_search }}">
+                                {% if invoice_search %}
+                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    {% if invoice_search %}
+                        <div class="search-results-info">
+                            Found <strong>{{ invoices|length }}</strong> invoice(s) matching "<strong>{{ invoice_search }}</strong>"
+                        </div>
+                    {% endif %}
                     <div class="table-responsive">
                         <table class="premium-table">
                             <thead>
                                 <tr>
                                     <th>Patient</th>
-                                    <th>Ward/Bed</th>
-                                    <th>Admitted At</th>
-                                    <th class="text-right">Action</th>
+                                    <th>Service</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for admission in ipd_admissions %}
-                                <tr>
-                                    <td>
-                                        <div class="patient-profile-inline">
-                                            <div class="avatar-initials" data-name="{{ admission.patient.first_name }}">
-                                                {{ admission.patient.first_name|first }}{{
-                                                admission.patient.last_name|first }}
+                            <tbody id="invoiceTableBody">
+                                {% for invoice in invoices %}
+                                    <tr class="invoice-row" data-invoice-id="{{ invoice.pk }}" style="cursor: pointer;" data-patient-name="{% if invoice.patient %}{{ invoice.patient.full_name }}{% else %}{{ invoice.deceased.full_name }}{% endif %}" data-service-name="{% for item in invoice.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% empty %}No services{% endfor %}" data-price="{{ invoice.balance }}" data-status="{{ invoice.status }}">
+                                        <td class="patient-name">
+                                            <div class="patient-profile-inline">
+                                                <div class="avatar-initials" data-name="{% if invoice.patient %}{{ invoice.patient.first_name }}{% else %}{{ invoice.deceased.first_name }}{% endif %}">
+                                                    {% if invoice.patient %}
+                                                        {{ invoice.patient.first_name|first }}{{ invoice.patient.last_name|first }}
+                                                    {% else %}
+                                                        {{ invoice.deceased.first_name|first }}{{ invoice.deceased.last_name|first }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="name-id">
+                                                    <span class="full-name">
+                                                        {% if invoice.patient %}
+                                                            {{ invoice.patient.full_name }}
+                                                        {% elif invoice.deceased %}
+                                                            <span class="text-danger">{{ invoice.deceased.full_name }}</span>
+                                                        {% else %}
+                                                            Unknown
+                                                        {% endif %}
+                                                    </span>
+                                                    <span class="patient-id">#INV-{{ invoice.pk|stringformat:"05d" }}</span>
+                                                </div>
                                             </div>
-                                            <div class="name-id">
-                                                <span class="full-name">{{ admission.patient.full_name }}</span>
-                                                <span class="patient-id">#PAT-{{ admission.patient.id|stringformat:"05d"
-                                                    }}</span>
+                                        </td>
+                                        <td class="service-name-cell">
+                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                {% for item in invoice.items.all %}
+                                                    <span style="font-size: 0.85rem; font-weight: 600; color: #6366f1;">{{ item.name }}</span>
+                                                {% empty %}
+                                                    <span class="text-secondary">No services</span>
+                                                {% endfor %}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="font-weight: 600; color: #10b981;">{{ admission.bed.ward.name }}
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Bed: {{
-                                            admission.bed.bed_number }}</div>
-                                    </td>
-                                    <td>
-                                        <div class="time-cell">
-                                            <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y"
-                                            }}
-                                            <span
-                                                style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
-                                                admission.admitted_at|date:"H:i" }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}"
-                                            class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                            <i class="fas fa-file-invoice-dollar"></i> Discharge
-                                        </a>
-                                    </td>
-                                </tr>
+                                        </td>
+                                        <td class="price">Ksh {{ invoice.balance|format_number:2 }}</td>
+                                        <td>
+                                            <span class="invoice-status status-{{ invoice.status|lower }}">
+                                                <i class="fas {% if invoice.status == 'Paid' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
+                                                {{ invoice.status }}
+                                            </span>
+                                        </td>
+                                        <td class="date">
+                                            <div class="time-cell">
+                                                <i class="far fa-calendar-alt"></i> {{ invoice.created_at|date:"M d, Y" }}
+                                                <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ invoice.created_at|date:"H:i" }}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 {% empty %}
-                                <tr>
-                                    <td colspan="4" class="no-records">
-                                        <div class="empty-state-small">
-                                            <i class="fas fa-procedures"></i>
-                                            <p>No active IPD admissions.</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td colspan="5" class="no-records">
+                                            <div class="empty-state-small">
+                                                <i class="fas fa-file-invoice"></i>
+                                                <p>No invoices found matching your criteria.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
-                <div id="morgue-tab" class="tab-content" style="display: none;">
+            {% elif user_role == 'Triage Nurse' %}
+                <div class="section">
+                    <div class="section-header">
+                        <h3>
+                            <i class="fas fa-clipboard-list"></i> Recent Triage Entries
+                        </h3>
+                        <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="search-section">
+                        <form method="GET" class="search-form">
+                            <div class="search-container" style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <input type="text" name="triage_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ triage_search }}">
+                                {% if triage_search %}
+                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    {% if triage_search %}
+                        <div class="search-results-info">
+                            Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search
+                            }}</strong>"
+                        </div>
+                    {% endif %}
                     <div class="table-responsive">
                         <table class="premium-table">
                             <thead>
                                 <tr>
-                                    <th>Deceased</th>
-                                    <th>Tag/Number</th>
-                                    <th>Status</th>
-                                    <th class="text-right">Action</th>
+                                    <th>Patient</th>
+                                    <th>Vitals</th>
+                                    <th>Priority Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for admission in morgue_admissions %}
-                                <tr>
-                                    <td>
-                                        <div class="patient-profile-inline">
-                                            <div class="avatar-initials" data-name="{{ admission.deceased.first_name }}"
-                                                style="background: #475569;">
-                                                {{ admission.deceased.first_name|first }}{{
-                                                admission.deceased.last_name|first }}
+                                {% for triage in triage_entries %}
+                                    <tr class="triage-row" data-triage-id="{{ triage.pk }}">
+                                        <td>
+                                            <div class="patient-profile-inline">
+                                                <div class="avatar-initials" data-name="{{ triage.visit.patient.first_name }}">{{ triage.visit.patient.first_name|first }}{{ triage.visit.patient.last_name|first }}</div>
+                                                <div class="name-id">
+                                                    <span class="full-name">{{ triage.visit.patient.first_name }}
+                                                    {{ triage.visit.patient.last_name }}</span>
+                                                    <span class="patient-id">#PAT-{{ triage.visit.patient.pk|stringformat:"05d" }}</span>
+                                                </div>
                                             </div>
-                                            <div class="name-id">
-                                                <span class="full-name text-danger">{{ admission.deceased.full_name
-                                                    }}</span>
-                                                <span class="patient-id">S/N: {{ admission.admission_number }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="vitals-display">
+                                                <span class="vital-item" title="Temperature">
+                                                    <i class="fas fa-thermometer-half"></i> {{ triage.temperature }}°C
+                                                </span>
+                                                <span class="vital-item" title="Blood Pressure">
+                                                    <i class="fas fa-heartbeat"></i> {{ triage.blood_pressure }}
+                                                </span>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td><span class="invoice-status status-unpaid">{{ admission.deceased.tag }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="time-cell">
-                                            <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M
-                                            d, Y" }}
-                                            <span
-                                                style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
-                                                admission.admission_datetime|date:"H:i" }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}"
-                                            class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                            <i class="fas fa-file-invoice-dollar"></i> Release
-                                        </a>
-                                    </td>
-                                </tr>
+                                        </td>
+                                        <td>
+                                            <span class="priority-badge-modern priority-{{ triage.priority|lower }}">
+                                                <i class="fas fa-circle"></i> {{ triage.get_priority_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
                                 {% empty %}
-                                <tr>
-                                    <td colspan="4" class="no-records">
-                                        <div class="empty-state-small">
-                                            <i class="fas fa-door-closed"></i>
-                                            <p>No active morgue cases.</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td colspan="4" class="no-records">
+                                            <div class="empty-state-small">
+                                                <i class="fas fa-clipboard-list"></i>
+                                                <p>No triage entries found today.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-        <div class="section" style="grid-column: span 2;">
-            <div class="section-header">
-                <h3><i class="fas fa-users-cog"></i> Recent Patient Directory</h3>
-            </div>
-            <div class="search-section">
-                <form method="GET" class="search-form">
-                    <div class="search-container" style="position: relative;">
-                        <i class="fas fa-search"
-                            style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                        <input type="text" name="patient_search" class="search-input"
-                            placeholder="Search by name, phone, or location..." value="{{ patient_search }}">
-                        {% if patient_search %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                        {% endif %}
+                <div class="section">
+                    <div class="section-header">
+                        <h3>
+                            <i class="fas fa-hourglass-half"></i> Visits Pending Triage
+                        </h3>
+                        <button class="reload-btn" onclick="location.reload()" title="Refresh visits">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
                     </div>
-                </form>
-            </div>
-            {% if patient_search %}
-            <div class="search-results-info">
-                Found <strong>{{ patients|length }}</strong> patient(s) matching "<strong>{{ patient_search }}</strong>"
-            </div>
+                    <div class="search-section">
+                        <form method="GET" class="search-form">
+                            <div class="search-container" style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <input type="text" name="pending_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ pending_search }}">
+                                {% if pending_search %}
+                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    {% if pending_search %}
+                        <div class="search-results-info">
+                            Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search
+                            }}</strong>"
+                        </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Info</th>
+                                    <th>Visit Reason</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for visit in visits_without_triage %}
+                                    <tr class="pending-visit-row" data-visit-id="{{ visit.pk }}">
+                                        <td>
+                                            <div class="patient-profile-inline">
+                                                <div class="avatar-initials" data-name="{{ visit.patient.first_name }}">{{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}</div>
+                                                <div class="name-id">
+                                                    <span class="full-name">{{ visit.patient.full_name }}</span>
+                                                    <span class="visit-time"><i class="far fa-clock"></i> {{ visit.visit_date|date:"H:i" }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="visit-reason-box">
+                                                <span class="reason-text">{{ visit.services_summary|default:"Standard Check-up"|truncatechars:60 }}</span>
+                                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                                    <span class="visit-type-tag">{{ visit.get_visit_type_display }}</span>
+                                                    {% if visit.is_maternity %}
+                                                        <span class="badge" style="background: rgba(231, 84, 128, 0.15); color: #e75480; border: 1px solid rgba(231, 84, 128, 0.3); font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">
+                                                            <i class="fas fa-baby-carriage"></i> MATERNITY
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-right">
+                                            <button class="btn-triage-start" data-visit-id="{{ visit.pk }}" data-patient-name="{{ visit.patient.full_name }}" data-visit-date="{{ visit.visit_date|date:'M d, Y H:i' }}" data-is-maternity="{{ visit.is_maternity|yesno:'true,false' }}" data-services="{{ visit.services_summary }}">
+                                                <i class="fas fa-stethoscope"></i> Triage
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="no-records">
+                                            <div class="empty-state-small">
+                                                <i class="fas fa-check-double"></i>
+                                                <p>All clear! No visits pending triage.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             {% endif %}
-            <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Age/Gender</th>
-                            <th>Contact</th>
-                            <th>Location</th>
-                        </tr>
-                    </thead>
-                    <tbody id="patientTableBody">
-                        {% for patient in patients %}
-                        <tr class="patient-row" data-patient-id="{{ patient.pk }}"
-                            data-patient-name="{{ patient.full_name }}">
-                            <td>
-                                <div class="patient-profile-inline">
-                                    <div class="avatar-initials" data-name="{{ patient.first_name }}">
-                                        {{ patient.first_name|first }}{{ patient.last_name|first }}
-                                    </div>
-                                    <div class="name-id">
-                                        <span class="full-name">{{ patient.full_name }}</span>
-                                        <span class="patient-id">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <span style="font-weight: 600;">{{ patient.age }} yrs</span>
-                                    <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{
-                                        patient.get_gender_display }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-size: 0.85rem; color: var(--text-primary);">
-                                    <i class="fas fa-phone-alt"
-                                        style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{
-                                    patient.phone }}
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    <i class="fas fa-map-marker-alt"
-                                        style="font-size: 0.75rem; margin-right: 0.5rem;"></i>{{ patient.location }}
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="no-records">
-                                <div class="empty-state-small">
-                                    <i class="fas fa-user-slash"></i>
-                                    <p>No patients found.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+                <!-- IPD & Morgue Section -->
+                <div class="section admission-morgue-section" style="grid-column: span 2;">
+                    <div class="tab-container">
+                        <div class="tabs-header">
+                            <button class="dashboard-tab active" onclick="switchDashboardTab(event, 'ipd-tab')">
+                                <i class="fas fa-procedures"></i> IPD Admissions
+                            </button>
+                            <button class="dashboard-tab" onclick="switchDashboardTab(event, 'morgue-tab')">
+                                <i class="fas fa-box"></i> Morgue Cases
+                            </button>
+                        </div>
+                        <div id="ipd-tab" class="tab-content active">
+                            <div class="table-responsive">
+                                <table class="premium-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient</th>
+                                            <th>Ward/Bed</th>
+                                            <th>Admitted At</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for admission in ipd_admissions %}
+                                            <tr>
+                                                <td>
+                                                    <div class="patient-profile-inline">
+                                                        <div class="avatar-initials" data-name="{{ admission.patient.first_name }}">
+                                                            {{ admission.patient.first_name|first }}{{
+                                                            admission.patient.last_name|first }}
+                                                        </div>
+                                                        <div class="name-id">
+                                                            <span class="full-name">{{ admission.patient.full_name }}</span>
+                                                            <span class="patient-id">#PAT-{{ admission.patient.id|stringformat:"05d" }}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style="font-weight: 600; color: #10b981;">{{ admission.bed.ward.name }}</div>
+                                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                                                        Bed: {{
+                                                        admission.bed.bed_number }}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="time-cell">
+                                                        <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y"
+                                                        }}
+                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
+                                                        admission.admitted_at|date:"H:i" }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-right">
+                                                    <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                                        <i class="fas fa-file-invoice-dollar"></i> Discharge
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="no-records">
+                                                    <div class="empty-state-small">
+                                                        <i class="fas fa-procedures"></i>
+                                                        <p>No active IPD admissions.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="morgue-tab" class="tab-content" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="premium-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Deceased</th>
+                                            <th>Tag/Number</th>
+                                            <th>Status</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for admission in morgue_admissions %}
+                                            <tr>
+                                                <td>
+                                                    <div class="patient-profile-inline">
+                                                        <div class="avatar-initials" data-name="{{ admission.deceased.first_name }}" style="background: #475569;">
+                                                            {{ admission.deceased.first_name|first }}{{
+                                                            admission.deceased.last_name|first }}
+                                                        </div>
+                                                        <div class="name-id">
+                                                            <span class="full-name text-danger">{{ admission.deceased.full_name
+                                                            }}</span>
+                                                            <span class="patient-id">S/N: {{ admission.admission_number }}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="invoice-status status-unpaid">{{ admission.deceased.tag }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="time-cell">
+                                                        <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M
+                                                        d, Y" }}
+                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
+                                                        admission.admission_datetime|date:"H:i" }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-right">
+                                                    <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                                        <i class="fas fa-file-invoice-dollar"></i> Release
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="no-records">
+                                                    <div class="empty-state-small">
+                                                        <i class="fas fa-door-closed"></i>
+                                                        <p>No active morgue cases.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+                <div class="section" style="grid-column: span 2;">
+                    <div class="section-header">
+                        <h3>
+                            <i class="fas fa-users-cog"></i> Recent Patient Directory
+                        </h3>
+                    </div>
+                    <div class="search-section">
+                        <form method="GET" class="search-form">
+                            <div class="search-container" style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <input type="text" name="patient_search" class="search-input" placeholder="Search by name, phone, or location..." value="{{ patient_search }}">
+                                {% if patient_search %}
+                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    {% if patient_search %}
+                        <div class="search-results-info">
+                            Found <strong>{{ patients|length }}</strong> patient(s) matching "<strong>{{ patient_search }}</strong>"
+                        </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Age/Gender</th>
+                                    <th>Contact</th>
+                                    <th>Location</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patientTableBody">
+                                {% for patient in patients %}
+                                    <tr class="patient-row" data-patient-id="{{ patient.pk }}" data-patient-name="{{ patient.full_name }}">
+                                        <td>
+                                            <div class="patient-profile-inline">
+                                                <div class="avatar-initials" data-name="{{ patient.first_name }}">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
+                                                <div class="name-id">
+                                                    <span class="full-name">{{ patient.full_name }}</span>
+                                                    <span class="patient-id">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <span style="font-weight: 600;">{{ patient.age }} yrs</span>
+                                                <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{
+                                                patient.get_gender_display }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="font-size: 0.85rem; color: var(--text-primary);">
+                                                <i class="fas fa-phone-alt" style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{
+                                                patient.phone }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                                <i class="fas fa-map-marker-alt" style="font-size: 0.75rem; margin-right: 0.5rem;"></i>{{ patient.location }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="no-records">
+                                            <div class="empty-state-small">
+                                                <i class="fas fa-user-slash"></i>
+                                                <p>No patients found.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-</div>
-
-<script>
+    <script>
     function switchDashboardTab(evt, tabId) {
         const container = evt.currentTarget.closest('.tab-container');
 
@@ -1229,278 +1189,245 @@
         document.getElementById(tabId).classList.add('active');
         evt.currentTarget.classList.add('active');
     }
-</script>
-
-
+    </script>
 {% endblock %}
-
 {% block modals %}
-<!-- Patient Action Modal -->
-<div id="patientActionModal" class="clinical-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-user-gear"></i> Patient Actions</h3>
-            <span class="close">&times;</span>
-        </div>
-        <div class="modal-body">
-            <p style="color: var(--text-secondary); margin-bottom: 2.5rem;">Selecting action for <strong
-                    id="modalPatientName" style="color: white; font-size: 1.2rem;"></strong></p>
-
-            <div class="action-card"
-                style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
-                <h4
-                    style="margin: 0; color: #10b981; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
-                    <i class="fas fa-hospital-user"></i> ADMIT FOR CONSULTATION
-                </h4>
-
-                <div class="form-group">
-                    <label for="admitConsultation"
-                        style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Consultation
-                        Type</label>
-                    <select id="admitConsultation" class="clinical-input" style="cursor: pointer;">
-                        <option value="">-- Select Consultation --</option>
-                        {% for service in services %}
-                        {% if "Consultation" in service.name or "PNC" in service.name or "ANC" in service.name or "CWC" in service.name %}
-                        <option value="{{ service.pk }}">
-                            {{ service.name }} (Ksh {{ service.price|format_number:0 }})
-                        </option>
-                        {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <button id="admitVisitBtn" class="btn-primary"
-                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
-                    <i class="fas fa-check-circle"></i> Complete Admission
-                </button>
+    <!-- Patient Action Modal -->
+    <div id="patientActionModal" class="clinical-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-user-gear"></i> Patient Actions
+                </h3>
+                <span class="close">&times;</span>
             </div>
-
-            <div style="display: flex; align-items: center; gap: 1.5rem; margin: 3rem 0;">
-                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-                <span
-                    style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">OR</span>
-                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-            </div>
-
-            <div class="action-card"
-                style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
-                <h4
-                    style="margin: 0; color: #6366f1; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
-                    <i class="fas fa-bolt"></i> QUICK SERVICE INVOICE
-                </h4>
-                <div class="form-group">
-                    <label for="quickService"
-                        style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Select
-                        Service / Item</label>
-                    <select id="quickService" class="clinical-input" style="cursor: pointer;">
-                        <option value="">-- Choose a service --</option>
-                        {% regroup services by department as services_by_dept %}
-                        {% for dept in services_by_dept %}
-                        {% if "Reception" not in dept.grouper.name %}
-                        <optgroup label="{{ dept.grouper.name }}">
-                            {% for service in dept.list %}
-                            {% if "Consultation" not in service.name %}
-                            <option value="{{ service.pk }}">
-                                {{ service.name }} (Ksh {{ service.price|format_number:2 }})
-                            </option>
-                            {% endif %}
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 2.5rem;">
+                    Selecting action for <strong id="modalPatientName" style="color: white; font-size: 1.2rem;"></strong>
+                </p>
+                <div class="action-card" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
+                    <h4 style="margin: 0; color: #10b981; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
+                        <i class="fas fa-hospital-user"></i> ADMIT FOR CONSULTATION
+                    </h4>
+                    <div class="form-group">
+                        <label for="admitConsultation" style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
+                            Consultation
+                            Type
+                        </label>
+                        <select id="admitConsultation" class="clinical-input" style="cursor: pointer;">
+                            <option value="">-- Select Consultation --</option>
+                            {% for service in services %}
+                                {% if "Consultation" in service.name or "PNC" in service.name or "ANC" in service.name or "CWC" in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>{% endif %}
                             {% endfor %}
-                        </optgroup>
-                        {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-                <button id="generateInvoiceBtn" class="btn-primary" onclick="submitQuickInvoice()"
-                    style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
-                    <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Payment Processing Modal -->
-<div id="paymentModal" class="clinical-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-credit-card"></i> Process Payment</h3>
-            <span class="close-payment">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="invoice-details-premium"
-                style="background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.85rem;">Patient</span>
-                    <strong id="paymentPatientName" style="color: white;"></strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.85rem;">Service</span>
-                    <span id="paymentServiceName" style="font-weight: 600; color: #6366f1;"></span>
-                </div>
-                <div
-                    style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--reception-border);">
-                    <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 700;">TOTAL AMOUNT</span>
-                    <strong id="paymentAmount" style="font-size: 1.5rem; color: #10b981;"></strong>
-                </div>
-            </div>
-
-            <div class="payment-options">
-                <div class="payment-methods-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <button id="mpesaPaymentBtn"
-                        style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
-                        <i class="fas fa-mobile-screen-button"
-                            style="font-size: 2rem; color: #10b981; margin-bottom: 1rem; display: block;"></i>
-                        <strong style="color: white; display: block;">M-PESA</strong>
-                        <small style="color: var(--text-secondary);">Mobile Money</small>
+                        </select>
+                    </div>
+                    <button id="admitVisitBtn" class="btn-primary" style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
+                        <i class="fas fa-check-circle"></i> Complete Admission
                     </button>
-                    <button id="cashPaymentBtn"
-                        style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
-                        <i class="fas fa-money-bill-transfer"
-                            style="font-size: 2rem; color: #6366f1; margin-bottom: 1rem; display: block;"></i>
-                        <strong style="color: white; display: block;">CASH</strong>
-                        <small style="color: var(--text-secondary);">Physical Payment</small>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1.5rem; margin: 3rem 0;">
+                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">OR</span>
+                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                </div>
+                <div class="action-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
+                    <h4 style="margin: 0; color: #6366f1; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
+                        <i class="fas fa-bolt"></i> QUICK SERVICE INVOICE
+                    </h4>
+                    <div class="form-group">
+                        <label for="quickService" style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
+                            Select
+                            Service / Item
+                        </label>
+                        <select id="quickService" class="clinical-input" style="cursor: pointer;">
+                            <option value="">-- Choose a service --</option>
+                            {% regroup services by department as services_by_dept %}
+                            {% for dept in services_by_dept %}
+                                {% if "Reception" not in dept.grouper.name %}
+                                    <optgroup label="{{ dept.grouper.name }}">
+                                        {% for service in dept.list %}
+                                            {% if "Consultation" not in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2 }})</option>{% endif %}
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button id="generateInvoiceBtn" class="btn-primary" onclick="submitQuickInvoice()" style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
+                        <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
                     </button>
                 </div>
             </div>
-
-            <div class="already-paid" style="display: none; text-align: center; padding: 2rem;">
-                <div
-                    style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
-                    <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981;"></i>
+        </div>
+    </div>
+    <!-- Payment Processing Modal -->
+    <div id="paymentModal" class="clinical-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-credit-card"></i> Process Payment
+                </h3>
+                <span class="close-payment">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="invoice-details-premium" style="background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Patient</span>
+                        <strong id="paymentPatientName" style="color: white;"></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Service</span>
+                        <span id="paymentServiceName" style="font-weight: 600; color: #6366f1;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--reception-border);">
+                        <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 700;">AMOUNT DUE</span>
+                        <strong id="paymentAmount" style="font-size: 1.5rem; color: #10b981;"></strong>
+                    </div>
                 </div>
-                <h4 style="color: #10b981; font-size: 1.5rem; margin-bottom: 0.5rem;">Payment Complete</h4>
-                <p style="color: var(--text-secondary);">This invoice has been fully paid.</p>
-                <button onclick="window.print()" class="btn-secondary" style="margin-top: 1.5rem;">
-                    <i class="fas fa-print"></i> Print Receipt
-                </button>
+                <div class="payment-options">
+                    <div class="payment-methods-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button id="mpesaPaymentBtn" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-mobile-screen-button" style="font-size: 2rem; color: #10b981; margin-bottom: 1rem; display: block;"></i>
+                            <strong style="color: white; display: block;">M-PESA</strong>
+                            <small style="color: var(--text-secondary);">Mobile Money</small>
+                        </button>
+                        <button id="cashPaymentBtn" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-money-bill-transfer" style="font-size: 2rem; color: #6366f1; margin-bottom: 1rem; display: block;"></i>
+                            <strong style="color: white; display: block;">CASH</strong>
+                            <small style="color: var(--text-secondary);">Physical Payment</small>
+                        </button>
+                    </div>
+                </div>
+                <div class="already-paid" style="display: none; text-align: center; padding: 2rem;">
+                    <div style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                        <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981;"></i>
+                    </div>
+                    <h4 style="color: #10b981; font-size: 1.5rem; margin-bottom: 0.5rem;">Payment Complete</h4>
+                    <p style="color: var(--text-secondary);">This invoice has been fully paid.</p>
+                    <button onclick="window.print()" class="btn-secondary" style="margin-top: 1.5rem;">
+                        <i class="fas fa-print"></i> Print Receipt
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Triage Entry Modal -->
-<div id="triageModal" class="clinical-modal">
-    <div class="modal-content" style="max-width: 800px;">
-        <div class="modal-header">
-            <h3><i class="fas fa-heart-pulse"></i> Clinical Triage Assessment</h3>
-            <span class="close-triage">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="triageForm">
-                <div class="patient-banner"
-                    style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 16px; margin-bottom: 2rem;">
-                    <div>
-                        <span
-                            style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Patient
+    <!-- Triage Entry Modal -->
+    <div id="triageModal" class="clinical-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-heart-pulse"></i> Clinical Triage Assessment
+                </h3>
+                <span class="close-triage">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="triageForm">
+                    <div class="patient-banner" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 16px; margin-bottom: 2rem;">
+                        <div>
+                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Patient
                             Name</span>
-                        <strong id="triagePatientName" style="font-size: 1.1rem; color: white;"></strong>
-                    </div>
-                    <div>
-                        <span
-                            style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
+                            <strong id="triagePatientName" style="font-size: 1.1rem; color: white;"></strong>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
                             Activity</span>
-                        <span id="triageVisitServices" style="font-weight: 600; color: #6366f1;"></span>
-                    </div>
-                    <div>
-                        <span
-                            style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
+                            <span id="triageVisitServices" style="font-weight: 600; color: #6366f1;"></span>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
                             Time</span>
-                        <span id="triageVisitDate" style="color: white;"></span>
+                            <span id="triageVisitDate" style="color: white;"></span>
+                        </div>
                     </div>
-                </div>
-
-                <div class="form-grid-modern">
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select name="category" id="category" class="clinical-input" required>
-                            <option value="">Select Category</option>
-                            <option value="GENERAL">General</option>
-                            <option value="EMERGENCY">Emergency</option>
-                            <option value="PEDIATRIC">Pediatric</option>
-                            <option value="MATERNITY">Maternity</option>
-                            <option value="SURGERY">Surgery</option>
-                            <option value="ORTHOPEDIC">Orthopedic</option>
-                            <option value="OTHER">Other</option>
-                        </select>
+                    <div class="form-grid-modern">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category" id="category" class="clinical-input" required>
+                                <option value="">Select Category</option>
+                                <option value="GENERAL">General</option>
+                                <option value="EMERGENCY">Emergency</option>
+                                <option value="PEDIATRIC">Pediatric</option>
+                                <option value="MATERNITY">Maternity</option>
+                                <option value="SURGERY">Surgery</option>
+                                <option value="ORTHOPEDIC">Orthopedic</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select name="priority" id="priority" class="clinical-input" required>
+                                <option value="CRITICAL">Critical (Immediate)</option>
+                                <option value="HIGH">High (Urgent)</option>
+                                <option value="MEDIUM" selected>Medium (Standard)</option>
+                                <option value="LOW">Low (Routine)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Temperature (°C)</label>
+                            <input type="number" name="temperature" class="clinical-input" step="0.1" placeholder="36.5">
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                BP Systolic (mmHg) <span style="color: red;">*</span>
+                            </label>
+                            <input type="number" name="blood_pressure_systolic" class="clinical-input" placeholder="120" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                BP Diastolic (mmHg) <span style="color: red;">*</span>
+                            </label>
+                            <input type="number" name="blood_pressure_diastolic" class="clinical-input" placeholder="80" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                O2 Saturation (%) <span style="color: red;">*</span>
+                            </label>
+                            <input type="number" name="oxygen_saturation" class="clinical-input" placeholder="98" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                Weight (kg) <span style="color: red;">*</span>
+                            </label>
+                            <input type="number" name="weight" class="clinical-input" placeholder="70.5" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                Height (cm) <span style="color: red;">*</span>
+                            </label>
+                            <input type="number" name="height" class="clinical-input" placeholder="175" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Assignment Room</label>
+                            <select name="send_to" id="send_to" class="clinical-input" required style="border-color: #6366f1 !important;">
+                                <option value="">-- Select Destination --</option>
+                                <option value="1">Consultation Room 1</option>
+                                <option value="2">Consultation Room 2</option>
+                                <option value="3">Consultation Room 3</option>
+                                <option value="4">Consultation Room 4</option>
+                                <option value="5">Consultation Room 5</option>
+                                <option value="ANC">Maternity - ANC</option>
+                                <option value="PNC">Maternity - PNC</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Priority</label>
-                        <select name="priority" id="priority" class="clinical-input" required>
-                            <option value="CRITICAL">Critical (Immediate)</option>
-                            <option value="HIGH">High (Urgent)</option>
-                            <option value="MEDIUM" selected>Medium (Standard)</option>
-                            <option value="LOW">Low (Routine)</option>
-                        </select>
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label>Assessment & Triage Notes</label>
+                        <textarea name="triage_notes" class="clinical-input" rows="3" placeholder="Enter clinical observations..."></textarea>
                     </div>
-
-                    <div class="form-group">
-                        <label>Temperature (°C)</label>
-                        <input type="number" name="temperature" class="clinical-input" step="0.1" placeholder="36.5">
-                    </div>
-
-
-                    <div class="form-group">
-                        <label>BP Systolic (mmHg) <span style="color: red;">*</span></label>
-                        <input type="number" name="blood_pressure_systolic" class="clinical-input" placeholder="120"
-                            required>
-                    </div>
-                    <div class="form-group">
-                        <label>BP Diastolic (mmHg) <span style="color: red;">*</span></label>
-                        <input type="number" name="blood_pressure_diastolic" class="clinical-input" placeholder="80"
-                            required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>O2 Saturation (%) <span style="color: red;">*</span></label>
-                        <input type="number" name="oxygen_saturation" class="clinical-input" placeholder="98" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Weight (kg) <span style="color: red;">*</span></label>
-                        <input type="number" name="weight" class="clinical-input" placeholder="70.5" step="0.1"
-                            required>
-                    </div>
-                    <div class="form-group">
-                        <label>Height (cm) <span style="color: red;">*</span></label>
-                        <input type="number" name="height" class="clinical-input" placeholder="175" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Assignment Room</label>
-                        <select name="send_to" id="send_to" class="clinical-input" required
-                            style="border-color: #6366f1 !important;">
-                            <option value="">-- Select Destination --</option>
-                            <option value="1">Consultation Room 1</option>
-                            <option value="2">Consultation Room 2</option>
-                            <option value="3">Consultation Room 3</option>
-                            <option value="4">Consultation Room 4</option>
-                            <option value="5">Consultation Room 5</option>
-                            <option value="ANC">Maternity - ANC</option>
-                            <option value="PNC">Maternity - PNC</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-top: 1.5rem;">
-                    <label>Assessment & Triage Notes</label>
-                    <textarea name="triage_notes" class="clinical-input" rows="3"
-                        placeholder="Enter clinical observations..."></textarea>
-                </div>
-
-                <input type="hidden" name="visit_id" id="visitId">
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-secondary" id="cancelTriageBtn">Cancel</button>
-            <button type="submit" form="triageForm" class="btn-primary">
-                <i class="fas fa-save"></i> Finalize Triage
-            </button>
+                    <input type="hidden" name="visit_id" id="visitId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelTriageBtn">Cancel</button>
+                <button type="submit" form="triageForm" class="btn-primary">
+                    <i class="fas fa-save"></i> Finalize Triage
+                </button>
+            </div>
         </div>
     </div>
-</div>
 {% endblock modals %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
         const reloadBtn = document.getElementById('reloadInvoices');
         const invoiceTableBody = document.getElementById('invoiceTableBody');
@@ -2000,5 +1927,5 @@
                 });
         }
     });
-</script>
+    </script>
 {% endblock %}

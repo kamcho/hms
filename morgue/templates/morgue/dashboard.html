@@ -1,230 +1,225 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Morgue Dashboard - HMS{% endblock %}
-
 {% block content %}
-<div class="morgue-dashboard">
-    <!-- Header Section -->
-    <header class="dashboard-header">
-        <div class="header-content">
-            <div class="header-text">
-                <h1><i class="fas fa-skull-crossbones"></i> Morgue Management System</h1>
-                <p>Comprehensive deceased management and tracking dashboard</p>
-            </div>
-            <div class="header-stats">
-                <div class="quick-stat">
-                    <span class="stat-number">{{ total_deceased }}</span>
-                    <span class="stat-label">Current Occupancy</span>
+    <div class="morgue-dashboard">
+        <!-- Header Section -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>
+                        <i class="fas fa-skull-crossbones"></i> Morgue Management System
+                    </h1>
+                    <p>Comprehensive deceased management and tracking dashboard</p>
                 </div>
-            </div>
-        </div>
-        <div class="header-actions">
-            <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> New Admission
-            </a>
-            <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
-                <i class="fas fa-list"></i> View All
-            </a>
-        </div>
-    </header>
-
-    <!-- Main Statistics Grid -->
-    <section class="stats-section">
-        <div class="stats-grid">
-            <div class="stat-card primary">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-number">{{ total_deceased }}</div>
-                    <div class="stat-label">Current Occupancy</div>
-                    <div class="stat-change">Active in morgue</div>
-                </div>
-                <div class="stat-progress">
-                    <div class="progress-bar" style="width: 85%"></div>
-                </div>
-            </div>
-            
-            <div class="stat-card success">
-                <div class="stat-icon">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-number">{{ admitted_today }}</div>
-                    <div class="stat-label">Admitted Today</div>
-                    <div class="stat-change">New admissions</div>
-                </div>
-                <div class="stat-progress">
-                    <div class="progress-bar success" style="width: 60%"></div>
-                </div>
-            </div>
-            
-            <div class="stat-card warning">
-                <div class="stat-icon">
-                    <i class="fas fa-user-minus"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-number">{{ released_today }}</div>
-                    <div class="stat-label">Released Today</div>
-                    <div class="stat-change">Processed releases</div>
-                </div>
-                <div class="stat-progress">
-                    <div class="progress-bar warning" style="width: 40%"></div>
-                </div>
-            </div>
-            
-            <div class="stat-card info">
-                <div class="stat-icon">
-                    <i class="fas fa-snowflake"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-number">{{ released_count }}</div>
-                    <div class="stat-label">Total Released</div>
-                    <div class="stat-change">All time releases</div>
-                </div>
-                <div class="stat-progress">
-                    <div class="progress-bar info" style="width: 75%"></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Dashboard Grid -->
-    <section class="main-dashboard-grid">
-        <!-- Storage Occupancy Card -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h3><i class="fas fa-th"></i> Storage Occupancy</h3>
-                <div class="card-badge">
-                    <span>{{ chamber_occupancy.items|length }} Chambers</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="occupancy-grid">
-                    {% for chamber, count in chamber_occupancy.items %}
-                    <div class="occupancy-item {% if count > 5 %}high-occupancy{% endif %}">
-                        <div class="chamber-info">
-                            <span class="chamber-name">{{ chamber }}</span>
-                            <span class="chamber-count">{{ count }}</span>
-                        </div>
-                        <div class="occupancy-indicator">
-                            <div class="indicator-bar" data-count="{{ count }}"></div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="occupancy-legend">
-                    <div class="legend-item">
-                        <span class="legend-color low"></span>
-                        <span>Low (0-5)</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color high"></span>
-                        <span>High (6+)</span>
+                <div class="header-stats">
+                    <div class="quick-stat">
+                        <span class="stat-number">{{ total_deceased }}</span>
+                        <span class="stat-label">Current Occupancy</span>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Recent Admissions Card -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h3><i class="fas fa-clock"></i> Recent Admissions</h3>
-                <div class="card-badge">
-                    <span>{{ recent_admissions|length }} Recent</span>
+            <div class="header-actions">
+                <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Admission
+                </a>
+                <a href="{% url 'morgue:deceased_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+        </header>
+        <!-- Main Statistics Grid -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{ total_deceased }}</div>
+                        <div class="stat-label">Current Occupancy</div>
+                        <div class="stat-change">Active in morgue</div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar" style="width: 85%"></div>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{ admitted_today }}</div>
+                        <div class="stat-label">Admitted Today</div>
+                        <div class="stat-change">New admissions</div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar success" style="width: 60%"></div>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-minus"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{ released_today }}</div>
+                        <div class="stat-label">Released Today</div>
+                        <div class="stat-change">Processed releases</div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar warning" style="width: 40%"></div>
+                    </div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-snowflake"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{ released_count }}</div>
+                        <div class="stat-label">Total Released</div>
+                        <div class="stat-change">All time releases</div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar info" style="width: 75%"></div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="recent-list">
-                    {% for admission in recent_admissions %}
-                    <div class="recent-item">
-                        <div class="recent-avatar">
-                            <span>{{ admission.surname|first }}{{ admission.other_names|first }}</span>
-                        </div>
-                        <div class="recent-info">
-                            <h4>{{ admission.full_name }}</h4>
-                            <div class="recent-meta">
-                                <span class="meta-item">
-                                    <i class="fas fa-tag"></i> {{ admission.tag }}
-                                </span>
-                                <span class="meta-item">
-                                    <i class="fas fa-snowflake"></i> {{ admission.get_storage_chamber_display }}
-                                </span>
+        </section>
+        <!-- Dashboard Grid -->
+        <section class="main-dashboard-grid">
+            <!-- Storage Occupancy Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>
+                        <i class="fas fa-th"></i> Storage Occupancy
+                    </h3>
+                    <div class="card-badge">
+                        <span>{{ chamber_occupancy.items|length }} Chambers</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="occupancy-grid">
+                        {% for chamber, count in chamber_occupancy.items %}
+                            <div class="occupancy-item {% if count > 5 %}high-occupancy{% endif %}">
+                                <div class="chamber-info">
+                                    <span class="chamber-name">{{ chamber }}</span>
+                                    <span class="chamber-count">{{ count }}</span>
+                                </div>
+                                <div class="occupancy-indicator">
+                                    <div class="indicator-bar" data-count="{{ count }}"></div>
+                                </div>
                             </div>
-                            <div class="recent-time">
-                                <i class="fas fa-clock"></i> {{ admission.date_time_received|date:"M d, Y H:i" }}
-                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="occupancy-legend">
+                        <div class="legend-item">
+                            <span class="legend-color low"></span>
+                            <span>Low (0-5)</span>
                         </div>
-                        <div class="recent-actions">
-                            <a href="{% url 'morgue:deceased_detail' admission.pk %}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-eye"></i> View
-                            </a>
+                        <div class="legend-item">
+                            <span class="legend-color high"></span>
+                            <span>High (6+)</span>
                         </div>
                     </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-user-injured"></i>
-                        <h4>No Recent Admissions</h4>
-                        <p>No new admissions have been recorded in the last 24 hours.</p>
-                    </div>
-                    {% endfor %}
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Quick Actions Section -->
-    <section class="quick-actions-section">
-        <div class="section-header">
-            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-            <p>Common tasks and shortcuts</p>
-        </div>
-        <div class="quick-actions-grid">
-            <a href="{% url 'morgue:deceased_create' %}" class="action-card">
-                <div class="action-icon">
-                    <i class="fas fa-user-plus"></i>
+            <!-- Recent Admissions Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>
+                        <i class="fas fa-clock"></i> Recent Admissions
+                    </h3>
+                    <div class="card-badge">
+                        <span>{{ recent_admissions|length }} Recent</span>
+                    </div>
                 </div>
-                <div class="action-content">
-                    <h4>New Admission</h4>
-                    <p>Register a new deceased person</p>
+                <div class="card-body">
+                    <div class="recent-list">
+                        {% for admission in recent_admissions %}
+                            <div class="recent-item">
+                                <div class="recent-avatar">
+                                    <span>{{ admission.surname|first }}{{ admission.other_names|first }}</span>
+                                </div>
+                                <div class="recent-info">
+                                    <h4>{{ admission.full_name }}</h4>
+                                    <div class="recent-meta">
+                                        <span class="meta-item">
+                                            <i class="fas fa-tag"></i> {{ admission.tag }}
+                                        </span>
+                                        <span class="meta-item">
+                                            <i class="fas fa-snowflake"></i> {{ admission.get_storage_chamber_display }}
+                                        </span>
+                                    </div>
+                                    <div class="recent-time">
+                                        <i class="fas fa-clock"></i> {{ admission.date_time_received|date:"M d, Y H:i" }}
+                                    </div>
+                                </div>
+                                <div class="recent-actions">
+                                    <a href="{% url 'morgue:deceased_detail' admission.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">
+                                <i class="fas fa-user-injured"></i>
+                                <h4>No Recent Admissions</h4>
+                                <p>No new admissions have been recorded in the last 24 hours.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
-            </a>
-            
-            <a href="{% url 'morgue:deceased_list' %}" class="action-card">
-                <div class="action-icon">
-                    <i class="fas fa-list"></i>
-                </div>
-                <div class="action-content">
-                    <h4>View All Deceased</h4>
-                    <p>Browse all registered deceased</p>
-                </div>
-            </a>
-            
-            <a href="{% url 'morgue:next_of_kin_create' 1 %}" class="action-card">
-                <div class="action-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="action-content">
-                    <h4>Add Next of Kin</h4>
-                    <p>Manage contact information</p>
-                </div>
-            </a>
-            
-            <a href="#" class="action-card">
-                <div class="action-icon">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <div class="action-content">
-                    <h4>Generate Report</h4>
-                    <p>Export morgue statistics</p>
-                </div>
-            </a>
-        </div>
-    </section>
-</div>
-
-<style>
+            </div>
+        </section>
+        <!-- Quick Actions Section -->
+        <section class="quick-actions-section">
+            <div class="section-header">
+                <h3>
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h3>
+                <p>Common tasks and shortcuts</p>
+            </div>
+            <div class="quick-actions-grid">
+                <a href="{% url 'morgue:deceased_create' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>New Admission</h4>
+                        <p>Register a new deceased person</p>
+                    </div>
+                </a>
+                <a href="{% url 'morgue:deceased_list' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>View All Deceased</h4>
+                        <p>Browse all registered deceased</p>
+                    </div>
+                </a>
+                <a href="{% url 'morgue:next_of_kin_create' 1 %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Add Next of Kin</h4>
+                        <p>Manage contact information</p>
+                    </div>
+                </a>
+                <a href="#" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Generate Report</h4>
+                        <p>Export morgue statistics</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </div>
+    <style>
 /* Reset and Base Styles */
 * {
     margin: 0;
@@ -970,9 +965,8 @@
 .action-card:nth-child(2) { animation-delay: 0.8s; }
 .action-card:nth-child(3) { animation-delay: 0.9s; }
 .action-card:nth-child(4) { animation-delay: 1.0s; }
-</style>
-
-<script>
+    </style>
+    <script>
 // Set occupancy indicator bar widths
 document.addEventListener('DOMContentLoaded', function() {
     const indicatorBars = document.querySelectorAll('.indicator-bar');
@@ -987,5 +981,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

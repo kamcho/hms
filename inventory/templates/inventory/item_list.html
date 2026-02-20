@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Inventory management - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -192,256 +190,212 @@
             transform: translateY(0);
         }
     }
-</style>
-
-<div class="inventory-header">
-    <h1>Inventory Items</h1>
-    <a href="{% url 'inventory:add_item' %}" class="btn-add">
-        <i class="fas fa-plus"></i>
-        Add New Item
-    </a>
-</div>
-
-<!-- Filter Section -->
-<div class="inventory-table-container" style="margin-bottom: 1.5rem;">
-    <form method="get" id="filterForm">
-        <div
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-            <!-- Category Filter -->
-            <div>
-                <label
-                    style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-layer-group" style="margin-right: 0.25rem;"></i>Category
-                </label>
-                <select name="category" class="filter-input">
-                    <option value="">All Categories</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat.id }}" {% if current_filters.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Name Search -->
-            <div>
-                <label
-                    style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-search" style="margin-right: 0.25rem;"></i>Search Name
-                </label>
-                <input type="text" name="name" value="{{ current_filters.name }}" placeholder="Search item name..."
-                    class="filter-input">
-            </div>
-
-            <!-- Stock Less Than -->
-            <div>
-                <label
-                    style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-box" style="margin-right: 0.25rem;"></i>Stock Below
-                </label>
-                <input type="number" name="stock_less_than" value="{{ current_filters.stock_less_than }}"
-                    placeholder="e.g., 10" min="0" class="filter-input">
-            </div>
-
-            <!-- Price Above -->
-            <div>
-                <label
-                    style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-money-bill-wave" style="margin-right: 0.25rem;"></i>Min Price (KES)
-                </label>
-                <input type="number" name="price_above" value="{{ current_filters.price_above }}"
-                    placeholder="e.g., 100" min="0" step="0.01" class="filter-input">
-            </div>
-        </div>
-
-        <!-- Filter Actions -->
-        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-            <button type="button" onclick="clearFilters()"
-                style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 2px solid rgba(239, 68, 68, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.3s ease;">
-                <i class="fas fa-times-circle"></i> Clear
-            </button>
-            <button type="submit"
-                style="background: var(--primary-gradient); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; font-size: 0.875rem; cursor: pointer; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); transition: all 0.3s ease;">
-                <i class="fas fa-filter"></i> Apply Filters
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Inventory Requests Section -->
-<div class="inventory-table-container" style="margin-bottom: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">Inventory Requests</h2>
-        <a href="{% url 'inventory:create_request' %}" class="btn-add"
-            style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-            <i class="fas fa-plus"></i> New Request
+    </style>
+    <div class="inventory-header">
+        <h1>Inventory Items</h1>
+        <a href="{% url 'inventory:add_item' %}" class="btn-add">
+            <i class="fas fa-plus"></i>
+            Add New Item
         </a>
     </div>
-
-    <table class="inventory-table">
-        <thead>
-            <tr>
-                <th>Item Name</th>
-                <th>Quantity</th>
-                <th>Location</th>
-                <th>Requested By</th>
-                <th>Status</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for req in inventory_requests %}
-            <tr onclick="openRequestModal('{{ req.id }}', '{{ req.item.name|escapejs }}', '{{ req.quantity }}', '{{ req.location.name|escapejs }}', '{{ req.requested_by.get_full_name|default:req.requested_by.username|escapejs }}', '{{ req.requested_at|date:'M d, Y' }}', '{{ req.status }}', '{{ req.adjusted_quantity|default:req.quantity }}')"
-                style="cursor: pointer; transition: background-color 0.2s;"
-                onmouseover="this.style.background='rgba(99, 102, 241, 0.05)'"
-                onmouseout="this.style.background='transparent'">
-                <td style="font-weight: 600; color: var(--text-primary);">{{ req.item.name }}</td>
-                <td>{{ req.quantity }} units</td>
-                <td>{{ req.location.name }}</td>
-                <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
-                <td>
-                    <span
-                        class="stock-status {% if req.status == 'Pending' %}status-normal{% elif req.status == 'Approved' %}status-normal{% else %}status-critical{% endif %}"
-                        style="{% if req.status == 'Pending' %}background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.2);{% endif %}">
-                        <i
-                            class="fas {% if req.status == 'Pending' %}fa-clock{% elif req.status == 'Approved' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
-                        {{ req.status }}
-                    </span>
-                </td>
-                <td>{{ req.requested_at|date:"M d, Y" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                    No active inventory requests.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<div class="inventory-table-container">
-    <table class="inventory-table">
-        <thead>
-            <tr>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th>Selling Price</th>
-                <th>Stock Quantity</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td><a href="{% url 'inventory:add_stock' item.id %}"
-                        style="text-decoration: none; color: var(--text-primary); font-weight: 600; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 6px; transition: all 0.3s ease;"
-                        onmouseover="this.style.background='rgba(99, 102, 241, 0.1)'"
-                        onmouseout="this.style.background='transparent'">{{ item.name }}</a></td>
-                <td><span class="badge-category">{{ item.category }}</span></td>
-                <td class="price-tag">Kes {{ item.selling_price }}</td>
-                <td>
-                    <div
-                        class="stock-status {% if item.total_stock <= item.reorder_level %}status-critical{% else %}status-normal{% endif %}">
-                        <i class="fas fa-layer-group"></i>
-                        {{ item.total_stock|default:0 }}
-                    </div>
-                </td>
-                <td>
-                    <div style="display: flex; gap: 0.75rem;">
-                        <a href="#"
-                            style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;"
-                            onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'"
-                            onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i
-                                class="fas fa-edit"></i></a>
-                        <a href="#"
-                            style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;"
-                            onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'"
-                            onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i
-                                class="fas fa-trash"></i></a>
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                    <i class="fas fa-box-open"
-                        style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
-                    <div style="font-size: 1.125rem; font-weight: 500; margin-bottom: 0.5rem;">No items found in
-                        inventory.</div>
-                    <div style="font-size: 0.875rem; color: var(--text-muted);">Start by adding your first inventory
-                        item.</div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Request Action Modal -->
-<div id="requestModal"
-    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div
-        style="background: white; width: 100%; max-width: 500px; border-radius: 20px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Inventory Request</h3>
-            <button onclick="closeRequestModal()"
-                style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <div style="margin-bottom: 2rem;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+    <!-- Filter Section -->
+    <div class="inventory-table-container" style="margin-bottom: 1.5rem;">
+        <form method="get" id="filterForm">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <!-- Category Filter -->
                 <div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Item</div>
-                    <div id="modal-item" style="font-weight: 600; color: #1e293b;">-</div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <i class="fas fa-layer-group" style="margin-right: 0.25rem;"></i>Category
+                    </label>
+                    <select name="category" class="filter-input">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if current_filters.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
+                <!-- Name Search -->
                 <div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Requested</div>
-                    <div id="modal-quantity" style="font-weight: 600; color: #1e293b;">-</div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <i class="fas fa-search" style="margin-right: 0.25rem;"></i>Search Name
+                    </label>
+                    <input type="text" name="name" value="{{ current_filters.name }}" placeholder="Search item name..." class="filter-input">
                 </div>
-                <div style="grid-column: span 2;">
-                    <label style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem; display: block;">Approved
-                        Quantity</label>
-                    <input type="number" form="requestActionForm" name="adjusted_quantity" id="adjusted_quantity"
-                        class="filter-input" style="width: 100%; font-weight: 600;" min="0">
-                </div>
+                <!-- Stock Less Than -->
                 <div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Location</div>
-                    <div id="modal-location" style="font-weight: 600; color: #1e293b;">-</div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <i class="fas fa-box" style="margin-right: 0.25rem;"></i>Stock Below
+                    </label>
+                    <input type="number" name="stock_less_than" value="{{ current_filters.stock_less_than }}" placeholder="e.g., 10" min="0" class="filter-input">
                 </div>
+                <!-- Price Above -->
                 <div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Requested By</div>
-                    <div id="modal-user" style="font-weight: 600; color: #1e293b;">-</div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <i class="fas fa-money-bill-wave" style="margin-right: 0.25rem;"></i>Min Price (KES)
+                    </label>
+                    <input type="number" name="price_above" value="{{ current_filters.price_above }}" placeholder="e.g., 100" min="0" step="0.01" class="filter-input">
                 </div>
             </div>
-
-            <div>
-                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Date</div>
-                <div id="modal-date" style="font-weight: 600; color: #1e293b;">-</div>
+            <!-- Filter Actions -->
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="clearFilters()" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 2px solid rgba(239, 68, 68, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-times-circle"></i> Clear
+                </button>
+                <button type="submit" style="background: var(--primary-gradient); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; font-size: 0.875rem; cursor: pointer; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); transition: all 0.3s ease;">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
             </div>
-
-            <div id="modal-status-badge"
-                style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem;">
-                <!-- Status Badge -->
-            </div>
-        </div>
-
-        <form id="requestActionForm" method="post" style="display: flex; gap: 1rem; justify-content: flex-end;">
-            {% csrf_token %}
-            <button type="submit" name="action" value="reject" class="btn-reject"
-                style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                <i class="fas fa-times"></i> Reject
-            </button>
-            <button type="submit" name="action" value="approve" class="btn-approve"
-                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4); transition: all 0.2s;">
-                <i class="fas fa-check"></i> Approve
-            </button>
         </form>
     </div>
-</div>
-
-<script>
+    <!-- Inventory Requests Section -->
+    <div class="inventory-table-container" style="margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">Inventory Requests</h2>
+            <a href="{% url 'inventory:create_request' %}" class="btn-add" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                <i class="fas fa-plus"></i> New Request
+            </a>
+        </div>
+        <table class="inventory-table">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in inventory_requests %}
+                    <tr onclick="openRequestModal('{{ req.id }}', '{{ req.item.name|escapejs }}', '{{ req.quantity }}', '{{ req.location.name|escapejs }}', '{{ req.requested_by.get_full_name|default:req.requested_by.username|escapejs }}', '{{ req.requested_at|date:'M d, Y' }}', '{{ req.status }}', '{{ req.adjusted_quantity|default:req.quantity }}')" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.background='rgba(99, 102, 241, 0.05)'" onmouseout="this.style.background='transparent'">
+                        <td style="font-weight: 600; color: var(--text-primary);">{{ req.item.name }}</td>
+                        <td>{{ req.quantity }} units</td>
+                        <td>{{ req.location.name }}</td>
+                        <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
+                        <td>
+                            <span class="stock-status {% if req.status == 'Pending' %}status-normal{% elif req.status == 'Approved' %}status-normal{% else %}status-critical{% endif %}" style="{% if req.status == 'Pending' %}background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.2);{% endif %}">
+                                <i class="fas {% if req.status == 'Pending' %}fa-clock{% elif req.status == 'Approved' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                                {{ req.status }}
+                            </span>
+                        </td>
+                        <td>{{ req.requested_at|date:"M d, Y" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No active inventory requests.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="inventory-table-container">
+        <table class="inventory-table">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Selling Price</th>
+                    <th>Stock Quantity</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr onclick="window.location='{% url 'inventory:inventory_distribution' item.id %}'" style="cursor: pointer;">
+                        <td>
+                            <a href="{% url 'inventory:inventory_distribution' item.id %}" style="text-decoration: none; color: var(--text-primary); font-weight: 600; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 6px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.background='transparent'">{{ item.name }}</a>
+                        </td>
+                        <td>
+                            <span class="badge-category">{{ item.category }}</span>
+                        </td>
+                        <td class="price-tag">Kes {{ item.selling_price }}</td>
+                        <td>
+                            <div class="stock-status {% if item.total_stock <= item.reorder_level %}status-critical{% else %}status-normal{% endif %}">
+                                <i class="fas fa-layer-group"></i>
+                                {{ item.total_stock|default:0 }}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <a href="#" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-edit"></i></a>
+                                <a href="#" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                            <i class="fas fa-box-open" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
+                            <div style="font-size: 1.125rem; font-weight: 500; margin-bottom: 0.5rem;">
+                                No items found in
+                                inventory.
+                            </div>
+                            <div style="font-size: 0.875rem; color: var(--text-muted);">
+                                Start by adding your first inventory
+                                item.
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Request Action Modal -->
+    <div id="requestModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 100%; max-width: 500px; border-radius: 20px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Inventory Request</h3>
+                <button onclick="closeRequestModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Item</div>
+                        <div id="modal-item" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Requested</div>
+                        <div id="modal-quantity" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <label style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem; display: block;">
+                            Approved
+                            Quantity
+                        </label>
+                        <input type="number" form="requestActionForm" name="adjusted_quantity" id="adjusted_quantity" class="filter-input" style="width: 100%; font-weight: 600;" min="0">
+                    </div>
+                    <div>
+                        <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Location</div>
+                        <div id="modal-location" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Requested By</div>
+                        <div id="modal-user" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Date</div>
+                    <div id="modal-date" style="font-weight: 600; color: #1e293b;">-</div>
+                </div>
+                <div id="modal-status-badge" style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem;">
+                    <!-- Status Badge -->
+                </div>
+            </div>
+            <form id="requestActionForm" method="post" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="reject" class="btn-reject" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button type="submit" name="action" value="approve" class="btn-approve" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4); transition: all 0.2s;">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+            </form>
+        </div>
+    </div>
+    <script>
     function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty) {
         document.getElementById('modal-item').textContent = item;
         document.getElementById('modal-quantity').textContent = quantity + ' units';
@@ -505,50 +459,48 @@
     }
 
     // ... existing JS ...
-</script>
 
-// Enhanced input focus effects
-document.querySelectorAll('.filter-input').forEach(input => {
-input.addEventListener('focus', function () {
-this.style.borderColor = '#6366f1';
-this.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)';
-});
+    // Enhanced input focus effects
+    document.querySelectorAll('.filter-input').forEach(input => {
+        input.addEventListener('focus', function () {
+            this.style.borderColor = '#6366f1';
+            this.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)';
+        });
 
-input.addEventListener('blur', function () {
-this.style.borderColor = 'var(--glass-border)';
-this.style.boxShadow = 'none';
-});
-});
+        input.addEventListener('blur', function () {
+            this.style.borderColor = 'var(--glass-border)';
+            this.style.boxShadow = 'none';
+        });
+    });
 
-// Button hover effects
-document.querySelectorAll('button').forEach(btn => {
-btn.addEventListener('mouseenter', function () {
-this.style.transform = 'translateY(-2px)';
-});
+    // Button hover effects
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('mouseenter', function () {
+            this.style.transform = 'translateY(-2px)';
+        });
 
-btn.addEventListener('mouseleave', function () {
-this.style.transform = 'translateY(0)';
-});
-});
+        btn.addEventListener('mouseleave', function () {
+            this.style.transform = 'translateY(0)';
+        });
+    });
 
-// Show active filters count
-window.addEventListener('DOMContentLoaded', function () {
-const form = document.getElementById('filterForm');
-const formData = new FormData(form);
-let activeFilters = 0;
+    // Show active filters count
+    window.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
+        let activeFilters = 0;
 
-for (let [key, value] of formData.entries()) {
-if (value && value.trim() !== '') {
-activeFilters++;
-}
-}
+        for (let [key, value] of formData.entries()) {
+            if (value && value.trim() !== '') {
+                activeFilters++;
+            }
+        }
 
-if (activeFilters > 0) {
-const header = document.querySelector('.inventory-header h1');
-header.innerHTML = `Inventory Items <span
-    style="background: var(--primary-gradient); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; margin-left: 0.5rem;">${activeFilters}
+        if (activeFilters > 0) {
+            const header = document.querySelector('.inventory-header h1');
+            header.innerHTML = `Inventory Items <span style="background: var(--primary-gradient); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; margin-left: 0.5rem;">${activeFilters}
     filter${activeFilters > 1 ? 's' : ''} active</span>`;
-}
-});
-</script>
+        }
+    });
+    </script>
 {% endblock %}

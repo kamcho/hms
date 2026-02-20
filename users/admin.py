@@ -6,23 +6,20 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('id_number', 'role', 'is_staff', 'is_active', 'date_joined')
-    list_filter = ('role', 'is_staff', 'is_active', 'date_joined')
-    search_fields = ('id_number',)
-    ordering = ('-date_joined',)
+    list_display = ('id_number', 'first_name', 'last_name', 'phone', 'role', 'is_active')
+    list_filter = ('role', 'is_active')
+    search_fields = ('id_number', 'first_name', 'last_name', 'phone')
+    ordering = ('id_number',)
     
     fieldsets = (
         (None, {'fields': ('id_number', 'password')}),
-        (_('Personal info'), {'fields': ()}),
-        (_('Permissions'), {
-            'fields': ('role', 'is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions'),
-        }),
-        (_('Important dates'), {'fields': ('date_joined',)}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'phone')}),
+        (_('Access'), {'fields': ('role', 'is_active')}),
     )
     
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('id_number', 'role', 'password1', 'password2'),
+            'fields': ('id_number', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'password1', 'password2'),
         }),
     )

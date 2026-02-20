@@ -1,5 +1,6 @@
 from django import forms
 from .models import InventoryItem, InventoryCategory, Supplier, StockRecord, InventoryRequest, Medication, ConsumableDetail
+from home.models import Departments
 
 class InventoryItemForm(forms.ModelForm):
     class Meta:
@@ -113,6 +114,42 @@ class PurchaseItemForm(forms.ModelForm):
             'current_location': forms.Select(attrs={'class': 'form-control'}),
         }
     
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
+
+class StockTransferForm(forms.Form):
+    item = forms.ModelChoiceField(
+        queryset=InventoryItem.objects.all().order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select select2'})
+    )
+    source_location = forms.ModelChoiceField(
+        queryset=Departments.objects.all(),
+        label="From Department",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    destination_location = forms.ModelChoiceField(
+        queryset=Departments.objects.all(),
+        label="To Department",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    quantity = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantity to transfer'})
+    )
+    batch_number = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specific Batch (Optional)'}),
+        help_text="Leave empty to auto-select oldest batches (FEFO)"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        source = cleaned_data.get('source_location')
+        destination = cleaned_data.get('destination_location')
+
+        if source and destination and source == destination:
+            raise forms.ValidationError("Source and destination departments cannot be the same.")
+        
+        return cleaned_data

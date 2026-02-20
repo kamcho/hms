@@ -1,31 +1,25 @@
 {% extends 'users/base.html' %}
 {% load static %}
-
 {% block title %}Login - HMS{% endblock %}
-
 {% block content %}
-<div class="auth-container">
-    <div class="auth-box">
-        <h2>Login to Your Account</h2>
-        <form method="post" class="auth-form">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="id_username">ID Number</label>
-                <input type="text" name="username" id="id_username" required autofocus>
-            </div>
-            <div class="form-group">
-                <label for="id_password">Password</label>
-                <input type="password" name="password" id="id_password" required>
-            </div>
-            {% if form.errors %}
-                <div class="error-message">
-                    Please enter a correct ID number and password. Note that both fields may be case-sensitive.
+    <div class="auth-container">
+        <div class="auth-box">
+            <h2>Login to Your Account</h2>
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_username">ID Number</label>
+                    <input type="text" name="username" id="id_username" required autofocus>
                 </div>
-            {% endif %}
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Login</button>
-            </div>
-        </form>
+                <div class="form-group">
+                    <label for="id_password">Password</label>
+                    <input type="password" name="password" id="id_password" required>
+                </div>
+                {% if form.errors %}<div class="error-message">Please enter a correct ID number and password. Note that both fields may be case-sensitive.</div>{% endif %}
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}

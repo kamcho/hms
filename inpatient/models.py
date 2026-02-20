@@ -70,20 +70,29 @@ class Admission(models.Model):
         super().save(*args, **kwargs)
 
 class MedicationChart(models.Model):
+    frequency_choices = [
+        ('Once Daily', 'Once Daily'),
+        ('Twice Daily', 'Twice Daily'),
+        ('Thrice Daily', 'Thrice Daily'),
+        ('Four Times Daily', 'Four Times Daily'),
+        ('Every 6 Hours', 'Every 6 Hours'),
+        ('Every 8 Hours', 'Every 8 Hours'),
+        ('Every 12 Hours', 'Every 12 Hours'),
+        ('Every 24 Hours', 'Every 24 Hours'),
+        ('As Needed', 'As Needed'),
+    ]
+
     admission = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='medications')
     item = models.ForeignKey('inventory.InventoryItem', on_delete=models.CASCADE, related_name='inpatient_medications')
     
-    # NEW: Numeric components for smart calculation (matching outpatient prescriptions)
     dose_count = models.PositiveIntegerField(default=1, help_text="Units per dose (e.g., 2 tablets)")
-    frequency_count = models.PositiveIntegerField(default=1, help_text="Times per day (e.g., 3 times)")
-    duration_days = models.PositiveIntegerField(default=1, help_text="Total days (e.g., 7 days)")
-    
-    # Total quantity to be dispensed
+    frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     quantity = models.PositiveIntegerField(default=1, help_text="Total units to dispense")
     
     # DEPRECATED: Kept for backwards compatibility with existing records
     dosage = models.CharField(max_length=100, blank=True, null=True)
-    frequency = models.CharField(max_length=100, help_text="e.g., TDS, BD, QID", blank=True, null=True)
+    frequency_count = models.PositiveIntegerField(default=1, help_text="DEPRECATED - kept for old records")
+    duration_days = models.PositiveIntegerField(default=1, help_text="DEPRECATED - kept for old records")
     
     prescribed_at = models.DateTimeField(auto_now_add=True)
     prescribed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='medications_prescribed')
@@ -98,15 +107,8 @@ class MedicationChart(models.Model):
     administered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_administered')
     is_administered = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
-        # Auto-calculate quantity only for loose items (tabs, ml, etc)
-        # For whole items (inhalers, ointments), we use the quantity provided in the form
-        if self.item and not self.item.is_dispensed_as_whole:
-            self.quantity = self.dose_count * self.frequency_count * self.duration_days
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return f"{self.item.name} - {self.dose_count} x {self.frequency_count} x {self.duration_days} days for {self.admission.patient.full_name}"
+        return f"{self.item.name} - {self.dose_count} x {self.frequency} for {self.admission.patient.full_name}"
 
 class ServiceAdmissionLink(models.Model):
     admission = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='services')
@@ -261,3 +263,35 @@ class NutritionOrder(models.Model):
     
     def __str__(self):
         return f"Nutrition: {self.diet_type} for {self.admission.patient.full_name}"
+
+class InpatientConsumable(models.Model):
+    """Tracks consumable requests for admitted patients to be billed upon dispense"""
+    admission = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='consumables')
+    item = models.ForeignKey('inventory.InventoryItem', on_delete=models.CASCADE, related_name='inpatient_consumables')
+    quantity = models.PositiveIntegerField(default=1)
+    
+    prescribed_at = models.DateTimeField(auto_now_add=True)
+    prescribed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='consumables_prescribed')
+    
+    # Dispensing status
+    is_dispensed = models.BooleanField(default=False)
+    dispensed_at = models.DateTimeField(null=True, blank=True)
+    dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='consumables_dispensed')
+
+    def __str__(self):
+        return f"{self.item.name} x{self.quantity} for {self.admission.patient.full_name}"
+
+    class Meta:
+        verbose_name = "Inpatient Consumable"
+        verbose_name_plural = "Inpatient Consumables"
+        ordering = ['-prescribed_at']
+
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+@receiver(post_delete, sender=Admission)
+def release_bed_on_admission_delete(sender, instance, **kwargs):
+    """Ensure bed is freed if admission is deleted (e.g. via visit deletion)"""
+    if instance.bed:
+        instance.bed.is_occupied = False
+        instance.bed.save()

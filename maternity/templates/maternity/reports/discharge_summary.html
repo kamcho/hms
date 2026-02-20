@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Discharge Summary - {{ pregnancy.patient.full_name }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <title>Discharge Summary - {{ pregnancy.patient.full_name }}</title>
+        <style>
         @page {
             size: A4;
             margin: 1.5cm;
@@ -137,122 +136,112 @@
                 display: none;
             }
         }
-    </style>
-</head>
-
-<body>
-    <button class="print-btn" onclick="window.print()">Print Summary</button>
-
-    <div class="header">
-        <div class="hospital-name">Maternity Health System</div>
-        <div style="font-size: 8pt; color: #64748b; margin-top: 5px;">Maternity & Neonatal Discharge Department</div>
-    </div>
-
-    <div class="title">Clinical Discharge Summary</div>
-
-    <div class="section">
-        <div class="section-header">Patient Identification</div>
-        <div class="grid">
-            <div>
-                <div class="label">Patient Name</div>
-                <div class="value">{{ pregnancy.patient.full_name }}</div>
-            </div>
-            <div>
-                <div class="label">Patient Number</div>
-                <div class="value">#{{ pregnancy.patient.id }}</div>
-            </div>
-            <div>
-                <div class="label">Date of Discharge</div>
-                <div class="value">{{ discharge.discharge_date|date:"d M Y, H:i" }}</div>
-            </div>
+        </style>
+    </head>
+    <body>
+        <button class="print-btn" onclick="window.print()">Print Summary</button>
+        <div class="header">
+            <div class="hospital-name">Maternity Health System</div>
+            <div style="font-size: 8pt; color: #64748b; margin-top: 5px;">Maternity & Neonatal Discharge Department</div>
         </div>
-    </div>
-
-    <div class="section">
-        <div class="section-header">Obstetric Summary</div>
-        <div class="grid">
-            <div>
-                <div class="label">Parity Code</div>
-                <div class="value">{{ pregnancy.para_code }}</div>
-            </div>
-            <div>
-                <div class="label">GA at Delivery</div>
-                <div class="value">{{ delivery.gestational_age_at_delivery }} Weeks</div>
-            </div>
-            <div>
-                <div class="label">Delivery Mode</div>
-                <div class="value">{{ delivery.get_delivery_mode_display }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-header">Maternal Outcome & Summary</div>
-        <div class="outcome-box">
-            <div class="label">Condition at Discharge</div>
-            <div class="value" style="margin-bottom: 10px;">{{ discharge.get_mother_condition_at_discharge_display }}
-            </div>
-
-            <div class="label">Clinical Summary</div>
-            <div class="narrative">{{ discharge.discharge_summary|default:"Refer to complete case notes." }}</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-header">Neonatal Information</div>
-        {% for baby in newborns %}
-        <div class="newborn-card">
-            <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+        <div class="title">Clinical Discharge Summary</div>
+        <div class="section">
+            <div class="section-header">Patient Identification</div>
+            <div class="grid">
                 <div>
-                    <div class="label">Baby No.</div>
-                    <div class="value">{{ baby.baby_number }}</div>
+                    <div class="label">Patient Name</div>
+                    <div class="value">{{ pregnancy.patient.full_name }}</div>
                 </div>
                 <div>
-                    <div class="label">Gender</div>
-                    <div class="value">{{ baby.get_gender_display }}</div>
+                    <div class="label">Patient Number</div>
+                    <div class="value">#{{ pregnancy.patient.id }}</div>
                 </div>
                 <div>
-                    <div class="label">Weight</div>
-                    <div class="value">{{ baby.birth_weight }} kg</div>
+                    <div class="label">Date of Discharge</div>
+                    <div class="value">{{ discharge.discharge_date|date:"d M Y, H:i" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-header">Obstetric Summary</div>
+            <div class="grid">
+                <div>
+                    <div class="label">Parity Code</div>
+                    <div class="value">{{ pregnancy.para_code }}</div>
                 </div>
                 <div>
-                    <div class="label">APGAR (1/5)</div>
-                    <div class="value">{{ baby.apgar_1min }}/{{ baby.apgar_5min }}</div>
+                    <div class="label">GA at Delivery</div>
+                    <div class="value">{{ delivery.gestational_age_at_delivery }} Weeks</div>
+                </div>
+                <div>
+                    <div class="label">Delivery Mode</div>
+                    <div class="value">{{ delivery.get_delivery_mode_display }}</div>
                 </div>
             </div>
-            <div style="margin-top: 8px;">
-                <span class="label">Condition:</span> <span class="value">{{ baby.status }}</span>
+        </div>
+        <div class="section">
+            <div class="section-header">Maternal Outcome & Summary</div>
+            <div class="outcome-box">
+                <div class="label">Condition at Discharge</div>
+                <div class="value" style="margin-bottom: 10px;">{{ discharge.get_mother_condition_at_discharge_display }}</div>
+                <div class="label">Clinical Summary</div>
+                <div class="narrative">{{ discharge.discharge_summary|default:"Refer to complete case notes." }}</div>
             </div>
         </div>
-        {% empty %}
-        <div style="padding: 10px; font-style: italic; color: #94a3b8;">No newborn records associated with this episode.
+        <div class="section">
+            <div class="section-header">Neonatal Information</div>
+            {% for baby in newborns %}
+                <div class="newborn-card">
+                    <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                        <div>
+                            <div class="label">Baby No.</div>
+                            <div class="value">{{ baby.baby_number }}</div>
+                        </div>
+                        <div>
+                            <div class="label">Gender</div>
+                            <div class="value">{{ baby.get_gender_display }}</div>
+                        </div>
+                        <div>
+                            <div class="label">Weight</div>
+                            <div class="value">{{ baby.birth_weight }} kg</div>
+                        </div>
+                        <div>
+                            <div class="label">APGAR (1/5)</div>
+                            <div class="value">{{ baby.apgar_1min }}/{{ baby.apgar_5min }}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <span class="label">Condition:</span> <span class="value">{{ baby.status }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="padding: 10px; font-style: italic; color: #94a3b8;">No newborn records associated with this episode.</div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-
-    <div class="section">
-        <div class="section-header">Discharge Plan & Medications</div>
-        <div class="outcome-box">
-            <div class="label">Follow-up Plan</div>
-            <div class="value" style="margin-bottom: 10px; color: #7c3aed;">{{
-                discharge.follow_up_plan|default:"Standard PNC schedule (Day 3, 2 Weeks, 6 Weeks)." }}</div>
-
-            <div class="label">Take-home Medications</div>
-            <div class="narrative">{{ discharge.medications_prescribed|default:"None prescribed." }}</div>
+        <div class="section">
+            <div class="section-header">Discharge Plan & Medications</div>
+            <div class="outcome-box">
+                <div class="label">Follow-up Plan</div>
+                <div class="value" style="margin-bottom: 10px; color: #7c3aed;">
+                    {{
+                    discharge.follow_up_plan|default:"Standard PNC schedule (Day 3, 2 Weeks, 6 Weeks)." }}
+                </div>
+                <div class="label">Take-home Medications</div>
+                <div class="narrative">{{ discharge.medications_prescribed|default:"None prescribed." }}</div>
+            </div>
         </div>
-    </div>
-
-    <div class="footer">
-        <div class="sign-area">
-            Discharging Clinician Signature
-            <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">{{
-                discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}</div>
+        <div class="footer">
+            <div class="sign-area">
+                Discharging Clinician Signature
+                <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">
+                    {{
+                    discharge.discharged_by.get_full_name|default:discharge.discharged_by.username }}
+                </div>
+            </div>
+            <div class="sign-area">
+                Hospital Registrar / Stamp
+                <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">Date: {{ today|date:"d M Y" }}</div>
+            </div>
         </div>
-        <div class="sign-area">
-            Hospital Registrar / Stamp
-            <div style="margin-top: 8px; font-weight: 500; font-size: 7.5pt;">Date: {{ today|date:"d M Y" }}</div>
-        </div>
-    </div>
-</body>
-
+    </body>
 </html>

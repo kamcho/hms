@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Birth Notification - {{ newborn.baby_number }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <title>Birth Notification - {{ newborn.baby_number }}</title>
+        <style>
         @page {
             size: A5;
             margin: 1cm;
@@ -112,77 +111,70 @@
                 display: none;
             }
         }
-    </style>
-</head>
-
-<body>
-    <button class="print-btn" onclick="window.print()">Print Document</button>
-
-    <div class="header">
-        <div class="hospital-name">Maternity Health System</div>
-        <div class="document-type">Official Notification of Birth</div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">Mother's Information</div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Full Name</div>
-                <div class="value">{{ newborn.delivery.pregnancy.patient.full_name }}</div>
-            </div>
-            <div class="field">
-                <div class="label">Patient ID</div>
-                <div class="value">#{{ newborn.delivery.pregnancy.patient.id }}</div>
+        </style>
+    </head>
+    <body>
+        <button class="print-btn" onclick="window.print()">Print Document</button>
+        <div class="header">
+            <div class="hospital-name">Maternity Health System</div>
+            <div class="document-type">Official Notification of Birth</div>
+        </div>
+        <div class="section">
+            <div class="section-title">Mother's Information</div>
+            <div class="grid">
+                <div class="field">
+                    <div class="label">Full Name</div>
+                    <div class="value">{{ newborn.delivery.pregnancy.patient.full_name }}</div>
+                </div>
+                <div class="field">
+                    <div class="label">Patient ID</div>
+                    <div class="value">#{{ newborn.delivery.pregnancy.patient.id }}</div>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">Birth Details</div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">Date & Time of Birth</div>
-                <div class="value">{{ newborn.birth_datetime|date:"d M Y, H:i" }}</div>
-            </div>
-            <div class="field">
-                <div class="label">Gender</div>
-                <div class="value">{{ newborn.get_gender_display }}</div>
-            </div>
-            <div class="field">
-                <div class="label">Birth Weight</div>
-                <div class="value">{{ newborn.birth_weight }} kg</div>
-            </div>
-            <div class="field">
-                <div class="label">Delivery Mode</div>
-                <div class="value">{{ newborn.delivery.get_delivery_mode_display }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">Initial Assessment</div>
-        <div class="grid">
-            <div class="field">
-                <div class="label">APGAR (1/5/10 min)</div>
-                <div class="value">{{ newborn.apgar_1min }} / {{ newborn.apgar_5min }} / {{
-                    newborn.apgar_10min|default:"-" }}</div>
-            </div>
-            <div class="field">
-                <div class="label">Status</div>
-                <div class="value">{{ newborn.status }}</div>
+        <div class="section">
+            <div class="section-title">Birth Details</div>
+            <div class="grid">
+                <div class="field">
+                    <div class="label">Date & Time of Birth</div>
+                    <div class="value">{{ newborn.birth_datetime|date:"d M Y, H:i" }}</div>
+                </div>
+                <div class="field">
+                    <div class="label">Gender</div>
+                    <div class="value">{{ newborn.get_gender_display }}</div>
+                </div>
+                <div class="field">
+                    <div class="label">Birth Weight</div>
+                    <div class="value">{{ newborn.birth_weight }} kg</div>
+                </div>
+                <div class="field">
+                    <div class="label">Delivery Mode</div>
+                    <div class="value">{{ newborn.delivery.get_delivery_mode_display }}</div>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="footer">
-        <div>
-            <div class="label">Generated on</div>
-            <div class="value" style="font-size: 8pt;">{{ today|date:"d M Y, H:i" }}</div>
+        <div class="section">
+            <div class="section-title">Initial Assessment</div>
+            <div class="grid">
+                <div class="field">
+                    <div class="label">APGAR (1/5/10 min)</div>
+                    <div class="value">
+                        {{ newborn.apgar_1min }} / {{ newborn.apgar_5min }} / {{
+                        newborn.apgar_10min|default:"-" }}
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="label">Status</div>
+                    <div class="value">{{ newborn.status }}</div>
+                </div>
+            </div>
         </div>
-        <div class="signature-box">
-            Clinical Officer / Nurse
+        <div class="footer">
+            <div>
+                <div class="label">Generated on</div>
+                <div class="value" style="font-size: 8pt;">{{ today|date:"d M Y, H:i" }}</div>
+            </div>
+            <div class="signature-box">Clinical Officer / Nurse</div>
         </div>
-    </div>
-</body>
-
+    </body>
 </html>

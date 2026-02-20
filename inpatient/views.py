@@ -223,6 +223,29 @@ def patient_case_folder(request, admission_id):
             'user': nu.prescribed_by
         })
 
+    # 8. Consumables (New requested/dispensed items)
+    from inpatient.models import InpatientConsumable
+    for c in admission.consumables.all():
+        activity_log.append({
+            'time': c.prescribed_at,
+            'type': 'Consumable',
+            'icon': 'fa-box-open',
+            'color': 'indigo',
+            'title': 'Consumable Requested',
+            'detail': f"{c.item.name} x{c.quantity} requested",
+            'user': c.prescribed_by
+        })
+        if c.is_dispensed:
+            activity_log.append({
+                'time': c.dispensed_at,
+                'type': 'Consumable',
+                'icon': 'fa-check-double',
+                'color': 'emerald',
+                'title': 'Consumable Dispensed',
+                'detail': f"{c.item.name} x{c.quantity} released from pharmacy",
+                'user': c.dispensed_by
+            })
+
     activity_log.sort(key=lambda x: x['time'] or timezone.now(), reverse=True)
 
     # Get medical tests services for the Next Action section
@@ -282,9 +305,44 @@ def patient_case_folder(request, admission_id):
             'selling_price': str(item.selling_price)
         }
 
-    # 8. Dispensed Items (Consumables)
+    # 8. Consumables History (Unified UI list)
     from inventory.models import DispensedItem
-    dispensed_items = DispensedItem.objects.filter(visit=admission.visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+    from inpatient.models import InpatientConsumable
+    
+    # Get all tracking records (Pending + Dispensed via new flow)
+    consumable_reqs = InpatientConsumable.objects.filter(admission=admission).select_related('item', 'prescribed_by', 'dispensed_by')
+    
+    # Get all legacy/OPD dispensed items for this visit
+    legacy_dispensed = DispensedItem.objects.filter(visit=admission.visit).select_related('item', 'dispensed_by')
+    
+    dispensed_items_ui = []
+    
+    # Add requests
+    for req in consumable_reqs:
+        dispensed_items_ui.append({
+            'item_name': req.item.name,
+            'status': 'Dispensed' if req.is_dispensed else 'Pending',
+            'status_class': 'bg-emerald-100 text-emerald-700' if req.is_dispensed else 'bg-amber-100 text-amber-700',
+            'at': req.dispensed_at if req.is_dispensed else req.prescribed_at,
+            'by': req.dispensed_by if req.is_dispensed else req.prescribed_by,
+            'quantity': req.quantity
+        })
+        
+    # Add legacy items (avoid duplicates if possible, though visit_id + item_id might clash)
+    processed_new_flow_keys = set((req.item_id, req.quantity) for req in consumable_reqs if req.is_dispensed)
+    for ld in legacy_dispensed:
+        if (ld.item_id, ld.quantity) not in processed_new_flow_keys:
+            dispensed_items_ui.append({
+                'item_name': ld.item.name,
+                'status': 'Dispensed',
+                'status_class': 'bg-emerald-100 text-emerald-700',
+                'at': ld.dispensed_at,
+                'by': ld.dispensed_by,
+                'quantity': ld.quantity
+            })
+            
+    # Sort UI list by date
+    dispensed_items_ui.sort(key=lambda x: x['at'] or timezone.now(), reverse=True)
 
     # 9. Procedures (Invoiced items linked to a Service in Procedure Room)
     from accounts.models import InvoiceItem
@@ -295,7 +353,7 @@ def patient_case_folder(request, admission_id):
 
     return render(request, 'inpatient/patient_case_folder.html', {
         'performed_procedures': performed_procedures,
-        'dispensed_items': dispensed_items,
+        'dispensed_items': dispensed_items_ui,
         'admission': admission,
         'vitals': vitals,
         'vitals_history': vitals_history,
@@ -317,7 +375,9 @@ def patient_case_folder(request, admission_id):
         'current_nutrition': current_nutrition,
         'activity_log': activity_log,
         'medical_tests_data': medical_tests_data,
+        'medical_tests_data': medical_tests_data,
         'available_departments': Departments.objects.all().order_by('name'),
+        'dispensing_departments': Departments.objects.all().order_by('name'),
         'lab_results': LabResult.objects.filter(patient=admission.patient).select_related('service', 'requested_by').order_by('-requested_at'),
         'invoice_is_paid': invoice_is_paid,
         'med_metadata_json': json.dumps(med_metadata),
@@ -327,6 +387,13 @@ def patient_case_folder(request, admission_id):
 @login_required
 def add_vitals(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = PatientVitalsForm(request.POST)
         if form.is_valid():
@@ -346,6 +413,13 @@ def add_clinical_note(request, admission_id):
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = ClinicalNoteForm(request.POST)
         if form.is_valid():
@@ -361,6 +435,13 @@ def add_clinical_note(request, admission_id):
 @login_required
 def add_fluid_balance(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = FluidBalanceForm(request.POST)
         if form.is_valid():
@@ -380,6 +461,13 @@ def transfer_patient(request, admission_id):
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = WardTransferForm(request.POST)
         if form.is_valid():
@@ -402,6 +490,16 @@ def add_medication(request, admission_id):
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        error_msg = "Cannot modify records for a previous visit."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error_msg})
+        messages.error(request, error_msg)
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = MedicationChartForm(request.POST)
         if form.is_valid():
@@ -426,6 +524,16 @@ def add_service(request, admission_id):
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        error_msg = "Cannot modify records for a previous visit."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error_msg})
+        messages.error(request, error_msg)
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = ServiceAdmissionLinkForm(request.POST)
         if form.is_valid():
@@ -444,6 +552,17 @@ def add_service(request, admission_id):
 @login_required
 def administer_medication(request, medication_id):
     medication = get_object_or_404(MedicationChart, id=medication_id)
+    admission = medication.admission
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        error_msg = "Cannot modify records for a previous visit."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error_msg})
+        messages.error(request, error_msg)
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if not medication.is_administered:
         medication.is_administered = True
         medication.administered_at = timezone.now()
@@ -461,6 +580,13 @@ def add_doctor_instruction(request, admission_id):
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = DoctorInstructionForm(request.POST)
         if form.is_valid():
@@ -476,6 +602,14 @@ def add_doctor_instruction(request, admission_id):
 @login_required
 def complete_instruction(request, instruction_id):
     instruction = get_object_or_404(DoctorInstruction, id=instruction_id)
+    admission = instruction.admission
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     instruction.is_completed = True
     instruction.completed_at = timezone.now()
     instruction.completed_by = request.user
@@ -486,6 +620,13 @@ def complete_instruction(request, instruction_id):
 @login_required
 def add_nutrition_order(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     if request.method == 'POST':
         form = NutritionOrderForm(request.POST)
         if form.is_valid():

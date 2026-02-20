@@ -27,7 +27,7 @@ def verify_discharge_billing():
     # [Testing IPD Discharge...]
     print("\n[Testing IPD Discharge...]")
     patient, _ = Patient.objects.get_or_create(id_number="PAT001", defaults={'surname': 'Doe', 'other_names': 'John', 'sex': 'MALE', 'date_of_birth': '1990-01-01'})
-    visit, _ = Visit.objects.get_or_create(patient=patient, status='Active', defaults={'visit_type': 'Inpatient', 'department': dept})
+    visit, _ = Visit.objects.get_or_create(patient=patient, status='Active', defaults={'visit_type': 'IN-PATIENT', 'department': dept})
     ward, _ = Ward.objects.get_or_create(name="General Ward", defaults={'base_charge_per_day': 2000})
     bed, _ = Bed.objects.get_or_create(ward=ward, bed_number="G1", defaults={'is_occupied': True})
     

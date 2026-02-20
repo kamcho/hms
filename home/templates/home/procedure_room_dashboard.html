@@ -1,179 +1,139 @@
 {% extends 'users/dashboard_base.html' %}
 {% load custom_filters %}
 {% block title %}Procedure Room Dashboard - HMS{% endblock %}
-
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-2xl font-black text-slate-800 flex items-center gap-3 tracking-tight">
-                <i class="fas fa-procedures text-indigo-500"></i> Procedure Room Dashboard
-            </h1>
-            <p class="text-slate-500 mt-1 font-medium">Manage and track procedure requests</p>
-        </div>
-        <div class="flex gap-3">
-            <button onclick="window.location.reload()"
-                class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl transition-all font-bold text-sm shadow-sm">
-                <i class="fas fa-sync-alt mr-2 text-indigo-500"></i> Refresh
-            </button>
-        </div>
-    </div>
-
-    <!-- Stats Overview (Optional Placeholder) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                <i class="fas fa-notes-medical text-6xl text-indigo-500"></i>
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 flex items-center gap-3 tracking-tight">
+                    <i class="fas fa-procedures text-indigo-500"></i> Procedure Room Dashboard
+                </h1>
+                <p class="text-slate-500 mt-1 font-medium">Manage and track procedure requests</p>
             </div>
-            <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Total Requests</h3>
-            <div class="text-3xl font-black text-slate-800">{{ page_obj.paginator.count }}</div>
-        </div>
-    </div>
-
-    <!-- Search Section -->
-    <div class="bg-white rounded-[24px] border border-slate-100 p-6 mb-8 shadow-sm">
-        <form method="GET" class="flex gap-4">
-            <div class="relative flex-1">
-                <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                <input type="text" name="search" value="{{ search_query }}"
-                    class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-bold"
-                    placeholder="Search by patient name, procedure name...">
+            <div class="flex gap-3">
+                <button onclick="window.location.reload()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl transition-all font-bold text-sm shadow-sm">
+                    <i class="fas fa-sync-alt mr-2 text-indigo-500"></i> Refresh
+                </button>
             </div>
-            <button type="submit"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition shadow-lg shadow-indigo-100">
-                Search
-            </button>
-            {% if search_query %}
-            <a href="{% url 'home:procedure_room_dashboard' %}"
-                class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition flex items-center shadow-sm">
-                Clear
-            </a>
-            {% endif %}
-        </form>
-    </div>
-
-    <!-- Procedures Table -->
-    <div class="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                <i class="fas fa-list text-indigo-500"></i> Procedure Requests
-            </h2>
         </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr
-                        class="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                        <th class="p-4">Date Requested</th>
-                        <th class="p-4">Patient</th>
-                        <th class="p-4">Procedure</th>
-                        <th class="p-4">Price</th>
-                        <th class="p-4">Payment Status</th>
-                        <th class="p-4">Requested By</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for item in page_obj %}
-                    <tr onclick="window.location.href='{% url 'home:procedure_detail' item.invoice.visit.id %}'"
-                        class="hover:bg-indigo-50/30 transition duration-150 group cursor-pointer">
-                        <td class="p-4">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold text-slate-700">{{ item.created_at|date:"M d, Y"
-                                    }}</span>
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">{{
-                                    item.created_at|date:"H:i" }}</span>
-                            </div>
-                        </td>
-                        <td class="p-4">
-                            {% if item.invoice.patient %}
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-black text-xs border border-slate-200 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                    {{ item.invoice.patient.first_name|first }}{{
-                                    item.invoice.patient.last_name|first|default:"" }}
-                                </div>
-                                <div>
-                                    <div class="text-sm font-bold text-slate-800">{{ item.invoice.patient.full_name }}
+        <!-- Stats Overview (Optional Placeholder) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <i class="fas fa-notes-medical text-6xl text-indigo-500"></i>
+                </div>
+                <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Total Requests</h3>
+                <div class="text-3xl font-black text-slate-800">{{ page_obj.paginator.count }}</div>
+            </div>
+        </div>
+        <!-- Search Section -->
+        <div class="bg-white rounded-[24px] border border-slate-100 p-6 mb-8 shadow-sm">
+            <form method="GET" class="flex gap-4">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
+                    <input type="text" name="search" value="{{ search_query }}" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-bold" placeholder="Search by patient name, procedure name...">
+                </div>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition shadow-lg shadow-indigo-100">Search</button>
+                {% if search_query %}
+                    <a href="{% url 'home:procedure_room_dashboard' %}" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition flex items-center shadow-sm">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+        <!-- Procedures Table -->
+        <div class="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-list text-indigo-500"></i> Procedure Requests
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                            <th class="p-4">Date Requested</th>
+                            <th class="p-4">Patient</th>
+                            <th class="p-4">Procedure</th>
+                            <th class="p-4">Price</th>
+                            <th class="p-4">Payment Status</th>
+                            <th class="p-4">Requested By</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for item in page_obj %}
+                            <tr onclick="window.location.href='{% url 'home:procedure_detail' item.invoice.visit.id %}'" class="hover:bg-indigo-50/30 transition duration-150 group cursor-pointer">
+                                <td class="p-4">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-slate-700">{{ item.created_at|date:"M d, Y"
+                                        }}</span>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase">{{
+                                        item.created_at|date:"H:i" }}</span>
                                     </div>
-                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">ID: {{
-                                        item.invoice.patient.id_number|default:"N/A" }}</div>
-                                </div>
-                            </div>
-                            {% else %}
-                            <span class="text-slate-400 italic font-medium">Unknown Patient</span>
-                            {% endif %}
-                        </td>
-                        <td class="p-4">
-                            <span
-                                class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold border border-indigo-100">
-                                {{ item.name }}
-                            </span>
-                        </td>
-                        <td class="p-4 text-slate-600 font-bold font-mono text-sm">
-                            {{ item.unit_price }}
-                        </td>
-                        <td class="p-4">
-                            {% if item.invoice.status == 'Paid' %}
-                            <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Paid
-                            </span>
-                            {% elif item.invoice.status == 'Pending' %}
-                            <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
-                            </span>
-                            {% else %}
-                            <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-600">
-                                {{ item.invoice.status }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="p-4 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                            {{ item.invoice.created_by.get_full_name|default:item.invoice.created_by.username }}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="p-12 text-center">
-                            <div class="flex flex-col items-center justify-center opacity-50">
-                                <i class="fas fa-inbox text-4xl mb-4 text-slate-300"></i>
-                                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No procedure
-                                    requests found</p>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        {% if page_obj.paginator.num_pages > 1 %}
-        <div class="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </td>
+                                <td class="p-4">
+                                    {% if item.invoice.patient %}
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-black text-xs border border-slate-200 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                                {{ item.invoice.patient.first_name|first }}{{
+                                                item.invoice.patient.last_name|first|default:"" }}
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-bold text-slate-800">{{ item.invoice.patient.full_name }}</div>
+                                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                                    ID: {{
+                                                    item.invoice.patient.id_number|default:"N/A" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-slate-400 italic font-medium">Unknown Patient</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-4">
+                                    <span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold border border-indigo-100">{{ item.name }}</span>
+                                </td>
+                                <td class="p-4 text-slate-600 font-bold font-mono text-sm">{{ item.unit_price }}</td>
+                                <td class="p-4">
+                                    {% if item.invoice.status == 'Paid' %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Paid
+                                        </span>
+                                    {% elif item.invoice.status == 'Pending' %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-600">{{ item.invoice.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-4 text-slate-500 text-xs font-bold uppercase tracking-wide">{{ item.invoice.created_by.get_full_name|default:item.invoice.created_by.username }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="p-12 text-center">
+                                    <div class="flex flex-col items-center justify-center opacity-50">
+                                        <i class="fas fa-inbox text-4xl mb-4 text-slate-300"></i>
+                                        <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">
+                                            No procedure
+                                            requests found
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div class="flex gap-2">
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}"
-                    class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest transition shadow-sm">
-                    Previous
-                </a>
-                {% endif %}
-
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}"
-                    class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest transition shadow-sm">
-                    Next
-                </a>
-                {% endif %}
-            </div>
+            <!-- Pagination -->
+            {% if page_obj.paginator.num_pages > 1 %}
+                <div class="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest transition shadow-sm">Previous</a>{% endif %}
+                        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest transition shadow-sm">Next</a>{% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-</div>
 {% endblock %}

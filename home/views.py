@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
-from django.db.models import Q, Count, Sum, Avg
+from django.db.models import Q, Count, Sum, Avg, Prefetch, F
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -13,12 +13,13 @@ import json
 from datetime import timedelta
 from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral
 from accounts.models import Invoice, InvoiceItem, Service, Payment
+from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
 from inpatient.models import Admission
 from morgue.models import MorgueAdmission
 from .forms import EmergencyContactForm, PatientForm, ReferralForm
 from django.db.models import Q
-
+from inventory.models import DispensedItem
 class PatientListView(LoginRequiredMixin, ListView):
     model = Patient
     template_name = 'home/patient_list.html'
@@ -80,66 +81,98 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
         # First save the patient to get the instance and set self.object
         self.object = form.save()
         
-        # Create a visit for the new patient
-        visit = Visit.objects.create(
-            patient=self.object,
-            visit_type='OUT-PATIENT',
-            visit_mode='Walk In'
-        )
-        
         # Handle integrated billing
-        consultation_service = form.cleaned_data.get('consultation_type')
+        selected_service = form.cleaned_data.get('consultation_type')
         payment_method = form.cleaned_data.get('payment_method')
         
-        if consultation_service and payment_method:
-            # Create Invoice
-            invoice = Invoice.objects.create(
+        # Define which services create a Visit + Queue
+        VISIT_SERVICES = {'OPD Consultation', 'ANC', 'PNC Visit (Mother)', 'PNC Visit (Baby)', 'CWC'}
+        creates_visit = selected_service and selected_service.name in VISIT_SERVICES
+        
+        if creates_visit:
+            # Create a visit for the new patient
+            visit = Visit.objects.create(
                 patient=self.object,
+                visit_type='OUT-PATIENT',
+                visit_mode='Walk In'
+            )
+            
+            if selected_service and payment_method:
+                # Get or Create Visit Invoice (Consolidated)
+                invoice = get_or_create_invoice(visit=visit, user=self.request.user)
+                
+                # Create InvoiceItem
+                item = InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=selected_service,
+                    name=selected_service.name,
+                    unit_price=selected_service.price,
+                    quantity=1
+                )
+                
+                # Record Payment
+                Payment.objects.create(
+                    invoice=invoice,
+                    amount=item.amount,
+                    payment_method=payment_method,
+                    created_by=self.request.user
+                )
+                
+                messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+            
+            # --- Smart Routing ---
+            reception_dept, _ = Departments.objects.get_or_create(
+                name='Reception', defaults={'abbreviation': 'REC'}
+            )
+            
+            service_name_upper = selected_service.name.upper() if selected_service else ''
+            
+            if 'ANC' in service_name_upper:
+                dest_dept, _ = Departments.objects.get_or_create(name='ANC', defaults={'abbreviation': 'ANC'})
+            elif 'PNC' in service_name_upper:
+                dest_dept, _ = Departments.objects.get_or_create(name='PNC', defaults={'abbreviation': 'PNC'})
+            elif 'CWC' in service_name_upper:
+                dest_dept, _ = Departments.objects.get_or_create(name='CWC', defaults={'abbreviation': 'CWC'})
+            else:
+                # OPD Consultation → Triage
+                dest_dept, _ = Departments.objects.get_or_create(name='Triage', defaults={'abbreviation': 'TRI'})
+            
+            PatientQue.objects.create(
                 visit=visit,
-                status='Pending',
-                created_by=self.request.user
+                qued_from=reception_dept,
+                sent_to=dest_dept,
+                created_by=self.request.user,
+                status='PENDING',
+                queue_type='INITIAL'
             )
-            
-            # Create InvoiceItem for consultation
-            item = InvoiceItem.objects.create(
-                invoice=invoice,
-                service=consultation_service,
-                name=consultation_service.name,
-                unit_price=consultation_service.price,
-                quantity=1
-            )
-            
-            # Record Payment
-            Payment.objects.create(
-                invoice=invoice,
-                amount=item.amount,
-                payment_method=payment_method,
-                created_by=self.request.user
-            )
-            
-            # Invoice update_totals and status will be handled by Payment.save()
-            messages.success(self.request, f"Patient registered and {consultation_service.name} billed via {payment_method}.")
         
-        # Create or get reception and triage departments
-        reception_dept, created = Departments.objects.get_or_create(
-            name='Reception',
-            defaults={'abbreviation': 'REC'}
-        )
-        
-        triage_dept, created = Departments.objects.get_or_create(
-            name='Triage',
-            defaults={'abbreviation': 'TRI'}
-        )
-        
-        # Create PatientQue from reception to triage
-        PatientQue.objects.create(
-            visit=visit,
-            qued_from=reception_dept,
-            sent_to=triage_dept,
-            created_by=self.request.user,
-            status='PENDING',
-            queue_type='INITIAL'
-        )
+        else:
+            # Non-visit service: create Invoice directly without a Visit
+            if selected_service and payment_method:
+                invoice = Invoice.objects.create(
+                    patient=self.object,
+                    status='Pending',
+                    created_by=self.request.user
+                )
+                
+                item = InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=selected_service,
+                    name=selected_service.name,
+                    unit_price=selected_service.price,
+                    quantity=1
+                )
+                
+                Payment.objects.create(
+                    invoice=invoice,
+                    amount=item.amount,
+                    payment_method=payment_method,
+                    created_by=self.request.user
+                )
+                
+                messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+            else:
+                messages.success(self.request, "Patient registered successfully.")
         
         # Now redirect to success URL
         return redirect(self.get_success_url())
@@ -168,23 +201,30 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         patient = self.get_object()
         from inpatient.models import Admission
 
+        # Get all visits for the filter dropdown
+        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date')
+        latest_visit = all_visits.first()
+
         # Get visit filter from GET parameters
         visit_id = self.request.GET.get('visit_id', None)
         selected_visit = None
         
-        if visit_id and visit_id != 'all':
+        if visit_id == 'all':
+            selected_visit = None
+        elif visit_id:
             try:
                 selected_visit = Visit.objects.get(id=visit_id, patient=patient)
             except Visit.DoesNotExist:
-                selected_visit = None
+                selected_visit = latest_visit
+        else:
+            # Default to latest visit if no parameter passed
+            selected_visit = latest_visit
 
-        # Get all visits for the filter dropdown
-        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date')
-        latest_visit = all_visits.first()
         
         context['visits'] = all_visits
         context['selected_visit'] = selected_visit
         context['latest_visit'] = latest_visit
+        context['visit_id_param'] = visit_id  # useful for template logic
         
         # Filter data based on selected visit
         if selected_visit:
@@ -274,13 +314,11 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             name__in=['Lab', 'Imaging', 'Procedure Room']
         ).order_by('name')
         
-        # Get dispensed items history
-        from inventory.models import DispensedItem
-        if selected_visit:
-            dispensed_items = DispensedItem.objects.filter(visit=selected_visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
-        else:
-            dispensed_items = DispensedItem.objects.filter(patient=patient).order_by('-dispensed_at')[:20]
-        context['dispensed_items'] = dispensed_items
+        # Get dispensed items history (Normalized)
+        context['dispensed_items'] = _get_normalized_history(selected_visit, patient)
+        
+        # Get departments for dispensing widget
+        context['dispensing_departments'] = Departments.objects.all().order_by('name')
         
         return context
 
@@ -388,6 +426,9 @@ def add_consultation_note(request):
             if not latest_visit:
                 return JsonResponse({'success': False, 'error': 'No active visit found for this patient.'})
 
+            if not latest_visit.is_active:
+                return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is already closed. Please create a new visit to record notes.'})
+
             # Handle consultation
             consultation = None
             
@@ -396,15 +437,16 @@ def add_consultation_note(request):
                 consultation = get_object_or_404(Consultation, pk=consultation_id)
                 # Ensure this consultation belongs to the latest visit
                 if consultation.visit != latest_visit:
-                    return JsonResponse({'success': False, 'error': 'Can only add notes to the latest visit.'})
+                    return JsonResponse({'success': False, 'error': 'Cannot add notes to a previous visit. Please select the latest visit.'})
             else:
                 # We are creating a new note, it MUST be for the latest visit
                 # Find or create a consultation for the latest visit
                 consultation = Consultation.objects.filter(visit=latest_visit, doctor=request.user).first()
                 if not consultation:
+                    # If no consultation exists for the latest visit, we create one
                     consultation = Consultation.objects.create(
                         visit=latest_visit,
-                        doctor=request.user
+                        doctor=request.user,
                     )
             
             # Create consultation note
@@ -423,7 +465,7 @@ def add_consultation_note(request):
 
 @login_required
 def submit_next_action(request):
-    allowed_roles = ['Doctor', 'Receptionist', 'Triage Nurse', 'Admin']
+    allowed_roles = ['Doctor', 'Nurse', 'Receptionist', 'Triage Nurse', 'Admin']
     if request.user.role not in allowed_roles:
         return JsonResponse({'success': False, 'error': 'You are not authorized to perform this action.'})
     
@@ -438,6 +480,11 @@ def submit_next_action(request):
             # Identify the latest visit
             latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
             
+            # Block if latest visit is already closed (unless it's a walk-in dispense which we haven't fully separated yet, 
+            # but for clinical actions like routing/labs, it must be active)
+            if latest_visit and not latest_visit.is_active:
+                return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is already closed. Clinical actions cannot be performed on closed visits.'})
+
             # If no active visit, we allow walk-in invoicing (visit=None)
             visit = latest_visit
             
@@ -493,26 +540,44 @@ def submit_next_action(request):
                     )
             
             # Process selected tests and create service invoices
-            invoice_id = None
             if selected_tests:
-                # Create one invoice for all tests
-                invoice = Invoice.objects.create(
-                    patient=patient,
-                    visit=visit,
-                    status='Pending',
-                    created_by=request.user
-                )
+                # Get or Create Visit Invoice (Consolidated)
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
                 invoice_id = invoice.id
+
+                # ANC Profile Bundle Automation
+                anc_profile_service = Service.objects.filter(pk__in=selected_tests, name__icontains='ANC Profile').first()
+                bundled_tests_names = [
+                    "Haemoglobin level (HB)",
+                    "Rhesus",
+                    "Random Blood Sugar (RBS)",
+                    "Urinalysis",
+                    "Hepatitis B Surface Antigen (HBsAg)",
+                    "Blood grouping"
+                ]
+
+                if anc_profile_service:
+                    # Add bundled tests if not already in selection
+                    bundled_services_ids = Service.objects.filter(name__in=bundled_tests_names).values_list('id', flat=True)
+                    for b_id in bundled_services_ids:
+                        if str(b_id) not in selected_tests:
+                            selected_tests.append(str(b_id))
                 
                 items_created = 0
                 for test_id in selected_tests:
                     try:
                         service = Service.objects.get(pk=test_id)
+                        
+                        # Determine Price (Free if part of ANC Profile bundle)
+                        unit_price = service.price
+                        if anc_profile_service and service.name in bundled_tests_names:
+                            unit_price = 0
+
                         item = InvoiceItem.objects.create(
                             invoice=invoice,
                             service=service,
                             name=service.name,
-                            unit_price=service.price,
+                            unit_price=unit_price,
                             quantity=1
                         )
 
@@ -694,7 +759,9 @@ def reception_dashboard(request):
         invoices = Invoice.objects.filter(
             status__in=['Pending', 'Partial', 'Draft'],
             visit__visit_type='OUT-PATIENT'
-        ).select_related('patient', 'deceased').prefetch_related('items__service')
+        ).select_related('patient', 'deceased').prefetch_related(
+            Prefetch('items', queryset=InvoiceItem.objects.filter(paid_amount__lt=F('amount')).select_related('service'))
+        )
         
         if invoice_search:
             invoices = invoices.filter(
@@ -738,16 +805,18 @@ def reception_dashboard(request):
         # Get visits without triage entries
         visits_with_triage = Visit.objects.filter(triage_entries__isnull=False).values_list('pk', flat=True)
         visits_without_triage = Visit.objects.filter(
-            ~Q(pk__in=visits_with_triage)
-        ).select_related('patient').prefetch_related('invoices__items__service')
+            ~Q(pk__in=visits_with_triage),
+            patient_queue__sent_to__name='Triage', # Ensuring we only show patients actually queued for Triage
+            patient_queue__status='PENDING'
+        ).select_related('patient').prefetch_related('invoice__items__service').distinct()
         
         if pending_search:
             visits_without_triage = visits_without_triage.filter(
                 Q(patient__first_name__icontains=pending_search) |
                 Q(patient__last_name__icontains=pending_search) |
                 Q(patient__phone__icontains=pending_search) |
-                Q(invoices__items__service__name__icontains=pending_search) |
-                Q(invoices__items__name__icontains=pending_search)
+                Q(invoice__items__service__name__icontains=pending_search) |
+                Q(invoice__items__name__icontains=pending_search)
             ).distinct()
             
         visits_without_triage = visits_without_triage.order_by('-visit_date')[:10]
@@ -756,8 +825,8 @@ def reception_dashboard(request):
         for visit in visits_without_triage:
             visit.is_maternity = False
             visit.services_list = []
-            for invoice in visit.invoices.all():
-                for item in invoice.items.all():
+            if hasattr(visit, 'invoice') and visit.invoice:
+                for item in visit.invoice.items.all():
                     if item.service:
                         visit.services_list.append(item.service.name)
                         if "ANC" in item.service.name.upper() or "PNC" in item.service.name.upper():
@@ -770,8 +839,10 @@ def reception_dashboard(request):
         # Get pending triage count (visits without triage)
         pending_triage_count = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
-            visit_date__date=today
-        ).count()
+            visit_date__date=today,
+            patient_queue__sent_to__name='Triage',
+            patient_queue__status='PENDING'
+        ).distinct().count()
         
         context.update({
             'triage_entries': triage_entries,
@@ -793,6 +864,15 @@ def add_symptoms(request):
             days = request.POST.get('days')
             
             visit = get_object_or_404(Visit, pk=visit_id)
+            
+            # Block if not latest visit or if visit is not active
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot add symptoms to a previous visit.'})
+            
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot add symptoms to a closed visit. Please create a new visit.'})
+
             from .models import Symptoms
             
                 
@@ -920,8 +1000,16 @@ def add_impression(request):
             data = request.POST.get('data')
             
             visit = get_object_or_404(Visit, pk=visit_id)
-            from .models import Impression
             
+            # Block if not latest visit or if visit is not active
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot add impressions to a previous visit.'})
+                
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot add impressions to a closed visit.'})
+
+            from .models import Impression
             Impression.objects.create(
                 visit=visit,
                 data=data,
@@ -941,8 +1029,16 @@ def add_diagnosis(request):
             data = request.POST.get('data')
             
             visit = get_object_or_404(Visit, pk=visit_id)
-            from .models import Diagnosis
             
+            # Block if not latest visit or if visit is not active
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot add diagnosis to a previous visit.'})
+                
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot add diagnosis to a closed visit.'})
+
+            from .models import Diagnosis
             Diagnosis.objects.create(
                 visit=visit,
                 data=data,
@@ -1058,13 +1154,15 @@ def create_triage_entry(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
-@login_required
+@login_required # Ensure login
 def admit_patient_visit(request):
-    """Create a new visit and queue entry for an existing patient (Free Revisit)"""
+    """
+    Admit a patient (create a Visit) and add to a Queue (Reception -> Dest).
+    """
     if request.method == 'POST':
         try:
             patient_id = request.POST.get('patient_id')
-            service_id = request.POST.get('consultation_id') # Kept the key for JS compatibility
+            service_id = request.POST.get('service_id') or request.POST.get('consultation_id')
             
             patient = get_object_or_404(Patient, pk=patient_id)
             main_service = get_object_or_404(Service, pk=service_id)
@@ -1088,30 +1186,116 @@ def admit_patient_visit(request):
             )
 
             # Route based on Service Name (Smart Routing)
-            destination_dept = triage_dept # Default to Triage
+            # Default: If service has a linked department, send there. Else fallback to Triage.
+            destination_dept = main_service.department if main_service.department else triage_dept
             
             service_name_upper = main_service.name.upper()
+            is_maternity = False
+            
+            # Specific Overrides - Order Matters! Check specific depts first before generic 'Consultation'
             if "ANC" in service_name_upper:
                 anc_dept, _ = Departments.objects.get_or_create(name='ANC', defaults={'abbreviation': 'ANC'})
                 destination_dept = anc_dept
+                is_maternity = True
             elif "PNC" in service_name_upper:
                 pnc_dept, _ = Departments.objects.get_or_create(name='PNC', defaults={'abbreviation': 'PNC'})
                 destination_dept = pnc_dept
-            elif "CWC" in service_name_upper:
+                is_maternity = True
+            elif "CWC" in service_name_upper or "CHILD WELFARE" in service_name_upper or "IMMUNIZA" in service_name_upper or "VACCIN" in service_name_upper or "CNC" in service_name_upper:
                 cwc_dept, _ = Departments.objects.get_or_create(name='CWC', defaults={'abbreviation': 'CWC'})
                 destination_dept = cwc_dept
+                is_maternity = True
+            elif "LAB" in service_name_upper or "LABORATORY" in service_name_upper:
+                 lab_dept, _ = Departments.objects.get_or_create(name='Lab', defaults={'abbreviation': 'LAB'})
+                 destination_dept = lab_dept
+            elif "RADIOLOGY" in service_name_upper or "IMAGING" in service_name_upper or "X-RAY" in service_name_upper or "ULTRASOUND" in service_name_upper:
+                 img_dept, _ = Departments.objects.get_or_create(name='Imaging', defaults={'abbreviation': 'IMG'})
+                 destination_dept = img_dept
+            elif "IPD" in service_name_upper or "ADMISSION" in service_name_upper:
+                 # Route IPD/Admissions to Admissions Desk/Ward
+                 adm_dept, _ = Departments.objects.get_or_create(name='Admissions', defaults={'abbreviation': 'ADM'})
+                 destination_dept = adm_dept
+            elif "OPD" in service_name_upper or "CONSULTATION" in service_name_upper:
+                # General OPD / Consultations always go to Triage first (if not matched above)
+                destination_dept = triage_dept
+            
+            # --- Billing Logic ---
+            from accounts.models import Invoice, InvoiceItem
+            from django.utils import timezone
+            from accounts.utils import get_or_create_invoice
+
+            should_bill = False
+            
+            if is_maternity:
+                # ANC / PNC / CWC: Always Bill
+                should_bill = True
+            else:
+                # OPD: Check if billed for consultation this year
+                current_year = timezone.now().year
+                has_billed_this_year = InvoiceItem.objects.filter(
+                    invoice__patient=patient,
+                    service__name__icontains='Consultation', # Broad check for consultation services
+                    invoice__created_at__year=current_year,
+                    invoice__status__in=['Paid', 'Partial', 'Pending'] # Assuming we only care if they have a valid previous invoice
+                ).exists()
+                
+                if not has_billed_this_year:
+                    should_bill = True
+            
+            billing_msg = " (Free Visit)"
+            if should_bill:
+                # Create Invoice
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
+                
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=main_service,
+                    name=main_service.name,
+                    unit_price=main_service.price,
+                    quantity=1
+                )
+                billing_msg = " (Billed)"
             
             # Create PatientQue from reception to destination (Triage or Direct Maternity)
-            PatientQue.objects.create(
+            que = PatientQue.objects.create(
                 visit=visit,
                 qued_from=reception_dept,
                 sent_to=destination_dept,
                 created_by=request.user
             )
             
+            # --- ANC Revisit: Auto-queue returning patients directly into Clinical Queue ---
+            if "ANC" in service_name_upper:
+                from maternity.models import Pregnancy, AntenatalVisit
+                active_pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
+                
+                if active_pregnancy:
+                    # Patient has active pregnancy → create AntenatalVisit directly
+                    # Only check for OPEN visits today (closed ones don't block a new revisit)
+                    existing_open_today = AntenatalVisit.objects.filter(
+                        pregnancy=active_pregnancy,
+                        visit_date=timezone.now().date(),
+                        is_closed=False
+                    ).first()
+                    
+                    if not existing_open_today:
+                        AntenatalVisit.objects.create(
+                            pregnancy=active_pregnancy,
+                            visit_date=timezone.now().date(),
+                            visit_number=(active_pregnancy.anc_visits.count() + 1),
+                            gestational_age=active_pregnancy.gestational_age_weeks,
+                            service_received=False,
+                            is_closed=False,
+                            recorded_by=request.user
+                        )
+                    
+                    # Mark queue as completed — patient goes straight to Clinical Queue
+                    que.status = 'COMPLETED'
+                    que.save()
+            
             return JsonResponse({
                 'success': True, 
-                'message': f'Patient {patient.full_name} admitted for {main_service.name} (Free Revisit).'
+                'message': f'Patient {patient.full_name} admitted for {main_service.name}{billing_msg}.'
             })
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -1123,18 +1307,41 @@ def admit_patient_visit(request):
 @login_required
 def create_prescription(request, visit_id):
     """Create a new prescription for a patient linked to a specific visit"""
-    if request.user.role != 'Doctor':
-        messages.error(request, "Only doctors can create prescriptions.")
+    allowed_roles = ['Doctor', 'Nurse']
+    if request.user.role not in allowed_roles:
+        messages.error(request, f"Only {', '.join(allowed_roles)} can create prescriptions.")
         # We need to find the patient first to redirect, or just redirect to dashboard
         visit = get_object_or_404(Visit, pk=visit_id)
         return redirect('home:patient_detail', pk=visit.patient.id)
     
     from django.forms import inlineformset_factory
     from .forms import PrescriptionForm, PrescriptionItemForm
-    from .models import Prescription, PrescriptionItem, Visit
+
     
     visit = get_object_or_404(Visit, pk=visit_id)
     patient = visit.patient
+    
+    # Block if not latest visit or if visit is not active
+    latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
+    
+    if visit != latest_visit:
+        messages.error(request, "Cannot create prescriptions for a previous visit.")
+        return redirect('home:patient_detail', pk=patient.id)
+        
+    if not visit.is_active:
+        messages.error(request, f"Visit for {patient.full_name} is already closed. Please create a new visit to prescribe medications.")
+        return redirect('home:patient_detail', pk=patient.id)
+    
+    # Block prescription creation for IPD visits — use MedicationChart via case folder instead
+    from inpatient.models import Admission
+    active_admission = Admission.objects.filter(visit=visit, status='Admitted').first()
+    if active_admission:
+        messages.warning(
+            request,
+            f"{patient.full_name} is an admitted inpatient. "
+            "Please prescribe medications from the Inpatient Case Folder instead."
+        )
+        return redirect('inpatient:patient_case_folder', admission_id=active_admission.id)
     
     # Create formset for prescription items (medications)
     PrescriptionItemFormSet = inlineformset_factory(
@@ -1170,14 +1377,16 @@ def create_prescription(request, visit_id):
             
             # Create billing for the prescription medications
             if prescription_items:
-                # Create a single invoice for all prescribed items
-                invoice = Invoice.objects.create(
-                    patient=patient,
-                    visit=prescription.visit,
-                    status='Pending',
-                    created_by=request.user,
-                    notes=f"Prescription billing for meds: {', '.join([item.medication.name for item in prescription_items])}"
-                )
+                # Get or Create Visit Invoice (Consolidated)
+                invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
+                
+                # Append to existing notes
+                new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
+                if invoice.notes:
+                    invoice.notes += new_notes
+                else:
+                    invoice.notes = new_notes.strip()
+                invoice.save()
                 
                 # Link invoice to prescription
                 prescription.invoice = invoice
@@ -1196,11 +1405,11 @@ def create_prescription(request, visit_id):
                 
                 # Update invoice totals and handle free prescriptions
                 invoice.update_totals()
-                if invoice.total_amount == 0:
+                if invoice.total_amount == 0 and invoice.status != 'Paid':
                     invoice.status = 'Paid'
                     invoice.save()
 
-                messages.success(request, f'Prescription and invoice created successfully for {patient.full_name}')
+                messages.success(request, f'Prescription processed successfully for {patient.full_name}')
             else:
                 messages.success(request, f'Prescription created successfully (no items) for {patient.full_name}')
                 
@@ -1221,15 +1430,37 @@ def create_prescription(request, visit_id):
     else:
         medications = InventoryItem.objects.all().select_related('category')
     
+    # Prepare stock logic
+    from django.db.models import Sum, Q 
+    from inventory.models import StockRecord
+
+    # Determine eligible departments for stock check
+    departments = ['Pharmacy'] # Base for everyone
+    if visit.visit_type == 'OUT-PATIENT':
+        departments.append('Main Store')
+    else: # In-Patient
+        departments.extend(['Main Store', 'Mini Pharmacy'])
+    
     med_metadata = {}
     for item in medications:
         details = getattr(item, 'medication', None)
+        
+        # Calculate stock
+        total_stock = StockRecord.objects.filter(
+            item=item,
+            current_location__name__in=departments
+        ).aggregate(quantity__sum=Sum('quantity'))['quantity__sum'] or 0
+
         med_metadata[item.id] = {
             'name': item.name,
             'generic_name': details.generic_name if details else '',
             'formulation': details.formulation if details else '',
+            'drug_class': details.drug_class.name if details and details.drug_class else '',
             'is_dispensed_as_whole': item.is_dispensed_as_whole,
-            'selling_price': str(item.selling_price)
+            'dispensing_unit': item.dispensing_unit,
+            'selling_price': str(item.selling_price),
+            'stock_quantity': total_stock,
+            'visit_type': visit.visit_type
         }
     
     context = {
@@ -1238,10 +1469,61 @@ def create_prescription(request, visit_id):
         'patient': patient,
         'visit': visit,
         'med_metadata_json': json.dumps(med_metadata),
-        # Add Dispensed Items context for the widget
-        'dispensed_items': visit.dispensed_items.select_related('item', 'dispensed_by').order_by('-dispensed_at')
+        # Add Dispensed Items context for the widget (Normalized)
+        'dispensed_items': _get_normalized_history(visit, patient),
+        'dispensing_departments': Departments.objects.all().order_by('name')
     }
     return render(request, 'home/create_prescription.html', context)
+
+def _get_normalized_history(visit, patient):
+    from inventory.models import DispensedItem
+    from accounts.models import InvoiceItem
+    
+    if not visit:
+        return []
+
+    # 1. Fetch physical dispensations (Stock deducted)
+    d_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+    
+    # 2. Fetch billed items (Requested by doctor but might not be dispensed yet)
+    billed_items = InvoiceItem.objects.filter(
+        invoice__visit=visit,
+        inventory_item__isnull=False
+    ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')
+        
+    # 3. Combine and Normalize
+    history = []
+    
+    # Add physically dispensed items
+    for d in d_items:
+        history.append({
+            'item_name': d.item.name,
+            'quantity': d.quantity,
+            'at': d.dispensed_at,
+            'by': d.dispensed_by,
+            'status': 'Dispensed',
+            'status_class': 'bg-emerald-50 text-emerald-700'
+        })
+        
+    # Add billed items (only if NOT already in physically dispensed to avoid duplicates)
+    dispensed_keys = {(d.item.name, d.quantity) for d in d_items}
+    
+    for b in billed_items:
+        key = (b.inventory_item.name, b.quantity)
+        if key not in dispensed_keys:
+            # Use b.name because it might contain "(from Dept)" info
+            history.append({
+                'item_name': b.name if b.name else b.inventory_item.name,
+                'quantity': b.quantity,
+                'at': b.created_at,
+                'by': b.invoice.created_by,
+                'status': 'Requested',
+                'status_class': 'bg-amber-50 text-amber-700'
+            })
+    
+    # Sort combined history by timestamp
+    history.sort(key=lambda x: x['at'], reverse=True)
+    return history[:30]
 
 @login_required
 def health_records_view(request):
@@ -1375,20 +1657,20 @@ from inpatient.models import MedicationChart
 
 @login_required
 def pharmacy_dashboard(request):
-    """Pharmacy dashboard showing prescriptions, stock, and requests"""
-    
+    """Pharmacy dashboard showing prescriptions, consumables, stock, and requests"""
+
     # Get or create pharmacy department
     pharmacy_dept, created = Departments.objects.get_or_create(
         name='Pharmacy',
         defaults={'abbreviation': 'PHR'}
     )
-    
+
     # Search functionality
     search_query = request.GET.get('search', '')
     stock_search = request.GET.get('stock_search', '')
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
-    
+
     # Get pending prescriptions (not dispensed)
     pending_items = PrescriptionItem.objects.filter(
         dispensed=False
@@ -1396,19 +1678,58 @@ def pharmacy_dashboard(request):
         'prescription__patient',
         'prescription__prescribed_by',
         'prescription__invoice',
+        'prescription__visit',
         'medication'
     ).order_by('-prescription__prescribed_at')
-    
+
     # Get pending IPD medications (from MedicationChart)
     pending_ipd_items = MedicationChart.objects.filter(
         is_dispensed=False
     ).select_related(
         'admission__patient',
+        'admission__visit',
         'admission__bed__ward',
         'prescribed_by',
         'item'
     ).order_by('-prescribed_at')
-    
+
+    # Get pending IPD consumables
+    from inpatient.models import Admission, InpatientConsumable
+    pending_ipd_consumables = InpatientConsumable.objects.filter(
+        is_dispensed=False
+    ).select_related(
+        'admission__patient',
+        'admission__visit',
+        'prescribed_by',
+        'item'
+    ).order_by('-prescribed_at')
+
+    # Get pending consumables — InvoiceItems with inventory_item that have NOT been dispensed yet
+    from accounts.models import Invoice, InvoiceItem
+
+    # Consumable InvoiceItems: have inventory_item set, but are NOT medications
+    pending_consumables = InvoiceItem.objects.filter(
+        inventory_item__isnull=False,
+        inventory_item__medication__isnull=True, # Structural check for consumables (non-drugs)
+        invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
+    ).select_related(
+        'invoice__patient',
+        'invoice__visit',
+        'inventory_item',
+    ).order_by('-created_at')
+
+    # Filter out consumables that already have a DispensedItem
+    # (match by visit + inventory_item + quantity)
+    dispensed_consumable_keys = set()
+    for d in DispensedItem.objects.all().values_list('visit_id', 'item_id', 'quantity'):
+        dispensed_consumable_keys.add(d)
+
+    pending_consumable_list = []
+    for ci in pending_consumables:
+        key = (ci.invoice.visit_id, ci.inventory_item_id, ci.quantity)
+        if key not in dispensed_consumable_keys:
+            pending_consumable_list.append(ci)
+
     if search_query:
         pending_items = pending_items.filter(
             Q(prescription__patient__first_name__icontains=search_query) |
@@ -1420,11 +1741,121 @@ def pharmacy_dashboard(request):
             Q(admission__patient__last_name__icontains=search_query) |
             Q(item__name__icontains=search_query)
         )
-    
+        pending_ipd_consumables = pending_ipd_consumables.filter(
+            Q(admission__patient__first_name__icontains=search_query) |
+            Q(admission__patient__last_name__icontains=search_query) |
+            Q(item__name__icontains=search_query)
+        )
+        # Filter pending consumable list
+        pending_consumable_list = [
+            ci for ci in pending_consumable_list
+            if search_query.lower() in (ci.invoice.patient.first_name or '').lower()
+            or search_query.lower() in (ci.invoice.patient.last_name or '').lower()
+            or search_query.lower() in (ci.inventory_item.name or '').lower()
+        ]
+
+    # ---- Build OPD grouped data: group prescriptions + consumables by visit ----
+    from collections import defaultdict
+
+    opd_visit_groups = defaultdict(lambda: {
+        'patient': None,
+        'visit': None,
+        'prescriptions': [],
+        'consumables': [],
+        'invoice': None,
+        'invoice_status': 'No Invoice',
+        'prescribed_at': None,
+        'prescribed_by': None,
+    })
+
+    for item in pending_items:
+        visit = item.prescription.visit
+        if not visit:
+            continue
+        # PrescriptionItem is guaranteed OPD (IPD blocked at create_prescription)
+        vkey = visit.id
+        group = opd_visit_groups[vkey]
+        group['patient'] = item.prescription.patient
+        group['visit'] = visit
+        group['prescriptions'].append(item)
+        if item.prescription.invoice:
+            group['invoice'] = item.prescription.invoice
+            group['invoice_status'] = item.prescription.invoice.status
+        if not group['prescribed_at'] or item.prescription.prescribed_at > group['prescribed_at']:
+            group['prescribed_at'] = item.prescription.prescribed_at
+            group['prescribed_by'] = item.prescription.prescribed_by
+
+    for ci in pending_consumable_list:
+        visit = ci.invoice.visit
+        if not visit:
+            continue
+        # Check if this visit is IPD — skip, those go in IPD section
+        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
+        if is_ipd:
+            continue
+        vkey = visit.id
+        group = opd_visit_groups[vkey]
+        group['patient'] = ci.invoice.patient
+        group['visit'] = visit
+        group['consumables'].append(ci)
+        if not group['invoice']:
+            group['invoice'] = ci.invoice
+            group['invoice_status'] = ci.invoice.status
+
+    # Convert to list and sort
+    opd_groups = sorted(
+        [g for g in opd_visit_groups.values() if g['patient']],
+        key=lambda g: g['prescribed_at'] or timezone.now(),
+        reverse=True
+    )
+
+    # ---- Build IPD grouped data ----
+    ipd_visit_groups = defaultdict(lambda: {
+        'patient': None,
+        'visit': None,
+        'admission': None,
+        'medications': [],
+        'consumables': [],
+    })
+
+    for item in pending_ipd_items:
+        vkey = item.admission.visit_id
+        group = ipd_visit_groups[vkey]
+        group['patient'] = item.admission.patient
+        group['visit'] = item.admission.visit
+        group['admission'] = item.admission
+        group['medications'].append(item)
+
+    for item in pending_ipd_consumables:
+        vkey = item.admission.visit_id
+        group = ipd_visit_groups[vkey]
+        group['patient'] = item.admission.patient
+        group['visit'] = item.admission.visit
+        group['admission'] = item.admission
+        group['consumables'].append(item)
+
+    for ci in pending_consumable_list:
+        visit = ci.invoice.visit
+        if not visit:
+            continue
+        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
+        if not is_ipd:
+            continue
+        vkey = visit.id
+        group = ipd_visit_groups[vkey]
+        group['patient'] = ci.invoice.patient
+        group['visit'] = visit
+        if not group['admission']:
+            group['admission'] = Admission.objects.filter(visit=visit, status='Admitted').first()
+        group['consumables'].append(ci)
+
+    ipd_groups = sorted(
+        [g for g in ipd_visit_groups.values() if g['patient']],
+        key=lambda g: g['admission'].admitted_at if g['admission'] else timezone.now(),
+        reverse=True
+    )
+
     # Get recently dispensed items (last 30 days)
-    # Use the central DispensedItem model
-    from inventory.models import DispensedItem
-    
     thirty_days_ago = timezone.now() - timedelta(days=30)
     dispensed_items = DispensedItem.objects.filter(
         dispensed_at__gte=thirty_days_ago
@@ -1432,8 +1863,8 @@ def pharmacy_dashboard(request):
         'patient',
         'item',
         'dispensed_by'
-    ).order_by('-dispensed_at')[:50]  # Limit to 50 recent items
-    
+    ).order_by('-dispensed_at')[:50]
+
     # Apply dispensed search filter
     if dispensed_search:
         dispensed_items = dispensed_items.filter(
@@ -1441,72 +1872,68 @@ def pharmacy_dashboard(request):
             Q(patient__last_name__icontains=dispensed_search) |
             Q(item__name__icontains=dispensed_search)
         )
-    
+
     # Get pharmacy stock
     pharmacy_stock = StockRecord.objects.filter(
         current_location=pharmacy_dept,
         quantity__gt=0
     ).select_related('item', 'supplier').order_by('item__name')
-    
+
     # Apply stock search filter
     if stock_search:
         pharmacy_stock = pharmacy_stock.filter(
             Q(item__name__icontains=stock_search) |
             Q(batch_number__icontains=stock_search)
         )
-    
+
     # Identify low stock items (below reorder level)
     low_stock_items = []
     expiring_soon_items = []
     today = timezone.now().date()
     thirty_days_later = today + timedelta(days=30)
-    
+
     for stock in pharmacy_stock:
-        # Calculate total quantity for this item across all batches
         total_qty = StockRecord.objects.filter(
             current_location=pharmacy_dept,
             item=stock.item
         ).aggregate(total=Sum('quantity'))['total'] or 0
-        
+
         if total_qty <= stock.item.reorder_level:
             if stock not in low_stock_items:
                 low_stock_items.append(stock)
-        
-        # Check for expiring items
+
         if stock.expiry_date and stock.expiry_date <= thirty_days_later:
             expiring_soon_items.append(stock)
-    
+
     # Get inventory requests for pharmacy
     inventory_requests_all = InventoryRequest.objects.filter(
         location=pharmacy_dept
     ).select_related('item', 'requested_by').order_by('-requested_at')
-    
-    # Apply request search filter
+
     if request_search:
         inventory_requests_all = inventory_requests_all.filter(
             Q(item__name__icontains=request_search) |
             Q(requested_by__first_name__icontains=request_search) |
             Q(requested_by__last_name__icontains=request_search)
         )
-    
-    # Calculate pending count before slicing
+
     pending_requests_count = inventory_requests_all.filter(status='Pending').count()
-    
-    # Slice for display
     inventory_requests = inventory_requests_all[:20]
-    
+
     # Statistics
     stats = {
-        'pending_prescriptions': pending_items.count(),
-        'pending_ipd_count': pending_ipd_items.count(),
+        'pending_prescriptions': pending_items.count() + len([c for c in pending_consumable_list if not Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
+        'pending_ipd_count': pending_ipd_items.count() + pending_ipd_consumables.count() + len([c for c in pending_consumable_list if Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
         'low_stock_count': len(set(low_stock_items)),
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
             dispensed_at__date=today
         ).count(),
     }
-    
+
     context = {
+        'opd_groups': opd_groups,
+        'ipd_groups': ipd_groups,
         'pending_items': pending_items,
         'pending_ipd_items': pending_ipd_items,
         'dispensed_items': dispensed_items,
@@ -1520,314 +1947,356 @@ def pharmacy_dashboard(request):
         'dispensed_search': dispensed_search,
         'request_search': request_search,
     }
-    
+
     return render(request, 'home/pharmacy_dashboard.html', context)
 
 
 @login_required
-def dispense_medication(request, item_id):
-    """Mark a prescription item as dispensed"""
-    from django.http import JsonResponse
-    
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid request method'})
-    
-    try:
-        prescription_item = get_object_or_404(PrescriptionItem, pk=item_id)
-        
-        # Check if already dispensed
-        if prescription_item.dispensed:
-            return JsonResponse({
-                'success': False,
-                'error': 'This medication has already been dispensed'
-            })
-        
-        # Check payment status
-        prescription = prescription_item.prescription
-        if prescription.invoice and prescription.invoice.status != 'Paid':
-            return JsonResponse({
-                'success': False,
-                'error': f'Payment required. Invoice {prescription.invoice.id} is {prescription.invoice.status}.'
-            })
-        
-        # Get pharmacy department
-        pharmacy_dept = Departments.objects.get(name='Pharmacy')
-        
-        # Check stock availability
-        available_stock = StockRecord.objects.filter(
-            current_location=pharmacy_dept,
-            item=prescription_item.medication,
-            quantity__gte=prescription_item.quantity
-        ).first()
-        
-        if not available_stock:
-            return JsonResponse({
-                'success': False,
-                'error': f'Insufficient stock for {prescription_item.medication.name}'
-            })
-        
-        # Mark as dispensed
-        prescription_item.dispensed = True
-        prescription_item.dispensed_at = timezone.now()
-        prescription_item.dispensed_by = request.user
-        prescription_item.save()
-        
-        # Reduce stock
-        available_stock.quantity -= prescription_item.quantity
-        available_stock.save()
-        
-        # Create stock adjustment record
-        # Create stock adjustment record
-        from inventory.models import StockAdjustment, DispensedItem
-        StockAdjustment.objects.create(
-            item=prescription_item.medication,
-            quantity=-prescription_item.quantity,
-            adjustment_type='Usage',
-            reason=f'Dispensed to {prescription_item.prescription.patient.full_name}',
-            adjusted_by=request.user,
-            adjusted_from=pharmacy_dept
-        )
-        
-        # Create Dispensed Item Record
-        DispensedItem.objects.create(
-            item=prescription_item.medication,
-            patient=prescription_item.prescription.patient,
-            visit=prescription_item.prescription.visit,
-            quantity=prescription_item.quantity,
-            dispensed_by=request.user,
-            department=pharmacy_dept
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'{prescription_item.medication.name} dispensed successfully'
-        })
-        
-    except Departments.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Pharmacy department not found'
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
-
-
-@login_required
 @require_http_methods(["POST"])
-def dispense_all_medications(request, prescription_id):
-    """Mark all pending items in a prescription as dispensed"""
+def dispense_all_visit_items(request, visit_id):
+    """
+    Dispense ALL pending items (medications + consumables) for a visit.
+    - OPD: requires invoice to be Paid before dispensing.
+    - IPD: dispenses immediately, creates invoice items at dispense time.
+    """
+    from accounts.models import Invoice, InvoiceItem
+    from inventory.models import StockAdjustment, DispensedItem
+    from inpatient.models import Admission
+
     try:
-        prescription = get_object_or_404(Prescription, pk=prescription_id)
-        pending_items = prescription.items.filter(dispensed=False)
-        
-        if not pending_items.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'No pending items found for this prescription'
-            })
-        
-        # Check payment status
-        if prescription.invoice and prescription.invoice.status != 'Paid':
-            return JsonResponse({
-                'success': False,
-                'error': f'Bulk dispensing blocked. Prescription invoice is {prescription.invoice.status}.'
-            })
-            
+        visit = get_object_or_404(Visit, pk=visit_id)
+        patient = visit.patient
         pharmacy_dept = Departments.objects.get(name='Pharmacy')
+
+        # Determine if IPD or OPD
+        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
+
+        # ---- Gather pending items ----
+        # 1. Prescription medications (PrescriptionItem)
+        pending_meds = PrescriptionItem.objects.filter(
+            prescription__visit=visit,
+            dispensed=False,
+        ).select_related('medication', 'prescription__invoice', 'prescription__patient')
+
+        # 2. Pending consumables
+        # Scenario A: InpatientConsumable (Modern IPD deferred billing)
+        from inpatient.models import Admission, InpatientConsumable
+        pending_ipd_consumable_reqs = InpatientConsumable.objects.filter(
+            admission__visit=visit,
+            is_dispensed=False
+        ).select_related('item', 'admission')
+
+        # Scenario B: InvoiceItems marked as Consumable (Legacy IPD or Modern OPD immediate billing)
+        pending_consumable_items = InvoiceItem.objects.filter(
+            invoice__visit=visit,
+            inventory_item__isnull=False,
+            inventory_item__medication__isnull=True, # Ensure it is a consumable (not a linked medication)
+        ).select_related('inventory_item', 'invoice')
+
+        # Filter out already-dispensed consumables for Scenario B
+        dispensed_keys = set(
+            DispensedItem.objects.filter(visit=visit).values_list('item_id', 'quantity')
+        )
+        pending_consumables = [
+            ci for ci in pending_consumable_items
+            if (ci.inventory_item_id, ci.quantity) not in dispensed_keys
+        ]
+
+        total_pending = pending_meds.count() + len(pending_consumables) + pending_ipd_consumable_reqs.count()
+        if total_pending == 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'No pending items found for this visit.'
+            })
+
+        # ---- OPD: Check payment ----
+        if not is_ipd:
+            # Check all related invoices are paid
+            invoices = Invoice.objects.filter(visit=visit).exclude(status='Cancelled')
+            unpaid = invoices.exclude(status='Paid')
+            if unpaid.exists():
+                inv_ids = ', '.join([f'INV-{inv.id}' for inv in unpaid])
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Payment required. Unpaid invoices: {inv_ids}'
+                })
+
         dispensed_count = 0
         errors = []
-        
-        from inventory.models import StockAdjustment, DispensedItem
-        
-        for item in pending_items:
-            # Check stock for each item
-            available_stock = StockRecord.objects.filter(
+
+        # ---- Dispense medications ----
+        for med in pending_meds:
+            # Check stock (FEFO)
+            stock_records = StockRecord.objects.filter(
                 current_location=pharmacy_dept,
-                item=item.medication,
-                quantity__gte=item.quantity
-            ).first()
-            
-            if not available_stock:
-                errors.append(f'Insufficient stock for {item.medication.name}')
+                item=med.medication,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(r.quantity for r in stock_records)
+            if total_available < med.quantity:
+                errors.append(f'Insufficient stock for {med.medication.name} (need {med.quantity}, have {total_available})')
                 continue
-                
-            # Perform dispensing
-            item.dispensed = True
-            item.dispensed_at = timezone.now()
-            item.dispensed_by = request.user
-            item.save()
-            
-            # Update stock
-            available_stock.quantity -= item.quantity
-            available_stock.save()
-            
-            # Record adjustment
-            StockAdjustment.objects.create(
-                item=item.medication,
-                adjusted_from=pharmacy_dept,
-                adjustment_type='Usage',
-                quantity=-item.quantity,
-                reason=f'Bulk Dispensed for Prescription #{prescription.id}',
-                adjusted_by=request.user
-            )
-            
-            # Create Dispensed Item Record
+
+            # Deduct stock FEFO
+            remaining = med.quantity
+            for record in stock_records:
+                if remaining <= 0:
+                    break
+                take = min(record.quantity, remaining)
+                record.quantity -= take
+                record.save()
+                StockAdjustment.objects.create(
+                    item=med.medication,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Dispensed to {patient.full_name} (Visit {visit.id})',
+                    adjusted_by=request.user,
+                    adjusted_from=pharmacy_dept,
+                )
+                remaining -= take
+
+            # Mark as dispensed
+            med.dispensed = True
+            med.dispensed_at = timezone.now()
+            med.dispensed_by = request.user
+            med.save()
+
             DispensedItem.objects.create(
-                item=item.medication,
-                patient=item.prescription.patient,
-                visit=item.prescription.visit,
-                quantity=item.quantity,
+                item=med.medication,
+                patient=patient,
+                visit=visit,
+                quantity=med.quantity,
                 dispensed_by=request.user,
-                department=pharmacy_dept
+                department=pharmacy_dept,
             )
             dispensed_count += 1
-            
+
+        # ---- Dispense consumables ----
+        for ci in pending_consumables:
+            item = ci.inventory_item
+            qty = ci.quantity
+
+            # Check stock (FEFO)
+            stock_records = StockRecord.objects.filter(
+                current_location=pharmacy_dept,
+                item=item,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(r.quantity for r in stock_records)
+            if total_available < qty:
+                errors.append(f'Insufficient stock for {item.name} (need {qty}, have {total_available})')
+                continue
+
+            # Deduct stock FEFO
+            remaining = qty
+            for record in stock_records:
+                if remaining <= 0:
+                    break
+                take = min(record.quantity, remaining)
+                record.quantity -= take
+                record.save()
+                StockAdjustment.objects.create(
+                    item=item,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Consumable dispensed to {patient.full_name} (Visit {visit.id})',
+                    adjusted_by=request.user,
+                    adjusted_from=pharmacy_dept,
+                )
+                remaining -= take
+
+            DispensedItem.objects.create(
+                item=item,
+                patient=patient,
+                visit=visit,
+                quantity=qty,
+                dispensed_by=request.user,
+                department=pharmacy_dept,
+            )
+            dispensed_count += 1
+
+        # ---- IPD: Also dispense MedicationChart items ----
+        if is_ipd:
+            pending_ipd_meds = MedicationChart.objects.filter(
+                admission__visit=visit,
+                is_dispensed=False,
+            ).select_related('item', 'admission__patient')
+
+            for med_item in pending_ipd_meds:
+                qty_to_dispense = med_item.quantity
+                if qty_to_dispense == 0:
+                    errors.append(f'Zero quantity for {med_item.item.name}')
+                    continue
+
+                stock_records = StockRecord.objects.filter(
+                    current_location=pharmacy_dept,
+                    item=med_item.item,
+                    quantity__gt=0
+                ).order_by('expiry_date').select_for_update()
+
+                total_available = sum(r.quantity for r in stock_records)
+                if total_available < qty_to_dispense:
+                    errors.append(f'Insufficient stock for {med_item.item.name} (need {qty_to_dispense}, have {total_available})')
+                    continue
+
+                # Deduct stock FEFO
+                remaining = qty_to_dispense
+                for record in stock_records:
+                    if remaining <= 0:
+                        break
+                    take = min(record.quantity, remaining)
+                    record.quantity -= take
+                    record.save()
+                    StockAdjustment.objects.create(
+                        item=med_item.item,
+                        quantity=-take,
+                        adjustment_type='Usage',
+                        reason=f'IPD Dispensed to {patient.full_name} (Visit {visit.id})',
+                        adjusted_by=request.user,
+                        adjusted_from=pharmacy_dept,
+                    )
+                    remaining -= take
+
+                # Mark as dispensed
+                med_item.is_dispensed = True
+                med_item.dispensed_at = timezone.now()
+                med_item.dispensed_by = request.user
+                if med_item.quantity == 0:
+                    med_item.quantity = qty_to_dispense
+                med_item.save()
+
+                DispensedItem.objects.create(
+                    item=med_item.item,
+                    patient=patient,
+                    visit=visit,
+                    quantity=qty_to_dispense,
+                    dispensed_by=request.user,
+                    department=pharmacy_dept,
+                )
+
+                # Add to IPD Invoice
+                try:
+                    invoice = Invoice.objects.filter(
+                        visit=visit,
+                        status__in=['Draft', 'Pending'],
+                    ).first()
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+                    if invoice.notes:
+                        invoice.notes += f"\nIPD Billing for Visit {visit.id}"
+                    else:
+                        invoice.notes = f"IPD Billing for Visit {visit.id}"
+                    invoice.save()
+                    if med_item.item.selling_price > 0:
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            inventory_item=med_item.item,
+                            name=f"{med_item.item.name} (IPD Dispense)",
+                            quantity=qty_to_dispense,
+                            unit_price=med_item.item.selling_price,
+                        )
+                except Exception as inv_err:
+                    print(f"Invoicing failed for IPD med {med_item.id}: {str(inv_err)}")
+
+                dispensed_count += 1
+
+        # ---- Dispense InpatientConsumable requests (and bill them now) ----
+        for req in pending_ipd_consumable_reqs:
+            item = req.item
+            qty = req.quantity
+
+            # Check stock (FEFO)
+            stock_records = StockRecord.objects.filter(
+                current_location=pharmacy_dept,
+                item=item,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(r.quantity for r in stock_records)
+            if total_available < qty:
+                errors.append(f'Insufficient stock for {item.name} (need {qty}, have {total_available})')
+                continue
+
+            # Deduct stock FEFO
+            remaining = qty
+            for record in stock_records:
+                if remaining <= 0:
+                    break
+                take = min(record.quantity, remaining)
+                record.quantity -= take
+                record.save()
+                StockAdjustment.objects.create(
+                    item=item,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Consumable dispensed to {patient.full_name} (Visit {visit.id})',
+                    adjusted_by=request.user,
+                    adjusted_from=pharmacy_dept,
+                )
+                remaining -= take
+
+            # Create InvoiceItem (Billed now upon dispense)
+            try:
+                invoice = Invoice.objects.filter(
+                    visit=visit,
+                    status__in=['Draft', 'Pending'],
+                ).first()
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
+                if invoice.notes:
+                    invoice.notes += f"\nConsumable billing for IPD dispense {visit.id}"
+                else:
+                    invoice.notes = f"Consumable billing for IPD dispense {visit.id}"
+                invoice.save()
+
+                if item.selling_price > 0:
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        inventory_item=item,
+                        name=f"{item.name} (Consumable)",
+                        quantity=qty,
+                        unit_price=item.selling_price,
+                    )
+                    invoice.update_totals()
+            except Exception as inv_err:
+                print(f"Invoicing failed for consumable req {req.id}: {str(inv_err)}")
+
+            # Mark request as dispensed
+            req.is_dispensed = True
+            req.dispensed_at = timezone.now()
+            req.dispensed_by = request.user
+            req.save()
+
+            DispensedItem.objects.create(
+                item=item,
+                patient=patient,
+                visit=visit,
+                quantity=qty,
+                dispensed_by=request.user,
+                department=pharmacy_dept,
+            )
+            dispensed_count += 1
+
         if dispensed_count == 0:
             return JsonResponse({
                 'success': False,
                 'error': '; '.join(errors) if errors else 'No items could be dispensed'
             })
-            
+
         message = f'Successfully dispensed {dispensed_count} items.'
         if errors:
             message += f' Warnings: {"; ".join(errors)}'
-            
+
         return JsonResponse({
             'success': True,
             'message': message,
             'dispensed_count': dispensed_count
         })
-        
+
+    except Departments.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Pharmacy department not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-
-@login_required
-def dispense_ipd_medication(request, item_id):
-    """Mark an inpatient medication (MedicationChart) as dispensed"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid request method'})
-    
-    try:
-        med_item = get_object_or_404(MedicationChart, pk=item_id)
-        
-        # Check if already dispensed
-        if med_item.is_dispensed:
-            return JsonResponse({
-                'success': False,
-                'error': 'This medication has already been dispensed'
-            })
-        
-        # Get pharmacy department
-        pharmacy_dept = Departments.objects.get(name='Pharmacy')
-        
-        # Calculate quantity if it's 0 (smart dispensing)
-        qty_to_dispense = med_item.quantity
-        if qty_to_dispense == 0:
-            qty_to_dispense = med_item.dose_count * med_item.frequency_count * med_item.duration_days
-            
-        if qty_to_dispense == 0:
-             return JsonResponse({
-                'success': False,
-                'error': f'Dispense quantity for {med_item.item.name} is zero. Please check prescription.'
-            })
-
-        # Check stock availability
-        available_stock = StockRecord.objects.filter(
-            current_location=pharmacy_dept,
-            item=med_item.item,
-            quantity__gte=qty_to_dispense
-        ).first()
-        
-        if not available_stock:
-            return JsonResponse({
-                'success': False,
-                'error': f'Insufficient stock for {med_item.item.name}'
-            })
-        
-        # Mark as dispensed
-        med_item.is_dispensed = True
-        med_item.dispensed_at = timezone.now()
-        med_item.dispensed_by = request.user
-        if med_item.quantity == 0:
-            med_item.quantity = qty_to_dispense
-        med_item.save()
-        
-        # Reduce stock
-        available_stock.quantity -= qty_to_dispense
-        available_stock.save()
-        
-        # Create stock adjustment record
-        from inventory.models import StockAdjustment, DispensedItem
-        StockAdjustment.objects.create(
-            item=med_item.item,
-            quantity=-qty_to_dispense,
-            adjustment_type='Usage',
-            reason=f'Dispensed to IPD: {med_item.admission.patient.full_name}',
-            adjusted_by=request.user,
-            adjusted_from=pharmacy_dept
-        )
-        
-        # Create Dispensed Item Record
-        DispensedItem.objects.create(
-            item=med_item.item,
-            patient=med_item.admission.patient,
-            visit=med_item.admission.visit,
-            quantity=qty_to_dispense,
-            dispensed_by=request.user,
-            department=pharmacy_dept
-        )
-        
-        # Add to Invoice (Provisional Billing)
-        try:
-            from accounts.models import Invoice, InvoiceItem
-            
-            # Find or create a pending invoice for this visit
-            invoice = Invoice.objects.filter(
-                visit=med_item.admission.visit,
-                status__in=['Draft', 'Pending']
-            ).exclude(status='Cancelled').first()
-            
-            if not invoice:
-                invoice = Invoice.objects.create(
-                    patient=med_item.admission.patient,
-                    visit=med_item.admission.visit,
-                    status='Pending',
-                    created_by=request.user,
-                    notes=f"IPD Billing for Admission {med_item.admission.id}"
-                )
-            
-            # Create invoice item only if price > 0
-            if med_item.item.selling_price > 0:
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    inventory_item=med_item.item,
-                    name=f"{med_item.item.name} (IPD Dispense)",
-                    quantity=qty_to_dispense,
-                    unit_price=med_item.item.selling_price
-                )
-        except Exception as inv_err:
-            # Don't fail the dispense if invoicing fails, but log it
-            print(f"Invoicing failed for med {med_item.id}: {str(inv_err)}")
-
-        return JsonResponse({
-            'success': True,
-            'message': f'{med_item.item.name} dispensed to IPD successfully'
-        })
-        
-    except Departments.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Pharmacy department not found'
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
 
 @login_required
 
@@ -1977,6 +2446,7 @@ def procedure_detail(request, visit_id):
         'patient': patient,
         'visit': visit,
         'dispensed_items': dispensed_items,
+        'dispensing_departments': Departments.objects.all().order_by('name'),
         'title': f'Procedures: {patient.full_name}'
     }
     return render(request, 'home/procedure_detail.html', context)
@@ -2006,13 +2476,23 @@ def ambulance_dashboard(request):
             patient = get_object_or_404(Patient, pk=patient_id)
             route = get_object_or_404(AmbulanceCharge, pk=route_id)
             
-            # Create Invoice
-            invoice = Invoice.objects.create(
-                patient=patient,
-                status='Pending',
-                created_by=request.user,
-                notes=f"Ambulance Trip: {route.from_location} to {route.to_location}"
-            )
+            # Get or Create Visit Invoice (Consolidated) - use latest active visit if possible
+            visit = Visit.objects.filter(patient=patient, is_active=True).last()
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            if not invoice:
+                # Fallback for visit-less invoice
+                invoice = Invoice.objects.create(
+                    patient=patient,
+                    status='Pending',
+                    created_by=request.user,
+                    notes=f"Ambulance Trip: {route.from_location} to {route.to_location}"
+                )
+            else:
+                if invoice.notes:
+                    invoice.notes += f"\nAmbulance Trip: {route.from_location} to {route.to_location}"
+                else:
+                    invoice.notes = f"Ambulance Trip: {route.from_location} to {route.to_location}"
+                invoice.save()
             
             # Create Invoice Item
             InvoiceItem.objects.create(

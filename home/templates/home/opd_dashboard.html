@@ -1,225 +1,210 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}OPD Consultation - HMS Premium{% endblock %}
-
 {% block content %}
-<div class="dashboard-wrapper-premium">
-    <!-- Header Section -->
-    <div class="header-premium glass-card">
-        <div class="header-content">
-            <div class="brand-section">
-                <div class="brand-icon-wrapper pulse-blue">
-                    <i class="fas fa-user-md"></i>
-                </div>
-                <div class="brand-text">
-                    <h1>OPD Consultation Hub</h1>
-                    <p><i class="fas fa-stethoscope"></i> Manage your patient workflow with precision</p>
-                </div>
-            </div>
-            <div class="header-metadata">
-                <div class="date-badge">
-                    <i class="far fa-calendar-alt"></i>
-                    <span>{{ today|date:"l, F d, Y" }}</span>
-                </div>
-                <div class="live-clock" id="liveClock">--:--:--</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Analytics Dashboard -->
-    <div class="analytics-grid">
-        <!-- Waiting Card -->
-        <div class="stat-card-premium glass-card hover-glow-indigo">
-            <div class="card-bg-decoration"></div>
-            <div class="card-content">
-                <div class="card-header">
-                    <div class="icon-box-indigo">
-                        <i class="fas fa-users-viewfinder"></i>
+    <div class="dashboard-wrapper-premium">
+        <!-- Header Section -->
+        <div class="header-premium glass-card">
+            <div class="header-content">
+                <div class="brand-section">
+                    <div class="brand-icon-wrapper pulse-blue">
+                        <i class="fas fa-user-md"></i>
                     </div>
-                    {% if waiting_count > 0 %}
-                    <span class="status-indicator live">Live Queue</span>
-                    {% endif %}
-                </div>
-                <div class="card-body">
-                    <h2 class="stat-value">{{ waiting_count }}</h2>
-                    <p class="stat-label">Patients Waiting</p>
-                </div>
-                <div class="card-footer-info">
-                    <i class="fas fa-arrow-right"></i> Priority queue active
-                </div>
-            </div>
-        </div>
-
-        <!-- Critical Card -->
-        <div class="stat-card-premium glass-card hover-glow-rose">
-            <div class="card-bg-decoration rose"></div>
-            <div class="card-content">
-                <div class="card-header">
-                    <div class="icon-box-rose">
-                        <i class="fas fa-heart-pulse"></i>
-                    </div>
-                    {% if critical_count > 0 %}
-                    <span class="status-indicator alert">Urgent Action</span>
-                    {% endif %}
-                </div>
-                <div class="card-body">
-                    <h2 class="stat-value text-rose-600">{{ critical_count }}</h2>
-                    <p class="stat-label">Critical Cases</p>
-                </div>
-                <div class="card-footer-info text-rose-500">
-                    <i class="fas fa-exclamation-triangle"></i> Requires immediate attention
-                </div>
-            </div>
-        </div>
-
-        <!-- Completed Card -->
-        <div class="stat-card-premium glass-card hover-glow-emerald">
-            <div class="card-bg-decoration emerald"></div>
-            <div class="card-content">
-                <div class="card-header">
-                    <div class="icon-box-emerald">
-                        <i class="fas fa-user-check"></i>
+                    <div class="brand-text">
+                        <h1>OPD Consultation Hub</h1>
+                        <p>
+                            <i class="fas fa-stethoscope"></i> Manage your patient workflow with precision
+                        </p>
                     </div>
                 </div>
-                <div class="card-body">
-                    <h2 class="stat-value text-emerald-600">{{ todays_visits_count }}</h2>
-                    <p class="stat-label">Consultations Completed</p>
-                </div>
-                <div class="card-footer-info text-emerald-500">
-                    <i class="fas fa-chart-line"></i> +12% from yesterday
+                <div class="header-metadata">
+                    <div class="date-badge">
+                        <i class="far fa-calendar-alt"></i>
+                        <span>{{ today|date:"l, F d, Y" }}</span>
+                    </div>
+                    <div class="live-clock" id="liveClock">--:--:--</div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Main Content Area -->
-    <div class="main-dashboard-grid">
-        <!-- Queue Section -->
-        <div class="queue-section-wrapper glass-card">
-            <div class="section-toolbar">
-                <div class="toolbar-left">
-                    <h2><i class="fas fa-stream"></i> Patient Consultation Queue</h2>
-                </div>
-                <div class="toolbar-right">
-                    <form method="GET" class="search-form-premium">
-                        <div class="search-input-wrapper">
-                            <i class="fas fa-search"></i>
-                            <input type="text" name="q" value="{{ request.GET.q|default:'' }}"
-                                placeholder="Search by name or ID...">
+        <!-- Analytics Dashboard -->
+        <div class="analytics-grid">
+            <!-- Waiting Card -->
+            <div class="stat-card-premium glass-card hover-glow-indigo">
+                <div class="card-bg-decoration"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div class="icon-box-indigo">
+                            <i class="fas fa-users-viewfinder"></i>
                         </div>
-                        <button type="submit" class="btn-search-premium">Filter</button>
-                        {% if request.GET.q %}
-                        <a href="{% url 'home:opd_dashboard' %}" class="btn-clear-search"><i
-                                class="fas fa-times"></i></a>
-                        {% endif %}
-                    </form>
+                        {% if waiting_count > 0 %}<span class="status-indicator live">Live Queue</span>{% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value">{{ waiting_count }}</h2>
+                        <p class="stat-label">Patients Waiting</p>
+                    </div>
+                    <div class="card-footer-info">
+                        <i class="fas fa-arrow-right"></i> Priority queue active
+                    </div>
                 </div>
             </div>
-
-            <div class="queue-table-container">
-                <table class="premium-data-table">
-                    <thead>
-                        <tr>
-                            <th>Patient Identity</th>
-                            <th>Priority</th>
-                            <th>Wait Time</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in queue_list %}
-                        <tr class="queue-row-premium priority-border-{{ item.triage.priority|lower|default:'low' }}">
-                            <td>
-                                <div class="patient-info-cell">
-                                    <div class="patient-avatar-mini"
-                                        data-initials="{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}">
-                                        {{ item.patient.first_name|first }}{{ item.patient.last_name|first }}
-                                    </div>
-                                    <div class="patient-details">
-                                        <span class="p-name">{{ item.patient.full_name }}</span>
-                                        <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{
-                                            item.patient.age }}Y • {{ item.patient.gender|first }}</span>
-                                    </div>
+            <!-- Critical Card -->
+            <div class="stat-card-premium glass-card hover-glow-rose">
+                <div class="card-bg-decoration rose"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div class="icon-box-rose">
+                            <i class="fas fa-heart-pulse"></i>
+                        </div>
+                        {% if critical_count > 0 %}<span class="status-indicator alert">Urgent Action</span>{% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value text-rose-600">{{ critical_count }}</h2>
+                        <p class="stat-label">Critical Cases</p>
+                    </div>
+                    <div class="card-footer-info text-rose-500">
+                        <i class="fas fa-exclamation-triangle"></i> Requires immediate attention
+                    </div>
+                </div>
+            </div>
+            <!-- Completed Card -->
+            <div class="stat-card-premium glass-card hover-glow-emerald">
+                <div class="card-bg-decoration emerald"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div class="icon-box-emerald">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value text-emerald-600">{{ todays_visits_count }}</h2>
+                        <p class="stat-label">Consultations Completed</p>
+                    </div>
+                    <div class="card-footer-info text-emerald-500">
+                        <i class="fas fa-chart-line"></i> +12% from yesterday
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Main Content Area -->
+        <div class="main-dashboard-grid">
+            <!-- Queue Section -->
+            <div class="queue-section-wrapper glass-card">
+                <div class="section-toolbar">
+                    <div class="toolbar-left">
+                        <h2>
+                            <i class="fas fa-stream"></i> Patient Consultation Queue
+                        </h2>
+                    </div>
+                    <div class="toolbar-right">
+                        <form method="GET" class="search-form-premium">
+                            <div class="search-input-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search by name or ID...">
+                            </div>
+                            <button type="submit" class="btn-search-premium">Filter</button>
+                            {% if request.GET.q %}
+                                <a href="{% url 'home:opd_dashboard' %}" class="btn-clear-search"><i class="fas fa-times"></i></a>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+                <div class="queue-table-container">
+                    <table class="premium-data-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Identity</th>
+                                <th>Priority</th>
+                                <th>Wait Time</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in queue_list %}
+                                <tr class="queue-row-premium priority-border-{{ item.triage.priority|lower|default:'low' }}">
+                                    <td>
+                                        <div class="patient-info-cell">
+                                            <div class="patient-avatar-mini" data-initials="{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}">{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}</div>
+                                            <div class="patient-details">
+                                                <span class="p-name">{{ item.patient.full_name }}</span>
+                                                <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{
+                                                item.patient.age }}Y • {{ item.patient.gender|first }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <span class="type-badge type-{{ item.queue_type|lower|default:'initial' }}">
+                                                <i class="fas {% if item.queue_type == 'REVIEW' %}fa-redo{% else %}fa-user-plus{% endif %}"></i>
+                                                {% if item.queue_type == 'REVIEW' %}
+                                                    REVIEW
+                                                {% else %}
+                                                    NEW VISIT
+                                                {% endif %}
+                                            </span>
+                                            <span class="priority-chip priority-{{ item.triage.priority|lower|default:'low' }}">
+                                                <i class="fas fa-circle"></i> {{ item.triage.priority|default:"NORMAL" }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="time-tracking">
+                                            <i class="far fa-clock"></i>
+                                            <span>{{ item.queued_at|time:"H:i" }}</span>
+                                            <small>Queued</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'home:patient_detail' item.patient.pk %}?visit_id={{ item.visit.id }}" class="btn-consult-start">
+                                            Consult <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-queue-state">
+                                            <div class="empty-icon-wrapper">
+                                                <i class="fas fa-file-medical"></i>
+                                            </div>
+                                            <h3>No Patients in Queue</h3>
+                                            <p>The reception is currently processing new arrivals.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Sidebar Section -->
+            <div class="sidebar-premium">
+                <!-- Recent Consults -->
+                <div class="recent-consults-card glass-card">
+                    <div class="card-header-simple">
+                        <h3>
+                            <i class="fas fa-history"></i> Recent Consults
+                        </h3>
+                    </div>
+                    <div class="recent-list">
+                        {% for consult in recent_consultations %}
+                            <div class="recent-item">
+                                <div class="recent-info">
+                                    <span class="r-name">{{ consult.visit.patient.full_name }}</span>
+                                    <span class="r-time">{{ consult.checkin_date|time:"H:i" }} HRS</span>
                                 </div>
-                            </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <span class="type-badge type-{{ item.queue_type|lower|default:'initial' }}">
-                                        <i
-                                            class="fas {% if item.queue_type == 'REVIEW' %}fa-redo{% else %}fa-user-plus{% endif %}"></i>
-                                        {% if item.queue_type == 'REVIEW' %}REVIEW{% else %}NEW VISIT{% endif %}
-                                    </span>
-                                    <span class="priority-chip priority-{{ item.triage.priority|lower|default:'low' }}">
-                                        <i class="fas fa-circle"></i> {{ item.triage.priority|default:"NORMAL" }}
-                                    </span>
-                                </div>
-                            </td>
-
-
-                            <td>
-                                <div class="time-tracking">
-                                    <i class="far fa-clock"></i>
-                                    <span>{{ item.queued_at|time:"H:i" }}</span>
-                                    <small>Queued</small>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <a href="{% url 'home:patient_detail' item.patient.pk %}?visit_id={{ item.visit.id }}"
-                                    class="btn-consult-start">
-                                    Consult <i class="fas fa-chevron-right"></i>
+                                <a href="{% url 'home:patient_detail' consult.visit.patient.pk %}" class="r-link">
+                                    <i class="fas fa-external-link-alt"></i>
                                 </a>
-                            </td>
-                        </tr>
+                            </div>
                         {% empty %}
-                        <tr>
-                            <td colspan="5">
-                                <div class="empty-queue-state">
-                                    <div class="empty-icon-wrapper">
-                                        <i class="fas fa-file-medical"></i>
-                                    </div>
-                                    <h3>No Patients in Queue</h3>
-                                    <p>The reception is currently processing new arrivals.</p>
-                                </div>
-                            </td>
-                        </tr>
+                            <p class="empty-text">No history today</p>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Sidebar Section -->
-        <div class="sidebar-premium">
-            <!-- Recent Consults -->
-            <div class="recent-consults-card glass-card">
-                <div class="card-header-simple">
-                    <h3><i class="fas fa-history"></i> Recent Consults</h3>
-                </div>
-                <div class="recent-list">
-                    {% for consult in recent_consultations %}
-                    <div class="recent-item">
-                        <div class="recent-info">
-                            <span class="r-name">{{ consult.visit.patient.full_name }}</span>
-                            <span class="r-time">{{ consult.checkin_date|time:"H:i" }} HRS</span>
-                        </div>
-                        <a href="{% url 'home:patient_detail' consult.visit.patient.pk %}" class="r-link">
-                            <i class="fas fa-external-link-alt"></i>
-                        </a>
                     </div>
-                    {% empty %}
-                    <p class="empty-text">No history today</p>
-                    {% endfor %}
                 </div>
             </div>
-
-         
-      
         </div>
     </div>
-</div>
-
-<style>
+    <style>
     :root {
         --primary-indigo: #4338ca;
         --primary-light: #e0e7ff;
@@ -1035,9 +1020,8 @@
             display: none;
         }
     }
-</style>
-
-<script>
+    </style>
+    <script>
     function updateClock() {
         const now = new Date();
         const clock = document.getElementById('liveClock');
@@ -1059,5 +1043,5 @@
             avatar.style.color = textColors[colorIndex];
         });
     });
-</script>
+    </script>
 {% endblock %}

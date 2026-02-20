@@ -1,0 +1,142 @@
+============================================================
+1. ALL SERVICES IN DB:
+============================================================
+  ID=20 | Name='ANC' | Price=100.00 | Dept=ANC | Active=True
+  ID=24 | Name='ANC Follow-up' | Price=500.00 | Dept=ANC | Active=True
+  ID=23 | Name='ANC Profile' | Price=1500.00 | Dept=ANC | Active=True
+  ID=94 | Name='ASOT' | Price=400.00 | Dept=Lab | Active=True
+  ID=100 | Name='Bilirubin test' | Price=400.00 | Dept=Lab | Active=True
+  ID=90 | Name='Blood grouping' | Price=500.00 | Dept=Lab | Active=True
+  ID=97 | Name='Brucellosis test (BAT)' | Price=400.00 | Dept=Lab | Active=True
+  ID=134 | Name='CNC Consultation' | Price=500.00 | Dept=Triage | Active=True
+  ID=22 | Name='CWC' | Price=100.00 | Dept=ANC | Active=True
+  ID=114 | Name='Caesarean section (CS)' | Price=25000.00 | Dept=Procedure Room | Active=True
+  ID=115 | Name='Circumcision – procedure' | Price=1500.00 | Dept=Procedure Room | Active=True
+  ID=66 | Name='Compatibility Test' | Price=1500.00 | Dept=Lab | Active=True
+  ID=107 | Name='Cross match' | Price=1000.00 | Dept=Lab | Active=True
+  ID=116 | Name='D&C' | Price=3500.00 | Dept=Procedure Room | Active=True
+  ID=103 | Name='DCT' | Price=300.00 | Dept=Lab | Active=True
+  ID=67 | Name='DU Test' | Price=1000.00 | Dept=Lab | Active=True
+  ID=68 | Name='Differential Counts' | Price=800.00 | Dept=Lab | Active=True
+  ID=104 | Name='ESR' | Price=200.00 | Dept=Lab | Active=True
+  ID=117 | Name='Extra Suture' | Price=500.00 | Dept=Procedure Room | Active=True
+  ID=99 | Name='Fasting Blood Sugar (FBS)' | Price=100.00 | Dept=Lab | Active=True
+  ID=118 | Name='Foreign body removal (FB)' | Price=1500.00 | Dept=Procedure Room | Active=True
+  ID=105 | Name='Full Haemogram (FHG)' | Price=500.00 | Dept=Lab | Active=True
+  ID=119 | Name='Gastric lavage – procedure' | Price=3500.00 | Dept=Procedure Room | Active=True
+  ID=135 | Name='General Consultation' | Price=500.00 | Dept=OPD | Active=True
+  ID=112 | Name='Gram stain' | Price=200.00 | Dept=Lab | Active=True
+  ID=108 | Name='H.Pylori AB Test' | Price=500.00 | Dept=Lab | Active=True
+  ID=109 | Name='H.Pylori AG Test' | Price=800.00 | Dept=Lab | Active=True
+  ID=70 | Name='HVS Swab' | Price=1000.00 | Dept=Lab | Active=True
+  ID=87 | Name='Haemoglobin level (HB)' | Price=150.00 | Dept=Lab | Active=True
+  ID=120 | Name='Haemorrhoidectomy' | Price=20000.00 | Dept=Procedure Room | Active=True
+  ID=113 | Name='Hepatitis B Surface Antigen (HBsAg)' | Price=500.00 | Dept=Lab | Active=True
+  ID=121 | Name='I&D' | Price=3500.00 | Dept=Procedure Room | Active=True
+  ID=69 | Name='ICT' | Price=1000.00 | Dept=Lab | Active=True
+  ID=122 | Name='Laparotomy – operation' | Price=45000.00 | Dept=Procedure Room | Active=True
+  ID=106 | Name='Liver function test (LFT)' | Price=1500.00 | Dept=Lab | Active=True
+  ID=123 | Name='MVA' | Price=3000.00 | Dept=Procedure Room | Active=True
+  ID=86 | Name='Malaria parasites (mps) BS' | Price=200.00 | Dept=Lab | Active=True
+  ID=124 | Name='Manual removal of placenta' | Price=3500.00 | Dept=Procedure Room | Active=True
+  ID=125 | Name='McDonald stitch' | Price=15000.00 | Dept=Procedure Room | Active=True
+  ID=126 | Name='Normal delivery' | Price=3000.00 | Dept=Procedure Room | Active=True
+  ID=19 | Name='OPD Consultation' | Price=50.00 | Dept=Consultation | Active=True
+  ID=84 | Name='PITC' | Price=100.00 | Dept=Lab | Active=True
+  ID=26 | Name='PNC Visit (Baby)' | Price=500.00 | Dept=PNC | Active=True
+  ID=25 | Name='PNC Visit (Mother)' | Price=1000.00 | Dept=PNC | Active=True
+  ID=95 | Name='Pregnancy test (HCG)' | Price=200.00 | Dept=Lab | Active=True
+  ID=96 | Name='Random Blood Sugar (RBS)' | Price=100.00 | Dept=Lab | Active=True
+  ID=110 | Name='Rhesus' | Price=200.00 | Dept=Lab | Active=True
+  ID=98 | Name='Rheumatoid factor (RF) test' | Price=500.00 | Dept=Lab | Active=True
+  ID=92 | Name='Salmonella Typhi (SSAT)' | Price=500.00 | Dept=Lab | Active=True
+  ID=111 | Name='Sickling test' | Price=300.00 | Dept=Lab | Active=True
+  ID=85 | Name='Sputum for AAFBS' | Price=200.00 | Dept=Lab | Active=True
+  ID=102 | Name='Sputum test' | Price=200.00 | Dept=Lab | Active=True
+  ID=127 | Name='Stitch removal' | Price=200.00 | Dept=Procedure Room | Active=True
+  ID=88 | Name='Stool for ova and cysts (OC)' | Price=150.00 | Dept=Lab | Active=True
+  ID=128 | Name='Surgical toilet' | Price=3500.00 | Dept=Procedure Room | Active=True
+  ID=129 | Name='Suturing (major)' | Price=5000.00 | Dept=Procedure Room | Active=True
+  ID=130 | Name='Suturing (minor)' | Price=1000.00 | Dept=Procedure Room | Active=True
+  ID=73 | Name='Ultrasound Abdominal' | Price=2000.00 | Dept=Imaging | Active=True
+  ID=83 | Name='Ultrasound Abdomino-Pelvic' | Price=3000.00 | Dept=Imaging | Active=True
+  ID=74 | Name='Ultrasound Breast' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=75 | Name='Ultrasound Breast (Bilateral)' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=77 | Name='Ultrasound Cardiac' | Price=3000.00 | Dept=Imaging | Active=True
+  ID=76 | Name='Ultrasound KUB' | Price=2000.00 | Dept=Imaging | Active=True
+  ID=71 | Name='Ultrasound Obstetric' | Price=2000.00 | Dept=Imaging | Active=True
+  ID=72 | Name='Ultrasound Pelvic' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=81 | Name='Ultrasound Prostate' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=80 | Name='Ultrasound Skin/Abscess' | Price=1000.00 | Dept=Imaging | Active=True
+  ID=79 | Name='Ultrasound Testicular & Scrotum' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=82 | Name='Ultrasound Thoracic' | Price=2000.00 | Dept=Imaging | Active=True
+  ID=78 | Name='Ultrasound Thyroid' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=101 | Name='Urea test' | Price=400.00 | Dept=Lab | Active=True
+  ID=89 | Name='Urinalysis' | Price=200.00 | Dept=Lab | Active=True
+  ID=93 | Name='VDRL' | Price=300.00 | Dept=Lab | Active=True
+  ID=91 | Name='Widal test' | Price=300.00 | Dept=Lab | Active=True
+  ID=131 | Name='Wound dressing' | Price=500.00 | Dept=Procedure Room | Active=True
+  ID=30 | Name='X-Ray Abdomen' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=43 | Name='X-Ray Ankle Joint' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=56 | Name='X-Ray Barium Meal' | Price=4000.00 | Dept=Imaging | Active=True
+  ID=55 | Name='X-Ray Barium Swallow' | Price=4000.00 | Dept=Imaging | Active=True
+  ID=57 | Name='X-Ray Calcaneus' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=58 | Name='X-Ray Calcaneus (Bilateral)' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=61 | Name='X-Ray Cervical Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=29 | Name='X-Ray Chest' | Price=1000.00 | Dept=Imaging | Active=True
+  ID=52 | Name='X-Ray Clavicle' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=46 | Name='X-Ray Elbow' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=37 | Name='X-Ray Femur' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=47 | Name='X-Ray Finger' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=41 | Name='X-Ray Foot' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=49 | Name='X-Ray Forearm' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=44 | Name='X-Ray Hand' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=36 | Name='X-Ray Hip Joint' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=50 | Name='X-Ray Humerus' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=38 | Name='X-Ray Knee Joint' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=39 | Name='X-Ray Knee Joint (Bilateral)' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=31 | Name='X-Ray Lumbar Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=62 | Name='X-Ray Lumbo-Sacral Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=65 | Name='X-Ray Mandible' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=60 | Name='X-Ray Maxilla' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=59 | Name='X-Ray Paranasal Sinuses' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=35 | Name='X-Ray Pelvis' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=45 | Name='X-Ray Radius and Ulna' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=33 | Name='X-Ray Ribs' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=64 | Name='X-Ray Sacral Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=53 | Name='X-Ray Scapula' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=51 | Name='X-Ray Shoulder Joint' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=54 | Name='X-Ray Skull' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=34 | Name='X-Ray Sternum' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=32 | Name='X-Ray Thoracic Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=63 | Name='X-Ray Thoraco-Lumbar Spine' | Price=2500.00 | Dept=Imaging | Active=True
+  ID=40 | Name='X-Ray Tibia and Fibula' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=42 | Name='X-Ray Toes' | Price=1500.00 | Dept=Imaging | Active=True
+  ID=48 | Name='X-Ray Wrist Joint' | Price=1500.00 | Dept=Imaging | Active=True
+
+============================================================
+2. SERVICES MATCHING PatientForm QUERYSET (name__in=['OPD Consultation', 'ANC', 'PNC', 'CWC']):
+============================================================
+  ID=20 | Name='ANC' | Price=100.00
+  ID=22 | Name='CWC' | Price=100.00
+  ID=19 | Name='OPD Consultation' | Price=50.00
+
+============================================================
+3. SERVICES MATCHING admit_patient_visit CHECK (name__icontains='Consultation'):
+============================================================
+  ID=19 | Name='OPD Consultation' | Price=50.00
+  ID=135 | Name='General Consultation' | Price=500.00
+  ID=134 | Name='CNC Consultation' | Price=500.00
+
+============================================================
+4. ALL INVOICE ITEMS (showing service name, invoice status, patient):
+============================================================
+  Patient=Test Patient | Item='General Consultation' | Service=General Consultation | Price=500.00 | Invoice Status=Paid | Visit=OUT-PATIENT | Date=2026-02-19
+
+============================================================
+5. reception_dashboard consultation dropdown (from template context):
+============================================================
+  ID=20 | Name='ANC' | Price=100.00
+  ID=22 | Name='CWC' | Price=100.00
+  ID=19 | Name='OPD Consultation' | Price=50.00
+  ID=135 | Name='General Consultation' | Price=500.00

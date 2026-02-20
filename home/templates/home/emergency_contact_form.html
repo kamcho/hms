@@ -1,114 +1,114 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
-{% block title %}{% if object %}Edit Emergency Contact{% else %}Add Emergency Contact{% endif %} - {{ patient.full_name }}{% endblock %}
-
+{% block title %}
+    {% if object %}
+        Edit Emergency Contact
+    {% else %}
+        Add Emergency Contact
+    {% endif %}
+    - {{ patient.full_name }}
+{% endblock %}
 {% block content %}
-<div class="container">
-    <div class="header-section">
-        <div class="header-content">
-            <h1><i class="fas fa-phone-alt"></i> {% if object %}Edit Emergency Contact{% else %}Add Emergency Contact{% endif %}</h1>
-            <p>For patient: <strong>{{ patient.full_name }}</strong></p>
-        </div>
-        <div class="header-actions">
-            <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Patient
-            </a>
-        </div>
-    </div>
-
-    <div class="form-container">
-        <form method="post" id="emergency-contact-form">
-            {% csrf_token %}
-            
-            <div class="form-section">
-                <h3><i class="fas fa-user"></i> Contact Information</h3>
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">
-                            <i class="fas fa-user"></i> Full Name *
-                            <span class="required">*</span>
-                        </label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                            <div class="error">{{ form.name.errors.0 }}</div>
-                        {% endif %}
-                        <small class="form-help">{{ form.name.help_text }}</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.relationship.id_for_label }}" class="form-label">
-                            <i class="fas fa-heart"></i> Relationship *
-                            <span class="required">*</span>
-                        </label>
-                        {{ form.relationship }}
-                        {% if form.relationship.errors %}
-                            <div class="error">{{ form.relationship.errors.0 }}</div>
-                        {% endif %}
-                        <small class="form-help">{{ form.relationship.help_text }}</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.phone.id_for_label }}" class="form-label">
-                            <i class="fas fa-phone"></i> Phone Number *
-                            <span class="required">*</span>
-                        </label>
-                        {{ form.phone }}
-                        {% if form.phone.errors %}
-                            <div class="error">{{ form.phone.errors.0 }}</div>
-                        {% endif %}
-                        <small class="form-help">{{ form.phone.help_text }}</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
-                            <i class="fas fa-envelope"></i> Email Address
-                        </label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="error">{{ form.email.errors.0 }}</div>
-                        {% endif %}
-                        <small class="form-help">{{ form.email.help_text }}</small>
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="{{ form.address.id_for_label }}" class="form-label">
-                            <i class="fas fa-map-marker-alt"></i> Address
-                        </label>
-                        {{ form.address }}
-                        {% if form.address.errors %}
-                            <div class="error">{{ form.address.errors.0 }}</div>
-                        {% endif %}
-                        <small class="form-help">{{ form.address.help_text }}</small>
-                    </div>
-                    
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            {{ form.is_primary }}
-                            <span class="checkmark"></span>
-                            <span class="checkbox-text">Primary Emergency Contact</span>
-                        </label>
-                        <small class="form-help">{{ form.is_primary.help_text }}</small>
-                        {% if form.is_primary.errors %}
-                            <div class="error">{{ form.is_primary.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
+    <div class="container">
+        <div class="header-section">
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-phone-alt"></i>
+                    {% if object %}
+                        Edit Emergency Contact
+                    {% else %}
+                        Add Emergency Contact
+                    {% endif %}
+                </h1>
+                <p>
+                    For patient: <strong>{{ patient.full_name }}</strong>
+                </p>
             </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> {% if object %}Update Contact{% else %}Add Contact{% endif %}
-                </button>
+            <div class="header-actions">
                 <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancel
+                    <i class="fas fa-arrow-left"></i> Back to Patient
                 </a>
             </div>
-        </form>
+        </div>
+        <div class="form-container">
+            <form method="post" id="emergency-contact-form">
+                {% csrf_token %}
+                <div class="form-section">
+                    <h3>
+                        <i class="fas fa-user"></i> Contact Information
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                <i class="fas fa-user"></i> Full Name *
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="error">{{ form.name.errors.0 }}</div>{% endif %}
+                            <small class="form-help">{{ form.name.help_text }}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.relationship.id_for_label }}" class="form-label">
+                                <i class="fas fa-heart"></i> Relationship *
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.relationship }}
+                            {% if form.relationship.errors %}<div class="error">{{ form.relationship.errors.0 }}</div>{% endif %}
+                            <small class="form-help">{{ form.relationship.help_text }}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                <i class="fas fa-phone"></i> Phone Number *
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<div class="error">{{ form.phone.errors.0 }}</div>{% endif %}
+                            <small class="form-help">{{ form.phone.help_text }}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <i class="fas fa-envelope"></i> Email Address
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<div class="error">{{ form.email.errors.0 }}</div>{% endif %}
+                            <small class="form-help">{{ form.email.help_text }}</small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="{{ form.address.id_for_label }}" class="form-label">
+                                <i class="fas fa-map-marker-alt"></i> Address
+                            </label>
+                            {{ form.address }}
+                            {% if form.address.errors %}<div class="error">{{ form.address.errors.0 }}</div>{% endif %}
+                            <small class="form-help">{{ form.address.help_text }}</small>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                {{ form.is_primary }}
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">Primary Emergency Contact</span>
+                            </label>
+                            <small class="form-help">{{ form.is_primary.help_text }}</small>
+                            {% if form.is_primary.errors %}<div class="error">{{ form.is_primary.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        {% if object %}
+                            Update Contact
+                        {% else %}
+                            Add Contact
+                        {% endif %}
+                    </button>
+                    <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-
-<style>
+    <style>
 .header-section {
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
     color: white;
@@ -343,5 +343,5 @@ textarea.form-control {
         justify-content: center;
     }
 }
-</style>
+    </style>
 {% endblock %}

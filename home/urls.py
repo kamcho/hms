@@ -37,9 +37,7 @@ urlpatterns = [
     
     # Pharmacy URLs
     path('pharmacy/dashboard/', views.pharmacy_dashboard, name='pharmacy_dashboard'),
-    path('pharmacy/dispense/<int:item_id>/', views.dispense_medication, name='dispense_medication'),
-    path('pharmacy/dispense-all/<int:prescription_id>/', views.dispense_all_medications, name='dispense_all_medications'),
-    path('pharmacy/dispense-ipd/<int:item_id>/', views.dispense_ipd_medication, name='dispense_ipd_medication'),
+    path('pharmacy/dispense-all/<int:visit_id>/', views.dispense_all_visit_items, name='dispense_all_visit_items'),
     
     # Health Records
     path('health-records/', views.health_records_view, name='health_records'),

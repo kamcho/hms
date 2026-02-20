@@ -1,555 +1,470 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Postnatal Care Dashboard - HMS{% endblock %}
-
 {% block content %}
-<div class="max-w-[1600px] mx-auto p-6 bg-slate-50/50 min-h-screen">
-    <!-- Header Section -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-        <div>
-            <div class="flex items-center gap-3 mb-2">
-                <div
-                    class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                    <i class="fas fa-hand-holding-heart text-xl"></i>
+    <div class="max-w-[1600px] mx-auto p-6 bg-slate-50/50 min-h-screen">
+        <!-- Header Section -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                        <i class="fas fa-hand-holding-heart text-xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-black text-slate-900 tracking-tight">Postnatal Care</h1>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Postnatal Care</h1>
+                <p class="text-slate-500 font-medium text-lg ml-1">
+                    Comprehensive follow-up management for mothers and
+                    newborns
+                </p>
             </div>
-            <p class="text-slate-500 font-medium text-lg ml-1">Comprehensive follow-up management for mothers and
-                newborns</p>
+            <div class="flex flex-wrap items-center gap-4">
+                <a href="{% url 'maternity:dashboard' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-slate-700 border border-slate-200 font-bold text-sm transition-all hover:bg-slate-50 hover:border-slate-300 shadow-sm">
+                    <i class="fas fa-hospital text-blue-500"></i> Ward Hub
+                </a>
+                <form method="GET" class="flex items-center gap-2">
+                    <div class="relative group">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-blue-500 transition-colors"></i>
+                        <input type="text" name="q" value="{{ search_query }}" placeholder="Search patient..." class="pl-11 pr-5 py-2.5 border border-slate-200 rounded-xl text-sm w-64 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all shadow-sm bg-white">
+                    </div>
+                    {% if search_query %}
+                        <a href="{% url 'maternity:pnc_dashboard' %}" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold border border-slate-200 transition-all hover:bg-slate-200">Clear</a>
+                    {% endif %}
+                </form>
+            </div>
         </div>
-
-        <div class="flex flex-wrap items-center gap-4">
-            <a href="{% url 'maternity:dashboard' %}"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-slate-700 border border-slate-200 font-bold text-sm transition-all hover:bg-slate-50 hover:border-slate-300 shadow-sm">
-                <i class="fas fa-hospital text-blue-500"></i> Ward Hub
-            </a>
-
-            <form method="GET" class="flex items-center gap-2">
-                <div class="relative group">
-                    <i
-                        class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-blue-500 transition-colors"></i>
-                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search patient..."
-                        class="pl-11 pr-5 py-2.5 border border-slate-200 rounded-xl text-sm w-64 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all shadow-sm bg-white">
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
+                <div class="relative z-10">
+                    <div class="text-4xl font-black text-slate-900 mb-1">{{ total_pnc_month }}</div>
+                    <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">PNC Visits (Month)</div>
+                    <div class="mt-6 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs">
+                            <i class="fas fa-chart-line"></i>
+                        </span>
+                        <span class="text-[11px] font-bold text-slate-500">Global maternity health tracking</span>
+                    </div>
                 </div>
-                {% if search_query %}
-                <a href="{% url 'maternity:pnc_dashboard' %}"
-                    class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold border border-slate-200 transition-all hover:bg-slate-200">Clear</a>
-                {% endif %}
-            </form>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-emerald-500"></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
+                <div class="relative z-10">
+                    <div class="text-4xl font-black text-slate-900 mb-1">{{ mother_queue.count }}</div>
+                    <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Mothers Waiting</div>
+                    <div class="mt-6 flex items-center gap-2 text-blue-600">
+                        <span class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-xs animate-pulse">
+                            <i class="fas fa-clock"></i>
+                        </span>
+                        <span class="text-[11px] font-black uppercase tracking-wider">In Clinic Queue</span>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500"></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
+                <div class="relative z-10">
+                    <div class="text-4xl font-black text-slate-900 mb-1">{{ baby_queue.count }}</div>
+                    <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Babies Waiting</div>
+                    <div class="mt-6 flex items-center gap-2 text-amber-600">
+                        <span class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-xs">
+                            <i class="fas fa-baby"></i>
+                        </span>
+                        <span class="text-[11px] font-black uppercase tracking-wider">In Clinic Queue</span>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-amber-500"></div>
+            </div>
         </div>
-    </div>
-
-    <!-- Stats Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
-            <div
-                class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform">
-            </div>
-            <div class="relative z-10">
-                <div class="text-4xl font-black text-slate-900 mb-1">{{ total_pnc_month }}</div>
-                <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">PNC Visits (Month)</div>
-                <div class="mt-6 flex items-center gap-2">
-                    <span
-                        class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs">
-                        <i class="fas fa-chart-line"></i>
-                    </span>
-                    <span class="text-[11px] font-bold text-slate-500">Global maternity health tracking</span>
+        <!-- New Arrivals from Triage -->
+        {% if new_pnc_arrivals %}
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-amber-900/5 overflow-hidden mb-10 ring-1 ring-amber-100">
+                <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-amber-50/50 to-transparent">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-200">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800 tracking-tight">Recent Triaged Arrivals</h2>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Patients awaiting registration</p>
+                        </div>
+                    </div>
+                    <span class="px-4 py-1.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-widest border border-amber-200">Pending
+                    Action</span>
                 </div>
-            </div>
-            <div class="absolute bottom-0 left-0 w-full h-1 bg-emerald-500"></div>
-        </div>
-
-        <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
-            <div
-                class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform">
-            </div>
-            <div class="relative z-10">
-                <div class="text-4xl font-black text-slate-900 mb-1">{{ mother_queue.count }}</div>
-                <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Mothers Waiting</div>
-                <div class="mt-6 flex items-center gap-2 text-blue-600">
-                    <span class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-xs animate-pulse">
-                        <i class="fas fa-clock"></i>
-                    </span>
-                    <span class="text-[11px] font-black uppercase tracking-wider">In Clinic Queue</span>
-                </div>
-            </div>
-            <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500"></div>
-        </div>
-
-        <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
-            <div
-                class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform">
-            </div>
-            <div class="relative z-10">
-                <div class="text-4xl font-black text-slate-900 mb-1">{{ baby_queue.count }}</div>
-                <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Babies Waiting</div>
-                <div class="mt-6 flex items-center gap-2 text-amber-600">
-                    <span class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-xs">
-                        <i class="fas fa-baby"></i>
-                    </span>
-                    <span class="text-[11px] font-black uppercase tracking-wider">In Clinic Queue</span>
-                </div>
-            </div>
-            <div class="absolute bottom-0 left-0 w-full h-1 bg-amber-500"></div>
-        </div>
-    </div>
-
-    <!-- New Arrivals from Triage -->
-    {% if new_pnc_arrivals %}
-    <div
-        class="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-amber-900/5 overflow-hidden mb-10 ring-1 ring-amber-100">
-        <div
-            class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-amber-50/50 to-transparent">
-            <div class="flex items-center gap-4">
-                <div
-                    class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-200">
-                    <i class="fas fa-sign-in-alt"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-black text-slate-800 tracking-tight">Recent Triaged Arrivals</h2>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Patients awaiting registration
-                    </p>
-                </div>
-            </div>
-            <span
-                class="px-4 py-1.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-widest border border-amber-200">Pending
-                Action</span>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Patient
-                            Profile</th>
-                        <th class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Arrival
-                            Source</th>
-                        <th
-                            class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">
-                            Action Required</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for arrival in new_pnc_arrivals %}
-                    <tr class="group hover:bg-slate-50 transition-all">
-                        <td class="px-8 py-6">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                    {{ arrival.visit.patient.first_name|first }}{{ arrival.visit.patient.last_name|first
-                                    }}
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <div
-                                            class="font-black text-slate-900 text-base leading-none group-hover:text-blue-600 transition-colors">
-                                            {{ arrival.visit.patient.full_name }}</div>
-                                        <span
-                                            class="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border
-                                            {% if arrival.arrival_type == 'Mother' %}bg-rose-50 text-rose-600 border-rose-100{% else %}bg-blue-50 text-blue-600 border-blue-100{% endif %}">
-                                            {{ arrival.arrival_type }}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/50">
+                                <th class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                                    Patient
+                                    Profile
+                                </th>
+                                <th class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                                    Arrival
+                                    Source
+                                </th>
+                                <th class="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Action Required</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for arrival in new_pnc_arrivals %}
+                                <tr class="group hover:bg-slate-50 transition-all">
+                                    <td class="px-8 py-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                                {{ arrival.visit.patient.first_name|first }}{{ arrival.visit.patient.last_name|first
+                                                }}
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="font-black text-slate-900 text-base leading-none group-hover:text-blue-600 transition-colors">{{ arrival.visit.patient.full_name }}</div>
+                                                    <span class="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border {% if arrival.arrival_type == 'Mother' %} bg-rose-50 text-rose-600 border-rose-100 {% else %} bg-blue-50 text-blue-600 border-blue-100 {% endif %}">{{ arrival.arrival_type }}</span>
+                                                </div>
+                                                <div class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">Patient ID: #{{ arrival.visit.patient.id }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-6">
+                                        <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border border-slate-200 group-hover:bg-white transition-colors">
+                                            <i class="fas fa-arrow-right text-slate-300 mr-1.5"></i>{{
+                                            arrival.qued_from.name|default:"General Triage" }}
                                         </span>
-                                    </div>
-                                    <div class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">
-                                        Patient ID: #{{ arrival.visit.patient.id }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-8 py-6">
-                            <span
-                                class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border border-slate-200 group-hover:bg-white transition-colors">
-                                <i class="fas fa-arrow-right text-slate-300 mr-1.5"></i>{{
-                                arrival.qued_from.name|default:"General Triage" }}
-                            </span>
-                        </td>
-                        <td class="px-8 py-6 text-right">
-                            <div
-                                class="flex justify-end gap-3 translate-x-2 group-hover:translate-x-0 transition-transform">
-                                {% if arrival.arrival_type == 'Mother' %}
-                                {% if arrival.active_pregnancy %}
-                                <a href="{% url 'maternity:receive_pnc_arrival' arrival.id %}"
-                                    class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 ring-2 ring-white">
-                                    <i class="fas fa-check-circle"></i> Receive & Queue
-                                </a>
-                                {% else %}
-                                <a href="{% url 'maternity:register_external_delivery' %}?patient_id={{ arrival.visit.patient.id }}"
-                                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100">
-                                    <i class="fas fa-plus-circle"></i> External Delivery
-                                </a>
-                                {% endif %}
-                                {% elif arrival.arrival_type == 'Child' %}
-                                {% if arrival.linked_newborn %}
-                                <a href="{% url 'maternity:receive_pnc_arrival' arrival.id %}"
-                                    class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 ring-2 ring-white">
-                                    <i class="fas fa-baby"></i> Receive Baby
-                                </a>
-                                {% else %}
-                                <a href="{% url 'maternity:register_external_delivery' %}?child_patient_id={{ arrival.visit.patient.id }}"
-                                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">
-                                    <i class="fas fa-link"></i> Link Maternal History
-                                </a>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Active Queues -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        <!-- Mother Queue -->
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
-                        <i class="fas fa-female text-lg"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-black text-slate-800 tracking-tight">Waitlist (Mothers)</h2>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">Ready for clinical
-                            assessment</p>
-                    </div>
+                                    </td>
+                                    <td class="px-8 py-6 text-right">
+                                        <div class="flex justify-end gap-3 translate-x-2 group-hover:translate-x-0 transition-transform">
+                                            {% if arrival.arrival_type == 'Mother' %}
+                                                {% if arrival.active_pregnancy %}
+                                                    <a href="{% url 'maternity:receive_pnc_arrival' arrival.id %}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 ring-2 ring-white">
+                                                        <i class="fas fa-check-circle"></i> Receive & Queue
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'maternity:register_external_delivery' %}?patient_id={{ arrival.visit.patient.id }}" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100">
+                                                        <i class="fas fa-plus-circle"></i> External Delivery
+                                                    </a>
+                                                {% endif %}
+                                            {% elif arrival.arrival_type == 'Child' %}
+                                                <a href="{% url 'maternity:receive_pnc_arrival' arrival.id %}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 ring-2 ring-white">
+                                                    <i class="fas fa-child"></i> Receive Child
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="flex-1 overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="bg-slate-50/30">
-                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mother
-                                Details</th>
-                            <th
-                                class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                Visit Meta</th>
-                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status
-                            </th>
-                            <th
-                                class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                                Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        {% for visit in mother_queue %}
-                        <tr
-                            class="group hover:bg-emerald-50/30 transition-all {% if visit.is_high_risk %}bg-rose-50/50{% endif %}">
-                            <td class="px-8 py-5">
-                                <div
-                                    class="font-bold text-slate-900 leading-tight group-hover:text-emerald-700 transition-colors">
-                                    {{ visit.delivery.pregnancy.patient.full_name }}</div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase mt-1">PARA: {{
-                                    visit.delivery.pregnancy.para|default:"0" }} + {{
-                                    visit.delivery.pregnancy.abortion|default:"0" }}</div>
-                            </td>
-                            <td class="px-8 py-5 text-center">
-                                <span
-                                    class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-black text-[9px] uppercase tracking-wider border border-emerald-200">
-                                    Day {{ visit.visit_day|default:"?" }}
-                                </span>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="flex flex-col gap-1.5">
-                                    {% for alert in visit.alerts %}
-                                    <span
-                                        class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider
-                                        {% if alert.type == 'danger' %}bg-rose-100 text-rose-700 ring-1 ring-rose-200{% else %}bg-amber-100 text-amber-700 ring-1 ring-amber-200{% endif %}">
-                                        <i class="fas fa-exclamation-circle text-[8px]"></i> {{ alert.message }}
-                                    </span>
-                                    {% empty %}
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                        <span
-                                            class="text-emerald-600 text-[10px] font-black uppercase tracking-widest">Stable</span>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                            <td class="px-8 py-5 text-right">
-                                <a href="{% url 'maternity:record_mother_pnc_visit' visit.delivery.pregnancy.id %}"
-                                    class="inline-flex items-center gap-2 px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm ring-2 ring-white
-                                    {% if visit.is_high_risk %}bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200{% else %}bg-slate-900 text-white hover:bg-blue-600 shadow-slate-200{% endif %}">
-                                    Examine <i class="fas fa-chevron-right text-[8px]"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="px-8 py-20 text-center">
-                                <div class="flex flex-col items-center gap-4 text-slate-300">
-                                    <div
-                                        class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-2xl">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
-                                    <p class="font-bold uppercase tracking-widest text-[10px]">No mothers in queue</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Baby Queue -->
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-100">
-                        <i class="fas fa-baby text-lg"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-black text-slate-800 tracking-tight">Waitlist (Newborns)</h2>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">Routine neonatal
-                            checks</p>
+        {% endif %}
+        <!-- Active Queues -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <!-- Mother Queue -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
+                            <i class="fas fa-female text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 tracking-tight">Waitlist (Mothers)</h2>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">
+                                Ready for clinical
+                                assessment
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="flex-1 overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="bg-slate-50/30">
-                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Baby
-                                Profile</th>
-                            <th
-                                class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                Visit Day</th>
-                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Waiting Period</th>
-                            <th
-                                class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                                Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        {% for visit in baby_queue %}
-                        <tr class="group hover:bg-blue-50/30 transition-all">
-                            <td class="px-8 py-5">
-                                <div
-                                    class="font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
-                                    Infant of {{ visit.newborn.delivery.pregnancy.patient.full_name }}</div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase mt-1">NEWBORN ID: #NB-{{
-                                    visit.newborn.id }}</div>
-                            </td>
-                            <td class="px-8 py-5 text-center">
-                                <span
-                                    class="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 font-black text-[9px] uppercase tracking-wider border border-blue-200">
-                                    Day {{ visit.visit_day|default:"?" }}
-                                </span>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                                    <i class="far fa-clock text-slate-300"></i>
-                                    {{ visit.created_at|timesince }}
-                                </div>
-                            </td>
-                            <td class="px-8 py-5 text-right">
-                                <a href="{% url 'maternity:record_baby_pnc_visit' visit.newborn.id %}"
-                                    class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 ring-2 ring-white">
-                                    Examine <i class="fas fa-chevron-right text-[8px]"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4"
-                                class="px-8 py-20 text-center text-slate-400 italic font-bold uppercase tracking-widest text-[10px]">
-                                Queue empty</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clinical History & Logs -->
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-12">
-        <div
-            class="px-8 py-6 border-b border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
-                    <i class="fas fa-history"></i>
+                <div class="flex-1 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/30">
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Mother
+                                    Details
+                                </th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Visit Meta</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for visit in mother_queue %}
+                                <tr class="group hover:bg-emerald-50/30 transition-all {% if visit.is_high_risk %}bg-rose-50/50{% endif %}">
+                                    <td class="px-8 py-5">
+                                        <div class="font-bold text-slate-900 leading-tight group-hover:text-emerald-700 transition-colors">{{ visit.delivery.pregnancy.patient.full_name }}</div>
+                                        <div class="text-[9px] font-black text-slate-400 uppercase mt-1">
+                                            PARA: {{
+                                            visit.delivery.pregnancy.para|default:"0" }} + {{
+                                            visit.delivery.pregnancy.abortion|default:"0" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-5 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-black text-[9px] uppercase tracking-wider border border-emerald-200">Day {{ visit.visit_day|default:"?" }}</span>
+                                    </td>
+                                    <td class="px-8 py-5">
+                                        <div class="flex flex-col gap-1.5">
+                                            {% for alert in visit.alerts %}
+                                                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider {% if alert.type == 'danger' %} bg-rose-100 text-rose-700 ring-1 ring-rose-200 {% else %} bg-amber-100 text-amber-700 ring-1 ring-amber-200 {% endif %}">
+                                                    <i class="fas fa-exclamation-circle text-[8px]"></i> {{ alert.message }}
+                                                </span>
+                                            {% empty %}
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                    <span class="text-emerald-600 text-[10px] font-black uppercase tracking-widest">Stable</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-5 text-right">
+                                        <a href="{% url 'maternity:record_mother_pnc_visit' visit.delivery.pregnancy.id %}" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm ring-2 ring-white {% if visit.is_high_risk %} bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200 {% else %} bg-slate-900 text-white hover:bg-blue-600 shadow-slate-200 {% endif %}">
+                                            Examine <i class="fas fa-chevron-right text-[8px]"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="px-8 py-20 text-center">
+                                        <div class="flex flex-col items-center gap-4 text-slate-300">
+                                            <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-2xl">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                            <p class="font-bold uppercase tracking-widest text-[10px]">No mothers in queue</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <h2 class="text-xl font-black text-slate-800 tracking-tight">Clinical Activity Logs</h2>
             </div>
-
-            <div class="flex p-1 bg-slate-200/50 rounded-2xl border border-slate-200">
-                <button
-                    class="nav-tab active px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm bg-blue-600 text-white"
-                    onclick="showTab('pnc_m', event)">Mother Logs</button>
-                <button
-                    class="nav-tab px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-600 hover:bg-white"
-                    onclick="showTab('pnc_b', event)">Baby Logs</button>
-                <button
-                    class="nav-tab px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-600 hover:bg-white"
-                    onclick="showTab('trends', event)">Analytics</button>
-            </div>
-        </div>
-
-        <div id="pnc_m-log" class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timestamp
-                        </th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient
-                        </th>
-                        <th
-                            class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                            Visit</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clinical
-                            Vitals</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Condition
-                        </th>
-                        <th
-                            class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                            Detail</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for visit in recent_mother_pnc %}
-                    <tr class="group hover:bg-slate-50 transition-colors">
-                        <td class="px-8 py-5 text-sm font-bold text-slate-500">{{ visit.visit_date|date:"d M" }}</td>
-                        <td class="px-8 py-5">
-                            <div class="font-black text-slate-900 group-hover:text-blue-600 transition-colors">{{
-                                visit.delivery.pregnancy.patient.full_name }}</div>
-                        </td>
-                        <td class="px-8 py-5 text-center">
-                            <span
-                                class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 font-black text-[9px] uppercase border border-slate-200">Day
-                                {{ visit.visit_day }}</span>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="flex items-center gap-3">
-                                <div class="flex flex-col">
-                                    <span class="text-[10px] font-black text-slate-400 uppercase">Blood Pressure</span>
-                                    <span class="text-xs font-black text-slate-700">{{ visit.bp_systolic }}/{{
-                                        visit.bp_diastolic }} mmHg</span>
-                                </div>
-                                <div class="w-px h-8 bg-slate-100"></div>
-                                <div class="flex flex-col">
-                                    <span class="text-[10px] font-black text-slate-400 uppercase">Temperature</span>
-                                    <span class="text-xs font-black text-slate-700">{{ visit.temperature }}°C</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <span
-                                class="px-3 py-1 rounded-lg font-black text-[9px] uppercase tracking-widest border
-                                {% if visit.lochia == 'Normal' %}bg-emerald-50 text-emerald-700 border-emerald-100{% else %}bg-amber-50 text-amber-700 border-amber-100{% endif %}">
-                                {{ visit.lochia|default:"Recorded" }}
-                            </span>
-                        </td>
-                        <td class="px-8 py-5 text-right">
-                            <a href="{% url 'maternity:pregnancy_detail' visit.delivery.pregnancy.id %}"
-                                class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all ml-auto">
-                                <i class="fas fa-external-link-alt text-[10px]"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-8 py-16 text-center text-slate-400 italic">No maternal logs recorded
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div id="pnc_b-log" class="overflow-x-auto" style="display: none;">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Baby
-                            Profile</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight
-                            Change</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Feeding
-                            Stats</th>
-                        <th
-                            class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                            Detail</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for visit in recent_baby_pnc %}
-                    <tr class="hover:bg-slate-50 transition-colors group">
-                        <td class="px-8 py-5 text-sm font-bold text-slate-500">{{ visit.visit_date|date:"d M" }}</td>
-                        <td class="px-8 py-5">
-                            <div class="font-black text-slate-900 group-hover:text-blue-600 transition-colors">B#{{
-                                visit.newborn.baby_number }} of {{ visit.newborn.delivery.pregnancy.patient.full_name }}
-                            </div>
-                            <div class="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">PNC Day {{ visit.visit_day
-                                }}</div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-black text-slate-700">{{ visit.weight }} kg</span>
-                                <span
-                                    class="text-[9px] font-black text-blue-500 uppercase px-1.5 py-0.5 bg-blue-50 rounded">{{
-                                    visit.temperature }}°C</span>
-                            </div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-check-circle text-emerald-500 text-[10px]"></i>
-                                <span class="text-xs font-bold text-slate-600">{{ visit.feeding_type }}</span>
-                            </div>
-                        </td>
-                        <td class="px-8 py-5 text-right">
-                            <a href="{% url 'maternity:pregnancy_detail' visit.newborn.delivery.pregnancy.id %}"
-                                class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all ml-auto">
-                                <i class="fas fa-external-link-alt text-[10px]"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5"
-                            class="px-8 py-16 text-center text-slate-400 italic font-bold uppercase tracking-widest text-[10px]">
-                            No recent newborn encounters</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div id="trends-log" class="p-10" style="display: none;">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h3 class="text-lg font-black text-slate-800 tracking-tight">Postnatal Attendance Trends</h3>
-                    <p class="text-xs text-slate-500 font-medium">Monthly volume comparison for mothers vs babies</p>
+            <!-- Baby Queue -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-100">
+                            <i class="fas fa-baby text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-800 tracking-tight">Waitlist (Newborns)</h2>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">
+                                Routine neonatal
+                                checks
+                            </p>
+                        </div>
+                    </div>
                 </div>
+                <div class="flex-1 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/30">
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Baby
+                                    Profile
+                                </th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Visit Day</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting Period</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for visit in baby_queue %}
+                                <tr class="group hover:bg-blue-50/30 transition-all">
+                                    <td class="px-8 py-5">
+                                        <div class="font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">Infant of {{ visit.newborn.delivery.pregnancy.patient.full_name }}</div>
+                                        <div class="text-[9px] font-black text-slate-400 uppercase mt-1">
+                                            NEWBORN ID: #NB-{{
+                                            visit.newborn.id }}
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-5 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 font-black text-[9px] uppercase tracking-wider border border-blue-200">Day {{ visit.visit_day|default:"?" }}</span>
+                                    </td>
+                                    <td class="px-8 py-5">
+                                        <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                                            <i class="far fa-clock text-slate-300"></i>
+                                            {{ visit.created_at|timesince }}
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-5 text-right">
+                                        <a href="{% url 'maternity:record_baby_pnc_visit' visit.newborn.id %}" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 ring-2 ring-white">
+                                            Examine <i class="fas fa-chevron-right text-[8px]"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="px-8 py-20 text-center text-slate-400 italic font-bold uppercase tracking-widest text-[10px]">Queue empty</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Clinical History & Logs -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-12">
+            <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded bg-emerald-500"></div>
-                        <span class="text-[10px] font-black text-slate-500 uppercase">Mothers</span>
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
+                        <i class="fas fa-history"></i>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded bg-blue-500"></div>
-                        <span class="text-[10px] font-black text-slate-500 uppercase">Babies</span>
-                    </div>
+                    <h2 class="text-xl font-black text-slate-800 tracking-tight">Clinical Activity Logs</h2>
+                </div>
+                <div class="flex p-1 bg-slate-200/50 rounded-2xl border border-slate-200">
+                    <button class="nav-tab active px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm bg-blue-600 text-white" onclick="showTab('pnc_m', event)">Mother Logs</button>
+                    <button class="nav-tab px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-600 hover:bg-white" onclick="showTab('pnc_b', event)">Baby Logs</button>
+                    <button class="nav-tab px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-600 hover:bg-white" onclick="showTab('trends', event)">Analytics</button>
                 </div>
             </div>
-            <div class="h-[400px] relative">
-                <canvas id="pncTrendChart"></canvas>
+            <div id="pnc_m-log" class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Visit</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Clinical
+                                Vitals
+                            </th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Condition</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for visit in recent_mother_pnc %}
+                            <tr class="group hover:bg-slate-50 transition-colors">
+                                <td class="px-8 py-5 text-sm font-bold text-slate-500">{{ visit.visit_date|date:"d M" }}</td>
+                                <td class="px-8 py-5">
+                                    <div class="font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        {{
+                                        visit.delivery.pregnancy.patient.full_name }}
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 text-center">
+                                    <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 font-black text-[9px] uppercase border border-slate-200">Day
+                                    {{ visit.visit_day }}</span>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex flex-col">
+                                            <span class="text-[10px] font-black text-slate-400 uppercase">Blood Pressure</span>
+                                            <span class="text-xs font-black text-slate-700">{{ visit.bp_systolic }}/{{
+                                            visit.bp_diastolic }} mmHg</span>
+                                        </div>
+                                        <div class="w-px h-8 bg-slate-100"></div>
+                                        <div class="flex flex-col">
+                                            <span class="text-[10px] font-black text-slate-400 uppercase">Temperature</span>
+                                            <span class="text-xs font-black text-slate-700">{{ visit.temperature }}°C</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="px-3 py-1 rounded-lg font-black text-[9px] uppercase tracking-widest border {% if visit.lochia == 'Normal' %} bg-emerald-50 text-emerald-700 border-emerald-100 {% else %} bg-amber-50 text-amber-700 border-amber-100 {% endif %}">{{ visit.lochia|default:"Recorded" }}</span>
+                                </td>
+                                <td class="px-8 py-5 text-right">
+                                    <a href="{% url 'maternity:pregnancy_detail' visit.delivery.pregnancy.id %}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all ml-auto">
+                                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-8 py-16 text-center text-slate-400 italic">No maternal logs recorded</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="pnc_b-log" class="overflow-x-auto" style="display: none;">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Baby
+                                Profile
+                            </th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Weight
+                                Change
+                            </th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Feeding
+                                Stats
+                            </th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for visit in recent_baby_pnc %}
+                            <tr class="hover:bg-slate-50 transition-colors group">
+                                <td class="px-8 py-5 text-sm font-bold text-slate-500">{{ visit.visit_date|date:"d M" }}</td>
+                                <td class="px-8 py-5">
+                                    <div class="font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        B#{{
+                                        visit.newborn.baby_number }} of {{ visit.newborn.delivery.pregnancy.patient.full_name }}
+                                    </div>
+                                    <div class="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">
+                                        PNC Day {{ visit.visit_day
+                                        }}
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs font-black text-slate-700">{{ visit.weight }} kg</span>
+                                        <span class="text-[9px] font-black text-blue-500 uppercase px-1.5 py-0.5 bg-blue-50 rounded">{{
+                                        visit.temperature }}°C</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-check-circle text-emerald-500 text-[10px]"></i>
+                                        <span class="text-xs font-bold text-slate-600">{{ visit.feeding_type }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 text-right">
+                                    <a href="{% url 'maternity:pregnancy_detail' visit.newborn.delivery.pregnancy.id %}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all ml-auto">
+                                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-8 py-16 text-center text-slate-400 italic font-bold uppercase tracking-widest text-[10px]">No recent newborn encounters</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="trends-log" class="p-10" style="display: none;">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800 tracking-tight">Postnatal Attendance Trends</h3>
+                        <p class="text-xs text-slate-500 font-medium">Monthly volume comparison for mothers vs babies</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded bg-emerald-500"></div>
+                            <span class="text-[10px] font-black text-slate-500 uppercase">Mothers</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded bg-blue-500"></div>
+                            <span class="text-[10px] font-black text-slate-500 uppercase">Babies</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="h-[400px] relative">
+                    <canvas id="pncTrendChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Chart.js and Custom Logic -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+    <!-- Chart.js and Custom Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
     function showTab(tabId, event) {
         // Log containers
         document.getElementById('pnc_m-log').style.display = 'none';
@@ -606,7 +521,7 @@
                     },
     {
         label: 'Baby PNC',
-            data: [{% for t in trends %} { { t.pnc_b } } {% if not forloop.last %}, {% endif %} {% endfor %}],
+            data: [{% for t in trends %} { { t.pnc_b } } {% if not forloop.last %},{% endif %} {% endfor %}],
     borderColor: '#3b82f6',
         borderWidth: 3,
             backgroundColor: blueGradient,
@@ -648,5 +563,5 @@
     }
         });
     });
-</script>
+    </script>
 {% endblock %}

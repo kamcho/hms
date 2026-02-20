@@ -40,3 +40,12 @@ def multiply(value, arg):
         return float(value) * float(arg)
     except (ValueError, TypeError):
         return 0
+@register.filter(name='abs')
+def absolute_value(value):
+    """
+    Return the absolute value of the input
+    """
+    try:
+        return abs(float(value))
+    except (ValueError, TypeError):
+        return value

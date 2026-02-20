@@ -1,0 +1,10 @@
+{
+    "profile": "django",
+    "max_line_length": 12500,
+    "max_attribute_length": 12500,
+    "format_attribute_template_tags": true,
+    "indent": 4,
+    "close_void_tags": false,
+    "format_css": false,
+    "format_js": false
+}

@@ -1,0 +1,11 @@
+Setting up test data...
+
+Test 1: First Visit (Should be billed)
+Response: {"success": true, "message": "Patient Test Patient admitted for General Consultation (Billed)."}
+Invoice Items Count: 1 (Expected: 1)
+
+Test 2: Second Visit (Same Year) (Should NOT be billed)
+Response: {"success": true, "message": "Patient Test Patient admitted for General Consultation (Free Visit)."}
+Invoice Items Count: 1 (Expected: 1)
+
+SUCCESS: Annual billing logic is working correctly.

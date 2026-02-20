@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static custom_filters %}
-
 {% block title %}Patient Details - {{ patient.first_name }} {{ patient.last_name }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     /* Theme Variables - Matching Accountant Dashboard */
     :root {
         --dash-bg: #f4f6f9;
@@ -400,637 +398,551 @@
     .filter-select:focus {
         border-color: var(--clinical-primary);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="profile-grid">
-    <!-- Sidebar Column -->
-    <aside class="sidebar-column">
-        <!-- Patient Summary Card -->
-        <div class="modern-card">
-            <div class="patient-profile-summary">
-                <div class="avatar-circle">
-                    {{ patient.first_name|first }}{{ patient.last_name|first }}
-                </div>
-                <h1 class="patient-name-large">{{ patient.full_name }}</h1>
-                <div class="patient-meta-badges">
-                    <span class="meta-badge">{{ patient.age }} Years</span>
-                    <span class="meta-badge">{{ patient.get_gender_display }}</span>
-                </div>
-            </div>
-            <div class="modern-card-body">
-                <div class="detail-list">
-                    <div class="detail-item">
-                        <span class="detail-label">Patient ID</span>
-                        <span class="detail-value text-primary">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
-                    </div>
-                    {% if active_admission %}
-                    <div class="detail-item" style="color: var(--clinical-warning);">
-                        <span class="detail-label">Status</span>
-                        <span class="detail-value"><i class="fas fa-bed"></i> Admitted ({{ active_admission.bed.bed_number }})</span>
-                    </div>
-                    {% else %}
-                    <div class="detail-item">
-                        <span class="detail-label">Status</span>
-                        <span class="detail-value text-success">Outpatient</span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% if user.role == 'Receptionist' %}
-                <div class="action-group">
-                    <a href="{% url 'home:patient_update' patient.pk %}" class="modern-btn btn-secondary">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-                    <a href="{% url 'home:patient_list' %}" class="modern-btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Personal Details Card -->
-        <div class="modern-card">
-            <div class="modern-card-header">
-                <h3 class="modern-card-title"><i class="fas fa-id-card"></i> Personal Info</h3>
-            </div>
-            <div class="modern-card-body">
-                <div class="detail-list">
-                    <div class="detail-item">
-                        <span class="detail-label"><i class="fas fa-calendar"></i> DoB</span>
-                        <span class="detail-value">{{ patient.date_of_birth }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"><i class="fas fa-phone"></i> Phone</span>
-                        <span class="detail-value">{{ patient.phone }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Location</span>
-                        <span class="detail-value">{{ patient.location }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"><i class="fas fa-clock"></i> Registered</span>
-                        <span class="detail-value">{{ patient.created_at|date:"M d, Y" }}</span>
+    <div class="profile-grid">
+        <!-- Sidebar Column -->
+        <aside class="sidebar-column">
+            <!-- Patient Summary Card -->
+            <div class="modern-card">
+                <div class="patient-profile-summary">
+                    <div class="avatar-circle">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
+                    <h1 class="patient-name-large">{{ patient.full_name }}</h1>
+                    <div class="patient-meta-badges">
+                        <span class="meta-badge">{{ patient.age }} Years</span>
+                        <span class="meta-badge">{{ patient.get_gender_display }}</span>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Emergency Contacts Card -->
-        <div class="modern-card">
-            <div class="modern-card-header">
-                <h3 class="modern-card-title"><i class="fas fa-heart"></i> Emergency</h3>
-                {% if user.role == 'Receptionist' %}
-                <a href="{% url 'home:emergency_contact_create' patient.pk %}" class="modern-btn btn-secondary"
-                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                    <i class="fas fa-plus"></i> Add
-                </a>
-                {% endif %}
-            </div>
-            <div class="modern-card-body">
-                {% if patient.emergency_contacts.all %}
-                <div class="detail-list">
-                    {% for contact in patient.emergency_contacts.all %}
-                    <div class="detail-item {% if contact.is_primary %}text-primary{% endif %}"
-                        style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
-                        <div style="display: flex; justify-content: space-between; width: 100%;">
-                            <span class="detail-value">{{ contact.name }}</span>
-                            <span class="status-badge" style="font-size: 0.65rem; background: var(--clinical-bg);">{{ contact.get_relationship_display }}</span>
+                <div class="modern-card-body">
+                    <div class="detail-list">
+                        <div class="detail-item">
+                            <span class="detail-label">Patient ID</span>
+                            <span class="detail-value text-primary">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
                         </div>
-                        <span class="detail-label"><i class="fas fa-phone"></i> {{ contact.phone }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0;">No contacts registered
-                </p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Clinical Actions Card -->
-        <div class="modern-card">
-            <div class="modern-card-header">
-                <h3 class="modern-card-title"><i class="fas fa-stethoscope"></i> Actions</h3>
-            </div>
-            <div class="modern-card-body">
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    {% if selected_visit == latest_visit or not selected_visit %}
-                    {% if user.role == 'Doctor' %}
-                    {% if active_admission %}
-                    <a href="{% url 'inpatient:discharge_patient' active_admission.id %}" class="modern-btn btn-danger"
-                        style="width: 100%;">
-                        <i class="fas fa-sign-out-alt"></i> Discharge Patient
-                    </a>
-                    {% else %}
-                    <a href="{% url 'inpatient:admit_patient' patient.pk %}" class="modern-btn btn-warning"
-                        style="width: 100%;">
-                        <i class="fas fa-bed"></i> Admit for Observation
-                    </a>
-                    <a href="{% url 'home:refer_patient' latest_visit.id %}" class="modern-btn btn-info"
-                        style="width: 100%;">
-                        <i class="fas fa-stethoscope"></i> Refer Patient
-                    </a>
-                    {% endif %}
-                    {% endif %}
-                    {% if user.role == 'Doctor' %}
-                    {% with visit_id=selected_visit.id|default:latest_visit.id %}
-                    {% if visit_id %}
-                    <a href="{% url 'home:create_prescription' visit_id %}" class="modern-btn btn-success"
-                        style="width: 100%;">
-                        <i class="fas fa-prescription"></i> New Prescription
-                    </a>
-                    {% endif %}
-                    {% endwith %}
-                    {% endif %}
-                    {% else %}
-                    <div
-                        style="background: #f1f5f9; padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border); text-align: center;">
-                        <p style="font-size: 0.75rem; color: var(--clinical-text-muted); margin: 0;">
-                            <i class="fas fa-lock"></i> Actions restricted to latest visit
-                        </p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Content Column -->
-    <main class="main-column">
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-            <label for="visit-filter"
-                style="font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; color: var(--clinical-text-muted);">
-                <i class="fas fa-filter"></i> VIEW VISIT HISTORY:
-            </label>
-            <select id="visit-filter" onchange="filterByVisit(this.value)" class="filter-select" style="flex: 1;">
-                <option value="all" {% if not selected_visit %}selected{% endif %}>Show All Clinical History</option>
-                {% for visit in visits %}
-                <option value="{{ visit.id }}" {% if selected_visit and selected_visit.id == visit.id %}selected{% endif %}>
-                    {{ visit.get_visit_type_display }} - {{ visit.visit_date|date:"M d, Y H:i" }}
-                </option>
-                {% endfor %}
-            </select>
-            {% if selected_visit %}
-            <span class="status-badge"
-                style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
-                <i class="fas fa-check"></i> Filter Active
-            </span>
-            {% endif %}
-        </div>
-
-        <!-- TABS SECTION -->
-        <div class="modern-card">
-            <div class="modern-card-header" style="background: white; padding-bottom: 0;">
-                <div class="modern-tabs">
-                    <div class="tab-item active" onclick="openTab(event, 'visits')">
-                        <i class="fas fa-calendar-alt"></i> Visits
-                    </div>
-
-
-                    <div class="tab-item" onclick="openTab(event, 'labs')">
-                        <i class="fas fa-flask"></i> Laboratory
-                    </div>
-                    <div class="tab-item" onclick="openTab(event, 'prescriptions')">
-                        <i class="fas fa-prescription"></i> Prescriptions
-                    </div>
-                    {% if active_admission %}
-                    <div class="tab-item" onclick="openTab(event, 'inpatient')">
-                        <i class="fas fa-procedures"></i> Inpatient
-                    </div>
-                    {% endif %}
-                    <div class="tab-item" onclick="openTab(event, 'dispense')">
-                        <i class="fas fa-prescription-bottle-alt"></i> Consumables
-                    </div>
-                </div>
-            </div>
-
-            <div class="modern-card-body">
-                <!-- DISPENSE TAB -->
-                <div id="dispense" class="tab-content">
-                    {% if selected_visit or latest_visit %}
-                    {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit %}
-                    {% else %}
-                    <div class="text-center py-8">
-                        <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>
-                        <p class="text-slate-500 font-bold">No active visit found to dispense items.</p>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- VISITS TAB -->
-                <div id="visits" class="tab-content active">
-                    <!-- Clinical Next Action (New Request) -->
-                    
-
-                    {% if visits %}
-                    <div class="activity-timeline">
-                        {% for visit in visits %}
-                        {% if not selected_visit or visit.id == selected_visit.id %}
-                        <!-- Visit Header -->
-                        <div class="activity-event">
-                            <div class="event-dot"></div>
-                            <div class="event-card">
-                                <div class="event-header">
-                                    <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-primary);">
-                                        {{ visit.get_visit_type_display }}
-                                    </h4>
-                                    <span
-                                        style="font-size: 0.8rem; font-weight: 600; color: var(--clinical-text-muted);">
-                                        {{ visit.visit_date|date:"F d, Y H:i" }}
-                                    </span>
-                                </div>
-                                <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-                                    <span class="status-badge"
-                                        style="background: var(--clinical-bg); color: var(--clinical-text-muted); font-size: 0.7rem;">
-                                        Mode: {{ visit.get_visit_mode_display }}
-                                    </span>
-                                </div>
+                        {% if active_admission %}
+                            <div class="detail-item" style="color: var(--clinical-warning);">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value"><i class="fas fa-bed"></i> Admitted ({{ active_admission.bed.bed_number }})</span>
                             </div>
-                        </div>
-
-                        <!-- 0. CLINICAL TRIAGE SECTION -->
-                        {% for entry in visit.triage_entries.all %}
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-stethoscope"></i> Clinical Triage <span class="status-badge"
-                                        style="font-size: 0.6rem; margin-left: 0.5rem; background: {{ entry.get_priority_color }}15; color: {{ entry.get_priority_color }}">{{ entry.get_priority_display }}</span></h5>
+                        {% else %}
+                            <div class="detail-item">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value text-success">Outpatient</span>
                             </div>
-                            <div
-                                style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
-                                <div
-                                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.75rem;">
-                                    {% if entry.temperature %}
-                                    <div style="text-align: center;">
-                                        <div
-                                            style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">
-                                            Temp</div>
-                                        <div
-                                            style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">
-                                            {{ entry.temperature }}°C</div>
-                                    </div>
-                                    {% endif %}
-                                    {% if entry.blood_pressure_systolic %}
-                                    <div style="text-align: center;">
-                                        <div
-                                            style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">
-                                            BP</div>
-                                        <div
-                                            style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">
-                                            {{ entry.get_blood_pressure }}</div>
-                                    </div>
-                                    {% endif %}
-                                    {% if entry.heart_rate %}
-                                    <div style="text-align: center;">
-                                        <div
-                                            style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">
-                                            Pulse</div>
-                                        <div
-                                            style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">
-                                            {{ entry.heart_rate }}</div>
-                                    </div>
-                                    {% endif %}
-                                    {% if entry.oxygen_saturation %}
-                                    <div style="text-align: center;">
-                                        <div
-                                            style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">
-                                            O2 Sat</div>
-                                        <div
-                                            style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">
-                                            {{ entry.oxygen_saturation }}%</div>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% if entry.triage_notes %}
-                                <div
-                                    style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--clinical-text-main); line-height: 1.4; background: #f8fafc; padding: 0.5rem; border-radius: 4px; border-left: 3px solid var(--clinical-primary);">
-                                    <strong>Notes:</strong> {{ entry.triage_notes }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-
-                        <!-- 1. SYMPTOMS SECTION -->
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-notes-medical"></i> Symptoms</h5>
-                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                {% if user.role == 'Doctor' or user.role == 'Nurse' %}
-                                <button class="modern-btn btn-primary btn-sm"
-                                    style="padding: 0.2rem 0.5rem; font-size: 0.7rem;"
-                                    onclick="openSymptomsModal('{{ visit.id }}')">
-                                    <i class="fas fa-plus"></i> Add
-                                </button>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                            {% for symptom in symptoms %}
-                            {% if symptom.visit == visit %}
-                            <div
-                                style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
-                                <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ symptom.data }}</p>
-                                <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">Duration: {{ symptom.days }} days</span>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-
-                        <!-- 2. CONSULTATION NOTES SECTION -->
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-user-md"></i> Consultation Notes</h5>
-                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                {% if user.role == 'Doctor' %}
-                                <button class="modern-btn btn-primary btn-sm"
-                                    style="padding: 0.2rem 0.5rem; font-size: 0.7rem;"
-                                    onclick="showModal('noteModal')"><i class="fas fa-plus"></i> Add</button>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                            {% for note in consultation_notes %}
-                            {% if note.consultation.visit == visit %}
-                            <div
-                                style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid var(--clinical-primary);">
-                                <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ note.notes|linebreaksbr }}</p>
-                                <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ note.created_at|date:"M d, H:i" }}</span>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-
-                        <!-- 3. IMPRESSION SECTION -->
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-brain"></i> Clinical Impression</h5>
-                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                {% if user.role == 'Doctor' %}
-                                <button class="modern-btn btn-primary btn-sm"
-                                    style="padding: 0.2rem 0.5rem; font-size: 0.7rem;"
-                                    onclick="openImpressionModal('{{ visit.id }}')"><i class="fas fa-plus"></i> Add
-                                </button>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                            {% for impression in impressions %}
-                            {% if impression.visit == visit %}
-                            <div
-                                style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
-                                <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ impression.data }}</p>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-
-                        <!-- 5. DIAGNOSIS SECTION -->
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-diagnoses"></i> Diagnosis</h5>
-                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                {% if user.role == 'Doctor' %}
-                                <button class="modern-btn btn-primary btn-sm"
-                                    style="padding: 0.2rem 0.5rem; font-size: 0.7rem;"
-                                    onclick="openDiagnosisModal('{{ visit.id }}')"><i class="fas fa-plus"></i>
-                                    Add</button>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                            {% for diagnosis in diagnoses %}
-                            {% if diagnosis.visit == visit %}
-                            <div
-                                style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #bfdbfe;">
-                                <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600;">{{ diagnosis.data }}</p>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-
-                        <!-- 6. PRESCRIPTIONS SECTION -->
-                        <div class="activity-event"
-                            style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
-                            <div class="event-header">
-                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);"><i
-                                        class="fas fa-prescription"></i> Prescriptions</h5>
-                            </div>
-                            {% for prescription in prescriptions %}
-                            {% if prescription.visit == visit %}
-                            <div
-                                style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem;">
-                                <div style="font-weight: 600; font-size: 0.9rem;">{{ prescription.diagnosis|truncatewords:5 }}</div>
-                                <div style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ prescription.prescribed_at|date:"M d, H:i" }}</div>
-                                <span class="status-badge"
-                                    style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">{{ prescription.status }}</span>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-
-                        {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
-                    <div class="mb-8">
-                        {% include 'home/partials/next_action_widget.html' with patient_id=patient.pk %}
-                    </div>
-                    {% endif %}
                         {% endif %}
-
-                        {% endfor %}
                     </div>
-                    {% else %}
-                    <div style="text-align: center; padding: 3rem 0;">
-                        <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--clinical-border);"></i>
-                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No visits recorded for this
-                            patient.</p>
-                    </div>
+                    {% if user.role == 'Receptionist' %}
+                        <div class="action-group">
+                            <a href="{% url 'home:patient_update' patient.pk %}" class="modern-btn btn-secondary">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{% url 'home:patient_list' %}" class="modern-btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </a>
+                        </div>
                     {% endif %}
                 </div>
-
-                <!-- LABS TAB -->
-                <div id="labs" class="tab-content">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">Laboratory
-                            Investigations {% if selected_visit %}({{ selected_visit.visit_date|date:"M d, Y" }}){% endif %}</h4>
-                    </div>
-                    {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
+            </div>
+            <!-- Personal Details Card -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-id-card"></i> Personal Info
+                    </h3>
                 </div>
-
-                <!-- PRESCRIPTIONS TAB -->
-                <div id="prescriptions" class="tab-content">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">Active & Past
-                            Prescriptions {% if selected_visit %}({{ selected_visit.visit_date|date:"M d, Y" }}){% endif  %}</h4>
+                <div class="modern-card-body">
+                    <div class="detail-list">
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-calendar"></i> DoB</span>
+                            <span class="detail-value">{{ patient.date_of_birth }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-phone"></i> Phone</span>
+                            <span class="detail-value">{{ patient.phone }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Location</span>
+                            <span class="detail-value">{{ patient.location }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-clock"></i> Registered</span>
+                            <span class="detail-value">{{ patient.created_at|date:"M d, Y" }}</span>
+                        </div>
                     </div>
-                    {% if prescriptions %}
-                    <div style="overflow-x: auto;">
-                        <table class="custom-table"
-                            style="width: 100%; border-collapse: separate; border-spacing: 0 0.5rem;">
-                            <thead style="background: var(--clinical-bg);">
-                                <tr>
-                                    <th style="padding: 1rem; border-radius: 8px 0 0 8px; font-weight: 700;">Prescribed
-                                        Date</th>
-                                    <th style="padding: 1rem; font-weight: 700;">Diagnosis</th>
-                                    <th style="padding: 1rem; font-weight: 700;">Physician</th>
-                                    <th style="padding: 1rem; font-weight: 700;">Status</th>
-                                    <th
-                                        style="padding: 1rem; border-radius: 0 8px 8px 0; font-weight: 700; text-align: right;">
-                                        Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for prescription in prescriptions %}
-                                {% if not selected_visit or prescription.visit == selected_visit %}
-                                <tr style="background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                                    <td style="padding: 1rem; font-weight: 600; color: var(--clinical-text-main);">{{ prescription.prescribed_at|date:"M d, Y H:i" }}</td>
-                                    <td style="padding: 1rem; color: var(--clinical-text-main); font-size: 0.875rem;">{{ prescription.diagnosis|truncatewords:8 }}</td>
-                                    <td style="padding: 1rem; color: var(--clinical-text-muted); font-size: 0.85rem;">{{ prescription.prescribed_by.full_name|default:"Unknown Provider" }}</td>
-                                    <td style="padding: 1rem;">
-                                        <span class="status-badge"
-                                            style="background: {% if prescription.status == 'Active' %}var(--clinical-primary-light){% elif prescription.status == 'Completed' %}var(--clinical-bg){% else %}#fee2e2{% endif %}; color: {% if prescription.status == 'Active' %}var(--clinical-primary){% elif prescription.status == 'Completed' %}var(--clinical-secondary){% else %}var(--clinical-danger){% endif %}; font-size: 0.7rem;">
-                                            {{ prescription.status }}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 1rem; text-align: right;">
-                                        <a href="{% url 'home:prescription_detail' prescription.id %}"
-                                            class="modern-btn btn-secondary"
-                                            style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
-                                            Manage
-                                        </a>
-                                    </td>
-                                </tr>
+                </div>
+            </div>
+            <!-- Emergency Contacts Card -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-heart"></i> Emergency
+                    </h3>
+                    {% if user.role == 'Receptionist' %}
+                        <a href="{% url 'home:emergency_contact_create' patient.pk %}" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                            <i class="fas fa-plus"></i> Add
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    {% if patient.emergency_contacts.all %}
+                        <div class="detail-list">
+                            {% for contact in patient.emergency_contacts.all %}
+                                <div class="detail-item {% if contact.is_primary %}text-primary{% endif %}" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+                                    <div style="display: flex; justify-content: space-between; width: 100%;">
+                                        <span class="detail-value">{{ contact.name }}</span>
+                                        <span class="status-badge" style="font-size: 0.65rem; background: var(--clinical-bg);">{{
+                                        contact.get_relationship_display }}</span>
+                                    </div>
+                                    <span class="detail-label"><i class="fas fa-phone"></i> {{ contact.phone }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0;">No contacts registered</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Clinical Actions Card -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-stethoscope"></i> Actions
+                    </h3>
+                </div>
+                <div class="modern-card-body">
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        {% if selected_visit == latest_visit or not selected_visit %}
+                            {% if user.role == 'Doctor' %}
+                                {% if active_admission %}
+                                    <a href="{% url 'inpatient:discharge_patient' active_admission.id %}" class="modern-btn btn-danger" style="width: 100%;">
+                                        <i class="fas fa-sign-out-alt"></i> Discharge Patient
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'inpatient:admit_patient' patient.pk %}" class="modern-btn btn-warning" style="width: 100%;">
+                                        <i class="fas fa-bed"></i> Admit for Observation
+                                    </a>
+                                    <a href="{% url 'home:refer_patient' latest_visit.id %}" class="modern-btn btn-info" style="width: 100%;">
+                                        <i class="fas fa-stethoscope"></i> Refer Patient
+                                    </a>
                                 {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div style="text-align: center; padding: 3rem 0;"><i class="fas fa-prescription-bottle-alt"
-                            style="font-size: 3rem; color: var(--clinical-border);"></i>
-                        <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No prescriptions on file.</p>
-                    </div>
-                    {% endif %}
-                </div>
-
-
-
-
-
-                <!-- INPATIENT TAB -->
-                {% if active_admission %}
-                <div id="inpatient" class="tab-content">
-                    <!-- Medications Section -->
-                    <div class="modern-card"
-                        style="margin-bottom: 2rem; border: 1px solid var(--clinical-border); box-shadow: none;">
-                        <div class="modern-card-header" style="padding: 1rem 1.5rem;">
-                            <h4 class="modern-card-title"><i class="fas fa-pills"></i> Inpatient Medications</h4>{% if  selected_visit == latest_visit or not selected_visit %}<button
-                                class="modern-btn btn-primary btn-sm" onclick="showModal('medicationModal')"><i
-                                    class="fas fa-plus"></i> Administer</button>{% endif %}
-                        </div>
-                        <div class="modern-card-body" style="padding: 0;">
-                            <table class="custom-table" style="width: 100%;">
-                                <thead style="background: var(--clinical-bg);">
-                                    <tr>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Medication Item</th>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Dosage</th>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Frequency</th>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for med in active_medications %}
-                                    <tr style="border-bottom: 1px solid var(--clinical-border);">
-                                        <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ med.item.name }}</td>
-                                        <td style="padding: 1rem 1.5rem;">{{ med.dosage }}</td>
-                                        <td style="padding: 1rem 1.5rem;">{{ med.frequency }}</td>
-                                        <td style="padding: 1rem 1.5rem;">
-                                            {% if med.is_administered %}
-                                            <span class="status-badge"
-                                                style="background: var(--clinical-primary-light); color: var(--clinical-primary);">Administered</span>
-                                            {% else %}
-                                            <span class="status-badge"
-                                                style="background: #fff7ed; color: #c2410c;">Pending</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% empty %}<tr>
-                                        <td colspan="4"
-                                            style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">
-                                            No active inpatient medications</td>
-                                    </tr>{% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Services Section -->
-                    <div class="modern-card" style="border: 1px solid var(--clinical-border); box-shadow: none;">
-                        <div class="modern-card-header" style="padding: 1rem 1.5rem;">
-                            <h4 class="modern-card-title"><i class="fas fa-concierge-bell"></i> Ward Services</h4>
-                            {% if selected_visit == latest_visit or not selected_visit %}
-                            <button class="modern-btn btn-success btn-sm" onclick="showModal('serviceModal')">
-                                <i class="fas fa-plus"></i> Bill Service
-                            </button>
                             {% endif %}
-                        </div>
-                        <div class="modern-card-body" style="padding: 0;">
-                            <table class="custom-table" style="width: 100%;">
-                                <thead style="background: var(--clinical-bg);">
-                                    <tr>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Service Description</th>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Qty</th>
-                                        <th
-                                            style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                            Fulfillment Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for link in active_services %}
-                                    <tr style="border-bottom: 1px solid var(--clinical-border);">
-                                        <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ link.service.name }}</td>
-                                        <td style="padding: 1rem 1.5rem;">{{ link.quantity }}</td>
-                                        <td
-                                            style="padding: 1rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.85rem;">
-                                            {{ link.date_provided|date:"M d, Y H:i" }}</td>
-                                    </tr>
-                                    {% empty %}<tr>
-                                        <td colspan="3"
-                                            style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">
-                                            No services provided during this admission</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                            {% if user.role == 'Doctor' %}
+                                {% with visit_id=selected_visit.id|default:latest_visit.id %}
+                                    {% if visit_id %}
+                                        <a href="{% url 'home:create_prescription' visit_id %}" class="modern-btn btn-success" style="width: 100%;">
+                                            <i class="fas fa-prescription"></i> New Prescription
+                                        </a>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        {% else %}
+                            <div style="background: #f1f5f9; padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border); text-align: center;">
+                                <p style="font-size: 0.75rem; color: var(--clinical-text-muted); margin: 0;">
+                                    <i class="fas fa-lock"></i> Actions restricted to latest visit
+                                </p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
+        </aside>
+        <!-- Main Content Column -->
+        <main class="main-column">
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <label for="visit-filter" style="font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; color: var(--clinical-text-muted);">
+                    <i class="fas fa-filter"></i> VIEW VISIT HISTORY:
+                </label>
+                <select id="visit-filter" onchange="filterByVisit(this.value)" class="filter-select" style="flex: 1;">
+                    <option value="all" {% if visit_id_param == 'all' %}selected{% endif %}>Show All Clinical History</option>
+                    {% for visit in visits %}
+                        <option value="{{ visit.id }}" {% if selected_visit and selected_visit.id == visit.id and visit_id_param != 'all' %}selected{% endif %}>{{ visit.get_visit_type_display }} - {{ visit.visit_date|date:"M d, Y H:i" }}</option>
+                    {% endfor %}
+                </select>
+                {% if selected_visit and visit_id_param != 'all' %}
+                    <span class="status-badge" style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
+                        <i class="fas fa-check"></i> Filter Active: Latest Visit
+                    </span>
+                {% elif selected_visit %}
+                    <span class="status-badge" style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
+                        <i class="fas fa-check"></i> Filter Active
+                    </span>
                 {% endif %}
             </div>
-
-            <!-- Next Action Dispatcher -->
-            <!-- <div class="modern-card" style="margin-top: 2rem;">
+            <!-- TABS SECTION -->
+            <div class="modern-card">
+                <div class="modern-card-header" style="background: white; padding-bottom: 0;">
+                    <div class="modern-tabs">
+                        <div class="tab-item active" onclick="openTab(event, 'visits')">
+                            <i class="fas fa-calendar-alt"></i> Visits
+                        </div>
+                        <div class="tab-item" onclick="openTab(event, 'labs')">
+                            <i class="fas fa-flask"></i> Laboratory
+                        </div>
+                        <div class="tab-item" onclick="openTab(event, 'prescriptions')">
+                            <i class="fas fa-prescription"></i> Prescriptions
+                        </div>
+                        {% if active_admission %}
+                            <div class="tab-item" onclick="openTab(event, 'inpatient')">
+                                <i class="fas fa-procedures"></i> Inpatient
+                            </div>
+                        {% endif %}
+                        <div class="tab-item" onclick="openTab(event, 'dispense')">
+                            <i class="fas fa-prescription-bottle-alt"></i> Consumables
+                        </div>
+                    </div>
+                </div>
+                <div class="modern-card-body">
+                    <!-- DISPENSE TAB -->
+                    <div id="dispense" class="tab-content">
+                        {% if selected_visit or latest_visit %}
+                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit %}
+                        {% else %}
+                            <div class="text-center py-8">
+                                <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>
+                                <p class="text-slate-500 font-bold">No active visit found to dispense items.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- VISITS TAB -->
+                    <div id="visits" class="tab-content active">
+                        <!-- Clinical Next Action (New Request) -->
+                        {% if visits %}
+                            <div class="activity-timeline">
+                                {% for visit in visits %}
+                                    {% if not selected_visit or visit.id == selected_visit.id %}
+                                        <!-- Visit Header -->
+                                        <div class="activity-event">
+                                            <div class="event-dot"></div>
+                                            <div class="event-card">
+                                                <div class="event-header">
+                                                    <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-primary);">{{ visit.get_visit_type_display }}</h4>
+                                                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--clinical-text-muted);">{{ visit.visit_date|date:"F d, Y H:i" }}</span>
+                                                </div>
+                                                <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                                                    <span class="status-badge" style="background: var(--clinical-bg); color: var(--clinical-text-muted); font-size: 0.7rem;">Mode: {{ visit.get_visit_mode_display }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- 0. CLINICAL TRIAGE SECTION -->
+                                        {% for entry in visit.triage_entries.all %}
+                                            <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                                <div class="event-header">
+                                                    <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                        <i class="fas fa-stethoscope"></i> Clinical Triage <span class="status-badge" style="font-size: 0.6rem; margin-left: 0.5rem; background: {{ entry.get_priority_color }}15; color: {{ entry.get_priority_color }}">{{ entry.get_priority_display }}</span>
+                                                    </h5>
+                                                </div>
+                                                <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
+                                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.75rem;">
+                                                        {% if entry.temperature %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">Temp</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.temperature }}°C</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.blood_pressure_systolic %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">BP</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.get_blood_pressure }}</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.heart_rate %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">Pulse</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.heart_rate }}</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.oxygen_saturation %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">O2 Sat</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.oxygen_saturation }}%</div>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if entry.triage_notes %}
+                                                        <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--clinical-text-main); line-height: 1.4; background: #f8fafc; padding: 0.5rem; border-radius: 4px; border-left: 3px solid var(--clinical-primary);">
+                                                            <strong>Notes:</strong> {{ entry.triage_notes }}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        <!-- 1. SYMPTOMS SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-notes-medical"></i> Symptoms
+                                                </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' or user.role == 'Nurse' %}
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openSymptomsModal('{{ visit.id }}')">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            {% for symptom in symptoms %}
+                                                {% if symptom.visit == visit %}
+                                                    <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
+                                                        <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ symptom.data }}</p>
+                                                        <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">Duration: {{ symptom.days }} days</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <!-- 2. CONSULTATION NOTES SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-user-md"></i> Consultation Notes
+                                                </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' %}
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="showModal('noteModal')">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            {% for note in consultation_notes %}
+                                                {% if note.consultation.visit == visit %}
+                                                    <div style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid var(--clinical-primary);">
+                                                        <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ note.notes|linebreaksbr }}</p>
+                                                        <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ note.created_at|date:"M d, H:i" }}</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <!-- 3. IMPRESSION SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-brain"></i> Clinical Impression
+                                                </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' %}
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openImpressionModal('{{ visit.id }}')">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            {% for impression in impressions %}
+                                                {% if impression.visit == visit %}
+                                                    <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
+                                                        <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ impression.data }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <!-- 5. DIAGNOSIS SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-diagnoses"></i> Diagnosis
+                                                </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' %}
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openDiagnosisModal('{{ visit.id }}')">
+                                                            <i class="fas fa-plus"></i>
+                                                            Add
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            {% for diagnosis in diagnoses %}
+                                                {% if diagnosis.visit == visit %}
+                                                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #bfdbfe;">
+                                                        <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600;">{{ diagnosis.data }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <!-- 6. PRESCRIPTIONS SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-prescription"></i> Prescriptions
+                                                </h5>
+                                            </div>
+                                            {% for prescription in prescriptions %}
+                                                {% if prescription.visit == visit %}
+                                                    <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                                                        <div style="font-weight: 600; font-size: 0.9rem;">{{ prescription.diagnosis|truncatewords:5 }}</div>
+                                                        <div style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ prescription.prescribed_at|date:"M d, H:i" }}</div>
+                                                        <span class="status-badge" style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">{{ prescription.status }}</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
+                                            <div class="mb-8">{% include 'home/partials/next_action_widget.html' with patient_id=patient.pk %}</div>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div style="text-align: center; padding: 3rem 0;">
+                                <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                                <p style="margin-top: 1rem; color: var(--clinical-text-muted);">
+                                    No visits recorded for this
+                                    patient.
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- LABS TAB -->
+                    <div id="labs" class="tab-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">
+                                Laboratory
+                                Investigations
+                                {% if selected_visit %}({{ selected_visit.visit_date|date:"M d, Y" }}){% endif %}
+                            </h4>
+                        </div>
+                        {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
+                    </div>
+                    <!-- PRESCRIPTIONS TAB -->
+                    <div id="prescriptions" class="tab-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">
+                                Active & Past
+                                Prescriptions
+                                {% if selected_visit %}({{ selected_visit.visit_date|date:"M d, Y" }}){% endif %}
+                            </h4>
+                        </div>
+                        {% if prescriptions %}
+                            <div style="overflow-x: auto;">
+                                <table class="custom-table" style="width: 100%; border-collapse: separate; border-spacing: 0 0.5rem;">
+                                    <thead style="background: var(--clinical-bg);">
+                                        <tr>
+                                            <th style="padding: 1rem; border-radius: 8px 0 0 8px; font-weight: 700;">
+                                                Prescribed
+                                                Date
+                                            </th>
+                                            <th style="padding: 1rem; font-weight: 700;">Diagnosis</th>
+                                            <th style="padding: 1rem; font-weight: 700;">Physician</th>
+                                            <th style="padding: 1rem; font-weight: 700;">Status</th>
+                                            <th style="padding: 1rem; border-radius: 0 8px 8px 0; font-weight: 700; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prescription in prescriptions %}
+                                            {% if not selected_visit or prescription.visit == selected_visit %}
+                                                <tr style="background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                                    <td style="padding: 1rem; font-weight: 600; color: var(--clinical-text-main);">{{ prescription.prescribed_at|date:"M d, Y H:i" }}</td>
+                                                    <td style="padding: 1rem; color: var(--clinical-text-main); font-size: 0.875rem;">{{ prescription.diagnosis|truncatewords:8 }}</td>
+                                                    <td style="padding: 1rem; color: var(--clinical-text-muted); font-size: 0.85rem;">{{ prescription.prescribed_by.full_name|default:"Unknown Provider" }}</td>
+                                                    <td style="padding: 1rem;">
+                                                        <span class="status-badge" style="background: {% if prescription.status == 'Active' %}var(--clinical-primary-light){% elif prescription.status == 'Completed' %}var(--clinical-bg){% else %}#fee2e2{% endif %}; color: {% if prescription.status == 'Active' %}var(--clinical-primary){% elif prescription.status == 'Completed' %}var(--clinical-secondary){% else %}var(--clinical-danger){% endif %}; font-size: 0.7rem;">{{ prescription.status }}</span>
+                                                    </td>
+                                                    <td style="padding: 1rem; text-align: right;">
+                                                        <a href="{% url 'home:prescription_detail' prescription.id %}" class="modern-btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage</a>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div style="text-align: center; padding: 3rem 0;">
+                                <i class="fas fa-prescription-bottle-alt" style="font-size: 3rem; color: var(--clinical-border);"></i>
+                                <p style="margin-top: 1rem; color: var(--clinical-text-muted);">No prescriptions on file.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- INPATIENT TAB -->
+                    {% if active_admission %}
+                        <div id="inpatient" class="tab-content">
+                            <!-- Medications Section -->
+                            <div class="modern-card" style="margin-bottom: 2rem; border: 1px solid var(--clinical-border); box-shadow: none;">
+                                <div class="modern-card-header" style="padding: 1rem 1.5rem;">
+                                    <h4 class="modern-card-title">
+                                        <i class="fas fa-pills"></i> Inpatient Medications
+                                    </h4>
+                                    {% if  selected_visit == latest_visit or not selected_visit %}
+                                        <button class="modern-btn btn-primary btn-sm" onclick="showModal('medicationModal')">
+                                            <i class="fas fa-plus"></i> Administer
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                <div class="modern-card-body" style="padding: 0;">
+                                    <table class="custom-table" style="width: 100%;">
+                                        <thead style="background: var(--clinical-bg);">
+                                            <tr>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Medication Item</th>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Dosage</th>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Frequency</th>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for med in active_medications %}
+                                                <tr style="border-bottom: 1px solid var(--clinical-border);">
+                                                    <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ med.item.name }}</td>
+                                                    <td style="padding: 1rem 1.5rem;">{{ med.dosage }}</td>
+                                                    <td style="padding: 1rem 1.5rem;">{{ med.frequency }}</td>
+                                                    <td style="padding: 1rem 1.5rem;">
+                                                        {% if med.is_administered %}
+                                                            <span class="status-badge" style="background: var(--clinical-primary-light); color: var(--clinical-primary);">Administered</span>
+                                                        {% else %}
+                                                            <span class="status-badge" style="background: #fff7ed; color: #c2410c;">Pending</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="4" style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">No active inpatient medications</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Services Section -->
+                            <div class="modern-card" style="border: 1px solid var(--clinical-border); box-shadow: none;">
+                                <div class="modern-card-header" style="padding: 1rem 1.5rem;">
+                                    <h4 class="modern-card-title">
+                                        <i class="fas fa-concierge-bell"></i> Ward Services
+                                    </h4>
+                                    {% if selected_visit == latest_visit or not selected_visit %}
+                                        <button class="modern-btn btn-success btn-sm" onclick="showModal('serviceModal')">
+                                            <i class="fas fa-plus"></i> Bill Service
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                <div class="modern-card-body" style="padding: 0;">
+                                    <table class="custom-table" style="width: 100%;">
+                                        <thead style="background: var(--clinical-bg);">
+                                            <tr>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Service Description</th>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Qty</th>
+                                                <th style="padding: 0.75rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Fulfillment Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for link in active_services %}
+                                                <tr style="border-bottom: 1px solid var(--clinical-border);">
+                                                    <td style="padding: 1rem 1.5rem; font-weight: 600;">{{ link.service.name }}</td>
+                                                    <td style="padding: 1rem 1.5rem;">{{ link.quantity }}</td>
+                                                    <td style="padding: 1rem 1.5rem; color: var(--clinical-text-muted); font-size: 0.85rem;">{{ link.date_provided|date:"M d, Y H:i" }}</td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="3" style="padding: 2rem; text-align: center; color: var(--clinical-text-muted);">No services provided during this admission</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <!-- Next Action Dispatcher -->
+                <!-- <div class="modern-card" style="margin-top: 2rem;">
                 <div class="modern-card-header">
                     <h3 class="modern-card-title"><i class="fas fa-paper-plane"></i> Clinical Next Action</h3>
                 </div>
@@ -1042,34 +954,25 @@
                         <input type="hidden" name="patient_id" value="{{ patient.pk }}">
                         <div class="profile-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 0;">
                             <div>
-                                <h4
-                                    style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
+                                <h4 style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
                                     <i class="fas fa-building"></i> Select Department
                                 </h4>
-                                <div
-                                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
                                     {% for dept in available_departments %}
-                                    <label
-                                        style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; border: 1px solid var(--clinical-border); border-radius: 10px; transition: all 0.2s; background: var(--clinical-bg);">
-                                        <input type="checkbox" name="send_to" value="{{ dept.name|lower }}"
-                                            data-dept-id="{{ dept.id }}" onchange="updateServicesFilter()"
-                                            style="width: 1.1rem; height: 1.1rem; accent-color: var(--clinical-primary);">
-                                        <span
-                                            style="font-size: 0.9rem; font-weight: 600; color: var(--clinical-text-main);">{{
+                                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; border: 1px solid var(--clinical-border); border-radius: 10px; transition: all 0.2s; background: var(--clinical-bg);">
+                                        <input type="checkbox" name="send_to" value="{{ dept.name|lower }}" data-dept-id="{{ dept.id }}" onchange="updateServicesFilter()" style="width: 1.1rem; height: 1.1rem; accent-color: var(--clinical-primary);">
+                                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--clinical-text-main);">{{
                                             dept.name }}</span>
                                     </label>
                                     {% endfor %}
                                 </div>
                             </div>
                             <div>
-                                <h4
-                                    style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
+                                <h4 style="margin-bottom: 1rem; color: var(--clinical-text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">
                                     <i class="fas fa-vial"></i> Available Investigations
                                 </h4>
-                                <div id="tests-container"
-                                    style="background: var(--clinical-bg); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--clinical-border); min-height: 120px; display: flex; align-items: center; justify-content: center;">
-                                    <p id="no-destination-message"
-                                        style="color: var(--clinical-text-muted); font-size: 0.875rem; text-align: center; margin: 0;">
+                                <div id="tests-container" style="background: var(--clinical-bg); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--clinical-border); min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                                    <p id="no-destination-message" style="color: var(--clinical-text-muted); font-size: 0.875rem; text-align: center; margin: 0;">
                                         Select at least one department above to view available investigations.
                                     </p>
                                     <div id="dynamic-test-categories" style="display: none; width: 100%;"></div>
@@ -1077,20 +980,17 @@
                             </div>
                         </div>
 
-                        <div
-                            style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--clinical-border);">
+                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--clinical-border);">
                             <button type="button" class="modern-btn btn-secondary" onclick="clearNextActionForm()">
                                 <i class="fas fa-undo"></i> Reset Form
                             </button>
-                            <button type="button" id="execute-btn" class="modern-btn btn-success"
-                                onclick="submitNextAction()" disabled>
+                            <button type="button" id="execute-btn" class="modern-btn btn-success" onclick="submitNextAction()" disabled>
                                 <i class="fas fa-play"></i> Execute Actions
                             </button>
                         </div>
                     </form>
                     {% else %}
-                    <div
-                        style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
+                    <div style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
                         <h4 style="margin: 0 0 0.5rem; color: #1e293b; font-weight: 800;"><i class="fas fa-lock"></i>
                             Restricted Access</h4>
                         <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Clinical next actions
@@ -1098,251 +998,227 @@
                     </div>
                     {% endif %}
                     {% else %}
-                    <div
-                        style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
-                        <div
-                            style="width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: #64748b; font-size: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div style="text-align: center; padding: 2.5rem; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1;">
+                        <div style="width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; color: #64748b; font-size: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                             <i class="fas fa-history"></i>
                         </div>
                         <h4 style="margin: 0 0 0.5rem; color: #1e293b; font-weight: 800;">Historical Visit View</h4>
                         <p style="margin: 0; color: #64748b; font-size: 0.9rem; max-width: 400px; margin: 0 auto;">
                             Clinical actions are only available for the current/latest visit. <strong>Please select the
                                 most recent visit</strong> from the history dropdown to record new data.</p>
-                        <button class="modern-btn btn-secondary btn-sm" style="margin-top: 1.5rem;"
-                            onclick="filterByVisit('{{ latest_visit.id }}')">
+                        <button class="modern-btn btn-secondary btn-sm" style="margin-top: 1.5rem;" onclick="filterByVisit('{{ latest_visit.id }}')">
                             Switch to Latest Visit
                         </button>
                     </div>
                     {% endif %}
                 </div>
             </div> -->
-    </main>
-</div> <!-- End Profile Grid -->
-
-<!-- Clinical Modals -->
-<!-- Note Modal -->
-<div id="noteModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-edit"></i> Add Clinical Note</h3>
-            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('noteModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;">
-                <i class="fas fa-times"></i>
-            </button>
+            </main>
         </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addNoteForm">
-                {% csrf_token %}
-                <input type="hidden" name="patient_id" value="{{ patient.pk }}">
-                <input type="hidden" name="visit_id" value="{{ latest_visit.id }}">
-                <div class="form-group" style="margin-bottom: 1.25rem;">
-                    <label class="form-label"
-                        style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Clinical
-                        Note Details</label>
-                    <textarea name="note_content" rows="6" class="form-control"
-                        style="border-radius: 10px; border: 1px solid var(--clinical-border); padding: 1rem; font-size: 0.95rem;"
-                        placeholder="Record patient assessment, findings, or treatment updates..."></textarea>
+        <!-- End Profile Grid -->
+        <!-- Clinical Modals -->
+        <!-- Note Modal -->
+        <div id="noteModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-edit"></i> Add Clinical Note
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('noteModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label"
-                        style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Focus
-                        Area</label>
-                    <select name="note_type" class="form-control"
-                        style="border-radius: 10px; border: 1px solid var(--clinical-border); height: 3.2rem; appearance: auto;">
-                        <option value="GENERAL">General Assessment</option>
-                        <option value="DIAGNOSIS">Differential Diagnosis</option>
-                        <option value="TREATMENT">Treatment Plan</option>
-                    </select>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="addNoteForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="patient_id" value="{{ patient.pk }}">
+                        <input type="hidden" name="visit_id" value="{{ latest_visit.id }}">
+                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                            <label class="form-label" style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                Clinical
+                                Note Details
+                            </label>
+                            <textarea name="note_content" rows="6" class="form-control" style="border-radius: 10px; border: 1px solid var(--clinical-border); padding: 1rem; font-size: 0.95rem;" placeholder="Record patient assessment, findings, or treatment updates..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
+                                Focus
+                                Area
+                            </label>
+                            <select name="note_type" class="form-control" style="border-radius: 10px; border: 1px solid var(--clinical-border); height: 3.2rem; appearance: auto;">
+                                <option value="GENERAL">General Assessment</option>
+                                <option value="DIAGNOSIS">Differential Diagnosis</option>
+                                <option value="TREATMENT">Treatment Plan</option>
+                            </select>
+                        </div>
+                    </form>
                 </div>
-            </form>
-        </div>
-        <div class="modern-modal-footer"
-            style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border); padding: 1rem 1.5rem;">
-            <button class="modern-btn btn-secondary" onclick="closeModal('noteModal')">Discard</button><button
-                class="modern-btn btn-primary" onclick="submitNote()">Save Entry</button>
-        </div>
-    </div>
-</div>
-
-{% if active_admission %}
-<!-- Medication Modal -->
-<div id="medicationModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-pills"></i> Inpatient Medication
-            </h3>
-            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('medicationModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addMedicationForm">
-                {% csrf_token %}
-                <div class="clinical-form-styled">
-                    {{ medication_form.as_p }}
+                <div class="modern-modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border); padding: 1rem 1.5rem;">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('noteModal')">Discard</button>
+                    <button class="modern-btn btn-primary" onclick="submitNote()">Save Entry</button>
                 </div>
-            </form>
+            </div>
         </div>
-        <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
-            <button class="modern-btn btn-secondary" onclick="closeModal('medicationModal')">Cancel</button>
-            <button class="modern-btn btn-primary" onclick="submitMedication()">Administer</button>
-        </div>
-    </div>
-</div>
-
-<!-- Service Modal -->
-<div id="serviceModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: var(--clinical-success); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-concierge-bell"></i> Ward Service
-                Billing</h3>
-            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('serviceModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addServiceForm">
-                {% csrf_token %}
-                <div class="clinical-form-styled">
-                    {{ service_form.as_p }}
+        {% if active_admission %}
+            <!-- Medication Modal -->
+            <div id="medicationModal" class="custom-modal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                        <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                            <i class="fas fa-pills"></i> Inpatient Medication
+                        </h3>
+                        <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('medicationModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <form id="addMedicationForm">
+                            {% csrf_token %}
+                            <div class="clinical-form-styled">{{ medication_form.as_p }}</div>
+                        </form>
+                    </div>
+                    <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                        <button class="modern-btn btn-secondary" onclick="closeModal('medicationModal')">Cancel</button>
+                        <button class="modern-btn btn-primary" onclick="submitMedication()">Administer</button>
+                    </div>
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
-            <button class="modern-btn btn-secondary" onclick="closeModal('serviceModal')">Cancel</button>
-            <button class="modern-btn btn-primary"
-                style="background: var(--clinical-success); border-color: var(--clinical-success);"
-                onclick="submitService()">Apply Charge</button>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Symptoms Modal -->
-<div id="symptomsModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-notes-medical"></i> Add Symptoms
-            </h3>
-            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('symptomsModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addSymptomsForm">
-                {% csrf_token %}
-                <input type="hidden" name="visit_id" id="symptoms_visit_id">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Symptoms
-                        Description</label>
-                    <textarea name="data" class="form-control" rows="3"
-                        style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;"
-                        required></textarea>
+            </div>
+            <!-- Service Modal -->
+            <div id="serviceModal" class="custom-modal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: var(--clinical-success); border: none;">
+                        <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                            <i class="fas fa-concierge-bell"></i> Ward Service
+                            Billing
+                        </h3>
+                        <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('serviceModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <form id="addServiceForm">
+                            {% csrf_token %}
+                            <div class="clinical-form-styled">{{ service_form.as_p }}</div>
+                        </form>
+                    </div>
+                    <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                        <button class="modern-btn btn-secondary" onclick="closeModal('serviceModal')">Cancel</button>
+                        <button class="modern-btn btn-primary" style="background: var(--clinical-success); border-color: var(--clinical-success);" onclick="submitService()">Apply Charge</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Duration
-                        (Days)</label>
-                    <input type="number" name="days" class="form-control"
-                        style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;"
-                        required>
+            </div>
+        {% endif %}
+        <!-- Symptoms Modal -->
+        <div id="symptomsModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-notes-medical"></i> Add Symptoms
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('symptomsModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer"
-            style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
-            <button class="modern-btn btn-secondary" onclick="closeModal('symptomsModal')">Cancel</button>
-            <button class="modern-btn btn-primary" onclick="submitSymptoms()">Save</button>
-        </div>
-    </div>
-</div>
-
-<!-- Impression Modal -->
-<div id="impressionModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-brain"></i> Add Clinical Impression
-            </h3><button class="modern-btn btn-secondary btn-sm" onclick="closeModal('impressionModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;"><i
-                    class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addImpressionForm">
-                {% csrf_token %}
-                <input type="hidden" name="visit_id" id="impression_visit_id">
-                <div class="form-group">
-                    <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Clinical
-                        Impression</label>
-                    <textarea name="data" class="form-control" rows="3"
-                        style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;"
-                        required></textarea>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="addSymptomsForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="visit_id" id="symptoms_visit_id">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">
+                                Symptoms
+                                Description
+                            </label>
+                            <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">
+                                Duration
+                                (Days)
+                            </label>
+                            <input type="number" name="days" class="form-control" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required>
+                        </div>
+                    </form>
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer"
-            style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
-            <button class="modern-btn btn-secondary" onclick="closeModal('impressionModal')">Cancel</button>
-            <button class="modern-btn btn-primary" onclick="submitImpression()">Save</button>
-        </div>
-    </div>
-</div>
-
-<!-- Diagnosis Modal -->
-<div id="diagnosisModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-            <h3 style="color: white; margin: 0; font-size: 1.1rem;"><i class="fas fa-diagnoses"></i> Add Diagnosis</h3>
-            <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('diagnosisModal')"
-                style="background: rgba(255,255,255,0.2); border: none; color: white;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-            <form id="addDiagnosisForm">
-                {% csrf_token %}
-                <input type="hidden" name="visit_id" id="diagnosis_visit_id">
-                <div class="form-group">
-                    <label
-                        style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis</label>
-                    <textarea name="data" class="form-control" rows="3"
-                        style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;"
-                        required></textarea>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('symptomsModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitSymptoms()">Save</button>
                 </div>
-            </form>
+            </div>
         </div>
-        <div class="modal-footer"
-            style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
-            <button class="modern-btn btn-secondary" onclick="closeModal('diagnosisModal')">Cancel</button>
-            <button class="modern-btn btn-primary" onclick="submitDiagnosis()">Save</button>
+        <!-- Impression Modal -->
+        <div id="impressionModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-brain"></i> Add Clinical Impression
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('impressionModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="addImpressionForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="visit_id" id="impression_visit_id">
+                        <div class="form-group">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">
+                                Clinical
+                                Impression
+                            </label>
+                            <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('impressionModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitImpression()">Save</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-
-<!-- Unified Message Modal -->
-<div id="messageModal" class="custom-modal">
-    <div class="modal-content" style="max-width: 400px; border-radius: 20px; overflow: hidden; border: none;">
-        <div id="messageModalIndicator" style="height: 6px; background: var(--clinical-primary);"></div>
-        <div class="modal-body" style="padding: 2.5rem 1.5rem; text-align: center;">
-            <div id="messageModalIcon" style="margin-bottom: 1.5rem; font-size: 3rem;"></div>
-            <h3 id="messageModalTitle"
-                style="margin-bottom: 0.75rem; color: var(--clinical-text-main); font-size: 1.25rem;">Notification</h3>
-            <p id="messageModalContent"
-                style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted); line-height: 1.5;"></p>
+        <!-- Diagnosis Modal -->
+        <div id="diagnosisModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-diagnoses"></i> Add Diagnosis
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('diagnosisModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="addDiagnosisForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="visit_id" id="diagnosis_visit_id">
+                        <div class="form-group">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis</label>
+                            <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('diagnosisModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitDiagnosis()">Save</button>
+                </div>
+            </div>
         </div>
-        <div class="modal-footer"
-            style="justify-content: center; padding: 1.5rem; background: var(--clinical-bg); border: none;">
-            <button class="modern-btn btn-primary" id="messageModalBtn" style="min-width: 120px;"
-                onclick="closeModal('messageModal')">Acknowledge</button>
+        <!-- Unified Message Modal -->
+        <div id="messageModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 400px; border-radius: 20px; overflow: hidden; border: none;">
+                <div id="messageModalIndicator" style="height: 6px; background: var(--clinical-primary);"></div>
+                <div class="modal-body" style="padding: 2.5rem 1.5rem; text-align: center;">
+                    <div id="messageModalIcon" style="margin-bottom: 1.5rem; font-size: 3rem;"></div>
+                    <h3 id="messageModalTitle" style="margin-bottom: 0.75rem; color: var(--clinical-text-main); font-size: 1.25rem;">Notification</h3>
+                    <p id="messageModalContent" style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted); line-height: 1.5;"></p>
+                </div>
+                <div class="modal-footer" style="justify-content: center; padding: 1.5rem; background: var(--clinical-bg); border: none;">
+                    <button class="modern-btn btn-primary" id="messageModalBtn" style="min-width: 120px;" onclick="closeModal('messageModal')">Acknowledge</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
+    {% endblock %}
+    {% block extra_js %}
+        <script>
     /**
      * Enhanced Tab Switching
      */
@@ -1593,5 +1469,5 @@
 
         showModal('messageModal');
     }
-</script>
-{% endblock %}
+        </script>
+    {% endblock %}

@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - HMS{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -283,64 +281,57 @@
         font-size: 0.875rem;
         font-weight: 500;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="form-container">
-    <div class="form-card">
-        <div class="form-header">
-            <h2>{{ title }}</h2>
-            <p>Request inventory items for your department or location.</p>
-        </div>
-
-        <div class="info-box">
-            <i class="fas fa-info-circle"></i>
-            Please select the item you need and specify the quantity and location where it's required.
-        </div>
-
-        <form method="post" autocomplete="off">
-            {% csrf_token %}
-
-            <div class="form-group">
-                <label for="item-search">Inventory Item <small style="color: #6366f1;">(Searchable)</small></label>
-                <div class="searchable-select-wrapper">
-                    {{ form.item }}
-                    <input type="text" id="item-search" class="searchable-input"
-                        placeholder="Search for an inventory item..." autocomplete="off">
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                    <div class="searchable-dropdown" id="item-dropdown">
-                        <!-- Options will be populated by JavaScript -->
+    <div class="form-container">
+        <div class="form-card">
+            <div class="form-header">
+                <h2>{{ title }}</h2>
+                <p>Request inventory items for your department or location.</p>
+            </div>
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                Please select the item you need and specify the quantity and location where it's required.
+            </div>
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="item-search">
+                        Inventory Item <small style="color: #6366f1;">(Searchable)</small>
+                    </label>
+                    <div class="searchable-select-wrapper">
+                        {{ form.item }}
+                        <input type="text" id="item-search" class="searchable-input" placeholder="Search for an inventory item..." autocomplete="off">
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                        <div class="searchable-dropdown" id="item-dropdown">
+                            <!-- Options will be populated by JavaScript -->
+                        </div>
                     </div>
+                    {{ form.item.errors }}
                 </div>
-                {{ form.item.errors }}
-            </div>
-
-            <div class="form-group">
-                <label for="{{ form.quantity.id_for_label }}">Quantity Required</label>
-                {{ form.quantity }}
-                {{ form.quantity.errors }}
-            </div>
-
-            <div class="form-group">
-                <label for="{{ form.location.id_for_label }}">Delivery Location</label>
-                {{ form.location }}
-                {{ form.location.errors }}
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Submit Request
-                </button>
-            </div>
-        </form>
+                <div class="form-group">
+                    <label for="{{ form.quantity.id_for_label }}">Quantity Required</label>
+                    {{ form.quantity }}
+                    {{ form.quantity.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.location.id_for_label }}">Delivery Location</label>
+                    {{ form.location }}
+                    {{ form.location.errors }}
+                </div>
+                <div class="form-actions">
+                    <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     (function () {
         const originalSelect = document.querySelector('#{{ form.item.id_for_label }}');
         const searchInput = document.querySelector('#item-search');
@@ -483,5 +474,5 @@
         // Initial population
         populateDropdown();
     })();
-</script>
+    </script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from .utils import get_or_create_invoice
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from datetime import timedelta, datetime
@@ -117,7 +118,7 @@ def accountant_dashboard(request):
     
     for inv in unpaid_invoices:
         age = (today - inv.created_at.date()).days
-        balance = inv.total_amount - inv.paid_amount
+        balance = inv.balance
         if age <= 7:
             aging_debtors['0-7 Days'] += float(balance)
         elif age <= 30:
@@ -243,7 +244,26 @@ def get_invoice_items(request, invoice_id):
             'balance': float(item.balance),
             'is_settled': item.is_settled
         })
-    return JsonResponse({'items': items_data})
+    
+    # For IPD invoices, include admission days and per-diem info
+    admission_info = None
+    if invoice.visit and invoice.visit.visit_type == 'IN-PATIENT':
+        admission = Admission.objects.filter(visit=invoice.visit).first()
+        if admission:
+            if admission.discharged_at:
+                days = max(1, (admission.discharged_at - admission.admitted_at).days)
+            else:
+                days = max(1, (timezone.now() - admission.admitted_at).days)
+            per_diem_rate = 2400
+            admission_info = {
+                'days': days,
+                'per_diem_rate': per_diem_rate,
+                'per_diem_total': days * per_diem_rate,
+                'total_billed': float(invoice.total_amount),
+                'current_adjustment': float(invoice.insurance_adjustment),
+            }
+    
+    return JsonResponse({'items': items_data, 'admission_info': admission_info})
 
 @login_required
 @user_passes_test(is_billing_staff)
@@ -255,9 +275,17 @@ def process_insurance_claim(request):
         item_ids = data.get('item_ids')
         claim_id = data.get('claim_id', '')
         custom_amount = data.get('amount')
+        adjustment = data.get('adjustment', 0)
 
         invoice = get_object_or_404(Invoice, id=invoice_id)
         selected_items = invoice.items.filter(id__in=item_ids)
+        
+        # Apply insurance adjustment if provided (per-diem gap/profit)
+        # Note: adjustment can be negative if we claim more than we billed
+        if adjustment is not None:
+            invoice.insurance_adjustment = Decimal(str(adjustment))
+            invoice.save()
+            invoice.update_totals()
         
         # Calculate selected items total as a sanity check
         selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or 0
@@ -268,8 +296,9 @@ def process_insurance_claim(request):
         if claim_amount <= 0:
             return JsonResponse({'success': False, 'error': 'Claim amount must be greater than zero.'})
             
+        # Re-check balance after adjustment application
         if claim_amount > invoice.balance:
-            return JsonResponse({'success': False, 'error': f'Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}).'})
+            return JsonResponse({'success': False, 'error': f'Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}). If this is a per-diem profit, the adjustment should have handled it.'})
 
         # Create Payment
         payment = Payment.objects.create(
@@ -284,7 +313,8 @@ def process_insurance_claim(request):
         return JsonResponse({
             'success': True, 
             'payment_id': payment.id,
-            'amount': float(claim_amount)
+            'amount': float(claim_amount),
+            'adjustment': float(invoice.insurance_adjustment)
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -401,6 +431,32 @@ def delete_invoice(request, pk):
 
 @login_required
 @user_passes_test(is_billing_staff)
+def delete_invoice_item(request, item_id):
+    if request.method == 'POST':
+        item = get_object_or_404(InvoiceItem, pk=item_id)
+        invoice = item.invoice
+        
+        # Permission Check: Admin or Invoice Creator or Item Creator
+        if request.user.is_superuser or invoice.created_by == request.user or item.created_by == request.user:
+             pass
+        else:
+            return JsonResponse({'success': False, 'error': 'Only the item creator or invoice creator can delete items.'})
+        
+        # State Check: Unpaid only
+        if item.paid_amount > 0:
+            return JsonResponse({'success': False, 'error': 'Cannot delete an item that has been partially or fully paid.'})
+            
+        try:
+            item.delete()
+            invoice.update_totals() # Recalculate invoice totals
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+            
+    return HttpResponse(status=405)
+
+@login_required
+@user_passes_test(is_billing_staff)
 def invoice_list(request):
     """List all invoices with filtering options"""
     invoices = Invoice.objects.all().select_related('patient', 'deceased', 'created_by')
@@ -458,14 +514,13 @@ def create_invoice(request):
                 
                 if deceased_id:
                     deceased = get_object_or_404(Deceased, pk=deceased_id)
-                    invoice = Invoice.objects.create(
-                        deceased=deceased,
-                        created_by=request.user,
-                        status='Draft',
-                        notes=notes,
-                        due_date=due_date,
-                        total_amount=total_amount
-                    )
+                    invoice = get_or_create_invoice(deceased=deceased, user=request.user)
+                    
+                    # Update fields if provided
+                    if notes: invoice.notes = notes
+                    if due_date: invoice.due_date = due_date
+                    if total_amount: invoice.total_amount = total_amount
+                    invoice.save()
                     return JsonResponse({
                         'success': True, 
                         'invoice_id': invoice.id,
@@ -473,14 +528,18 @@ def create_invoice(request):
                     })
                 elif patient_id:
                     patient = get_object_or_404(Patient, pk=patient_id)
-                    invoice = Invoice.objects.create(
-                        patient=patient,
-                        created_by=request.user,
-                        status='Draft',
-                        notes=notes,
-                        due_date=due_date,
-                        total_amount=total_amount
-                    )
+                    from home.models import Visit
+                    visit = Visit.objects.filter(patient=patient, is_active=True).last()
+                    
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+                    if not invoice:
+                        # Fallback for visit-less invoice if really needed, though get_or_create_invoice handles visit=None poorly right now
+                        invoice = Invoice.objects.create(patient=patient, created_by=request.user, status='Draft')
+
+                    if notes: invoice.notes = notes
+                    if due_date: invoice.due_date = due_date
+                    if total_amount: invoice.total_amount = total_amount
+                    invoice.save()
                     return JsonResponse({
                         'success': True, 
                         'invoice_id': invoice.id,
@@ -499,21 +558,17 @@ def create_invoice(request):
         try:
             if invoice_type == 'deceased':
                 deceased = get_object_or_404(Deceased, pk=entity_id)
-                invoice = Invoice.objects.create(
-                    deceased=deceased,
-                    created_by=request.user,
-                    status='Draft'
-                )
-                messages.success(request, f'Invoice created for {deceased.full_name}')
+                invoice = get_or_create_invoice(deceased=deceased, user=request.user)
+                messages.success(request, f'Invoice retrieval/creation successful for {deceased.full_name}')
                 return redirect('accounts:invoice_detail', pk=invoice.pk)
             elif invoice_type == 'patient':
                 patient = get_object_or_404(Patient, pk=entity_id)
-                invoice = Invoice.objects.create(
-                    patient=patient,
-                    created_by=request.user,
-                    status='Draft'
-                )
-                messages.success(request, f'Invoice created for {patient.full_name}')
+                from home.models import Visit
+                visit = Visit.objects.filter(patient=patient, is_active=True).last()
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
+                if not invoice:
+                    invoice = Invoice.objects.create(patient=patient, created_by=request.user, status='Draft')
+                messages.success(request, f'Invoice retrieval/creation successful for {patient.full_name}')
                 return redirect('accounts:invoice_detail', pk=invoice.pk)
         except Exception as e:
             messages.error(request, f'Error creating invoice: {str(e)}')
@@ -712,20 +767,15 @@ def discharge_billing_detail(request, admission_type, admission_id):
     if not invoice:
         # Create a new discharge invoice if none exists
         if admission_type == 'ipd':
-            invoice = Invoice.objects.create(
-                patient=patient,
-                visit=admission.visit,
-                status='Draft',
-                notes=f'DISCHARGE BILLING - Admission ID: {admission.id}',
-                created_by=request.user
-            )
+            invoice = get_or_create_invoice(visit=admission.visit, user=request.user)
+            if invoice.notes: invoice.notes += f'\nDISCHARGE BILLING - Admission ID: {admission.id}'
+            else: invoice.notes = f'DISCHARGE BILLING - Admission ID: {admission.id}'
+            invoice.save()
         else:
-            invoice = Invoice.objects.create(
-                deceased=deceased,
-                status='Draft',
-                notes=f'DISCHARGE BILLING - Morgue Admission ID: {admission.id}',
-                created_by=request.user
-            )
+            invoice = get_or_create_invoice(deceased=deceased, user=request.user)
+            if invoice.notes: invoice.notes += f'\nDISCHARGE BILLING - Morgue Admission ID: {admission.id}'
+            else: invoice.notes = f'DISCHARGE BILLING - Morgue Admission ID: {admission.id}'
+            invoice.save()
 
     # REFACTORED SYNC LOGIC: Ensure all services and meds are on the invoice
     existing_items = invoice.items.all()
@@ -896,18 +946,10 @@ def charge_procedure(request):
         visit = Visit.objects.filter(id=visit_id).first() if visit_id else None
 
         # Find or Create Active Invoice for this Visit
-        invoice = None
-        if visit:
-            invoice = Invoice.objects.filter(visit=visit).exclude(status='Cancelled').first()
-        
-        if not invoice:
-            invoice = Invoice.objects.create(
-                patient=patient,
-                visit=visit,
-                status='Pending',
-                created_by=request.user,
-                notes=f"Procedure Charge: {service.name}"
-            )
+        invoice = get_or_create_invoice(visit=visit, user=request.user)
+        if invoice and not invoice.notes:
+             invoice.notes = f"Procedure Charge: {service.name}"
+             invoice.save()
 
         # Create Invoice Item
         InvoiceItem.objects.create(
@@ -915,7 +957,8 @@ def charge_procedure(request):
             service=service,
             name=service.name,
             unit_price=service.price,
-            quantity=1
+            quantity=1,
+            created_by=request.user
         )
         
         # Update Invoice Totals

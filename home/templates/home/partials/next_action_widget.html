@@ -3,90 +3,66 @@
         <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
             <i class="fas fa-stethoscope text-indigo-600"></i> Clinical Next Action
         </h3>
-        <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-widest">
-            New Request
-        </span>
+        <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-widest">New Request</span>
     </div>
-
     <form id="nextActionForm" method="POST" action="{% url 'home:submit_next_action' %}">
         {% csrf_token %}
         <input type="hidden" name="patient_id" value="{{ patient_id }}">
-
         <!-- Priority Level -->
         <div class="mb-6">
-            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Priority
-                Level</label>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                Priority
+                Level
+            </label>
             <div class="flex gap-4">
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    <input type="radio" name="priority" value="Routine" checked
-                        class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300">
-                    <span
-                        class="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">Routine</span>
+                    <input type="radio" name="priority" value="Routine" checked class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                    <span class="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">Routine</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    <input type="radio" name="priority" value="Urgent"
-                        class="w-4 h-4 text-amber-500 focus:ring-amber-500 border-slate-300">
-                    <span
-                        class="text-xs font-bold text-slate-600 group-hover:text-amber-600 transition-colors">Urgent</span>
+                    <input type="radio" name="priority" value="Urgent" class="w-4 h-4 text-amber-500 focus:ring-amber-500 border-slate-300">
+                    <span class="text-xs font-bold text-slate-600 group-hover:text-amber-600 transition-colors">Urgent</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    <input type="radio" name="priority" value="Emergency"
-                        class="w-4 h-4 text-rose-600 focus:ring-rose-500 border-slate-300">
-                    <span
-                        class="text-xs font-bold text-slate-600 group-hover:text-rose-600 transition-colors">Emergency</span>
+                    <input type="radio" name="priority" value="Emergency" class="w-4 h-4 text-rose-600 focus:ring-rose-500 border-slate-300">
+                    <span class="text-xs font-bold text-slate-600 group-hover:text-rose-600 transition-colors">Emergency</span>
                 </label>
             </div>
         </div>
-
         <!-- Destination Selection -->
         <div class="mb-6">
-            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Department
-                Routing</label>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                Department
+                Routing
+            </label>
             <div class="grid grid-cols-2 gap-3">
                 {% for dept in available_departments %}
-                <label
-                    class="flex items-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-200 hover:bg-slate-50 transition-all group">
-                    <input type="checkbox" name="send_to" value="{{ dept.name }}" onchange="updateServicesFilter()"
-                        class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                    <span class="ml-2 text-xs font-bold text-slate-600 group-hover:text-indigo-700">{{ dept.name
-                        }}</span>
-                </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-200 hover:bg-slate-50 transition-all group">
+                        <input type="checkbox" name="send_to" value="{{ dept.name }}" onchange="updateServicesFilter()" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                        <span class="ml-2 text-xs font-bold text-slate-600 group-hover:text-indigo-700">{{ dept.name }}</span>
+                    </label>
                 {% endfor %}
             </div>
         </div>
-
         <!-- Dynamic Services Container -->
         <div class="mb-6">
             <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                 <i class="fas fa-list-ul mr-1"></i> Available Investigations
             </label>
-            <div id="tests-container"
-                class="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[100px] flex items-center justify-center relative">
-                <p id="no-destination-message"
-                    class="text-slate-400 text-xs font-bold text-center uppercase tracking-wide">
-                    Select a department above
-                </p>
+            <div id="tests-container" class="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[100px] flex items-center justify-center relative">
+                <p id="no-destination-message" class="text-slate-400 text-xs font-bold text-center uppercase tracking-wide">Select a department above</p>
                 <div id="dynamic-test-categories" class="w-full hidden space-y-4"></div>
             </div>
         </div>
-
         <!-- Action Buttons -->
         <div class="flex gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onclick="clearNextActionForm()"
-                class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex-1">
-                Reset
-            </button>
-            <button type="button" id="execute-btn" onclick="submitNextAction()" disabled
-                class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex-1">
-                Execute Action
-            </button>
+            <button type="button" onclick="clearNextActionForm()" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex-1">Reset</button>
+            <button type="button" id="execute-btn" onclick="submitNextAction()" disabled class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex-1">Execute Action</button>
         </div>
     </form>
 </div>
-
 <!-- Context Data -->
 {{ medical_tests_data|default:"[]"|json_script:"services-data" }}
-
 <script>
     /**
      * Shared Clinical Next Action Logic
@@ -183,8 +159,7 @@
                                     <div class="relative">
                                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Specimen Type</label>
                                         <div class="relative group">
-                                            <select name="test_specimen_${test.id}" 
-                                                class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer group-hover:border-indigo-300">
+                                            <select name="test_specimen_${test.id}" class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer group-hover:border-indigo-300">
                                                 <option value="">Select Specimen Type...</option>
                                                 <option value="Blood" ${specimenValue === 'Blood' ? 'selected' : ''}>Blood</option>
                                                 <option value="Urine" ${specimenValue === 'Urine' ? 'selected' : ''}>Urine</option>
@@ -204,9 +179,7 @@
                                     ` : ''}
                                     <div>
                                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Clinical Indications</label>
-                                        <textarea name="test_notes_${test.id}" rows="2" 
-                                            class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none resize-none hover:border-indigo-300"
-                                            placeholder="Provide specific clinical reasons for ${test.name}...">${noteValue}</textarea>
+                                        <textarea name="test_notes_${test.id}" rows="2" class="w-full text-xs font-bold p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none resize-none hover:border-indigo-300" placeholder="Provide specific clinical reasons for ${test.name}...">${noteValue}</textarea>
                                     </div>
                                 </div>
                             </div>

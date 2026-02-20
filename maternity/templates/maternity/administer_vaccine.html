@@ -1,0 +1,217 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}Administer Vaccine - HMS{% endblock %}
+{% block content %}
+    <div class="px-8 py-6">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-lg shadow-lg shadow-blue-200">
+                        <i class="fas fa-syringe"></i>
+                    </span>
+                    Administer Immunization
+                </h1>
+                <p class="text-slate-500 font-bold mt-2 ml-14">{{ patient.full_name }} • {{ patient.gender }} • {{ patient.age }}</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'maternity:vaccination_dashboard' %}" class="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors">Cancel</a>
+                <form method="POST" onsubmit="return confirm('Are you sure you want to finish this visit?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="finish_visit" value="true">
+                    <button type="submit" class="px-6 py-3 bg-emerald-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all flex items-center gap-2">
+                        <i class="fas fa-check"></i> Finish Visit
+                    </button>
+                </form>
+            </div>
+        </div>
+        <!-- Alerts for Due Vaccines -->
+        {% if due_vaccines %}
+            <div class="mb-8 bg-rose-50 border border-rose-100 rounded-2xl p-6 flex items-start gap-4">
+                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 shrink-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-rose-900 mb-1">Vaccinations Due Now</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for v in due_vaccines %}<span class="px-3 py-1 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-black uppercase tracking-widest">{{ v }}</span>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Forms -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- 1. Administer Vaccine Form -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                        <i class="fas fa-plus-circle text-blue-600"></i>
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">Record Vaccination</h2>
+                    </div>
+                    <div class="p-8">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="administer_vaccine" value="true">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Vaccine</label>
+                                    {{ vaccine_form.vaccine }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                        Dose
+                                        No.
+                                    </label>
+                                    {{ vaccine_form.dose_number }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                        Date
+                                        Administered
+                                    </label>
+                                    {{ vaccine_form.date_administered }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                        Batch
+                                        No.
+                                    </label>
+                                    {{ vaccine_form.batch_number }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                        Next Dose
+                                        Due
+                                    </label>
+                                    {{ vaccine_form.next_dose_due }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                        Facility
+                                        (Optional)
+                                    </label>
+                                    {{ vaccine_form.facility }}
+                                </div>
+                            </div>
+                            <div class="space-y-2 mb-6">
+                                <label class="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                    Reaction /
+                                    Notes
+                                </label>
+                                {{ vaccine_form.reaction_observed }}
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-syringe"></i> Administer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- 2. Dispense Consumables Form -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                        <i class="fas fa-box-open text-emerald-600"></i>
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">
+                            Dispense Consumables
+                            (Syringes etc.)
+                        </h2>
+                    </div>
+                    <div class="p-8">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="dispense_item" value="true">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="space-y-2 md:col-span-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Item</label>
+                                    {{ inventory_form.item }}
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Quantity</label>
+                                    {{ inventory_form.quantity }}
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-check"></i> Dispense Item
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Right Column: History & Summary -->
+            <div class="space-y-8">
+                <!-- Immunization History -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-6 py-5 bg-slate-50/50 border-b border-slate-100">
+                        <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">History</h2>
+                    </div>
+                    <div class="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
+                        {% for record in history %}
+                            <div class="p-6 hover:bg-slate-50 transition-colors">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="font-bold text-slate-900 text-sm">{{ record.vaccine.name }}</span>
+                                    <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase">{{
+                                    record.date_administered|date:"d M Y" }}</span>
+                                </div>
+                                <div class="flex gap-4 text-xs text-slate-500">
+                                    <span><i class="fas fa-hashtag mr-1"></i> Dose {{ record.dose_number }}</span>
+                                    {% if record.batch_number %}<span><i class="fas fa-barcode mr-1"></i> {{ record.batch_number }}</span>{% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="p-8 text-center text-slate-400 text-xs font-bold">No history recorded</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Dispensed Items Summary -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-6 py-5 bg-slate-50/50 border-b border-slate-100">
+                        <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest">Dispensed Items</h2>
+                    </div>
+                    <div class="divide-y divide-slate-50">
+                        {% for item in dispensed_items %}
+                            <div class="p-6 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                <div>
+                                    <div class="font-bold text-slate-900 text-sm">{{ item.item.name }}</div>
+                                    <div class="text-xs text-slate-500 mt-1">By {{ item.dispensed_by.username }}</div>
+                                </div>
+                                <span class="font-black text-slate-900">x{{ item.quantity }}</span>
+                            </div>
+                        {% empty %}
+                            <div class="p-8 text-center text-slate-400 text-xs font-bold">No items dispensed yet</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+    /* Form Styles Override */
+    select,
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #0f172a;
+        transition: all 0.2s;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+        outline: none;
+        background-color: #fff;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    </style>
+{% endblock %}

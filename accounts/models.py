@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from decimal import Decimal
 
 class Service(models.Model):
     CATEGORY_CHOICES = [
@@ -43,11 +44,12 @@ class Invoice(models.Model):
     ]
     
     patient = models.ForeignKey('home.Patient', on_delete=models.CASCADE, related_name='invoices', null=True, blank=True)
-    deceased = models.ForeignKey('morgue.Deceased', on_delete=models.CASCADE, related_name='invoices', null=True, blank=True)
-    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
+    deceased = models.OneToOneField('morgue.Deceased', on_delete=models.CASCADE, related_name='invoice', null=True, blank=True)
+    visit = models.OneToOneField('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoice')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Draft')
-    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    insurance_adjustment = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Per-diem shortfall absorbed by facility for insurance patients")
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True, help_text="Additional notes or reference information")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,11 +72,12 @@ class Invoice(models.Model):
     
     def update_totals(self):
         """Recalculate total amount linked to this invoice"""
-        total = self.items.aggregate(total=models.Sum('amount'))['total'] or 0
+        total = self.items.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
         self.total_amount = total
         
-        # Determine status
-        if self.paid_amount >= self.total_amount and self.total_amount > 0:
+        # Determine status based on effective amount (after insurance adjustment)
+        effective = self.effective_amount
+        if self.paid_amount >= effective and effective > 0:
             self.status = 'Paid'
         elif self.paid_amount > 0:
             self.status = 'Partial'
@@ -84,15 +87,20 @@ class Invoice(models.Model):
         self.save()
     
     @property
+    def effective_amount(self):
+        """Amount the hospital expects to collect (after insurance adjustment)"""
+        return self.total_amount - self.insurance_adjustment
+    
+    @property
     def balance(self):
-        """Calculate remaining balance"""
-        return self.total_amount - self.paid_amount
+        """Calculate remaining balance based on effective amount"""
+        return self.effective_amount - self.paid_amount
 
     def distribute_payments(self):
         """
         Distributes the total paid amount across invoice items using FIFO logic.
         """
-        total_paid = self.payments.aggregate(total=models.Sum('amount'))['total'] or 0
+        total_paid = self.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
         self.paid_amount = total_paid
         
         remaining_pool = total_paid
@@ -126,6 +134,7 @@ class InvoiceItem(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_invoice_items')
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     @property

@@ -1,154 +1,163 @@
 {% extends 'users/dashboard_base.html' %}
-
-{% block title %}{% if form.instance.pk %}Edit{% else %}Register New{% endif %} Patient - HMS{% endblock %}
-
+{% block title %}
+    {% if form.instance.pk %}
+        Edit
+    {% else %}
+        Register New
+    {% endif %}
+    Patient - HMS
+{% endblock %}
 {% block content %}
-<div class="dashboard-content">
-    <div class="form-container-wrapper">
-        <div class="page-header-premium">
-            <div class="header-main">
-                <div class="header-icon">
-                    <i class="fas fa-id-card-alt"></i>
+    <div class="dashboard-content">
+        <div class="form-container-wrapper">
+            <div class="page-header-premium">
+                <div class="header-main">
+                    <div class="header-icon">
+                        <i class="fas fa-id-card-alt"></i>
+                    </div>
+                    <div class="header-text">
+                        <h1>
+                            {% if form.instance.pk %}
+                                Edit Patient Record
+                            {% else %}
+                                Patient Registration
+                            {% endif %}
+                        </h1>
+                        <p class="subtitle text-muted">
+                            Complete the form below to
+                            {% if form.instance.pk %}
+                                update
+                            {% else
+                                %}
+                                onboard a new
+                            {% endif %}
+                            patient.
+                        </p>
+                    </div>
                 </div>
-                <div class="header-text">
-                    <h1>{% if form.instance.pk %}Edit Patient Record{% else %}Patient Registration{% endif %}</h1>
-                    <p class="subtitle text-muted">Complete the form below to {% if form.instance.pk %}update{% else
-                        %}onboard a new{% endif %} patient.</p>
+                <div class="header-actions">
+                    <a href="{% url 'home:patient_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Patients
+                    </a>
                 </div>
             </div>
-            <div class="header-actions">
-                <a href="{% url 'home:patient_list' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Patients
-                </a>
-            </div>
+            <form method="post" class="premium-form">
+                {% csrf_token %}
+                <!-- Personal Information Section -->
+                <div class="form-section-card">
+                    <div class="section-header">
+                        <div class="section-number">1</div>
+                        <h3>Personal Information</h3>
+                    </div>
+                    <div class="form-grid-premium">
+                        <div class="form-group-premium">
+                            <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user input-icon"></i>
+                                {{ form.first_name }}
+                            </div>
+                            {{ form.first_name.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user input-icon"></i>
+                                {{ form.last_name }}
+                            </div>
+                            {{ form.last_name.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.id_number.id_for_label }}">ID Number</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-id-card input-icon"></i>
+                                {{ form.id_number }}
+                            </div>
+                            {{ form.id_number.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.gender.id_for_label }}">Gender</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-venus-mars input-icon"></i>
+                                {{ form.gender }}
+                            </div>
+                            {{ form.gender.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar-alt input-icon"></i>
+                                {{ form.date_of_birth }}
+                            </div>
+                            {{ form.date_of_birth.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.phone.id_for_label }}">Phone Number</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-phone input-icon"></i>
+                                {{ form.phone }}
+                            </div>
+                            {{ form.phone.errors }}
+                        </div>
+                        <div class="form-group-premium full-width">
+                            <label for="{{ form.location.id_for_label }}">Residential Location</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-map-marker-alt input-icon"></i>
+                                {{ form.location }}
+                            </div>
+                            {{ form.location.errors }}
+                        </div>
+                    </div>
+                </div>
+                {% if not form.instance.pk %}
+                    <!-- Billing & Consultation Section -->
+                    <div class="form-section-card billing-card shadow-lg">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <h3>Billing & Consultation</h3>
+                            <span class="badge badge-billing">Required</span>
+                        </div>
+                        <div class="form-grid-premium">
+                            <div class="form-group-premium">
+                                <label for="{{ form.consultation_type.id_for_label }}">Consultation Category</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-stethoscope input-icon"></i>
+                                    {{ form.consultation_type }}
+                                </div>
+                                <small class="helper-text">Select the appropriate consultation service</small>
+                                {{ form.consultation_type.errors }}
+                            </div>
+                            <div class="form-group-premium">
+                                <label for="{{ form.payment_method.id_for_label }}">Mode of Payment</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-wallet input-icon"></i>
+                                    {{ form.payment_method }}
+                                </div>
+                                <small class="helper-text">Confirm payment before proceeding</small>
+                                {{ form.payment_method.errors }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="form-sticky-actions">
+                    <div class="actions-content">
+                        <p class="text-muted d-none d-md-block">Ensure all critical fields are accurate before saving.</p>
+                        <div class="button-group">
+                            <a href="{% url 'home:patient_list' %}" class="btn btn-ghost">Cancel</a>
+                            <button type="submit" class="btn btn-primary-premium">
+                                <i class="fas fa-save"></i>
+                                {% if form.instance.pk %}
+                                    Update Record
+                                {% else %}
+                                    Complete Registration
+                                {% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
-
-        <form method="post" class="premium-form">
-            {% csrf_token %}
-
-            <!-- Personal Information Section -->
-            <div class="form-section-card">
-                <div class="section-header">
-                    <div class="section-number">1</div>
-                    <h3>Personal Information</h3>
-                </div>
-
-                <div class="form-grid-premium">
-                    <div class="form-group-premium">
-                        <label for="{{ form.first_name.id_for_label }}">First Name</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-user input-icon"></i>
-                            {{ form.first_name }}
-                        </div>
-                        {{ form.first_name.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.last_name.id_for_label }}">Last Name</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-user input-icon"></i>
-                            {{ form.last_name }}
-                        </div>
-                        {{ form.last_name.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.id_number.id_for_label }}">ID Number</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-id-card input-icon"></i>
-                            {{ form.id_number }}
-                        </div>
-                        {{ form.id_number.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.gender.id_for_label }}">Gender</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-venus-mars input-icon"></i>
-                            {{ form.gender }}
-                        </div>
-                        {{ form.gender.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-calendar-alt input-icon"></i>
-                            {{ form.date_of_birth }}
-                        </div>
-                        {{ form.date_of_birth.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.phone.id_for_label }}">Phone Number</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-phone input-icon"></i>
-                            {{ form.phone }}
-                        </div>
-                        {{ form.phone.errors }}
-                    </div>
-
-                    <div class="form-group-premium full-width">
-                        <label for="{{ form.location.id_for_label }}">Residential Location</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-map-marker-alt input-icon"></i>
-                            {{ form.location }}
-                        </div>
-                        {{ form.location.errors }}
-                    </div>
-                </div>
-            </div>
-
-            {% if not form.instance.pk %}
-            <!-- Billing & Consultation Section -->
-            <div class="form-section-card billing-card shadow-lg">
-                <div class="section-header">
-                    <div class="section-number">2</div>
-                    <h3>Billing & Consultation</h3>
-                    <span class="badge badge-billing">Required</span>
-                </div>
-
-                <div class="form-grid-premium">
-                    <div class="form-group-premium">
-                        <label for="{{ form.consultation_type.id_for_label }}">Consultation Category</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-stethoscope input-icon"></i>
-                            {{ form.consultation_type }}
-                        </div>
-                        <small class="helper-text">Select the appropriate consultation service</small>
-                        {{ form.consultation_type.errors }}
-                    </div>
-
-                    <div class="form-group-premium">
-                        <label for="{{ form.payment_method.id_for_label }}">Mode of Payment</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-wallet input-icon"></i>
-                            {{ form.payment_method }}
-                        </div>
-                        <small class="helper-text">Confirm payment before proceeding</small>
-                        {{ form.payment_method.errors }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="form-sticky-actions">
-                <div class="actions-content">
-                    <p class="text-muted d-none d-md-block">Ensure all critical fields are accurate before saving.</p>
-                    <div class="button-group">
-                        <a href="{% url 'home:patient_list' %}" class="btn btn-ghost">Cancel</a>
-                        <button type="submit" class="btn btn-primary-premium">
-                            <i class="fas fa-save"></i>
-                            {% if form.instance.pk %}Update Record{% else %}Complete Registration{% endif %}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
     </div>
-</div>
-
-<style>
+    <style>
     :root {
         --primary-clinical: #2563eb;
         --primary-clinical-dark: #1d4ed8;
@@ -451,5 +460,5 @@
             justify-content: center;
         }
     }
-</style>
+    </style>
 {% endblock %}

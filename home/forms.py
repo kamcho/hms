@@ -177,11 +177,10 @@ class PatientForm(forms.ModelForm):
     
     consultation_type = forms.ModelChoiceField(
         queryset=Service.objects.filter(
-            name__in=['OPD Consultation', 'ANC', 'PNC', 'CWC'],
             is_active=True
-        ).order_by('name'),
+        ).order_by('department__name', 'name'),
         required=True,
-        label="Consultation Type",
+        label="Service",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     

@@ -19,4 +19,6 @@ urlpatterns = [
     path('procurement/', views.procurement_dashboard, name='procurement_dashboard'),
     path('procurement/add/', views.add_inventory_purchase, name='add_inventory_purchase'),
     path('procurement/<int:grn_id>/add-items/', views.add_grn_item, name='add_grn_item'),
+    path('items/<int:item_id>/distribution/', views.inventory_distribution, name='inventory_distribution'),
+    path('transfer/', views.transfer_stock, name='transfer_stock'),
 ]

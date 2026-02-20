@@ -1,63 +1,71 @@
 {% extends 'users/dashboard_base.html' %}
-
 {% block title %}Delete Patient - HMS{% endblock %}
-
 {% block content %}
-<div class="dashboard-content">
-    <div class="page-header">
-        <h1><i class="fas fa-trash-alt"></i> Delete Patient</h1>
-        <a href="{% url 'home:patient_list' %}" class="btn btn-secondary">Back to Patients</a>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <div class="delete-confirmation">
-                <div class="warning-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                
-                <h2>Are you sure you want to delete this patient?</h2>
-                
-                <div class="patient-summary">
-                    <h3>{{ object.first_name }} {{ object.last_name }}</h3>
-                    <div class="patient-details">
-                        <p><strong>Age:</strong> {{ object.age }} years</p>
-                        <p><strong>Gender:</strong> {{ object.get_gender_display }}</p>
-                        <p><strong>Phone:</strong> {{ object.phone }}</p>
-                        <p><strong>Location:</strong> {{ object.location }}</p>
-                        <p><strong>Date of Birth:</strong> {{ object.date_of_birth }}</p>
-                        <p><strong>Registered:</strong> {{ object.created_at|date:"F d, Y" }}</p>
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-trash-alt"></i> Delete Patient
+            </h1>
+            <a href="{% url 'home:patient_list' %}" class="btn btn-secondary">Back to Patients</a>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="delete-confirmation">
+                    <div class="warning-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                </div>
-                
-                <div class="warning-message">
-                    <p><strong>Warning:</strong> This action cannot be undone. Deleting this patient will also remove all associated records including:</p>
-                    <ul>
-                        <li>Visit history</li>
-                        <li>Triage entries</li>
-                        <li>Consultation records</li>
-                        <li>Prescriptions</li>
-                        <li>Medical notes</li>
-                    </ul>
-                </div>
-                
-                <form method="post" class="delete-form">
-                    {% csrf_token %}
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash-alt"></i> Yes, Delete Patient
-                        </button>
-                        <a href="{% url 'home:patient_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
+                    <h2>Are you sure you want to delete this patient?</h2>
+                    <div class="patient-summary">
+                        <h3>{{ object.first_name }} {{ object.last_name }}</h3>
+                        <div class="patient-details">
+                            <p>
+                                <strong>Age:</strong> {{ object.age }} years
+                            </p>
+                            <p>
+                                <strong>Gender:</strong> {{ object.get_gender_display }}
+                            </p>
+                            <p>
+                                <strong>Phone:</strong> {{ object.phone }}
+                            </p>
+                            <p>
+                                <strong>Location:</strong> {{ object.location }}
+                            </p>
+                            <p>
+                                <strong>Date of Birth:</strong> {{ object.date_of_birth }}
+                            </p>
+                            <p>
+                                <strong>Registered:</strong> {{ object.created_at|date:"F d, Y" }}
+                            </p>
+                        </div>
                     </div>
-                </form>
+                    <div class="warning-message">
+                        <p>
+                            <strong>Warning:</strong> This action cannot be undone. Deleting this patient will also remove all associated records including:
+                        </p>
+                        <ul>
+                            <li>Visit history</li>
+                            <li>Triage entries</li>
+                            <li>Consultation records</li>
+                            <li>Prescriptions</li>
+                            <li>Medical notes</li>
+                        </ul>
+                    </div>
+                    <form method="post" class="delete-form">
+                        {% csrf_token %}
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash-alt"></i> Yes, Delete Patient
+                            </button>
+                            <a href="{% url 'home:patient_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-<style>
+    <style>
 .delete-confirmation {
     max-width: 600px;
     margin: 0 auto;
@@ -159,5 +167,5 @@
         font-size: 0.9rem;
     }
 }
-</style>
+    </style>
 {% endblock %}

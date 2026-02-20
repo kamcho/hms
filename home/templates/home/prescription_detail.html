@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Prescription Details - {{ patient.full_name }} - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     .prescription-detail {
         max-width: 900px;
         margin: 0 auto;
@@ -145,130 +143,112 @@
         cursor: not-allowed;
         transform: none;
     }
-</style>
-
-<div class="prescription-detail">
-    <div class="prescription-header">
-        <h2><i class="fas fa-prescription"></i> Prescription Details</h2>
-    </div>
-
-    <div class="prescription-info">
-        <div class="info-item">
-            <span class="info-label">Patient</span>
-            <span class="info-value">{{ patient.full_name }}</span>
+    </style>
+    <div class="prescription-detail">
+        <div class="prescription-header">
+            <h2>
+                <i class="fas fa-prescription"></i> Prescription Details
+            </h2>
         </div>
-
-        <div class="info-item">
-            <span class="info-label">Prescribed By</span>
-            <span class="info-value">{{ prescription.prescribed_by.get_full_name|default:prescription.prescribed_by.username }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="info-label">Date</span>
-            <span class="info-value">{{ prescription.prescribed_at|date:"F d, Y H:i" }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="info-label">Status</span>
-            <span class="info-value">{{ prescription.status }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="info-label">Total Cost</span>
-            <span class="info-value" style="color: #059669; font-weight: 700;">KES {{ prescription.total_amount }}</span>
-        </div>
-
-        <div class="info-item" style="grid-column: span 2;">
-            <span class="info-label">Diagnosis</span>
-            <span class="info-value">{{ prescription.diagnosis }}</span>
-        </div>
-
-        {% if prescription.notes %}
-        <div class="info-item" style="grid-column: span 2;">
-            <span class="info-label">Notes</span>
-            <span class="info-value">{{ prescription.notes }}</span>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="medications-section">
-        <h3 class="section-title">Prescribed Medications</h3>
-
-        {% for item in prescription.items.all %}
-        <div class="medication-card">
-            <div class="medication-name">
-                <i class="fas fa-pills"></i> {{ item.medication.name }}
+        <div class="prescription-info">
+            <div class="info-item">
+                <span class="info-label">Patient</span>
+                <span class="info-value">{{ patient.full_name }}</span>
             </div>
-
-            <div class="medication-details">
-                <div class="detail-item">
-                    <span class="detail-label">Dose:</span>
-                    <span class="detail-value">{{ item.dose_count }} units</span>
+            <div class="info-item">
+                <span class="info-label">Prescribed By</span>
+                <span class="info-value">{{ prescription.prescribed_by.get_full_name|default:prescription.prescribed_by.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Date</span>
+                <span class="info-value">{{ prescription.prescribed_at|date:"F d, Y H:i" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Status</span>
+                <span class="info-value">{{ prescription.status }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Total Cost</span>
+                <span class="info-value" style="color: #059669; font-weight: 700;">KES {{ prescription.total_amount }}</span>
+            </div>
+            <div class="info-item" style="grid-column: span 2;">
+                <span class="info-label">Diagnosis</span>
+                <span class="info-value">{{ prescription.diagnosis }}</span>
+            </div>
+            {% if prescription.notes %}
+                <div class="info-item" style="grid-column: span 2;">
+                    <span class="info-label">Notes</span>
+                    <span class="info-value">{{ prescription.notes }}</span>
                 </div>
-
-                <div class="detail-item">
-                    <span class="detail-label">Frequency:</span>
-                    <span class="detail-value">{{ item.frequency }}</span>
-                </div>
-
-                <div class="detail-item">
-                    <span class="detail-label">Quantity:</span>
-                    <span class="detail-value">{{ item.quantity }} units</span>
-                </div>
-
-                <div class="detail-item">
-                    <span class="detail-label">Cost:</span>
-                    <span class="detail-value font-medium text-emerald-600">
-                        KES {{ item.total_price }}
-                        <span class="text-xs text-slate-500 font-normal">(@ {{ item.medication.selling_price }})</span>
-                    </span>
-                </div>
-
-                {% if item.instructions %}
-                <div class="detail-item" style="grid-column: span 2;">
-                    <span class="detail-label">Instructions:</span>
-                    <span class="detail-value">{{ item.instructions }}</span>
-                </div>
-                {% endif %}
-
-                <div class="detail-item">
-                    <span class="detail-label">Dispensed:</span>
-                    <span class="detail-value">
-                        {% if item.dispensed %}
-                        <i class="fas fa-check-circle" style="color: #10b981;"></i> Yes
-                        <span style="font-size: 0.875rem; color: #64748b;">
-                            ({{ item.dispensed_at|date:"M d, Y H:i" }} by {{
-                            item.dispensed_by.full_name|default:"Unknown" }})
-                        </span>
-                        {% else %}
-                        <i class="fas fa-times-circle" style="color: #ef4444;"></i> No
+            {% endif %}
+        </div>
+        <div class="medications-section">
+            <h3 class="section-title">Prescribed Medications</h3>
+            {% for item in prescription.items.all %}
+                <div class="medication-card">
+                    <div class="medication-name">
+                        <i class="fas fa-pills"></i> {{ item.medication.name }}
+                    </div>
+                    <div class="medication-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Dose:</span>
+                            <span class="detail-value">{{ item.dose_count }} units</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Frequency:</span>
+                            <span class="detail-value">{{ item.frequency }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Quantity:</span>
+                            <span class="detail-value">{{ item.quantity }} units</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Cost:</span>
+                            <span class="detail-value font-medium text-emerald-600">
+                                KES {{ item.total_price }}
+                                <span class="text-xs text-slate-500 font-normal">(@ {{ item.medication.selling_price }})</span>
+                            </span>
+                        </div>
+                        {% if item.instructions %}
+                            <div class="detail-item" style="grid-column: span 2;">
+                                <span class="detail-label">Instructions:</span>
+                                <span class="detail-value">{{ item.instructions }}</span>
+                            </div>
                         {% endif %}
-                    </span>
-                </div>
-
-                {% if not item.dispensed %}
-                <div class="detail-item" style="grid-column: span 2; margin-top: 0.5rem;">
-                    <button class="btn-dispense" data-item-id="{{ item.id }}"
-                        data-medication="{{ item.medication.name }}" data-patient="{{ patient.full_name }}">
+                        <div class="detail-item">
+                            <span class="detail-label">Dispensed:</span>
+                            <span class="detail-value">
+                                {% if item.dispensed %}
+                                    <i class="fas fa-check-circle" style="color: #10b981;"></i> Yes
+                                    <span style="font-size: 0.875rem; color: #64748b;">
+                                        ({{ item.dispensed_at|date:"M d, Y H:i" }} by {{
+                                        item.dispensed_by.full_name|default:"Unknown" }})
+                                    </span>
+                                {% else %}
+                                    <i class="fas fa-times-circle" style="color: #ef4444;"></i> No
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if not item.dispensed %}
+                            <!-- <div class="detail-item" style="grid-column: span 2; margin-top: 0.5rem;">
+                    <button class="btn-dispense" data-item-id="{{ item.id }}" data-medication="{{ item.medication.name }}" data-patient="{{ patient.full_name }}">
                         <i class="fas fa-check"></i> Mark as Dispensed
                     </button>
+                </div> -->
+                        {% endif %}
+                    </div>
                 </div>
-                {% endif %}
-            </div>
+            {% empty %}
+                <p style="color: #64748b;">No medications prescribed.</p>
+            {% endfor %}
         </div>
-        {% empty %}
-        <p style="color: #64748b;">No medications prescribed.</p>
-        {% endfor %}
+        <div style="margin-top: 2rem;">
+            <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Patient
+            </a>
+        </div>
     </div>
-
-    <div style="margin-top: 2rem;">
-        <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Patient
-        </a>
-    </div>
-</div>
-
-<script>
+    <script>
     // Handle dispense button clicks
     document.querySelectorAll('.btn-dispense').forEach(button => {
         button.addEventListener('click', function () {
@@ -307,5 +287,5 @@
             }
         });
     });
-</script>
+    </script>
 {% endblock %}

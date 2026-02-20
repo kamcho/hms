@@ -1,14 +1,9 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
-
+{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         --secondary-gradient: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
@@ -320,557 +315,601 @@
             transform: translateY(0);
         }
     }
-</style>
-
-<div class="case-folder">
-    <div class="patient-header">
-        <div class="patient-info-main">
-            <div class="d-flex align-items-center gap-3 mb-2">
-                <span class="badge bg-white text-primary px-3 py-2 rounded-pill fw-bold" style="font-size: 0.8rem;">
-                    INPATIENT CASE #{{ admission.id }}
-                </span>
-                {% if admission.status == 'Admitted' %}
-                <span class="badge bg-success px-3 py-2 rounded-pill fw-bold" style="font-size: 0.8rem;">ACTIVE
-                    ADMISSION</span>
-                {% endif %}
-            </div>
-            <h1>{{ admission.patient.full_name }}</h1>
-            <div class="patient-meta">
-                <span class="meta-item"><i class="fas fa-user"></i> {{ admission.patient.age }} Years,
+    </style>
+    <div class="case-folder">
+        <div class="patient-header">
+            <div class="patient-info-main">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="badge bg-white text-primary px-3 py-2 rounded-pill fw-bold" style="font-size: 0.8rem;">INPATIENT CASE #{{ admission.id }}</span>
+                    {% if admission.status == 'Admitted' %}
+                        <span class="badge bg-success px-3 py-2 rounded-pill fw-bold" style="font-size: 0.8rem;">ACTIVE
+                        ADMISSION</span>
+                    {% endif %}
+                </div>
+                <h1>{{ admission.patient.full_name }}</h1>
+                <div class="patient-meta">
+                    <span class="meta-item"><i class="fas fa-user"></i> {{ admission.patient.age }} Years,
                     {{ admission.patient.gender }}</span>
-                <span class="meta-item"><i class="fas fa-calendar-alt"></i> Admitted {{ admission.admitted_at|date:"M d,
+                    <span class="meta-item"><i class="fas fa-calendar-alt"></i> Admitted {{ admission.admitted_at|date:"M d,
                     Y" }}</span>
-                {% if admission.provisional_diagnosis %}
-                <span class="meta-item"><i class="fas fa-stethoscope"></i> {{
-                    admission.provisional_diagnosis|truncatechars:30 }}</span>
-                {% endif %}
+                    {% if admission.provisional_diagnosis %}
+                        <span class="meta-item"><i class="fas fa-stethoscope"></i> {{
+                        admission.provisional_diagnosis|truncatechars:30 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.8rem; font-weight: 800; line-height: 1;">{{ admission.bed.ward.name }}</div>
+                <div style="font-size: 1rem; opacity: 0.9; margin-top: 0.5rem;">
+                    Bed {{ admission.bed.bed_number }} ({{
+                    admission.bed.bed_type }})
+                </div>
             </div>
         </div>
-        <div style="text-align: right;">
-            <div style="font-size: 1.8rem; font-weight: 800; line-height: 1;">{{ admission.bed.ward.name }}</div>
-            <div style="font-size: 1rem; opacity: 0.9; margin-top: 0.5rem;">Bed {{ admission.bed.bed_number }} ({{
-                admission.bed.bed_type }})</div>
-        </div>
-    </div>
-
-    <div class="folder-grid">
-        <div class="main-content">
-            <!-- Vitals Section -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-heartbeat" style="color: #ef4444;"></i> Clinical Monitoring</h2>
-                    <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#vitalsModal">
-                        <i class="fas fa-plus"></i> Record Vitals
-                    </button>
-                </div>
-
-                {% if latest_vitals %}
-                <div class="vitals-summary">
-                    <div class="vital-box">
-                        <div class="label">Temperature</div>
-                        <div class="value">{{ latest_vitals.temperature }}<span class="unit">°C</span></div>
+        <div class="folder-grid">
+            <div class="main-content">
+                <!-- Vitals Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-heartbeat" style="color: #ef4444;"></i> Clinical Monitoring
+                        </h2>
+                        <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#vitalsModal">
+                            <i class="fas fa-plus"></i> Record Vitals
+                        </button>
                     </div>
-                    <div class="vital-box">
-                        <div class="label">Pulse Rate</div>
-                        <div class="value">{{ latest_vitals.pulse_rate }}<span class="unit">bpm</span></div>
-                    </div>
-                    <div class="vital-box">
-                        <div class="label">Blood Pressure</div>
-                        <div class="value">{{ latest_vitals.systolic_bp }}/{{ latest_vitals.diastolic_bp }}</div>
-                    </div>
-                    <div class="vital-box">
-                        <div class="label">SPO2</div>
-                        <div class="value">{{ latest_vitals.spo2 }}<span class="unit">%</span></div>
-                    </div>
-                    <div class="vital-box">
-                        <div class="label">Respiration</div>
-                        <div class="value">{{ latest_vitals.respiratory_rate }}<span class="unit">/m</span></div>
-                    </div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div
-                            style="height: 250px; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02);">
-                            <canvas id="tempChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div
-                            style="height: 250px; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02);">
-                            <canvas id="bpChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; font-weight: 500;">
-                    <i class="fas fa-history"></i> Last recorded: {{ latest_vitals.recorded_at|timesince }} ago by <span
-                        class="text-primary">{{ latest_vitals.recorded_by.get_full_name }}</span>
-                </div>
-                {% else %}
-                <div class="text-center py-5">
-                    <div class="mb-3 text-muted opacity-50"><i class="fas fa-heart-broken fa-3x"></i></div>
-                    <p class="text-secondary fw-medium">No clinical monitoring data recorded for this admission yet.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Doctor Instructions Section -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-clipboard-list" style="color: #4f46e5;"></i> Medical Orders & Instructions</h2>
-                    <button class="btn-action btn-primary-soft" data-bs-toggle="modal"
-                        data-bs-target="#instructionModal">
-                        <i class="fas fa-plus"></i> New Order
-                    </button>
-                </div>
-                <div class="instruction-list">
-                    {% for ins in instructions %}
-                    <div class="instruction-card {% if ins.is_completed %}opacity-50{% endif %}"
-                        style="border-left: 5px solid {% if ins.instruction_type == 'Treatment' %}#ef4444{% elif ins.instruction_type == 'Activity' %}#0ea5e9{% else %}#4f46e5{% endif %};">
-                        <div style="flex: 1;">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span
-                                    class="badge {% if ins.instruction_type == 'Treatment' %}bg-danger-subtle text-danger{% elif ins.instruction_type == 'Activity' %}bg-info-subtle text-info{% else %}bg-primary-subtle text-primary{% endif %} rounded-pill px-2 py-1 fw-bold"
-                                    style="font-size: 0.65rem; text-transform: uppercase;">
-                                    {{ ins.get_instruction_type_display }}
-                                </span>
-                                {% if ins.is_completed %}
-                                <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 fw-bold"
-                                    style="font-size: 0.65rem; text-transform: uppercase;">Completed</span>
-                                {% endif %}
-                            </div>
-                            <div
-                                style="font-weight: 600; color: var(--text-primary); font-size: 1.05rem; {% if ins.is_completed %}text-decoration: line-through;{% endif %}">
-                                {{ ins.instruction }}</div>
-                            <div
-                                style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-user-md"></i> Dr. {{ ins.created_by.get_full_name }}
-                                <span class="opacity-50">|</span>
-                                <i class="fas fa-clock"></i> {{ ins.created_at|date:"M d, H:i" }}
-                                {% if ins.is_completed %}
-                                <span class="text-success ms-2">
-                                    <i class="fas fa-check-double"></i> Done by {{ ins.completed_by.get_full_name }} at
-                                    {{ ins.completed_at|date:"H:i" }}
-                                </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="ms-3">
-                            {% if not ins.is_completed %}
-                            <a href="{% url 'inpatient:complete_instruction' ins.id %}"
-                                class="btn-action bg-success-subtle text-success hover-elevate"
-                                title="Mark as Completed">
-                                <i class="fas fa-check-circle"></i> Complete
-                            </a>
-                            {% else %}
-                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center"
-                                style="width: 32px; height: 32px;">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center py-4 border rounded-4 border-dashed">
-                        <p class="text-secondary mb-0">No active medical orders found.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Medication Chart Section -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-pills" style="color: #7c3aed;"></i> Active Medication Chart</h2>
-                    <button class="btn-action btn-primary-soft" data-bs-toggle="modal"
-                        data-bs-target="#medicationModal">
-                        <i class="fas fa-plus"></i> Prescribe
-                    </button>
-                </div>
-                <div class="table-responsive">
-                    <table class="med-table">
-                        <thead>
-                            <tr
-                                style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; font-weight: 700;">
-                                <th style="padding: 0 1.25rem;">Medication Item</th>
-                                <th>Dosage</th>
-                                <th>Frequency</th>
-                                <th>Administration Status</th>
-                                <th class="text-end" style="padding-right: 1.25rem;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for med in medications %}
-                            <tr class="med-row">
-                                <td>
-                                    <div style="font-weight: 700; color: var(--text-primary);">{{ med.item.name }}</div>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                                        Ordered: {{ med.prescribed_at|date:"M d, H:i" }} by {{
-                                        med.prescribed_by.get_full_name }}
-                                    </div>
-                                </td>
-                                <td><span class="fw-bold text-primary">{{ med.dosage }}</span></td>
-                                <td><span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">{{
-                                        med.frequency }}</span></td>
-                                <td id="status-{{ med.id }}">
-                                    {% if med.is_administered %}
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-success rounded-circle" style="width: 8px; height: 8px;"></div>
-                                        <span class="fw-bold text-success"
-                                            style="font-size: 0.9rem;">Administered</span>
-                                    </div>
-                                    <div
-                                        style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; padding-left: 1rem;">
-                                        {{ med.administered_at|date:"H:i" }} by {{ med.administered_by.get_full_name }}
-                                    </div>
-                                    {% else %}
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-warning rounded-circle pulse" style="width: 8px; height: 8px;">
-                                        </div>
-                                        <span class="fw-bold text-warning" style="font-size: 0.9rem;">Pending
-                                            Dose</span>
-                                    </div>
-                                    {% endif %}
-                                </td>
-                                <td id="action-{{ med.id }}" class="text-end">
-                                    {% if not med.is_administered %}
-                                    <button onclick="administerMedication({{ med.id }})"
-                                        class="btn-action btn-primary-soft btn-sm">
-                                        <i class="fas fa-hand-holding-medical"></i> Give Dose
-                                    </button>
-                                    {% else %}
-                                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2">
-                                        <i class="fas fa-check-double me-1"></i> Recorded
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5"
-                                    style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                                    <i class="fas fa-capsules fa-3x mb-3 opacity-25"></i>
-                                    <p class="mb-0 fw-medium">No medications currently prescribed.</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Clinical Notes Section -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-notes-medical" style="color: #4f46e5;"></i> Clinical Progress Notes</h2>
-                    <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#noteModal">
-                        <i class="fas fa-plus"></i> Add Note
-                    </button>
-                </div>
-                <div class="note-timeline">
-                    {% for note in notes %}
-                    <div class="note-item">
-                        <div class="note-content">
-                            <div class="note-meta">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="note-type-badge note-{{ note.note_type|lower }}">{{
-                                        note.get_note_type_display }}</span>
-                                    <span class="fw-bold" style="color: var(--text-primary);">Dr. {{
-                                        note.created_by.get_full_name }}</span>
+                    {% if latest_vitals %}
+                        <div class="vitals-summary">
+                            <div class="vital-box">
+                                <div class="label">Temperature</div>
+                                <div class="value">
+                                    {{ latest_vitals.temperature }}<span class="unit">°C</span>
                                 </div>
-                                <div class="text-muted"><i class="fas fa-clock me-1"></i> {{ note.created_at|date:"M d,
-                                    Y H:i" }}</div>
                             </div>
-                            <div
-                                style="white-space: pre-wrap; font-size: 1rem; color: var(--text-primary); line-height: 1.6;">
-                                {{ note.content }}</div>
+                            <div class="vital-box">
+                                <div class="label">Pulse Rate</div>
+                                <div class="value">
+                                    {{ latest_vitals.pulse_rate }}<span class="unit">bpm</span>
+                                </div>
+                            </div>
+                            <div class="vital-box">
+                                <div class="label">Blood Pressure</div>
+                                <div class="value">{{ latest_vitals.systolic_bp }}/{{ latest_vitals.diastolic_bp }}</div>
+                            </div>
+                            <div class="vital-box">
+                                <div class="label">SPO2</div>
+                                <div class="value">
+                                    {{ latest_vitals.spo2 }}<span class="unit">%</span>
+                                </div>
+                            </div>
+                            <div class="vital-box">
+                                <div class="label">Respiration</div>
+                                <div class="value">
+                                    {{ latest_vitals.respiratory_rate }}<span class="unit">/m</span>
+                                </div>
+                            </div>
                         </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <div style="height: 250px; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02);">
+                                    <canvas id="tempChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div style="height: 250px; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02);">
+                                    <canvas id="bpChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; font-weight: 500;">
+                            <i class="fas fa-history"></i> Last recorded: {{ latest_vitals.recorded_at|timesince }} ago by <span class="text-primary">{{ latest_vitals.recorded_by.get_full_name }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3 text-muted opacity-50">
+                                <i class="fas fa-heart-broken fa-3x"></i>
+                            </div>
+                            <p class="text-secondary fw-medium">No clinical monitoring data recorded for this admission yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <!-- Doctor Instructions Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-clipboard-list" style="color: #4f46e5;"></i> Medical Orders & Instructions
+                        </h2>
+                        <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#instructionModal">
+                            <i class="fas fa-plus"></i> New Order
+                        </button>
                     </div>
-                    {% empty %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-file-medical fa-3x mb-3 opacity-25"></i>
-                        <p class="text-secondary fw-medium">No progress notes recorded.</p>
+                    <div class="instruction-list">
+                        {% for ins in instructions %}
+                            <div class="instruction-card {% if ins.is_completed %}opacity-50{% endif %}" style="border-left: 5px solid {% if ins.instruction_type == 'Treatment' %}#ef4444{% elif ins.instruction_type == 'Activity' %}#0ea5e9{% else %}#4f46e5{% endif %};">
+                                <div style="flex: 1;">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge {% if ins.instruction_type == 'Treatment' %}bg-danger-subtle text-danger{% elif ins.instruction_type == 'Activity' %}bg-info-subtle text-info{% else %}bg-primary-subtle text-primary{% endif %} rounded-pill px-2 py-1 fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">{{ ins.get_instruction_type_display }}</span>
+                                        {% if ins.is_completed %}<span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Completed</span>{% endif %}
+                                    </div>
+                                    <div style="font-weight: 600; color: var(--text-primary); font-size: 1.05rem; {% if ins.is_completed %}text-decoration: line-through;{% endif %}">{{ ins.instruction }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-user-md"></i> Dr. {{ ins.created_by.get_full_name }}
+                                        <span class="opacity-50">|</span>
+                                        <i class="fas fa-clock"></i> {{ ins.created_at|date:"M d, H:i" }}
+                                        {% if ins.is_completed %}
+                                            <span class="text-success ms-2">
+                                                <i class="fas fa-check-double"></i> Done by {{ ins.completed_by.get_full_name }} at
+                                                {{ ins.completed_at|date:"H:i" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="ms-3">
+                                    {% if not ins.is_completed %}
+                                        <a href="{% url 'inpatient:complete_instruction' ins.id %}" class="btn-action bg-success-subtle text-success hover-elevate" title="Mark as Completed">
+                                            <i class="fas fa-check-circle"></i> Complete
+                                        </a>
+                                    {% else %}
+                                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center py-4 border rounded-4 border-dashed">
+                                <p class="text-secondary mb-0">No active medical orders found.</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                </div>
+                <!-- Medication Chart Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-pills" style="color: #7c3aed;"></i> Active Medication Chart
+                        </h2>
+                        <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#medicationModal">
+                            <i class="fas fa-plus"></i> Prescribe
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="med-table">
+                            <thead>
+                                <tr style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; font-weight: 700;">
+                                    <th style="padding: 0 1.25rem;">Medication Item</th>
+                                    <th>Dosage</th>
+                                    <th>Frequency</th>
+                                    <th>Administration Status</th>
+                                    <th class="text-end" style="padding-right: 1.25rem;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for med in medications %}
+                                    <tr class="med-row">
+                                        <td>
+                                            <div style="font-weight: 700; color: var(--text-primary);">{{ med.item.name }}</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                                Ordered: {{ med.prescribed_at|date:"M d, H:i" }} by {{
+                                                med.prescribed_by.get_full_name }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold text-primary">{{ med.dosage }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">{{
+                                            med.frequency }}</span>
+                                        </td>
+                                        <td id="status-{{ med.id }}">
+                                            {% if med.is_administered %}
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-success rounded-circle" style="width: 8px; height: 8px;"></div>
+                                                    <span class="fw-bold text-success" style="font-size: 0.9rem;">Administered</span>
+                                                </div>
+                                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; padding-left: 1rem;">{{ med.administered_at|date:"H:i" }} by {{ med.administered_by.get_full_name }}</div>
+                                            {% else %}
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-warning rounded-circle pulse" style="width: 8px; height: 8px;"></div>
+                                                    <span class="fw-bold text-warning" style="font-size: 0.9rem;">Pending
+                                                    Dose</span>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td id="action-{{ med.id }}" class="text-end">
+                                            {% if not med.is_administered %}
+                                                <button onclick="administerMedication({{ med.id }})" class="btn-action btn-primary-soft btn-sm">
+                                                    <i class="fas fa-hand-holding-medical"></i> Give Dose
+                                                </button>
+                                            {% else %}
+                                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2">
+                                                    <i class="fas fa-check-double me-1"></i> Recorded
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                                            <i class="fas fa-capsules fa-3x mb-3 opacity-25"></i>
+                                            <p class="mb-0 fw-medium">No medications currently prescribed.</p>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Clinical Notes Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-notes-medical" style="color: #4f46e5;"></i> Clinical Progress Notes
+                        </h2>
+                        <button class="btn-action btn-primary-soft" data-bs-toggle="modal" data-bs-target="#noteModal">
+                            <i class="fas fa-plus"></i> Add Note
+                        </button>
+                    </div>
+                    <div class="note-timeline">
+                        {% for note in notes %}
+                            <div class="note-item">
+                                <div class="note-content">
+                                    <div class="note-meta">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="note-type-badge note-{{ note.note_type|lower }}">{{
+                                            note.get_note_type_display }}</span>
+                                            <span class="fw-bold" style="color: var(--text-primary);">Dr. {{
+                                            note.created_by.get_full_name }}</span>
+                                        </div>
+                                        <div class="text-muted">
+                                            <i class="fas fa-clock me-1"></i> {{ note.created_at|date:"M d,
+                                            Y H:i" }}
+                                        </div>
+                                    </div>
+                                    <div style="white-space: pre-wrap; font-size: 1rem; color: var(--text-primary); line-height: 1.6;">{{ note.content }}</div>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file-medical fa-3x mb-3 opacity-25"></i>
+                                <p class="text-secondary fw-medium">No progress notes recorded.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="sidebar">
-            <!-- Fluid Balance -->
-            <div class="content-card overflow-hidden">
-                <div class="card-header">
-                    <h2><i class="fas fa-tint" style="color: #0ea5e9;"></i> Fluid Balance</h2>
-                </div>
-                <div class="row g-2 mb-4">
-                    <div class="col-6">
-                        <div
-                            style="background: #f0f9ff; padding: 1.25rem; border-radius: 20px; text-align: center; border: 1px solid #e0f2fe;">
-                            <div
-                                style="font-size: 0.75rem; color: #0ea5e9; text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">
-                                Intake</div>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: #0369a1;">{{ fluid_intake }}<span
-                                    style="font-size: 0.8rem; margin-left: 2px;">ml</span></div>
+            <div class="sidebar">
+                <!-- Fluid Balance -->
+                <div class="content-card overflow-hidden">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-tint" style="color: #0ea5e9;"></i> Fluid Balance
+                        </h2>
+                    </div>
+                    <div class="row g-2 mb-4">
+                        <div class="col-6">
+                            <div style="background: #f0f9ff; padding: 1.25rem; border-radius: 20px; text-align: center; border: 1px solid #e0f2fe;">
+                                <div style="font-size: 0.75rem; color: #0ea5e9; text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">Intake</div>
+                                <div style="font-size: 1.5rem; font-weight: 800; color: #0369a1;">
+                                    {{ fluid_intake }}<span style="font-size: 0.8rem; margin-left: 2px;">ml</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="background: #fff1f2; padding: 1.25rem; border-radius: 20px; text-align: center; border: 1px solid #ffe4e6;">
+                                <div style="font-size: 0.75rem; color: #e11d48; text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">Output</div>
+                                <div style="font-size: 1.5rem; font-weight: 800; color: #9f1239;">
+                                    {{ fluid_output }}<span style="font-size: 0.8rem; margin-left: 2px;">ml</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div
-                            style="background: #fff1f2; padding: 1.25rem; border-radius: 20px; text-align: center; border: 1px solid #ffe4e6;">
-                            <div
-                                style="font-size: 0.75rem; color: #e11d48; text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">
-                                Output</div>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: #9f1239;">{{ fluid_output }}<span
-                                    style="font-size: 0.8rem; margin-left: 2px;">ml</span></div>
-                        </div>
+                    <button class="btn-action btn-primary-soft w-100 justify-content-center py-3" data-bs-toggle="modal" data-bs-target="#fluidModal">
+                        <i class="fas fa-plus"></i> Record Fluid Entry
+                    </button>
+                </div>
+                <!-- Nutrition -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-utensils" style="color: #f59e0b;"></i> Diet Orders
+                        </h2>
+                        <button class="btn-action bg-warning-subtle text-warning btn-sm" data-bs-toggle="modal" data-bs-target="#nutritionModal">
+                            <i class="fas fa-pen"></i>
+                        </button>
                     </div>
-                </div>
-                <button class="btn-action btn-primary-soft w-100 justify-content-center py-3" data-bs-toggle="modal"
-                    data-bs-target="#fluidModal">
-                    <i class="fas fa-plus"></i> Record Fluid Entry
-                </button>
-            </div>
-
-            <!-- Nutrition -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-utensils" style="color: #f59e0b;"></i> Diet Orders</h2>
-                    <button class="btn-action bg-warning-subtle text-warning btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#nutritionModal">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                </div>
-                {% if current_nutrition %}
-                <div class="diet-badge py-2 px-3 mb-3"
-                    style="background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
-                    <i class="fas fa-apple-alt"></i> {{ current_nutrition.get_diet_type_display }}
-                </div>
-                {% if current_nutrition.specific_instructions %}
-                <div
-                    style="font-size: 0.9rem; color: var(--text-primary); border-left: 4px solid #f59e0b; padding: 1rem; margin-top: 0.5rem; background: rgba(245, 158, 11, 0.05); border-radius: 0 12px 12px 0;">
-                    <div class="fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase; color: #d97706;">
-                        Instructions:</div>
-                    {{ current_nutrition.specific_instructions }}
-                </div>
-                {% endif %}
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1.25rem; font-weight: 500;">
-                    <i class="fas fa-check-circle text-success me-1"></i> Prescribed by Dr. {{
-                    current_nutrition.prescribed_by.get_full_name }}
-                </div>
-                {% else %}
-                <div class="text-center py-3">
-                    <p class="text-secondary small mb-0">No specific diet order defined.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Action Center -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-bolt" style="color: #8b5cf6;"></i> Quick Actions</h2>
-                </div>
-                <div class="d-grid gap-2">
-                    <button class="btn-action btn-primary-soft text-start py-3" data-bs-toggle="modal"
-                        data-bs-target="#medicationModal">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-white p-2 rounded-3 text-primary"><i class="fas fa-pills px-1"></i></div>
-                            <div>
-                                <div class="fw-bold">Prescribe Meds</div>
-                                <div class="small opacity-75 fw-normal">Add to medication chart</div>
-                            </div>
+                    {% if current_nutrition %}
+                        <div class="diet-badge py-2 px-3 mb-3" style="background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                            <i class="fas fa-apple-alt"></i> {{ current_nutrition.get_diet_type_display }}
                         </div>
-                    </button>
-                    <button class="btn-action btn-primary-soft text-start py-3" data-bs-toggle="modal"
-                        data-bs-target="#transferModal">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-white p-2 rounded-3 text-info"><i class="fas fa-exchange-alt px-1"></i></div>
-                            <div>
-                                <div class="fw-bold">Bed Transfer</div>
-                                <div class="small opacity-75 fw-normal">Move patient ward/bed</div>
+                        {% if current_nutrition.specific_instructions %}
+                            <div style="font-size: 0.9rem; color: var(--text-primary); border-left: 4px solid #f59e0b; padding: 1rem; margin-top: 0.5rem; background: rgba(245, 158, 11, 0.05); border-radius: 0 12px 12px 0;">
+                                <div class="fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase; color: #d97706;">Instructions:</div>
+                                {{ current_nutrition.specific_instructions }}
                             </div>
+                        {% endif %}
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1.25rem; font-weight: 500;">
+                            <i class="fas fa-check-circle text-success me-1"></i> Prescribed by Dr. {{
+                            current_nutrition.prescribed_by.get_full_name }}
                         </div>
-                    </button>
-                    <a href="{% url 'inpatient:discharge_patient' admission.id %}"
-                        class="btn-action text-start py-3 text-white" style="background: var(--danger-gradient);">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-white p-2 rounded-3 text-danger"><i class="fas fa-sign-out-alt px-1"></i>
-                            </div>
-                            <div>
-                                <div class="fw-bold">Process Discharge</div>
-                                <div class="small opacity-75 fw-normal">Finalize case & billing</div>
-                            </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <p class="text-secondary small mb-0">No specific diet order defined.</p>
                         </div>
-                    </a>
+                    {% endif %}
+                </div>
+                <!-- Action Center -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-bolt" style="color: #8b5cf6;"></i> Quick Actions
+                        </h2>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn-action btn-primary-soft text-start py-3" data-bs-toggle="modal" data-bs-target="#medicationModal">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-white p-2 rounded-3 text-primary">
+                                    <i class="fas fa-pills px-1"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Prescribe Meds</div>
+                                    <div class="small opacity-75 fw-normal">Add to medication chart</div>
+                                </div>
+                            </div>
+                        </button>
+                        <button class="btn-action btn-primary-soft text-start py-3" data-bs-toggle="modal" data-bs-target="#transferModal">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-white p-2 rounded-3 text-info">
+                                    <i class="fas fa-exchange-alt px-1"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Bed Transfer</div>
+                                    <div class="small opacity-75 fw-normal">Move patient ward/bed</div>
+                                </div>
+                            </div>
+                        </button>
+                        <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="btn-action text-start py-3 text-white" style="background: var(--danger-gradient);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-white p-2 rounded-3 text-danger">
+                                    <i class="fas fa-sign-out-alt px-1"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Process Discharge</div>
+                                    <div class="small opacity-75 fw-normal">Finalize case & billing</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block modals %}
-<!-- Vitals Modal -->
-<div class="modal fade" id="vitalsModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_vitals' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Record Patient Vitals</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">{% for field in vitals_form %}<div class="col-6"><label class="form-label">{{
-                                field.label }}</label>{{ field }}</div>{% endfor %}</div>
-                </div>
-                <div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal"
-                        style="border-radius: 12px;">Cancel</button><button type="submit" class="btn btn-primary"
-                        style="border-radius: 12px; background: var(--primary-gradient); border: none;">Save
-                        Vitals</button></div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Note Modal -->
-<div class="modal fade" id="noteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_clinical_note' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Add Clinical Note</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Note Type</label>{{ note_form.note_type }}</div>
-                    <div class="mb-3"><label class="form-label">Clinical Observations & Plan</label>{{ note_form.content
-                        }}</div>
-                </div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100"
-                        style="border-radius: 12px; background: var(--primary-gradient); border: none;">Add
-                        Note</button></div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Fluid Modal -->
-<div class="modal fade" id="fluidModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_fluid' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Log Fluid Intake/Output</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Type</label>{{ fluid_form.fluid_type }}</div>
-                    <div class="mb-3"><label class="form-label">Item/Route</label>{{ fluid_form.item }}</div>
-                    <div class="mb-3"><label class="form-label">Amount (ml)</label>{{ fluid_form.amount_ml }}</div>
-                </div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100"
-                        style="border-radius: 12px; background: var(--secondary-gradient); border: none;">Record
-                        Entry</button></div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Transfer Modal -->
-<div class="modal fade" id="transferModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:transfer_patient' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Ward/Bed Transfer</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Target Ward</label>{{ transfer_form.ward }}</div>
-                    <div class="mb-3"><label class="form-label">Available Beds</label>{{ transfer_form.to_bed }}</div>
-                    <div class="mb-3"><label class="form-label">Reason for Transfer</label>{{ transfer_form.reason }}
+    <!-- Vitals Modal -->
+    <div class="modal fade" id="vitalsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_vitals' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Record Patient Vitals</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-warning w-100"
-                        style="border-radius: 12px; border: none;">Execute Transfer</button></div>
-            </form>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            {% for field in vitals_form %}
+                                <div class="col-6">
+                                    <label class="form-label">
+                                        {{
+                                        field.label }}
+                                    </label>
+                                    {{ field }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 12px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="border-radius: 12px; background: var(--primary-gradient); border: none;">
+                            Save
+                            Vitals
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Medication Modal -->
-<div class="modal fade" id="medicationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_medication' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Prescribe Medication</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">{% for field in med_form %}<div class="mb-3"><label class="form-label">{{
-                            field.label }}</label>{{ field }}</div>{% endfor %}</div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100"
-                        style="border-radius: 12px; background: var(--primary-gradient); border: none;">Add to
-                        Chart</button></div>
-            </form>
+    <!-- Note Modal -->
+    <div class="modal fade" id="noteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_clinical_note' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Add Clinical Note</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Note Type</label>
+                            {{ note_form.note_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Clinical Observations & Plan</label>
+                            {{ note_form.content
+                            }}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary w-100" style="border-radius: 12px; background: var(--primary-gradient); border: none;">
+                            Add
+                            Note
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Instruction Modal -->
-<div class="modal fade" id="instructionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_doctor_instruction' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">New Medical Order</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Order Category</label>{{
-                        instruction_form.instruction_type }}</div>
-                    <div class="mb-3"><label class="form-label">Instruction Details</label>{{
-                        instruction_form.instruction }}</div>
-                </div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100"
-                        style="border-radius: 12px; background: var(--primary-gradient); border: none;">Issue
-                        Order</button></div>
-            </form>
+    <!-- Fluid Modal -->
+    <div class="modal fade" id="fluidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_fluid' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Log Fluid Intake/Output</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            {{ fluid_form.fluid_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Item/Route</label>
+                            {{ fluid_form.item }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount (ml)</label>
+                            {{ fluid_form.amount_ml }}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary w-100" style="border-radius: 12px; background: var(--secondary-gradient); border: none;">
+                            Record
+                            Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Nutrition Modal -->
-<div class="modal fade" id="nutritionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 24px; border: none;">
-            <form action="{% url 'inpatient:add_nutrition' admission.id %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">Nutrition & Diet Plan</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Diet Type</label>{{ nutrition_form.diet_type }}</div>
-                    <div class="mb-3"><label class="form-label">Nursing/Dietary Instructions</label>{{
-                        nutrition_form.specific_instructions }}</div>
-                </div>
-                <div class="modal-footer border-0"><button type="submit" class="btn btn-warning w-100"
-                        style="border-radius: 12px; border: none;">Update Diet Order</button></div>
-            </form>
+    <!-- Transfer Modal -->
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:transfer_patient' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Ward/Bed Transfer</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Target Ward</label>
+                            {{ transfer_form.ward }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Available Beds</label>
+                            {{ transfer_form.to_bed }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason for Transfer</label>
+                            {{ transfer_form.reason }}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-warning w-100" style="border-radius: 12px; border: none;">Execute Transfer</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
+    <!-- Medication Modal -->
+    <div class="modal fade" id="medicationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_medication' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Prescribe Medication</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% for field in med_form %}
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    {{
+                                    field.label }}
+                                </label>
+                                {{ field }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary w-100" style="border-radius: 12px; background: var(--primary-gradient); border: none;">
+                            Add to
+                            Chart
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Instruction Modal -->
+    <div class="modal fade" id="instructionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_doctor_instruction' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">New Medical Order</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Order Category</label>
+                            {{
+                            instruction_form.instruction_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Instruction Details</label>
+                            {{
+                            instruction_form.instruction }}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary w-100" style="border-radius: 12px; background: var(--primary-gradient); border: none;">
+                            Issue
+                            Order
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Nutrition Modal -->
+    <div class="modal fade" id="nutritionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 24px; border: none;">
+                <form action="{% url 'inpatient:add_nutrition' admission.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title">Nutrition & Diet Plan</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Diet Type</label>
+                            {{ nutrition_form.diet_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nursing/Dietary Instructions</label>
+                            {{
+                            nutrition_form.specific_instructions }}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-warning w-100" style="border-radius: 12px; border: none;">Update Diet Order</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     const vitalsData = JSON.parse('{{ vitals_json|escapejs }}');
     const chartOptions = {
         responsive: true,
@@ -1020,5 +1059,5 @@
                 });
         }
     });
-</script>
+    </script>
 {% endblock %}

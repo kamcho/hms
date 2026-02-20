@@ -14,7 +14,8 @@ from .forms import (
     PostnatalMotherVisitForm, PostnatalBabyVisitForm, MaternityDischargeForm, 
     MaternityReferralForm, ImmunizationRecordForm
 )
-from accounts.models import InvoiceItem, Service
+from accounts.models import InvoiceItem, Service, Invoice
+from accounts.utils import get_or_create_invoice
 from home.models import PatientQue, Departments, Visit, Prescription, PrescriptionItem # Added Visit, Prescription, PrescriptionItem
 from home.forms import PrescriptionItemForm # Added PrescriptionItemForm
 
@@ -56,6 +57,12 @@ def maternity_dashboard(request):
         status__in=['Alive', 'NICU']
     ).select_related('delivery__pregnancy__patient')
     
+    # Delivery Queue (Mothers delivered but not discharged)
+    maternity_arrivals = Pregnancy.objects.filter(             # Only check delivered pregnancies
+        delivery__isnull=False,             # Has delivered
+        maternity_discharge__isnull=True    # Has not been discharged
+    ).select_related('patient', 'delivery').order_by('-delivery__delivery_datetime')
+    
     context = {
         'active_pregnancies': active_pregnancies[:20],
         'total_active': total_active,
@@ -65,6 +72,7 @@ def maternity_dashboard(request):
         'recent_deliveries': recent_deliveries,
         'deliveries_this_month': deliveries_this_month,
         'current_newborns': current_newborns,
+        'maternity_arrivals': maternity_arrivals,
         'today': today,
     }
     
@@ -99,7 +107,7 @@ def anc_dashboard(request):
     # ANC Receiving Queue (Existing Visits)
     search_query = request.GET.get('q', '')
     anc_queue = AntenatalVisit.objects.filter(
-        service_received=False,
+        is_closed=False,
         visit_date=today
     ).select_related('pregnancy__patient').order_by('created_at')
 
@@ -108,12 +116,19 @@ def anc_dashboard(request):
     # but primarily 'ANC'.
     new_arrivals_raw = PatientQue.objects.filter(
         Q(sent_to__name='ANC') | Q(sent_to__name='Maternity'), # Keep Maternity for fallback/legacy
-        visit__visit_date__date=today
-    ).select_related('visit__patient').prefetch_related('visit__invoices__items').order_by('-created_at')
+        visit__visit_date__date=today,
+        status='PENDING'  # Only show unprocessed queue entries
+    ).select_related('visit__patient').prefetch_related('visit__invoice__items').order_by('-created_at')
 
     new_arrivals = []
+    seen_patients = set()
+    
     # Identify which are ANC based on Department OR Services (Legacy)
     for que in new_arrivals_raw:
+        # Avoid duplicates for the same patient (e.g. if queued multiple times)
+        if que.visit.patient.id in seen_patients:
+            continue
+            
         is_anc = False
         
         # 1. Explicit Department Routing (New Way)
@@ -122,19 +137,19 @@ def anc_dashboard(request):
             
         # 2. Service-based fallback (Old Way - for legacy 'Maternity' queue items)
         elif que.sent_to and que.sent_to.name == 'Maternity':
-            for inv in que.visit.invoices.all():
-                for item in inv.items.all():
+            if hasattr(que.visit, 'invoice') and que.visit.invoice:
+                for item in que.visit.invoice.items.all():
                     if item.service and "ANC" in item.service.name.upper():
                         is_anc = True
                         break
-                if is_anc: break
         
         if is_anc:
-            # Check if an AntenatalVisit already exists for this visit - if so, it's already in anc_queue or completed
-            if not AntenatalVisit.objects.filter(pregnancy__patient=que.visit.patient, visit_date=today).exists():
-                # Check if patient has an active pregnancy
-                que.active_pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Active').first()
+            # Only show patients WITHOUT active pregnancies in New Arrivals.
+            # Patients with active pregnancies are auto-queued into Clinical Queue at reception.
+            active_pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Active').first()
+            if not active_pregnancy:
                 new_arrivals.append(que)
+                seen_patients.add(que.visit.patient.id)
 
     if search_query:
         anc_queue = anc_queue.filter(
@@ -206,9 +221,11 @@ def pnc_dashboard(request):
     new_arrivals_raw = PatientQue.objects.filter(
         Q(sent_to__name='PNC') | Q(sent_to__name='Maternity'), 
         visit__visit_date__date=today
-    ).select_related('visit__patient').prefetch_related('visit__invoices__items').order_by('-created_at')
+    ).select_related('visit__patient').prefetch_related('visit__invoice__items').order_by('-created_at')
 
     new_pnc_arrivals = []
+    seen_patients_pnc = set()
+    
     for que in new_arrivals_raw:
         is_pnc = False
         
@@ -218,14 +235,16 @@ def pnc_dashboard(request):
         
         # 2. Service-based fallback (Legacy)
         elif que.sent_to and que.sent_to.name == 'Maternity':
-            for inv in que.visit.invoices.all():
-                for item in inv.items.all():
+            if hasattr(que.visit, 'invoice') and que.visit.invoice:
+                for item in que.visit.invoice.items.all():
                     if item.service and "PNC" in item.service.name.upper():
                         is_pnc = True
                         break
-                if is_pnc: break
         
         if is_pnc:
+            if que.visit.patient.id in seen_patients_pnc:
+                continue
+
             patient = que.visit.patient
             # Case 1: Mother arrival
             if patient.gender == 'F' and patient.age >= 12:
@@ -234,14 +253,29 @@ def pnc_dashboard(request):
                     que.active_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').first()
                     que.arrival_type = 'Mother'
                     new_pnc_arrivals.append(que)
+                    seen_patients_pnc.add(patient.id)
             
             # Case 2: Child arrival (specifically registered as patient)
-            elif patient.age < 1:
+            elif patient.age <= 5:
                 has_baby_visit = PostnatalBabyVisit.objects.filter(newborn__patient_profile=patient, visit_date=today).exists()
                 if not has_baby_visit:
-                    que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                    linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                    
+                    if not linked_newborn:
+                        # Fallback: Try to find by name match if not directly linked
+                        # This is a bit fuzzy but helps if link is missing
+                        linked_newborn = Newborn.objects.filter(
+                            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                            birth_datetime__date=patient.date_of_birth
+                        ).first()
+                    
+                    if linked_newborn:
+                        que.linked_newborn = linked_newborn
+                    
+                    # Always add child to queue, even if no linked newborn record (External)
                     que.arrival_type = 'Child'
                     new_pnc_arrivals.append(que)
+                    seen_patients_pnc.add(patient.id)
 
     if search_query:
         mother_queue = mother_queue.filter(
@@ -335,6 +369,32 @@ def register_external_delivery(request):
                 labor_onset='Spontaneous'
             )
             
+            # 2b. Create Inpatient Visit and Invoice for External Delivery
+            from home.models import Visit
+            from accounts.models import Service, InvoiceItem
+            from accounts.utils import get_or_create_invoice
+            
+            visit = Visit.objects.create(
+                patient=data['patient'],
+                visit_type='IN-PATIENT',
+                visit_date=timezone.now()
+            )
+            delivery.visit = visit
+            delivery.save()
+            
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            service, _ = Service.objects.get_or_create(
+                name='Normal Delivery',
+                defaults={'price': 10000} # Provide a default valid price
+            )
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                service=service,
+                name=service.name,
+                unit_price=service.price,
+                quantity=1
+            )
+            
             # 3. Create Newborn record(s)
             num_babies = data.get('number_of_babies', 1)
             child_patient = data.get('child_patient')
@@ -370,30 +430,94 @@ def receive_anc_arrival(request, que_id):
     pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Active').first()
     
     if pregnancy:
-        # Create a pending ANC visit record
-        # visit_number logic
-        last_completed = pregnancy.anc_visits.filter(service_received=True).order_by('-visit_number').first()
-        next_visit_number = (last_completed.visit_number + 1) if last_completed else 1
-        
-        AntenatalVisit.objects.get_or_create(
+        # Check for existing OPEN ANC visit today (closed ones don't block a new visit)
+        existing_visit = AntenatalVisit.objects.filter(
             pregnancy=pregnancy,
             visit_date=timezone.now().date(),
-            defaults={
-                'visit_number': next_visit_number,
-                'gestational_age': pregnancy.gestational_age_weeks,
-                'service_received': False,
-                'recorded_by': request.user
-            }
-        )
+            is_closed=False
+        ).first()
+        
+        if not existing_visit:
+            AntenatalVisit.objects.create(
+                pregnancy=pregnancy,
+                visit_date=timezone.now().date(),
+                visit_number=(pregnancy.anc_visits.count() + 1),
+                gestational_age=pregnancy.gestational_age_weeks,
+                service_received=False,
+                is_closed=False,
+                recorded_by=request.user
+            )
+    
+    # Mark ALL pending queue entries for this visit/patient as completed to prevent duplicates in list
+    PatientQue.objects.filter(
+        visit=que.visit,
+        status='PENDING',
+        sent_to__name__in=['ANC', 'Maternity']
+    ).update(status='COMPLETED')
+    
+    from django.contrib import messages
+    messages.success(request, f'{que.visit.patient.full_name} has been received and queued for ANC.')
     
     return redirect('maternity:anc_dashboard')
+
+
+@login_required
+def close_anc_visit(request, visit_id):
+    """Close an ANC visit — marks it as completed so it leaves the clinical queue"""
+    anc_visit = get_object_or_404(AntenatalVisit, id=visit_id)
+    anc_visit.is_closed = True
+    anc_visit.service_received = True
+    anc_visit.save()
+    
+    from django.contrib import messages
+    messages.success(request, f'ANC Visit #{anc_visit.visit_number} for {anc_visit.pregnancy.patient.full_name} has been closed.')
+    
+    return redirect('maternity:pregnancy_detail', pregnancy_id=anc_visit.pregnancy.id)
 
 
 @login_required
 def receive_pnc_arrival(request, que_id):
     """Transition patient from Triage queue to PNC clinical queue"""
     que = get_object_or_404(PatientQue, id=que_id)
-    pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Delivered').first()
+    patient = que.visit.patient
+    
+    # Case 1: Child Arrival
+    if patient.age <= 5:
+        # Try to find linked newborn
+        newborn = Newborn.objects.filter(patient_profile=patient).first()
+        
+        # Fuzzy match fallback
+        if not newborn:
+            newborn = Newborn.objects.filter(
+                delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                birth_datetime__date=patient.date_of_birth
+            ).first()
+            
+        if newborn:
+            # Create a pending PNC visit record for baby
+            PostnatalBabyVisit.objects.get_or_create(
+                newborn=newborn,
+                visit_date=timezone.now().date(),
+                defaults={
+                    'service_received': False,
+                    'recorded_by': request.user
+                }
+            )
+            
+            # Clean up queue
+            PatientQue.objects.filter(
+                visit=que.visit,
+                status='PENDING',
+                sent_to__name__in=['PNC', 'Maternity']
+            ).update(status='COMPLETED')
+            
+            return redirect('maternity:pnc_dashboard')
+        else:
+            # No newborn record found - redirect to external delivery registration
+            return redirect(f"{reverse('maternity:register_external_delivery')}?child_patient_id={patient.id}")
+
+    # Case 2: Mother Arrival (Existing logic)
+    pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').first()
     
     if pregnancy:
         # Check for matching delivery
@@ -404,10 +528,18 @@ def receive_pnc_arrival(request, que_id):
                 delivery=delivery,
                 visit_date=timezone.now().date(),
                 defaults={
+                    'visit_day': (timezone.now().date() - delivery.delivery_datetime.date()).days,
                     'service_received': False,
                     'recorded_by': request.user
                 }
             )
+    
+    # Clean up queue (for mother too)
+    PatientQue.objects.filter(
+        visit=que.visit,
+        status='PENDING',
+        sent_to__name__in=['PNC', 'Maternity']
+    ).update(status='COMPLETED')
             
     return redirect('maternity:pnc_dashboard')
 
@@ -455,8 +587,25 @@ def pregnancy_detail(request, pregnancy_id):
         })
     
     # Lab results and reports
+    # Get lab results and organize them by date
     from lab.models import LabResult, LabReport
     lab_results = LabResult.objects.filter(patient=pregnancy.patient).select_related('service', 'requested_by').order_by('-requested_at')
+    
+    # Group lab results by date for easy linking
+    lab_results_by_date = {}
+    for result in lab_results:
+        date_key = result.requested_at.date()
+        if date_key not in lab_results_by_date:
+            lab_results_by_date[date_key] = []
+        lab_results_by_date[date_key].append(result)
+
+    # Attach lab results to ANC visits
+    for visit in anc_visits:
+        visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
+        
+    # Attach lab results to Mother PNC visits
+    for visit in mother_pnc_visits:
+        visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
     
     # Get lab reports for this patient
     lab_report_ids = lab_results.values_list('id', flat=True)
@@ -469,6 +618,68 @@ def pregnancy_detail(request, pregnancy_id):
         is_active=True
     ).order_by('name')
 
+    # Get dispensed items history (Normalized from both InvoiceItem and DispensedItem)
+    from inventory.models import DispensedItem, StockRecord, StockAdjustment
+    from accounts.models import Invoice, InvoiceItem
+    
+    today = timezone.now().date()
+    latest_visit = Visit.objects.filter(
+        patient=pregnancy.patient,
+        visit_date__date=today,
+        is_active=True
+    ).last()
+    
+    # 1. Fetch physical dispensations (Stock deducted)
+    if latest_visit:
+        d_items = DispensedItem.objects.filter(visit=latest_visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+    else:
+        d_items = DispensedItem.objects.filter(patient=pregnancy.patient).order_by('-dispensed_at')[:20]
+        
+    # 2. Fetch billed items (Requested by doctor but might not be dispensed yet)
+    if latest_visit:
+        billed_items = InvoiceItem.objects.filter(
+            invoice__visit=latest_visit,
+            inventory_item__isnull=False
+        ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')
+    else:
+        billed_items = InvoiceItem.objects.filter(
+            invoice__patient=pregnancy.patient,
+            inventory_item__isnull=False
+        ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')[:20]
+        
+    # 3. Combine and Normalize
+    dispensed_history = []
+    
+    # Add physically dispensed items
+    for d in d_items:
+        dispensed_history.append({
+            'item_name': d.item.name,
+            'quantity': d.quantity,
+            'at': d.dispensed_at,
+            'by': d.dispensed_by,
+            'status': 'Dispensed',
+            'status_class': 'bg-emerald-50 text-emerald-700'
+        })
+        
+    # Add billed items (only if NOT already in physically dispensed to avoid duplicates)
+    dispensed_keys = {(d.item.name, d.quantity) for d in d_items}
+    
+    for b in billed_items:
+        key = (b.inventory_item.name, b.quantity)
+        if key not in dispensed_keys:
+            dispensed_history.append({
+                'item_name': b.inventory_item.name,
+                'quantity': b.quantity,
+                'at': b.created_at,
+                'by': b.invoice.created_by,
+                'status': 'Billed/Pending',
+                'status_class': 'bg-amber-50 text-amber-700'
+            })
+            
+    # Sort combined history by timestamp
+    dispensed_history.sort(key=lambda x: x['at'], reverse=True)
+    dispensed_items = dispensed_history[:30] # Limit to 30 items
+
     # Handle Dispense Medication (Widget)
     from home.forms import DispenseInventoryForm
     
@@ -477,22 +688,12 @@ def pregnancy_detail(request, pregnancy_id):
         if dispense_form.is_valid():
             p_item = dispense_form.save(commit=False)
             
-            # 1. Find or create active visit
-            today = timezone.now().date()
-            visit = Visit.objects.filter(
-                patient=pregnancy.patient,
-                visit_date__date=today,
-                is_active=True
-            ).last()
+            # 1. Use the latest active visit
+            visit = latest_visit
             
             if not visit:
-                visit = Visit.objects.create(
-                    patient=pregnancy.patient,
-                    visit_type='Maternity',
-                    visit_date=timezone.now(),
-                    is_active=True,
-                    notes="Auto-created for dispensing"
-                )
+                messages.error(request, "No active visit found for today. Please create a new visit before dispensing medication.")
+                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
                 
             # 2. Find or create active prescription for this visit
             prescription = Prescription.objects.filter(
@@ -532,22 +733,12 @@ def pregnancy_detail(request, pregnancy_id):
             d_item.patient = pregnancy.patient
             d_item.dispensed_by = request.user
             
-            # 1. Find or create visit
-            today = timezone.now().date()
-            visit = Visit.objects.filter(
-                patient=pregnancy.patient,
-                visit_date__date=today,
-                is_active=True
-            ).last()
+            # 1. Use the latest active visit
+            visit = latest_visit
             
             if not visit:
-                visit = Visit.objects.create(
-                    patient=pregnancy.patient,
-                    visit_type='Maternity',
-                    visit_date=timezone.now(),
-                    is_active=True,
-                    notes="Auto-created for dispensing consumables"
-                )
+                messages.error(request, "No active visit found for today. Please create a new visit before dispensing items.")
+                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
             d_item.visit = visit
             
             # 2. Check Stock
@@ -576,17 +767,19 @@ def pregnancy_detail(request, pregnancy_id):
                 d_item.department = stock_record.current_location
                 d_item.save()
                 
+                # Create DispensedItem for history tracking
+                DispensedItem.objects.create(
+                    item=d_item.item,
+                    patient=pregnancy.patient,
+                    visit=visit,
+                    quantity=d_item.quantity,
+                    dispensed_by=request.user,
+                    department=stock_record.current_location
+                )
+                
                 # 3. Billing (Invoice)
-                # Check for pending invoice for this visit or create new
-                invoice = Invoice.objects.filter(visit=visit, status='Pending').last()
-                if not invoice:
-                    invoice = Invoice.objects.create(
-                        patient=pregnancy.patient,
-                        visit=visit,
-                        status='Pending',
-                        created_by=request.user,
-                        notes="Maternity Consumables"
-                    )
+                # Get or Create Visit Invoice (Consolidated)
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
                 
                 InvoiceItem.objects.create(
                     invoice=invoice,
@@ -616,12 +809,15 @@ def pregnancy_detail(request, pregnancy_id):
         'discharge': discharge,
         'referrals': referrals,
         'available_departments': Departments.objects.all().order_by('name'),
+        'dispensing_departments': Departments.objects.all().order_by('name'),
         'maternity_services': maternity_services,
         'dispense_form': dispense_form,
         'inventory_form': inventory_form,
         'medical_tests_data': medical_tests_data,
         'lab_results': lab_results,
         'lab_reports': lab_reports,
+        'dispensed_items': dispensed_items,
+        'latest_visit': latest_visit,
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)
@@ -702,7 +898,36 @@ def record_delivery(request, pregnancy_id):
             delivery_record = form.save(commit=False)
             delivery_record.pregnancy = pregnancy
             delivery_record.delivery_by = request.user
+            
+            # Auto-create Visit and Invoice if this is a new delivery
+            if is_new:
+                from home.models import Visit
+                from accounts.models import Service, InvoiceItem
+                from accounts.utils import get_or_create_invoice
+                
+                visit = Visit.objects.create(
+                    patient=pregnancy.patient,
+                    visit_type='IN-PATIENT',
+                    visit_date=timezone.now()
+                )
+                delivery_record.visit = visit
+            
             delivery_record.save()
+            
+            if is_new:
+                # Bill for Normal Delivery
+                invoice = get_or_create_invoice(visit=visit, user=request.user)
+                service, _ = Service.objects.get_or_create(
+                    name='Normal Delivery',
+                    defaults={'price': 10000}
+                )
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=service,
+                    name=service.name,
+                    unit_price=service.price,
+                    quantity=1
+                )
             
             # Update pregnancy status
             pregnancy.status = 'Delivered'
@@ -753,7 +978,8 @@ def register_newborn(request, pregnancy_id):
             newborn.delivery = delivery
             newborn.created_by = request.user
             newborn.save()
-            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+            from django.urls import reverse
+            return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
     else:
         # Auto-populate baby number (count existing + 1)
         existing_babies = delivery.newborns.count()
@@ -786,7 +1012,8 @@ def edit_newborn(request, newborn_id):
         form = NewbornForm(request.POST, instance=newborn)
         if form.is_valid():
             form.save()
-            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+            from django.urls import reverse
+            return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
     else:
         form = NewbornForm(instance=newborn)
     
@@ -885,8 +1112,17 @@ def record_baby_pnc_visit(request, newborn_id):
 def record_maternity_discharge(request, pregnancy_id):
     """Formal clinical closure for mother and baby"""
     from .forms import MaternityDischargeForm
+    from django.contrib import messages
     
     pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
+    
+    # Payment Validation: Check for pending delivery invoice
+    if hasattr(pregnancy, 'delivery') and pregnancy.delivery.visit:
+        if hasattr(pregnancy.delivery.visit, 'invoice'):
+            invoice = pregnancy.delivery.visit.invoice
+            if invoice.status != 'PAID':
+                messages.error(request, f"Cannot discharge patient. There is an unpaid invoice for the delivery visit (Invoice #{invoice.id}). Please clear it first.")
+                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     
     # Check if already discharged
     if hasattr(pregnancy, 'maternity_discharge'):
@@ -1045,29 +1281,232 @@ def vaccination_dashboard(request):
     # Recent activity
     recent_records = ImmunizationRecord.objects.select_related('newborn__delivery__pregnancy__patient', 'vaccine').order_by('-date_administered')[:10]
     
+    # --- CWC Queue Logic ---
+    # Get Queued Patients for CWC
+    cwc_queue = PatientQue.objects.filter(
+        sent_to__name='CWC',
+        visit__visit_date__date=today,
+        status='PENDING'
+    ).select_related('visit__patient').order_by('created_at')
+
+    # Resolve Pregnancy/Newborn context for each queue item
+    # This ensures we direct them to the right Pregnancy Detail page
+    processed_queue = []
+    
+    for que in cwc_queue:
+        patient = que.visit.patient
+        linked_pregnancy = None
+        
+        # Case 1: Patient is a Baby (linked via Newborn profile)
+        # Note: We use hasattr because of OneToOne reverse relation default name or related_name
+        if hasattr(patient, 'newborn_clinical_record'):
+            linked_pregnancy = patient.newborn_clinical_record.delivery.pregnancy
+            
+        # Case 2: Patient is the Mother
+        else:
+            # Try to find a recent pregnancy (Active or Delivered)
+            linked_pregnancy = Pregnancy.objects.filter(patient=patient).order_by('-created_at').first()
+            
+        if linked_pregnancy:
+            que.linked_pregnancy = linked_pregnancy
+            processed_queue.append(que)
+        else:
+            # Fallback: Still show them but maybe link to generic profile or show warning?
+            # For now, we'll just include them and handle None in template if needed
+            processed_queue.append(que)
+
     context = {
         'overdue': overdue,
         'due_today': due_today,
         'recent_records': recent_records,
         'today': today,
+        'cwc_queue': processed_queue,
     }
     return render(request, 'maternity/vaccination_dashboard.html', context)
 
 @login_required
-def generate_birth_notification(request, newborn_id):
-    """Generate a printable birth notification for a newborn"""
-    newborn = get_object_or_404(Newborn.objects.select_related('delivery__pregnancy__patient'), id=newborn_id)
-    return render(request, 'maternity/reports/birth_notification.html', {
+def administer_vaccine(request, que_id):
+    """
+    Consolidated view for administering vaccines and dispensing consumables.
+    This replaces the simple 'record_vaccination' view for queue processing.
+    """
+    from home.forms import DispenseInventoryForm, PrescriptionItemForm
+    from inventory.models import StockRecord, StockAdjustment, DispensedItem
+    from home.models import PatientQue
+    
+    que = get_object_or_404(PatientQue, id=que_id)
+    patient = que.visit.patient
+    visit = que.visit
+    
+    # Identify context: Newborn or Just Patient
+    newborn = Newborn.objects.filter(patient_profile=patient).first()
+    
+    if request.method == 'POST':
+        if 'administer_vaccine' in request.POST:
+            form = ImmunizationRecordForm(request.POST)
+            if form.is_valid():
+                vaccination = form.save(commit=False)
+                
+                # Always link to patient
+                vaccination.patient = patient
+                vaccination.administered_by = request.user
+                
+                # Link to newborn if available (for detailed tracking)
+                if newborn:
+                    vaccination.newborn = newborn
+                    
+                    # Update flags
+                    if vaccination.vaccine.abbreviation == 'BCG':
+                        newborn.bcg_given = True
+                        newborn.save()
+                    elif vaccination.vaccine.abbreviation == 'OPV' and vaccination.dose_number == 0:
+                        newborn.opv_0_given = True
+                        newborn.save()
+                
+                vaccination.save()
+                messages.success(request, f"Administered {vaccination.vaccine.name}")
+
+                return redirect('maternity:administer_vaccine', que_id=que_id)
+                
+        elif 'dispense_item' in request.POST:
+            inventory_form = DispenseInventoryForm(request.POST)
+            if inventory_form.is_valid():
+                d_item = inventory_form.save(commit=False)
+                d_item.patient = patient
+                d_item.visit = visit
+                d_item.dispensed_by = request.user
+                d_item.department = que.sent_to # CWC
+                
+                # Deduct Stock
+                stock_record = StockRecord.objects.filter(
+                    item=d_item.item,
+                    quantity__gte=d_item.quantity
+                ).order_by('expiry_date').first()
+                
+                if stock_record:
+                    stock_record.quantity -= d_item.quantity
+                    stock_record.save()
+                    
+                    # Record Adjustment
+                    StockAdjustment.objects.create(
+                        item=d_item.item,
+                        quantity=-d_item.quantity,
+                        adjustment_type='Usage',
+                        reason=f"Administered at CWC to {patient.full_name}",
+                        adjusted_by=request.user,
+                        adjusted_from=stock_record.current_location
+                    )
+                    
+                    d_item.save()
+                    
+                    # Create Invoice Item (Billable?)
+                    # Generally vaccines/syringes might be billable.
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        inventory_item=d_item.item,
+                        name=d_item.item.name,
+                        unit_price=d_item.item.selling_price,
+                        quantity=d_item.quantity
+                    )
+                    
+                    messages.success(request, f"Dispensed {d_item.item.name}")
+                else:
+                    messages.error(request, f"Insufficient stock for {d_item.item.name}")
+            return redirect('maternity:administer_vaccine', que_id=que_id)
+
+        elif 'finish_visit' in request.POST:
+            que.status = 'COMPLETED'
+            que.save()
+            messages.success(request, "Visit marked as completed.")
+            return redirect('maternity:vaccination_dashboard')
+
+    # GET
+    vaccine_form = ImmunizationRecordForm(initial={'date_administered': timezone.now().date()})
+    inventory_form = DispenseInventoryForm()
+    
+    # Calculate Due Vaccines (Simple logic based on age)
+    due_vaccines = []
+    
+    # Fetch history (Newborn OR Patient)
+    if newborn:
+        history = ImmunizationRecord.objects.filter(
+            Q(newborn=newborn) | Q(patient=patient)
+        ).distinct().order_by('-date_administered')
+        
+        # Use newborn birth datetime for precision if available
+        birth_date = newborn.birth_datetime.date() if newborn.birth_datetime else patient.date_of_birth
+        
+        # Check flags first
+        bcg_given = newborn.bcg_given
+        opv0_given = newborn.opv_0_given
+    else:
+        history = ImmunizationRecord.objects.filter(patient=patient).order_by('-date_administered')
+        birth_date = patient.date_of_birth
+        
+        # Check history for flags equivalent
+        bcg_given = history.filter(vaccine__abbreviation__icontains='BCG').exists()
+        opv0_given = history.filter(vaccine__abbreviation__icontains='OPV', dose_number=0).exists()
+
+    if birth_date:
+        age_days = (timezone.now().date() - birth_date).days
+        age_weeks = age_days // 7
+        
+        # KEPI Schedule Logic (Simplified)
+        if not bcg_given: due_vaccines.append("BCG")
+        if not opv0_given: due_vaccines.append("OPV 0")
+        
+        if age_weeks >= 6:
+            # Check 6 week vaccines
+            if not history.filter(vaccine__abbreviation__icontains='OPV', dose_number=1).exists(): due_vaccines.append("OPV 1")
+            if not history.filter(vaccine__abbreviation__icontains='Penta', dose_number=1).exists(): due_vaccines.append("Penta 1")
+            if not history.filter(vaccine__abbreviation__icontains='PCV', dose_number=1).exists(): due_vaccines.append("PCV 1")
+            if not history.filter(vaccine__abbreviation__icontains='Rota', dose_number=1).exists(): due_vaccines.append("Rota 1")
+
+        if age_weeks >= 10:
+                if not history.filter(vaccine__abbreviation__icontains='OPV', dose_number=2).exists(): due_vaccines.append("OPV 2")
+                if not history.filter(vaccine__abbreviation__icontains='Penta', dose_number=2).exists(): due_vaccines.append("Penta 2")
+                if not history.filter(vaccine__abbreviation__icontains='PCV', dose_number=2).exists(): due_vaccines.append("PCV 2")
+                if not history.filter(vaccine__abbreviation__icontains='Rota', dose_number=2).exists(): due_vaccines.append("Rota 2")
+                
+        if age_weeks >= 14:
+                if not history.filter(vaccine__abbreviation__icontains='OPV', dose_number=3).exists(): due_vaccines.append("OPV 3")
+                if not history.filter(vaccine__abbreviation__icontains='Penta', dose_number=3).exists(): due_vaccines.append("Penta 3")
+                if not history.filter(vaccine__abbreviation__icontains='PCV', dose_number=3).exists(): due_vaccines.append("PCV 3")
+                if not history.filter(vaccine__abbreviation__icontains='IPV').exists(): due_vaccines.append("IPV")
+
+        if age_days >= 270: # 9 months
+                if not history.filter(vaccine__abbreviation__icontains='Measles', dose_number=1).exists(): due_vaccines.append("Measles 1")
+                if not history.filter(vaccine__abbreviation__icontains='Yellow').exists(): due_vaccines.append("Yellow Fever")
+                 
+    # Get dispensed items for this visit
+    dispensed_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by')
+
+    context = {
+        'patient': patient,
         'newborn': newborn,
-        'today': timezone.now()
-    })
+        'vaccine_form': vaccine_form,
+        'inventory_form': inventory_form,
+        'due_vaccines': due_vaccines,
+        'history': history,
+        'dispensed_items': dispensed_items,
+        'que': que,
+    }
+    
+    return render(request, 'maternity/administer_vaccine.html', context)
+
+
 
 @login_required
 def generate_referral_letter(request, referral_id):
     """Generate a printable referral letter"""
+    from home.models import TriageEntry
     referral = get_object_or_404(MaternityReferral.objects.select_related('pregnancy__patient', 'referred_by'), id=referral_id)
+    latest_triage = TriageEntry.objects.filter(visit__patient=referral.pregnancy.patient).order_by('-entry_date').first()
+    
     return render(request, 'maternity/reports/referral_letter.html', {
         'referral': referral,
+        'latest_triage': latest_triage,
         'today': timezone.now()
     })
 

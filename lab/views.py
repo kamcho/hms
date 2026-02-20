@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.generic import ListView, DetailView
@@ -153,6 +153,8 @@ def create_lab_result(request, invoice_id):
             lab_result = form.save(commit=False)
             lab_result.requested_by = request.user
             lab_result.invoice = invoice
+            if 'invoice_item' in locals() and invoice_item:
+                lab_result.invoice_item = invoice_item
             if service:
                 lab_result.service = service
             lab_result.save()
@@ -185,14 +187,38 @@ def lab_result_detail(request, result_id):
     except LabReport.DoesNotExist:
         pass
     
+    is_read_only = request.user.role not in ['Lab Technician', 'Radiographer']
+    
     # Restriction: OPD invoices must be fully paid before tests
-    if lab_result.invoice and lab_result.invoice.visit and lab_result.invoice.visit.visit_type == 'OUT-PATIENT' and lab_result.invoice.status != 'Paid':
-        messages.error(request, "For OPD, invoice has to be fully paid before tests.")
-        return redirect('lab:radiology_dashboard')
+    # Only enforce for those who can edit/perform tests
+    if not is_read_only and lab_result.invoice and lab_result.invoice.visit and lab_result.invoice.visit.visit_type == 'OUT-PATIENT':
+        # Check specific item status first (Granular check)
+        if lab_result.invoice_item:
+            if not lab_result.invoice_item.is_settled:
+                 messages.error(request, f"For OPD, the specific test '{lab_result.service.name}' must be paid before processing.")
+                 return redirect('lab:radiology_dashboard')
+        # Fallback to smart search if no specific item linked (Legacy/Group creation)
+        else:
+            # Try to find a paid item for this service on this invoice
+            matching_paid_item = InvoiceItem.objects.filter(
+                invoice=lab_result.invoice,
+                service=lab_result.service
+            ).first()
+            
+            is_item_paid = matching_paid_item.is_settled if matching_paid_item else False
+            
+            if not is_item_paid and lab_result.invoice.status != 'Paid':
+                messages.error(request, "For OPD, invoice has to be fully paid before tests.")
+                return redirect('lab:radiology_dashboard')
     
     if request.method == 'POST':
+        if is_read_only:
+             messages.error(request, "You do not have permission to edit results.")
+             return redirect('lab:lab_result_detail', result_id=result_id)
+
         form = LabResultUpdateForm(instance=lab_result)
         report_form = LabReportForm(instance=lab_report)
+        parameter_form = ServiceParameterForm()
         
         if 'update_result' in request.POST:
             form = LabResultUpdateForm(request.POST, instance=lab_result)
@@ -269,6 +295,96 @@ def lab_result_detail(request, result_id):
                 for field, errors in parameter_form.errors.items():
                    for error in errors:
                        messages.error(request, f"Parameter Form Error ({field}): {error}")
+        
+        elif 'dispense_consumable' in request.POST:
+            try:
+                item_id = request.POST.get('consumable_item')
+                quantity = int(request.POST.get('quantity', 0))
+                
+                if quantity <= 0:
+                    messages.error(request, "Quantity must be greater than zero.")
+                else:
+                    from inventory.models import InventoryItem, StockRecord, StockAdjustment, DispensedItem
+                    from home.models import Departments
+                    
+                    item = get_object_or_404(InventoryItem, id=item_id)
+                    
+                    # Determine source department based on user role
+                    dept_name = 'Lab'
+                    if request.user.role == 'Radiographer':
+                        dept_name = 'Imaging' # Or Radiology, assuming Imaging based on earlier code
+                    
+                    source_dept = Departments.objects.filter(name__icontains=dept_name).first()
+                    
+                    if not source_dept:
+                         messages.error(request, f"Source department '{dept_name}' not found.")
+                    else:
+                         # Check stock
+                        total_stock = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=source_dept
+                        ).aggregate(Sum('quantity'))['quantity__sum'] or 0
+                        
+                        if total_stock < quantity:
+                            messages.error(request, f"Insufficient stock for {item.name}. Available: {total_stock}")
+                        else:
+                            # 1. Deduct Stock (FIFO)
+                            remaining_qty = quantity
+                            source_records = StockRecord.objects.filter(
+                                item=item, 
+                                current_location=source_dept, 
+                                quantity__gt=0
+                            ).order_by('expiry_date')
+
+                            for record in source_records:
+                                if remaining_qty <= 0:
+                                    break
+                                
+                                qty_to_take = min(record.quantity, remaining_qty)
+                                
+                                record.quantity -= qty_to_take
+                                record.save()
+                                
+                                remaining_qty -= qty_to_take
+                            
+                            # 2. Record Dispensed Item
+                            DispensedItem.objects.create(
+                                item=item,
+                                patient=lab_result.patient,
+                                visit=lab_result.invoice.visit if lab_result.invoice else None,
+                                quantity=quantity,
+                                dispensed_by=request.user,
+                                department=source_dept
+                            )
+                            
+                            # 3. Log Adjustment
+                            StockAdjustment.objects.create(
+                                item=item,
+                                quantity=-quantity,
+                                adjustment_type='Usage',
+                                reason=f'Used in Lab Test: {lab_result.service.name}',
+                                adjusted_by=request.user,
+                                adjusted_from=source_dept
+                            )
+                            
+                            # 4. Create Zero-Price Invoice Item (Tracking only)
+                            if lab_result.invoice:
+                                InvoiceItem.objects.create(
+                                    invoice=lab_result.invoice,
+                                    inventory_item=item,
+                                    name=f"{item.name} (Consumable)",
+                                    quantity=quantity,
+                                    unit_price=0, # Free as part of service
+                                )
+                                
+                            messages.success(request, f"Dispensed {quantity} x {item.name} successfully.")
+                            return redirect('lab:lab_result_detail', result_id=result_id)
+                            
+            except ValueError:
+                messages.error(request, "Invalid quantity.")
+            except Exception as e:
+                messages.error(request, f"Error dispensing: {str(e)}")
+
     else:
         initial_data = {}
         if not lab_result.performed_by:
@@ -278,13 +394,35 @@ def lab_result_detail(request, result_id):
         report_form = LabReportForm(instance=lab_report)
         parameter_form = ServiceParameterForm()
     
+    # Get available consumables for the user's department
+    from inventory.models import InventoryItem, DispensedItem
+    dept_focus = 'Imaging' if request.user.role == 'Radiographer' else 'Lab'
+    # Filter items that are consumables and have stock in the department
+    consumables = InventoryItem.objects.filter(
+        category__name__icontains='Consumable',
+        stock_records__current_location__name__icontains=dept_focus,
+        stock_records__quantity__gt=0
+    ).distinct()
+    
+    # Get previously dispensed items for this visit/context
+    dispensed_consumables = []
+    if lab_result.invoice and lab_result.invoice.visit:
+        # Filter dispensed items by this visit And maybe by this user department to be relevant
+        dispensed_consumables = DispensedItem.objects.filter(
+             visit=lab_result.invoice.visit,
+             department__name__icontains=dept_focus
+        ).select_related('item', 'dispensed_by')
+
     return render(request, 'lab/lab_result_detail.html', {
         'lab_result': lab_result,
         'lab_report': lab_report,
         'form': form,
         'report_form': report_form,
         'parameter_form': parameter_form,
-        'title': f'Lab Result - {lab_result.patient.full_name}'
+        'title': f'Lab Result - {lab_result.patient.full_name}',
+        'is_read_only': is_read_only,
+        'consumables': consumables,
+        'dispensed_consumables': dispensed_consumables
     })
 
 class LabResultListView(LoginRequiredMixin, ListView):

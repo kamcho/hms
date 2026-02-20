@@ -1,173 +1,190 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
-{% block title %}{% if is_edit %}Edit{% else %}Register{% endif %} Newborn - HMS{% endblock %}
-
+{% block title %}
+    {% if is_edit %}
+        Edit
+    {% else %}
+        Register
+    {% endif %}
+    Newborn - HMS
+{% endblock %}
 {% block content %}
-<div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
-    <div style="margin-bottom: 30px;">
-        <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
-            style="color: #00a8e8; text-decoration: none; font-weight: 600;">
-            <i class="fas fa-arrow-left"></i> Back to Pregnancy Record
-        </a>
-    </div>
-
-    <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <div style="margin-bottom: 24px;">
-            <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
-                {% if is_edit %}Edit Newborn{% else %}Register Newborn{% endif %}
-            </h1>
-            <p style="color: #64748b; margin: 0;">
-                {{ pregnancy.patient.full_name }} • Delivered {{ delivery.delivery_datetime|date:"d M Y H:i" }}
-            </p>
+    <div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+        <div style="margin-bottom: 30px;">
+            <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}" style="color: #00a8e8; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-arrow-left"></i> Back to Pregnancy Record
+            </a>
         </div>
-
-        <form method="POST">
-            {% csrf_token %}
-
-            <!-- Baby Information -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Baby Information</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Baby Number</strong> <span
-                                style="color: #dc2626;">*</span></label>
-                        {{ form.baby_number }}
-                        <small style="color: #64748b; display: block; margin-top: 4px;">For multiple births (1 for
+        <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div style="margin-bottom: 24px;">
+                <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
+                    {% if is_edit %}
+                        Edit Newborn
+                    {% else %}
+                        Register Newborn
+                    {% endif %}
+                </h1>
+                <p style="color: #64748b; margin: 0;">{{ pregnancy.patient.full_name }} • Delivered {{ delivery.delivery_datetime|date:"d M Y H:i" }}</p>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <!-- Baby Information -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Baby Information</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Baby Number</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.baby_number }}
+                            <small style="color: #64748b; display: block; margin-top: 4px;">For multiple births (1 for
                             singleton)</small>
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Gender</strong> <span style="color: #dc2626;">*</span></label>
-                        {{ form.gender }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Birth Date & Time</strong> <span
-                                style="color: #dc2626;">*</span></label>
-                        {{ form.birth_datetime }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Birth Measurements -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Birth Measurements
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Birth Weight (kg)</strong> <span
-                                style="color: #dc2626;">*</span></label>
-                        {{ form.birth_weight }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Birth Length (cm)</strong></label>
-                        {{ form.birth_length }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Head Circumference (cm)</strong></label>
-                        {{ form.head_circumference }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Gender</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.gender }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Birth Date & Time</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.birth_datetime }}
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- APGAR Scores -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #0f172a;">APGAR Scores</h3>
-                <p style="font-size: 12px; color: #64748b; margin: 0 0 16px 0;">
-                    Score 0-10: Appearance, Pulse, Grimace, Activity, Respiration
-                    <br><span style="color: #16a34a;">7-10 = Normal</span> •
-                    <span style="color: #ea580c;">4-6 = Moderate depression</span> •
-                    <span style="color: #dc2626;">0-3 = Severe depression</span>
-                </p>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>1 Minute</strong> <span
-                                style="color: #dc2626;">*</span></label>
-                        {{ form.apgar_1min }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>5 Minutes</strong> <span
-                                style="color: #dc2626;">*</span></label>
-                        {{ form.apgar_5min }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>10 Minutes</strong></label>
-                        {{ form.apgar_10min }}
+                <!-- Birth Measurements -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Birth Measurements</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Birth Weight (kg)</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.birth_weight }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Birth Length (cm)</strong>
+                            </label>
+                            {{ form.birth_length }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Head Circumference (cm)</strong>
+                            </label>
+                            {{ form.head_circumference }}
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Assessment -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Assessment</h3>
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label"><strong>Baby Status</strong> <span
-                            style="color: #dc2626;">*</span></label>
-                    {{ form.status }}
+                <!-- APGAR Scores -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #0f172a;">APGAR Scores</h3>
+                    <p style="font-size: 12px; color: #64748b; margin: 0 0 16px 0;">
+                        Score 0-10: Appearance, Pulse, Grimace, Activity, Respiration
+                        <br>
+                        <span style="color: #16a34a;">7-10 = Normal</span> •
+                        <span style="color: #ea580c;">4-6 = Moderate depression</span> •
+                        <span style="color: #dc2626;">0-3 = Severe depression</span>
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>1 Minute</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.apgar_1min }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>5 Minutes</strong> <span style="color: #dc2626;">*</span>
+                            </label>
+                            {{ form.apgar_5min }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>10 Minutes</strong>
+                            </label>
+                            {{ form.apgar_10min }}
+                        </div>
+                    </div>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <div class="form-check">
-                        {{ form.resuscitation_required }}
-                        <label class="form-check-label" for="{{ form.resuscitation_required.id_for_label }}">
-                            <strong>Resuscitation Required</strong>
+                <!-- Assessment -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Assessment</h3>
+                    <div style="margin-bottom: 16px;">
+                        <label class="form-label">
+                            <strong>Baby Status</strong> <span style="color: #dc2626;">*</span>
                         </label>
+                        {{ form.status }}
                     </div>
-                </div>
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label"><strong>Resuscitation Details</strong></label>
-                    {{ form.resuscitation_details }}
-                </div>
-                <div>
-                    <label class="form-label"><strong>Congenital Abnormalities</strong></label>
-                    {{ form.congenital_abnormalities }}
-                </div>
-            </div>
-
-            <!-- Care & Immunizations -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Care & Immunizations
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                    <div class="form-check">
-                        {{ form.breastfeeding_initiated }}
-                        <label class="form-check-label" for="{{ form.breastfeeding_initiated.id_for_label }}">
-                            <strong>Breastfeeding Initiated</strong>
+                    <div style="margin-bottom: 16px;">
+                        <div class="form-check">
+                            {{ form.resuscitation_required }}
+                            <label class="form-check-label" for="{{ form.resuscitation_required.id_for_label }}">
+                                <strong>Resuscitation Required</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="form-label">
+                            <strong>Resuscitation Details</strong>
                         </label>
+                        {{ form.resuscitation_details }}
                     </div>
-                    <div class="form-check">
-                        {{ form.bcg_given }}
-                        <label class="form-check-label" for="{{ form.bcg_given.id_for_label }}">
-                            <strong>BCG Vaccine Given</strong>
+                    <div>
+                        <label class="form-label">
+                            <strong>Congenital Abnormalities</strong>
                         </label>
-                    </div>
-                    <div class="form-check">
-                        {{ form.opv_0_given }}
-                        <label class="form-check-label" for="{{ form.opv_0_given.id_for_label }}">
-                            <strong>OPV 0 Given</strong>
-                        </label>
+                        {{ form.congenital_abnormalities }}
                     </div>
                 </div>
-            </div>
-
-            <!-- Clinical Notes -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Clinical Notes</h3>
-                <div>
-                    <label class="form-label"><strong>Observations & Care Plan</strong></label>
-                    {{ form.notes }}
+                <!-- Care & Immunizations -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Care & Immunizations</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div class="form-check">
+                            {{ form.breastfeeding_initiated }}
+                            <label class="form-check-label" for="{{ form.breastfeeding_initiated.id_for_label }}">
+                                <strong>Breastfeeding Initiated</strong>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            {{ form.bcg_given }}
+                            <label class="form-check-label" for="{{ form.bcg_given.id_for_label }}">
+                                <strong>BCG Vaccine Given</strong>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            {{ form.opv_0_given }}
+                            <label class="form-check-label" for="{{ form.opv_0_given.id_for_label }}">
+                                <strong>OPV 0 Given</strong>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                <button type="submit"
-                    style="background: #00a8e8; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-check"></i> {% if is_edit %}Update Newborn{% else %}Register Newborn{% endif %}
-                </button>
-                <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
-                    style="background: #e2e8f0; color: #475569; padding: 12px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block;">
-                    Cancel
-                </a>
-            </div>
-        </form>
+                <!-- Clinical Notes -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Clinical Notes</h3>
+                    <div>
+                        <label class="form-label">
+                            <strong>Observations & Care Plan</strong>
+                        </label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="submit" style="background: #00a8e8; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-check"></i>
+                        {% if is_edit %}
+                            Update Newborn
+                        {% else %}
+                            Register Newborn
+                        {% endif %}
+                    </button>
+                    <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}" style="background: #e2e8f0; color: #475569; padding: 12px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block">Cancel</a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}

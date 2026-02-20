@@ -5,6 +5,7 @@ from django.db.models import Q
 from inpatient.models import Admission, ServiceAdmissionLink
 from morgue.models import Deceased, PerformedMortuaryService, MorgueAdmission
 from accounts.models import Service, Invoice, InvoiceItem
+from accounts.utils import get_or_create_invoice
 from users.models import User
 
 class Command(BaseCommand):
@@ -66,15 +67,7 @@ class Command(BaseCommand):
                             provided_by=system_user
                         )
                         
-                        invoice = Invoice.objects.filter(visit=admission.visit).exclude(status='Cancelled').first()
-                        if not invoice:
-                            invoice = Invoice.objects.create(
-                                patient=admission.patient,
-                                visit=admission.visit,
-                                status='Pending',
-                                created_by=system_user,
-                                notes=f"Auto-generated invoice for Inpatient Admission ADM-{admission.id}"
-                            )
+                        invoice = get_or_create_invoice(visit=admission.visit, user=system_user)
                         
                         InvoiceItem.objects.create(
                             invoice=invoice,
@@ -120,14 +113,7 @@ class Command(BaseCommand):
                             performed_by=system_user
                         )
                         
-                        invoice = Invoice.objects.filter(deceased=deceased).exclude(status='Cancelled').first()
-                        if not invoice:
-                            invoice = Invoice.objects.create(
-                                deceased=deceased,
-                                status='Pending',
-                                created_by=system_user,
-                                notes=f"Auto-generated invoice for Mortuary Storage - {deceased.tag}"
-                            )
+                        invoice = get_or_create_invoice(deceased=deceased, user=system_user)
                         
                         InvoiceItem.objects.create(
                             invoice=invoice,

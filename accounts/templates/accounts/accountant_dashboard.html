@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static custom_filters %}
-
 {% block title %}Financial Dashboard{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     /* Reset & Custom Properties */
     :root {
         --dash-bg: #f4f6f9;
@@ -347,280 +345,262 @@
             gap: 1rem;
         }
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div>
-    <!-- Header -->
-    <div class="page-header">
-        <div>
-            <h1 class="page-title">Financial Overview</h1>
-            <p class="page-subtitle">Real-time financial analytics and reporting</p>
+    <div>
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Financial Overview</h1>
+                <p class="page-subtitle">Real-time financial analytics and reporting</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="custom-btn btn-outline" type="button" onclick="document.getElementById('filterPanel').style.display = document.getElementById('filterPanel').style.display === 'none' ? 'block' : 'none'">
+                    <i class="fas fa-filter" style="margin-right: 0.5rem;"></i>Filter
+                </button>
+                <a href="?export=csv{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}" class="custom-btn btn-primary">
+                    <i class="fas fa-download" style="margin-right: 0.5rem;"></i>Export Report
+                </a>
+            </div>
         </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <button class="custom-btn btn-outline" type="button"
-                onclick="document.getElementById('filterPanel').style.display = document.getElementById('filterPanel').style.display === 'none' ? 'block' : 'none'">
-                <i class="fas fa-filter" style="margin-right: 0.5rem;"></i>Filter
-            </button>
-            <a href="?export=csv{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}"
-                class="custom-btn btn-primary">
-                <i class="fas fa-download" style="margin-right: 0.5rem;"></i>Export Report
-            </a>
-        </div>
-    </div>
-
-    <!-- Filter Panel -->
-    <div id="filterPanel" class="mb-4" style="display: none;">
-        <div class="custom-card">
-            <form method="GET">
-                <div class="filter-group">
-                    <div class="form-group">
-                        <label class="form-label">From Date</label>
-                        <input type="date" name="from_date" class="custom-input" value="{{ from_date|date:'Y-m-d' }}">
+        <!-- Filter Panel -->
+        <div id="filterPanel" class="mb-4" style="display: none;">
+            <div class="custom-card">
+                <form method="GET">
+                    <div class="filter-group">
+                        <div class="form-group">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="from_date" class="custom-input" value="{{ from_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="to_date" class="custom-input" value="{{ to_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="form-group" style="flex: 0 0 150px;">
+                            <button type="submit" class="custom-btn btn-primary w-100" style="justify-content: center;">Apply</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" class="custom-input" value="{{ to_date|date:'Y-m-d' }}">
-                    </div>
-                    <div class="form-group" style="flex: 0 0 150px;">
-                        <button type="submit" class="custom-btn btn-primary w-100"
-                            style="justify-content: center;">Apply</button>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
-
-    <!-- Top Metrics Row -->
-    <div class="dashboard-grid">
-        <!-- Revenue -->
-        <div class="custom-card">
-            <div class="metric-item">
-                <div class="metric-content">
-                    <h3>Total Revenue</h3>
-                    <p class="metric-value text-success">Ksh {{ total_revenue|format_number:2 }}</p>
-                    <div class="metric-sub">
-                        <i class="fas fa-arrow-up text-success"></i>
-                        From payments received
+        <!-- Top Metrics Row -->
+        <div class="dashboard-grid">
+            <!-- Revenue -->
+            <div class="custom-card">
+                <div class="metric-item">
+                    <div class="metric-content">
+                        <h3>Total Revenue</h3>
+                        <p class="metric-value text-success">Ksh {{ total_revenue|format_number:2 }}</p>
+                        <div class="metric-sub">
+                            <i class="fas fa-arrow-up text-success"></i>
+                            From payments received
+                        </div>
+                    </div>
+                    <div class="icon-box icon-success">
+                        <i class="fas fa-wallet"></i>
                     </div>
                 </div>
-                <div class="icon-box icon-success">
-                    <i class="fas fa-wallet"></i>
+            </div>
+            <!-- Expenses -->
+            <div class="custom-card">
+                <div class="metric-item">
+                    <div class="metric-content">
+                        <h3>Total Expenses</h3>
+                        <p class="metric-value text-danger">Ksh {{ total_expenses|format_number:2 }}</p>
+                        <div class="metric-sub">Inventory usage & purchases</div>
+                    </div>
+                    <div class="icon-box icon-danger">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Net Profit -->
+            <div class="custom-card">
+                <div class="metric-item">
+                    <div class="metric-content">
+                        <h3>Net Profit</h3>
+                        <p class="metric-value {% if net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">Ksh {{ net_profit|format_number:2 }}</p>
+                        <div class="metric-sub">Revenue - Expenses</div>
+                    </div>
+                    <div class="icon-box icon-primary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- High Risk Debt -->
+            <div class="custom-card">
+                <div class="metric-item">
+                    <div class="metric-content">
+                        <h3>Patient Debt (30+ Days)</h3>
+                        <p class="metric-value text-warning">Ksh {{ aging_debtors|get_item:'30+ Days'|default:0|format_number:2 }}</p>
+                        <div class="metric-sub">Action required</div>
+                    </div>
+                    <div class="icon-box icon-warning">
+                        <i class="fas fa-hand-holding-medical"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Accounts Payable -->
+            <div class="custom-card">
+                <div class="metric-item">
+                    <div class="metric-content">
+                        <h3>Accounts Payable</h3>
+                        <p class="metric-value text-rose-600">Ksh {{ total_payable|format_number:2 }}</p>
+                        <div class="metric-sub">Owed to suppliers</div>
+                    </div>
+                    <div class="icon-box" style="background: rgba(225, 29, 72, 0.1); color: #e11d48;">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Expenses -->
-        <div class="custom-card">
-            <div class="metric-item">
-                <div class="metric-content">
-                    <h3>Total Expenses</h3>
-                    <p class="metric-value text-danger">Ksh {{ total_expenses|format_number:2 }}</p>
-                    <div class="metric-sub">Inventory usage & purchases</div>
+        <!-- Charts Row -->
+        <div class="dashboard-grid">
+            <div class="custom-card grid-col-span-3">
+                <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Revenue Trend</h5>
+                <div class="chart-box">
+                    <canvas id="revenueChart"></canvas>
                 </div>
-                <div class="icon-box icon-danger">
-                    <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="custom-card">
+                <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Payment Methods</h5>
+                <div class="chart-container" style="height: 200px;">
+                    <canvas id="methodChart"></canvas>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    {% for pm in payment_methods %}
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                            <span style="color: var(--text-secondary);">{{ pm.payment_method }}</span>
+                            <span style="font-weight: 600;">Ksh {{ pm.total|format_number:2 }}</span>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-
-        <!-- Net Profit -->
-        <div class="custom-card">
-            <div class="metric-item">
-                <div class="metric-content">
-                    <h3>Net Profit</h3>
-                    <p class="metric-value {% if net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-                        Ksh {{ net_profit|format_number:2 }}
-                    </p>
-                    <div class="metric-sub">Revenue - Expenses</div>
-                </div>
-                <div class="icon-box icon-primary">
-                    <i class="fas fa-chart-line"></i>
+        <!-- Analysis Row -->
+        <div class="dashboard-grid">
+            <!-- Aging Debtors -->
+            <div class="custom-card">
+                <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Aging Debtors</h5>
+                <ul class="custom-list">
+                    <li class="custom-list-item">
+                        <span>0 - 7 Days</span>
+                        <span class="custom-badge badge-success">Ksh {{ aging_debtors|get_item:'0-7 Days'|format_number:2
+                        }}</span>
+                    </li>
+                    <li class="custom-list-item">
+                        <span>8 - 30 Days</span>
+                        <span class="custom-badge badge-warning">Ksh {{ aging_debtors|get_item:'8-30 Days'|format_number:2
+                        }}</span>
+                    </li>
+                    <li class="custom-list-item">
+                        <span>30+ Days</span>
+                        <span class="custom-badge badge-danger">Ksh {{ aging_debtors|get_item:'30+ Days'|format_number:2
+                        }}</span>
+                    </li>
+                </ul>
+            </div>
+            <!-- Cashier Performance -->
+            <div class="custom-card">
+                <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Cashier Accountability</h5>
+                <div style="overflow-x: auto;">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Cashier</th>
+                                <th class="text-end">Collected</th>
+                                <th class="text-end">Txns</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in cashier_stats %}
+                                <tr>
+                                    <td>{{ c.created_by__first_name|default:c.created_by__id_number }}</td>
+                                    <td class="text-end">Ksh {{ c.total|format_number:2 }}</td>
+                                    <td class="text-end">{{ c.count }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-secondary);">No data available</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
-
-        <!-- High Risk Debt -->
-        <div class="custom-card">
-            <div class="metric-item">
-                <div class="metric-content">
-                    <h3>Patient Debt (30+ Days)</h3>
-                    <p class="metric-value text-warning">Ksh {{ aging_debtors|get_item:'30+ Days'|default:0|format_number:2 }}</p>
-                    <div class="metric-sub">Action required</div>
-                </div>
-                <div class="icon-box icon-warning">
-                    <i class="fas fa-hand-holding-medical"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Accounts Payable -->
-        <div class="custom-card">
-            <div class="metric-item">
-                <div class="metric-content">
-                    <h3>Accounts Payable</h3>
-                    <p class="metric-value text-rose-600">Ksh {{ total_payable|format_number:2 }}</p>
-                    <div class="metric-sub">Owed to suppliers</div>
-                </div>
-                <div class="icon-box" style="background: rgba(225, 29, 72, 0.1); color: #e11d48;">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="dashboard-grid">
-        <div class="custom-card grid-col-span-3">
-            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Revenue Trend</h5>
-            <div class="chart-box">
-                <canvas id="revenueChart"></canvas>
-            </div>
-        </div>
-        <div class="custom-card">
-            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Payment Methods</h5>
-            <div class="chart-container" style="height: 200px;">
-                <canvas id="methodChart"></canvas>
-            </div>
-            <div style="margin-top: 1.5rem;">
-                {% for pm in payment_methods %}
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                    <span style="color: var(--text-secondary);">{{ pm.payment_method }}</span>
-                    <span style="font-weight: 600;">Ksh {{ pm.total|format_number:2 }}</span>
-                </div>
+            <!-- Visit Revenue (spanning 2 cols on wide screens if space permits, or share row) -->
+            <div class="custom-card grid-col-span-2">
+                <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Revenue Source</h5>
+                {% for v in visit_revenue %}
+                    <div class="mb-4">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                            <span>{{ v.visit__visit_type|default:'Direct Bill' }}</span>
+                            <span style="font-weight: 600;">Ksh {{ v.total|format_number:2 }}</span>
+                        </div>
+                        <!-- Simple progress bar using Flexbox/Divs -->
+                        <div style="height: 8px; background-color: #f3f4f6; border-radius: 4px; overflow: hidden;">
+                            <div style="height: 100%; width: 100%; background-color: var(--accent-primary);"></div>
+                        </div>
+                    </div>
                 {% endfor %}
             </div>
         </div>
-    </div>
-
-    <!-- Analysis Row -->
-    <div class="dashboard-grid">
-        <!-- Aging Debtors -->
+        <!-- Recent Transactions -->
         <div class="custom-card">
-            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Aging Debtors</h5>
-            <ul class="custom-list">
-                <li class="custom-list-item">
-                    <span>0 - 7 Days</span>
-                    <span class="custom-badge badge-success">Ksh {{ aging_debtors|get_item:'0-7 Days'|format_number:2
-                        }}</span>
-                </li>
-                <li class="custom-list-item">
-                    <span>8 - 30 Days</span>
-                    <span class="custom-badge badge-warning">Ksh {{ aging_debtors|get_item:'8-30 Days'|format_number:2
-                        }}</span>
-                </li>
-                <li class="custom-list-item">
-                    <span>30+ Days</span>
-                    <span class="custom-badge badge-danger">Ksh {{ aging_debtors|get_item:'30+ Days'|format_number:2
-                        }}</span>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Cashier Performance -->
-        <div class="custom-card">
-            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Cashier Accountability</h5>
+            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Recent Transactions</h5>
             <div style="overflow-x: auto;">
                 <table class="custom-table">
                     <thead>
                         <tr>
+                            <th>Date</th>
+                            <th>Receipt / Ref</th>
+                            <th>Patient</th>
+                            <th>Method</th>
+                            <th>Amount</th>
                             <th>Cashier</th>
-                            <th class="text-end">Collected</th>
-                            <th class="text-end">Txns</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for c in cashier_stats %}
-                        <tr>
-                            <td>{{ c.created_by__first_name|default:c.created_by__id_number }}</td>
-                            <td class="text-end">Ksh {{ c.total|format_number:2 }}</td>
-                            <td class="text-end">{{ c.count }}</td>
-                        </tr>
+                        {% for txn in recent_transactions %}
+                            <tr>
+                                <td>{{ txn.payment_date|date:"M d, H:i" }}</td>
+                                <td style="color: var(--accent-primary);">{{ txn.transaction_reference|default:"-" }}</td>
+                                <td>
+                                    <div style="font-weight: 500;">{{ txn.invoice.patient.full_name }}</div>
+                                    <small style="color: var(--text-secondary);">INV-{{ txn.invoice.id }}</small>
+                                </td>
+                                <td>
+                                    {% if txn.payment_method == 'M-Pesa' %}
+                                        <span class="custom-badge badge-success">M-Pesa</span>
+                                    {% elif txn.payment_method == 'Cash' %}
+                                        <span class="custom-badge badge-gray">Cash</span>
+                                    {% elif txn.payment_method == 'Insurance' %}
+                                        <span class="custom-badge badge-primary" style="background: rgba(126, 58, 242, 0.1); color: var(--accent-primary);">Insurance</span>
+                                    {% else %}
+                                        <span class="custom-badge badge-gray">{{ txn.payment_method }}</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-weight: 600;">Ksh {{ txn.amount|format_number:2 }}</td>
+                                <td>{{ txn.created_by.id_number|default:'System' }}</td>
+                            </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="3" style="text-align: center; color: var(--text-secondary);">No data available
-                            </td>
-                        </tr>
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                    No
+                                    recent transactions found
+                                </td>
+                            </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <!-- Visit Revenue (spanning 2 cols on wide screens if space permits, or share row) -->
-        <div class="custom-card grid-col-span-2">
-            <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Revenue Source</h5>
-            {% for v in visit_revenue %}
-            <div class="mb-4">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                    <span>{{ v.visit__visit_type|default:'Direct Bill' }}</span>
-                    <span style="font-weight: 600;">Ksh {{ v.total|format_number:2 }}</span>
-                </div>
-                <!-- Simple progress bar using Flexbox/Divs -->
-                <div style="height: 8px; background-color: #f3f4f6; border-radius: 4px; overflow: hidden;">
-                    <div style="height: 100%; width: 100%; background-color: var(--accent-primary);"></div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
     </div>
-
-    <!-- Recent Transactions -->
-    <div class="custom-card">
-        <h5 class="page-title" style="font-size: 1.1rem; margin-bottom: 1rem;">Recent Transactions</h5>
-        <div style="overflow-x: auto;">
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Receipt / Ref</th>
-                        <th>Patient</th>
-                        <th>Method</th>
-                        <th>Amount</th>
-                        <th>Cashier</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for txn in recent_transactions %}
-                    <tr>
-                        <td>{{ txn.payment_date|date:"M d, H:i" }}</td>
-                        <td style="color: var(--accent-primary);">{{ txn.transaction_reference|default:"-" }}</td>
-                        <td>
-                            <div style="font-weight: 500;">{{ txn.invoice.patient.full_name }}</div>
-                            <small style="color: var(--text-secondary);">INV-{{ txn.invoice.id }}</small>
-                        </td>
-                        <td>
-                            {% if txn.payment_method == 'M-Pesa' %}
-                            <span class="custom-badge badge-success">M-Pesa</span>
-                            {% elif txn.payment_method == 'Cash' %}
-                            <span class="custom-badge badge-gray">Cash</span>
-                            {% elif txn.payment_method == 'Insurance' %}
-                            <span class="custom-badge badge-primary"
-                                style="background: rgba(126, 58, 242, 0.1); color: var(--accent-primary);">Insurance</span>
-                            {% else %}
-                            <span class="custom-badge badge-gray">{{ txn.payment_method }}</span>
-                            {% endif %}
-                        </td>
-                        <td style="font-weight: 600;">Ksh {{ txn.amount|format_number:2 }}</td>
-                        <td>{{ txn.created_by.id_number|default:'System' }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No
-                            recent transactions found</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
     // Revenue Line Chart
     const revCtx = document.getElementById('revenueChart').getContext('2d');
     new Chart(revCtx, {
@@ -678,5 +658,5 @@
         cutout: '70%'
     }
     });
-</script>
+    </script>
 {% endblock %}

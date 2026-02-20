@@ -1,143 +1,117 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Procurement Dashboard | HMS{% endblock %}
-
 {% block content %}
-<div class="p-6 space-y-8 max-w-[1600px] mx-auto min-h-screen">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-30">
-        <div>
-            <div class="flex items-center gap-2 mb-2">
-                <a href="{% url 'inventory:item_list' %}"
-                    class="text-indigo-600 font-bold text-xs uppercase tracking-widest hover:underline flex items-center gap-1">
-                    <i class="fas fa-arrow-left"></i> Inventory Dashboard
-                </a>
-            </div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight text-left">Procurement & Stock Intake</h1>
-            <p class="text-slate-500 font-medium mt-1 text-left">Manage incoming stock and supplier deliveries (GRN)</p>
-        </div>
-        <div>
-            <button data-open-modal="modal-purchase"
-                class="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all flex items-center gap-3 shadow-xl shadow-slate-300 group border-b-4 border-slate-700">
-                <div
-                    class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <i class="fas fa-truck-loading text-[10px] text-white"></i>
+    <div class="p-6 space-y-8 max-w-[1600px] mx-auto min-h-screen">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-30">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <a href="{% url 'inventory:item_list' %}" class="text-indigo-600 font-bold text-xs uppercase tracking-widest hover:underline flex items-center gap-1">
+                        <i class="fas fa-arrow-left"></i> Inventory Dashboard
+                    </a>
                 </div>
-                RECORD STOCK INTAKE (GRN)
-            </button>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div
-        class="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-wrap gap-4 items-center justify-between">
-        <div class="flex items-center gap-4">
-            <h3 class="font-black text-slate-900 text-sm uppercase tracking-wide">Recent GRNs</h3>
-        </div>
-        <form method="GET" class="flex items-center gap-2">
-            <div class="relative group">
-                <i
-                    class="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                <input type="date" name="from_date" value="{{ from_date|default:'' }}"
-                    class="bg-slate-50 border-slate-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all"
-                    placeholder="From">
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight text-left">Procurement & Stock Intake</h1>
+                <p class="text-slate-500 font-medium mt-1 text-left">Manage incoming stock and supplier deliveries (GRN)</p>
             </div>
-            <div class="relative group">
-                <input type="date" name="to_date" value="{{ to_date|default:'' }}"
-                    class="bg-slate-50 border-slate-100 rounded-2xl px-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all"
-                    placeholder="To">
+            <div>
+                <button data-open-modal="modal-purchase" class="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all flex items-center gap-3 shadow-xl shadow-slate-300 group border-b-4 border-slate-700">
+                    <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                        <i class="fas fa-truck-loading text-[10px] text-white"></i>
+                    </div>
+                    RECORD STOCK INTAKE (GRN)
+                </button>
             </div>
-            <button type="submit"
-                class="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                FILTER
-            </button>
-            {% if from_date or to_date %}
-            <a href="{% url 'inventory:procurement_dashboard' %}"
-                class="px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs hover:bg-rose-100 transition-all">
-                <i class="fas fa-times"></i>
-            </a>
-            {% endif %}
-        </form>
-    </div>
-
-    <!-- GRN Table -->
-    <div class="bg-white border border-slate-100 rounded-[3rem] shadow-sm overflow-hidden min-h-[500px] relative z-20">
-        <div class="overflow-x-auto text-left">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr
-                        class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-50 bg-slate-50/50">
-                        <th class="px-10 py-6">Date</th>
-                        <th class="px-10 py-6">Supplier Vendor</th>
-                        <th class="px-10 py-6">Linked Invoice</th>
-                        <th class="px-10 py-6 text-right">Received Value</th>
-                        <th class="px-10 py-6 text-right">Items</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50">
-                    {% for pur in purchases %}
-                    <tr class="group hover:bg-slate-50/80 transition-all text-left cursor-pointer"
-                        onclick="window.location.href='{% url 'inventory:add_grn_item' grn_id=pur.id %}'">
-                        <td class="px-10 py-7">
-                            <span class="text-sm font-black text-slate-900">{{ pur.date|date:"M d, Y" }}</span>
-                        </td>
-                        <td class="px-10 py-7 text-left">
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">
-                                    {{ pur.supplier.name|slice:":1"|upper }}
-                                </div>
-                                <span class="text-sm font-black text-slate-800 text-left">{{ pur.supplier.name }}</span>
-                            </div>
-                        </td>
-                        <td class="px-10 py-7 text-left">
-                            <div class="flex flex-col text-left gap-1">
-                                {% if pur.invoice_ref %}
-                                <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">#{{
-                                    pur.invoice_ref.invoice_number }}</span>
-                                {% else %}
-                                <span
-                                    class="px-3 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black rounded-lg border border-slate-200 self-start uppercase tracking-widest">UNLINKED</span>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td class="px-10 py-7 text-right">
-                            <span class="text-base font-black text-slate-950 tracking-tighter">KES {{
-                                pur.total_amount|floatformat:2 }}</span>
-                        </td>
-                        <td class="px-10 py-7 text-right">
-                            <a href="{% url 'inventory:add_grn_item' grn_id=pur.id %}"
-                                class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all inline-block">
-                                ADD STOCK <i class="fas fa-arrow-right ml-1"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="py-32 text-center text-slate-300">
-                            <div class="flex flex-col items-center justify-center gap-4">
-                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                                    <i class="fas fa-truck-loading text-2xl text-slate-300"></i>
-                                </div>
-                                <h3 class="font-black text-slate-900 text-sm">No Procurement Logs</h3>
-                                <p class="text-slate-400 text-xs max-w-xs text-center mb-4">Track physical inventory
-                                    received from suppliers here.</p>
-                                <button data-open-modal="modal-purchase"
-                                    class="px-6 py-3 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">
-                                    LOG STOCK INTAKE
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        </div>
+        <!-- Filters -->
+        <div class="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex items-center gap-4">
+                <h3 class="font-black text-slate-900 text-sm uppercase tracking-wide">Recent GRNs</h3>
+            </div>
+            <form method="GET" class="flex items-center gap-2">
+                <div class="relative group">
+                    <i class="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
+                    <input type="date" name="from_date" value="{{ from_date|default:'' }}" class="bg-slate-50 border-slate-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all" placeholder="From">
+                </div>
+                <div class="relative group">
+                    <input type="date" name="to_date" value="{{ to_date|default:'' }}" class="bg-slate-50 border-slate-100 rounded-2xl px-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all" placeholder="To">
+                </div>
+                <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">FILTER</button>
+                {% if from_date or to_date %}
+                    <a href="{% url 'inventory:procurement_dashboard' %}" class="px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs hover:bg-rose-100 transition-all">
+                        <i class="fas fa-times"></i>
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+        <!-- GRN Table -->
+        <div class="bg-white border border-slate-100 rounded-[3rem] shadow-sm overflow-hidden min-h-[500px] relative z-20">
+            <div class="overflow-x-auto text-left">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-50 bg-slate-50/50">
+                            <th class="px-10 py-6">Date</th>
+                            <th class="px-10 py-6">Supplier Vendor</th>
+                            <th class="px-10 py-6">Linked Invoice</th>
+                            <th class="px-10 py-6 text-right">Received Value</th>
+                            <th class="px-10 py-6 text-right">Items</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for pur in purchases %}
+                            <tr class="group hover:bg-slate-50/80 transition-all text-left cursor-pointer" onclick="window.location.href='{% url 'inventory:add_grn_item' grn_id=pur.id %}'">
+                                <td class="px-10 py-7">
+                                    <span class="text-sm font-black text-slate-900">{{ pur.date|date:"M d, Y" }}</span>
+                                </td>
+                                <td class="px-10 py-7 text-left">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">{{ pur.supplier.name|slice:":1"|upper }}</div>
+                                        <span class="text-sm font-black text-slate-800 text-left">{{ pur.supplier.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-10 py-7 text-left">
+                                    <div class="flex flex-col text-left gap-1">
+                                        {% if pur.invoice_ref %}
+                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">#{{
+                                            pur.invoice_ref.invoice_number }}</span>
+                                        {% else %}
+                                            <span class="px-3 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black rounded-lg border border-slate-200 self-start uppercase tracking-widest">UNLINKED</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-10 py-7 text-right">
+                                    <span class="text-base font-black text-slate-950 tracking-tighter">KES {{
+                                    pur.total_amount|floatformat:2 }}</span>
+                                </td>
+                                <td class="px-10 py-7 text-right">
+                                    <a href="{% url 'inventory:add_grn_item' grn_id=pur.id %}" class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all inline-block">
+                                        ADD STOCK <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-32 text-center text-slate-300">
+                                    <div class="flex flex-col items-center justify-center gap-4">
+                                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                            <i class="fas fa-truck-loading text-2xl text-slate-300"></i>
+                                        </div>
+                                        <h3 class="font-black text-slate-900 text-sm">No Procurement Logs</h3>
+                                        <p class="text-slate-400 text-xs max-w-xs text-center mb-4">
+                                            Track physical inventory
+                                            received from suppliers here.
+                                        </p>
+                                        <button data-open-modal="modal-purchase" class="px-6 py-3 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">LOG STOCK INTAKE</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
-
-<style>
+    <style>
     .hms-modal-backdrop {
         position: fixed;
         inset: 0;
@@ -207,63 +181,61 @@
         margin-bottom: 0.5rem;
         text-align: left;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block modals %}
-<!-- Add Procurement Modal (GRN) -->
-<div id="modal-purchase" class="hms-modal-backdrop">
-    <div class="hms-modal-content max-w-lg">
-        <div class="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-            <div class="text-left">
-                <h3 class="text-xl font-black text-slate-900 tracking-tight text-left">Goods Received Note</h3>
-                <p class="text-[10px] text-emerald-600 font-extrabold uppercase tracking-widest mt-1 text-left">Physical
-                    Stock Intake</p>
-            </div>
-            <button data-close-modal
-                class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:scale-110 transition-all shadow-sm">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <form action="{% url 'inventory:add_inventory_purchase' %}" method="POST" class="p-10 space-y-6">
-            {% csrf_token %}
-            <div class="grid grid-cols-2 gap-6 text-left">
+    <!-- Add Procurement Modal (GRN) -->
+    <div id="modal-purchase" class="hms-modal-backdrop">
+        <div class="hms-modal-content max-w-lg">
+            <div class="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
                 <div class="text-left">
-                    <label>Receipt Date</label>
-                    {{ purchase_form.date }}
+                    <h3 class="text-xl font-black text-slate-900 tracking-tight text-left">Goods Received Note</h3>
+                    <p class="text-[10px] text-emerald-600 font-extrabold uppercase tracking-widest mt-1 text-left">
+                        Physical
+                        Stock Intake
+                    </p>
                 </div>
-                <div class="text-left">
-                    <label>Supplier Vendor</label>
-                    {{ purchase_form.supplier }}
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-6 text-left">
-                <div class="text-left">
-                    <label>Total Value of Items</label>
-                    {{ purchase_form.total_amount }}
-                </div>
-                <div class="text-left">
-                    <label>Supplier Invoice #</label>
-                    {{ purchase_form.invoice_number }}
-                </div>
-            </div>
-            <div class="text-left">
-                <label>Delivery Remarks / Manifest</label>
-                {{ purchase_form.notes }}
-            </div>
-            <div class="pt-6">
-                <button type="submit"
-                    class="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm hover:bg-black transition-all shadow-2xl border-b-4 border-slate-600 flex items-center justify-center gap-3">
-                    <i class="fas fa-save"></i> RECORD STOCK INTAKE
+                <button data-close-modal class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:scale-110 transition-all shadow-sm">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-        </form>
+            <form action="{% url 'inventory:add_inventory_purchase' %}" method="POST" class="p-10 space-y-6">
+                {% csrf_token %}
+                <div class="grid grid-cols-2 gap-6 text-left">
+                    <div class="text-left">
+                        <label>Receipt Date</label>
+                        {{ purchase_form.date }}
+                    </div>
+                    <div class="text-left">
+                        <label>Supplier Vendor</label>
+                        {{ purchase_form.supplier }}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-6 text-left">
+                    <div class="text-left">
+                        <label>Total Value of Items</label>
+                        {{ purchase_form.total_amount }}
+                    </div>
+                    <div class="text-left">
+                        <label>Supplier Invoice #</label>
+                        {{ purchase_form.invoice_number }}
+                    </div>
+                </div>
+                <div class="text-left">
+                    <label>Delivery Remarks / Manifest</label>
+                    {{ purchase_form.notes }}
+                </div>
+                <div class="pt-6">
+                    <button type="submit" class="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm hover:bg-black transition-all shadow-2xl border-b-4 border-slate-600 flex items-center justify-center gap-3">
+                        <i class="fas fa-save"></i> RECORD STOCK INTAKE
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     (function () {
         "use strict";
         // Safe Modal Controller
@@ -307,5 +279,5 @@
         };
         ModalController.init();
     })();
-</script>
+    </script>
 {% endblock %}

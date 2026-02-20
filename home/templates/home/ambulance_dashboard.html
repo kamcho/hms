@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Ambulance Dashboard - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --amb-red: #ef4444;
         --amb-header: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -188,166 +186,152 @@
             grid-template-columns: 1fr;
         }
     }
-</style>
-
-<div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-
-    <!-- Header -->
-    <div class="amb-header">
-        <h1 style="font-weight: 800; font-size: 2rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
-            <i class="fas fa-ambulance"></i> Ambulance Operations Center
-        </h1>
-        <p style="margin: 0.5rem 0 0 3.5rem; opacity: 0.8;">Monitor trips, manage billing, and dispatch services.</p>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-container">
-        <div class="stat-card">
-            <div class="stat-icon trip-card">
-                <i class="fas fa-route"></i>
+    </style>
+    <div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+        <!-- Header -->
+        <div class="amb-header">
+            <h1 style="font-weight: 800; font-size: 2rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-ambulance"></i> Ambulance Operations Center
+            </h1>
+            <p style="margin: 0.5rem 0 0 3.5rem; opacity: 0.8;">Monitor trips, manage billing, and dispatch services.</p>
+        </div>
+        <!-- Stats -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon trip-card">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ total_trips }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Trips</div>
+                </div>
             </div>
+            <div class="stat-card">
+                <div class="stat-icon revenue-card">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">Let {{ total_revenue }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Revenue</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon today-card">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ trips_today }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Trips Today</div>
+                </div>
+            </div>
+        </div>
+        <div class="main-grid">
+            <!-- Left Column: Activity Log & Chart -->
             <div>
-                <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ total_trips }}</div>
-                <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Trips</div>
+                <!-- Usage Chart -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-chart-line" style="color: #3b82f6;"></i> Usage & Revenue Analytics (30 Days)
+                        </h2>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="ambulanceChart"></canvas>
+                    </div>
+                </div>
+                <!-- Recent Activity List -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-list-alt" style="color: #64748b;"></i> Recent Trips
+                        </h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Patient</th>
+                                    <th>Route</th>
+                                    <th>Driver</th>
+                                    <th>Billing</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trip in activities %}
+                                    <tr>
+                                        <td>{{ trip.date|date:"M d, H:i" }}</td>
+                                        <td style="font-weight: 600;">{{ trip.patient.full_name }}</td>
+                                        <td>{{ trip.route.from_location }} &rarr; {{ trip.route.to_location }}</td>
+                                        <td>{{ trip.driver }}</td>
+                                        <td>Let {{ trip.amount }}</td>
+                                        <td>
+                                            {% if trip.invoice.status == 'Paid' %}
+                                                <span style="color: #10b981; font-weight: 700; font-size: 0.75rem; background: #ecfdf5; padding: 0.25rem 0.75rem; border-radius: 99px;">PAID</span>
+                                            {% else %}
+                                                <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem; background: #fffbeb; padding: 0.25rem 0.75rem; border-radius: 99px;">PENDING</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                            No activity
+                                            recorded yet
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon revenue-card">
-                <i class="fas fa-coins"></i>
-            </div>
+            <!-- Right Column: Dispatch Form -->
             <div>
-                <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">Let {{ total_revenue }}</div>
-                <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Revenue</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon today-card">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div>
-                <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ trips_today }}</div>
-                <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Trips Today</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="main-grid">
-        <!-- Left Column: Activity Log & Chart -->
-        <div>
-            <!-- Usage Chart -->
-            <div class="section-card">
-                <div class="section-header">
-                    <h2><i class="fas fa-chart-line" style="color: #3b82f6;"></i> Usage & Revenue Analytics (30 Days)
-                    </h2>
-                </div>
-                <div style="height: 300px;">
-                    <canvas id="ambulanceChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Recent Activity List -->
-            <div class="section-card">
-                <div class="section-header">
-                    <h2><i class="fas fa-list-alt" style="color: #64748b;"></i> Recent Trips</h2>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Patient</th>
-                                <th>Route</th>
-                                <th>Driver</th>
-                                <th>Billing</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for trip in activities %}
-                            <tr>
-                                <td>{{ trip.date|date:"M d, H:i" }}</td>
-                                <td style="font-weight: 600;">{{ trip.patient.full_name }}</td>
-                                <td>{{ trip.route.from_location }} &rarr; {{ trip.route.to_location }}</td>
-                                <td>{{ trip.driver }}</td>
-                                <td>Let {{ trip.amount }}</td>
-                                <td>
-                                    {% if trip.invoice.status == 'Paid' %}
-                                    <span
-                                        style="color: #10b981; font-weight: 700; font-size: 0.75rem; background: #ecfdf5; padding: 0.25rem 0.75rem; border-radius: 99px;">PAID</span>
-                                    {% else %}
-                                    <span
-                                        style="color: #f59e0b; font-weight: 700; font-size: 0.75rem; background: #fffbeb; padding: 0.25rem 0.75rem; border-radius: 99px;">PENDING</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">No activity
-                                    recorded yet</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: Dispatch Form -->
-        <div>
-            <div class="section-card" style="position: sticky; top: 2rem;">
-                <div class="section-header">
-                    <h2><i class="fas fa-plus-circle" style="color: #ef4444;"></i> New Dispatch</h2>
-                </div>
-
-                <form method="POST">
-                    {% csrf_token %}
-                    <div class="form-group">
-                        <label class="form-label">Patient</label>
-                        <select name="patient" class="form-control" required>
-                            <option value="">Select Patient...</option>
-                            {% for p in patients %}
-                            <option value="{{ p.id }}">{{ p.full_name }} ({{ p.id_number }})</option>
-                            {% endfor %}
-                        </select>
+                <div class="section-card" style="position: sticky; top: 2rem;">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-plus-circle" style="color: #ef4444;"></i> New Dispatch
+                        </h2>
                     </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Route</label>
-                        <select name="route" class="form-control" required>
-                            <option value="">Select Route...</option>
-                            {% for r in routes %}
-                            <option value="{{ r.id }}">{{ r.from_location }} to {{ r.to_location }} - Let {{ r.price }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Driver</label>
-                        <input type="text" name="driver" class="form-control" placeholder="Driver Name">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Additional Notes</label>
-                        <textarea name="notes" class="form-control" rows="3"
-                            placeholder="Condition, pickup details..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn-action" style="width: 100%; justify-content: center;">
-                        <i class="fas fa-paper-plane"></i> Record Trip & Bill
-                    </button>
-
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: #64748b; text-align: center;">
-                        <i class="fas fa-info-circle"></i> This will automatically generate an invoice for the patient.
-                    </div>
-                </form>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label class="form-label">Patient</label>
+                            <select name="patient" class="form-control" required>
+                                <option value="">Select Patient...</option>
+                                {% for p in patients %}<option value="{{ p.id }}">{{ p.full_name }} ({{ p.id_number }})</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Route</label>
+                            <select name="route" class="form-control" required>
+                                <option value="">Select Route...</option>
+                                {% for r in routes %}<option value="{{ r.id }}">{{ r.from_location }} to {{ r.to_location }} - Let {{ r.price }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Driver</label>
+                            <input type="text" name="driver" class="form-control" placeholder="Driver Name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Additional Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Condition, pickup details..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-action" style="width: 100%; justify-content: center;">
+                            <i class="fas fa-paper-plane"></i> Record Trip & Bill
+                        </button>
+                        <div style="margin-top: 1rem; font-size: 0.8rem; color: #64748b; text-align: center;">
+                            <i class="fas fa-info-circle"></i> This will automatically generate an invoice for the patient.
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
         const ctx = document.getElementById('ambulanceChart').getContext('2d');
         const labels = {{ chart_labels| safe
@@ -410,6 +394,5 @@
         }
     });
     });
-</script>
-
+    </script>
 {% endblock %}

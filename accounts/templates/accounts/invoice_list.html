@@ -1,185 +1,175 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Invoices - Accounts{% endblock %}
-
 {% block content %}
-<div class="container">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="header-content">
-            <h1><i class="fas fa-file-invoice"></i> Invoices</h1>
-            <p>Manage and view all invoices in the system</p>
-        </div>
-        <div class="header-actions">
-            <a href="{% url 'accounts:create_invoice' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Create Invoice
-            </a>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-card">
-        <div class="filters-header">
-            <h3><i class="fas fa-filter"></i> Filters</h3>
-            <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
-                <i class="fas fa-times"></i> Clear
-            </button>
-        </div>
-        <div class="filters-body">
-            <form method="get" class="filter-form">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control" 
-                               placeholder="Invoice #, Patient, Deceased..." 
-                               value="{{ search_query }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="Draft" {% if status_filter == 'Draft' %}selected{% endif %}>Draft</option>
-                            <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
-                            <option value="Partial" {% if status_filter == 'Partial' %}selected{% endif %}>Partial</option>
-                            <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>Paid</option>
-                            <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Deceased ID</label>
-                        <input type="text" name="deceased" class="form-control" 
-                               placeholder="Deceased ID" value="{{ deceased_filter }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Patient ID</label>
-                        <input type="text" name="patient" class="form-control" 
-                               placeholder="Patient ID" value="{{ patient_filter }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">&nbsp;</label>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                            <a href="{% url 'accounts:invoice_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-redo"></i> Reset
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Invoices Table -->
-    <div class="table-card">
-        <div class="table-header">
-            <h3><i class="fas fa-list"></i> Invoice List</h3>
-            <div class="table-info">
-                <span class="badge bg-info">{{ invoices.count }} invoices</span>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-file-invoice"></i> Invoices
+                </h1>
+                <p>Manage and view all invoices in the system</p>
             </div>
-        </div>
-        <div class="table-body">
-            {% if invoices %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Invoice #</th>
-                            <th>Patient/Deceased</th>
-                            <th>Type</th>
-                            <th>Total Amount</th>
-                            <th>Paid Amount</th>
-                            <th>Balance</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for invoice in invoices %}
-                        <tr>
-                            <td>
-                                <strong>INV-{{ invoice.id }}</strong>
-                            </td>
-                            <td>
-                                {% if invoice.patient %}
-                                    <i class="fas fa-user text-primary"></i>
-                                    {{ invoice.patient.full_name }}
-                                {% elif invoice.deceased %}
-                                    <i class="fas fa-cross text-danger"></i>
-                                    {{ invoice.deceased.full_name }}
-                                {% else %}
-                                    <span class="text-muted">Unknown</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if invoice.patient %}
-                                    <span class="badge bg-primary">Patient</span>
-                                {% elif invoice.deceased %}
-                                    <span class="badge bg-danger">Deceased</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <strong>${{ invoice.total_amount|floatformat:2 }}</strong>
-                            </td>
-                            <td class="text-end">
-                                <span class="text-success">${{ invoice.paid_amount|floatformat:2 }}</span>
-                            </td>
-                            <td class="text-end">
-                                <span class="{% if invoice.total_amount|add:invoice.paid_amount != 0 %}text-danger{% else %}text-success{% endif %}">
-                                    ${{ invoice.total_amount|add:invoice.paid_amount|floatformat:2 }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="status-badge status-{{ invoice.status|lower }}">
-                                    {{ invoice.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <small>{{ invoice.created_at|date:"M d, Y H:i" }}</small>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'accounts:invoice_detail' invoice.pk %}" 
-                                       class="btn btn-outline-primary" title="View">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    {% if invoice.status != 'Paid' %}
-                                    <a href="{% url 'accounts:invoice_detail' invoice.pk %}#payment" 
-                                       class="btn btn-outline-success" title="Record Payment">
-                                        <i class="fas fa-money-bill"></i>
-                                    </a>
-                                    {% endif %}
-                                    {% if invoice.created_by == request.user and invoice.paid_amount == 0 %}
-                                    <button class="btn btn-outline-danger" 
-                                            data-invoice-id="{{ invoice.pk }}" onclick="deleteInvoice(this)" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <i class="fas fa-file-invoice fa-3x"></i>
-                <h4>No invoices found</h4>
-                <p>No invoices match your current filters.</p>
+            <div class="header-actions">
                 <a href="{% url 'accounts:create_invoice' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Create First Invoice
+                    <i class="fas fa-plus"></i> Create Invoice
                 </a>
             </div>
-            {% endif %}
+        </div>
+        <!-- Filters -->
+        <div class="filters-card">
+            <div class="filters-header">
+                <h3>
+                    <i class="fas fa-filter"></i> Filters
+                </h3>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+            <div class="filters-body">
+                <form method="get" class="filter-form">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="search" class="form-control" placeholder="Invoice #, Patient, Deceased..." value="{{ search_query }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="Draft" {% if status_filter == 'Draft' %}selected{% endif %}>Draft</option>
+                                <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                                <option value="Partial" {% if status_filter == 'Partial' %}selected{% endif %}>Partial</option>
+                                <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>Paid</option>
+                                <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Deceased ID</label>
+                            <input type="text" name="deceased" class="form-control" placeholder="Deceased ID" value="{{ deceased_filter }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Patient ID</label>
+                            <input type="text" name="patient" class="form-control" placeholder="Patient ID" value="{{ patient_filter }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                                <a href="{% url 'accounts:invoice_list' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo"></i> Reset
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Invoices Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>
+                    <i class="fas fa-list"></i> Invoice List
+                </h3>
+                <div class="table-info">
+                    <span class="badge bg-info">{{ invoices.count }} invoices</span>
+                </div>
+            </div>
+            <div class="table-body">
+                {% if invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient/Deceased</th>
+                                    <th>Type</th>
+                                    <th>Total Amount</th>
+                                    <th>Paid Amount</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <strong>INV-{{ invoice.id }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if invoice.patient %}
+                                                <i class="fas fa-user text-primary"></i>
+                                                {{ invoice.patient.full_name }}
+                                            {% elif invoice.deceased %}
+                                                <i class="fas fa-cross text-danger"></i>
+                                                {{ invoice.deceased.full_name }}
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if invoice.patient %}
+                                                <span class="badge bg-primary">Patient</span>
+                                            {% elif invoice.deceased %}
+                                                <span class="badge bg-danger">Deceased</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <strong>${{ invoice.total_amount|floatformat:2 }}</strong>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="text-success">${{ invoice.paid_amount|floatformat:2 }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="{% if invoice.total_amount|add:invoice.paid_amount != 0 %}text-danger{% else %}text-success{% endif %}">${{ invoice.total_amount|add:invoice.paid_amount|floatformat:2 }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-{{ invoice.status|lower }}">{{ invoice.get_status_display }}</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ invoice.created_at|date:"M d, Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'accounts:invoice_detail' invoice.pk %}" class="btn btn-outline-primary" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if invoice.status != 'Paid' %}
+                                                    <a href="{% url 'accounts:invoice_detail' invoice.pk %}#payment" class="btn btn-outline-success" title="Record Payment">
+                                                        <i class="fas fa-money-bill"></i>
+                                                    </a>
+                                                {% endif %}
+                                                {% if invoice.created_by == request.user and invoice.paid_amount == 0 %}
+                                                    <button class="btn btn-outline-danger" data-invoice-id="{{ invoice.pk }}" onclick="deleteInvoice(this)" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-file-invoice fa-3x"></i>
+                        <h4>No invoices found</h4>
+                        <p>No invoices match your current filters.</p>
+                        <a href="{% url 'accounts:create_invoice' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create First Invoice
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
-
-<style>
+    <style>
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -318,9 +308,8 @@
         text-align: center;
     }
 }
-</style>
-
-<script>
+    </style>
+    <script>
 function clearFilters() {
     window.location.href = "{% url 'accounts:invoice_list' %}";
 }
@@ -363,5 +352,5 @@ function getCookie(name) {
     }
     return cookieValue;
 }
-</script>
+    </script>
 {% endblock %}

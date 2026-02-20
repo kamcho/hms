@@ -1,306 +1,224 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Add Inventory Item - HMS{% endblock %}
-
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8 pb-20">
-    <div class="max-w-5xl mx-auto space-y-8 mb-12">
-
-        <!-- Header Section -->
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-200/60 overflow-hidden">
-            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                            <i class="fas fa-box-open text-2xl text-white"></i>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl font-bold text-white tracking-tight">Add Inventory Item</h1>
-                            <p class="text-slate-300 text-sm mt-0.5">Register new stock into the system</p>
-                        </div>
-                    </div>
-                    <a href="{% url 'inventory:item_list' %}"
-                        class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-xl text-sm font-semibold hover:bg-white/20 transition-all duration-200 border border-white/20">
-                        <i class="fas fa-arrow-left mr-2"></i>Back
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <form method="post" id="inventoryForm" class="space-y-6">
-            {% csrf_token %}
-
-            <!-- Basic Information Card -->
-            <div class="bg-white rounded-3xl shadow-lg border border-slate-200/60 overflow-hidden">
-                <div class="border-b border-slate-100 px-8 py-5 bg-gradient-to-r from-slate-50 to-white">
-                    <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <h2 class="text-lg font-bold text-slate-900">Basic Information</h2>
-                    </div>
-                </div>
-
-                <div class="p-8 space-y-6">
-                    <!-- Item Name -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-slate-700">
-                            <i class="fas fa-tag text-slate-400 mr-2"></i>Item Name
-                            <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="{{ form.name.name }}" value="{{ form.name.value|default:'' }}"
-                            placeholder="e.g., Paracetamol 500mg Tablets, 10ml Syringe, Gauze Pads"
-                            class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 text-slate-900 font-medium placeholder:text-slate-400"
-                            required>
-                        {% if form.name.errors %}
-                        <p class="text-sm text-red-600 mt-1">{{ form.name.errors.0 }}</p>
-                        {% endif %}
-                        <p class="text-xs text-slate-500 mt-1">Include strength/size in the name (e.g., 500mg, 10ml,
-                            Large)</p>
-                    </div>
-
-                    <!-- Category -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-slate-700">
-                            <i class="fas fa-layer-group text-slate-400 mr-2"></i>Category
-                            <span class="text-red-500">*</span>
-                        </label>
-                        <select name="{{ form.category.name }}" id="categorySelect"
-                            class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 text-slate-900 font-medium"
-                            required>
-                            <option value="">Select a category...</option>
-                            {% for value, label in form.category.field.choices %}
-                            {% if value %}
-                            <option value="{{ value }}" {% if form.category.value == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-                            {% endif %}
-                            {% endfor %}
-                        </select>
-                        {% if form.category.errors %}
-                        <p class="text-sm text-red-600 mt-1">{{ form.category.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dispensing & Pricing Card -->
-            <div class="bg-white rounded-3xl shadow-lg border border-slate-200/60 overflow-hidden">
-                <div class="border-b border-slate-100 px-8 py-5 bg-gradient-to-r from-emerald-50 to-white">
-                    <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        <h2 class="text-lg font-bold text-slate-900">Dispensing & Pricing</h2>
-                    </div>
-                </div>
-
-                <div class="p-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Dispensing Unit -->
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-slate-700">
-                                Dispensing Unit <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" name="{{ form.dispensing_unit.name }}"
-                                value="{{ form.dispensing_unit.value|default:'' }}"
-                                placeholder="e.g., Tablet, ml, Piece"
-                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium"
-                                required>
-                            <p class="text-xs text-slate-500">Smallest unit sold</p>
-                        </div>
-
-                        <!-- Buying Price -->
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-slate-700">
-                                Buying Price (Optional)
-                            </label>
-                            <input type="number" name="{{ form.buying_price.name }}" id="buyingPrice"
-                                value="{{ form.buying_price.value|default:'' }}" step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium">
-                            <p class="text-xs text-slate-500">For automatic profit calc</p>
-                        </div>
-
-                        <!-- Selling Price -->
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-slate-700">
-                                Selling Price <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" name="{{ form.selling_price.name }}" id="sellingPrice"
-                                value="{{ form.selling_price.value|default:'' }}" step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium"
-                                required>
-                            <p class="text-xs text-emerald-600 font-medium" id="profitMargin"></p>
-                        </div>
-                    </div>
-
-                    <!-- Dispense as Whole Toggle -->
-                    <div class="mt-6 pt-6 border-t border-slate-100">
-                        <label class="flex items-center gap-4 cursor-pointer group">
-                            <div class="relative">
-                                <input type="checkbox" name="{{ form.is_dispensed_as_whole.name }}" class="sr-only peer"
-                                    {% if form.is_dispensed_as_whole.value %}checked{% endif %}>
-                                <div
-                                    class="w-14 h-8 bg-slate-200 rounded-full peer-checked:bg-emerald-500 transition-colors duration-200">
-                                </div>
-                                <div
-                                    class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-6">
-                                </div>
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8 pb-20">
+        <div class="max-w-5xl mx-auto space-y-8 mb-12">
+            <!-- Header Section -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200/60 overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                                <i class="fas fa-box-open text-2xl text-white"></i>
                             </div>
                             <div>
-                                <span
-                                    class="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Dispense
+                                <h1 class="text-2xl font-bold text-white tracking-tight">Add Inventory Item</h1>
+                                <p class="text-slate-300 text-sm mt-0.5">Register new stock into the system</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'inventory:item_list' %}" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-xl text-sm font-semibold hover:bg-white/20 transition-all duration-200 border border-white/20">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <form method="post" id="inventoryForm" class="space-y-6">
+                {% csrf_token %}
+                <!-- Basic Information Card -->
+                <div class="bg-white rounded-3xl shadow-lg border border-slate-200/60 overflow-hidden">
+                    <div class="border-b border-slate-100 px-8 py-5 bg-gradient-to-r from-slate-50 to-white">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <h2 class="text-lg font-bold text-slate-900">Basic Information</h2>
+                        </div>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <!-- Item Name -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                <i class="fas fa-tag text-slate-400 mr-2"></i>Item Name
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="{{ form.name.name }}" value="{{ form.name.value|default:'' }}" placeholder="e.g., Paracetamol 500mg Tablets, 10ml Syringe, Gauze Pads" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 text-slate-900 font-medium placeholder:text-slate-400" required>
+                            {% if form.name.errors %}<p class="text-sm text-red-600 mt-1">{{ form.name.errors.0 }}</p>{% endif %}
+                            <p class="text-xs text-slate-500 mt-1">
+                                Include strength/size in the name (e.g., 500mg, 10ml,
+                                Large)
+                            </p>
+                        </div>
+                        <!-- Category -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                <i class="fas fa-layer-group text-slate-400 mr-2"></i>Category
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <select name="{{ form.category.name }}" id="categorySelect" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 text-slate-900 font-medium" required>
+                                <option value="">Select a category...</option>
+                                {% for value, label in form.category.field.choices %}
+                                    {% if value %}
+                                        <option value="{{ value }}" {% if form.category.value == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% if form.category.errors %}<p class="text-sm text-red-600 mt-1">{{ form.category.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Dispensing & Pricing Card -->
+                <div class="bg-white rounded-3xl shadow-lg border border-slate-200/60 overflow-hidden">
+                    <div class="border-b border-slate-100 px-8 py-5 bg-gradient-to-r from-emerald-50 to-white">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <h2 class="text-lg font-bold text-slate-900">Dispensing & Pricing</h2>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Dispensing Unit -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-slate-700">
+                                    Dispensing Unit <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="{{ form.dispensing_unit.name }}" value="{{ form.dispensing_unit.value|default:'' }}" placeholder="e.g., Tablet, ml, Piece" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium" required>
+                                <p class="text-xs text-slate-500">Smallest unit sold</p>
+                            </div>
+                            <!-- Buying Price -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-slate-700">Buying Price (Optional)</label>
+                                <input type="number" name="{{ form.buying_price.name }}" id="buyingPrice" value="{{ form.buying_price.value|default:'' }}" step="0.01" min="0" placeholder="0.00" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium">
+                                <p class="text-xs text-slate-500">For automatic profit calc</p>
+                            </div>
+                            <!-- Selling Price -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-slate-700">
+                                    Selling Price <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" name="{{ form.selling_price.name }}" id="sellingPrice" value="{{ form.selling_price.value|default:'' }}" step="0.01" min="0" placeholder="0.00" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all duration-200 text-slate-900 font-medium" required>
+                                <p class="text-xs text-emerald-600 font-medium" id="profitMargin"></p>
+                            </div>
+                        </div>
+                        <!-- Dispense as Whole Toggle -->
+                        <div class="mt-6 pt-6 border-t border-slate-100">
+                            <label class="flex items-center gap-4 cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" name="{{ form.is_dispensed_as_whole.name }}" class="sr-only peer" {% if form.is_dispensed_as_whole.value %}checked{% endif %}>
+                                    <div class="w-14 h-8 bg-slate-200 rounded-full peer-checked:bg-emerald-500 transition-colors duration-200"></div>
+                                    <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-6"></div>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Dispense
                                     as Whole Unit</span>
-                                <span class="block text-xs text-slate-500">Item cannot be split (e.g., small box,
+                                    <span class="block text-xs text-slate-500">Item cannot be split (e.g., small box,
                                     kit)</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Medication Details (Conditional) -->
-            <div id="medicationSection" class="hidden">
-                <div
-                    class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl shadow-xl border border-indigo-400/30 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-white/20">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                                <i class="fas fa-pills text-white text-lg"></i>
-                            </div>
-                            <h2 class="text-xl font-bold text-white">Medication Details</h2>
+                                </div>
+                            </label>
                         </div>
                     </div>
-
-                    <div class="p-8">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Generic Name -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-white/90">
-                                    Generic Name <span class="text-yellow-300">*</span>
-                                </label>
-                                <input type="text" name="{{ med_form.generic_name.name }}"
-                                    value="{{ med_form.generic_name.value|default:'' }}"
-                                    placeholder="e.g., Paracetamol, Amoxicillin"
-                                    class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
+                </div>
+                <!-- Medication Details (Conditional) -->
+                <div id="medicationSection" class="hidden">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl shadow-xl border border-indigo-400/30 overflow-hidden">
+                        <div class="px-8 py-6 border-b border-white/20">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                                    <i class="fas fa-pills text-white text-lg"></i>
+                                </div>
+                                <h2 class="text-xl font-bold text-white">Medication Details</h2>
                             </div>
-
-                            <!-- Drug Class -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-white/90">
-                                    Drug Class
-                                </label>
-                                <select name="{{ med_form.drug_class.name }}"
-                                    class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
-                                    <option value="">Select drug class...</option>
-                                    {% for value, label in med_form.drug_class.field.choices %}
-                                    {% if value %}
-                                    <option value="{{ value }}" class="bg-indigo-600">{{ label }}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <!-- Formulation -->
-                            <div class="space-y-2 md:col-span-2">
-                                <label class="block text-sm font-semibold text-white/90">
-                                    Formulation <span class="text-yellow-300">*</span>
-                                </label>
-                                <select name="{{ med_form.formulation.name }}"
-                                    class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
-                                    <option value="">Select formulation...</option>
-                                    {% for value, label in med_form.formulation.field.choices %}
-                                    {% if value %}
-                                    <option value="{{ value }}" class="bg-indigo-600">{{ label }}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
+                        </div>
+                        <div class="p-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Generic Name -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">
+                                        Generic Name <span class="text-yellow-300">*</span>
+                                    </label>
+                                    <input type="text" name="{{ med_form.generic_name.name }}" value="{{ med_form.generic_name.value|default:'' }}" placeholder="e.g., Paracetamol, Amoxicillin" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
+                                </div>
+                                <!-- Drug Class -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">Drug Class</label>
+                                    <select name="{{ med_form.drug_class.name }}" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
+                                        <option value="">Select drug class...</option>
+                                        {% for value, label in med_form.drug_class.field.choices %}
+                                            {% if value %}<option value="{{ value }}" class="bg-indigo-600">{{ label }}</option>{% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <!-- Formulation -->
+                                <div class="space-y-2 md:col-span-2">
+                                    <label class="block text-sm font-semibold text-white/90">
+                                        Formulation <span class="text-yellow-300">*</span>
+                                    </label>
+                                    <select name="{{ med_form.formulation.name }}" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
+                                        <option value="">Select formulation...</option>
+                                        {% for value, label in med_form.formulation.field.choices %}
+                                            {% if value %}<option value="{{ value }}" class="bg-indigo-600">{{ label }}</option>{% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Consumable Details (Conditional) -->
-            <div id="consumableSection" class="hidden">
-                <div
-                    class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl shadow-xl border border-amber-400/30 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-white/20">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                                <i class="fas fa-syringe text-white text-lg"></i>
+                <!-- Consumable Details (Conditional) -->
+                <div id="consumableSection" class="hidden">
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl shadow-xl border border-amber-400/30 overflow-hidden">
+                        <div class="px-8 py-6 border-b border-white/20">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                                    <i class="fas fa-syringe text-white text-lg"></i>
+                                </div>
+                                <h2 class="text-xl font-bold text-white">Consumable Specifications</h2>
                             </div>
-                            <h2 class="text-xl font-bold text-white">Consumable Specifications</h2>
                         </div>
-                    </div>
-
-                    <div class="p-8">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Material -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-white/90">
-                                    Material
-                                </label>
-                                <input type="text" name="{{ con_form.material.name }}"
-                                    value="{{ con_form.material.value|default:'' }}"
-                                    placeholder="e.g., Plastic, Glass, Latex"
-                                    class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
-                            </div>
-
-                            <!-- Size -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-white/90">
-                                    Size/Dimensions
-                                </label>
-                                <input type="text" name="{{ con_form.size.name }}"
-                                    value="{{ con_form.size.value|default:'' }}" placeholder="e.g., 5ml, 21G, Medium"
-                                    class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
-                            </div>
-
-                            <!-- Sterile Toggle -->
-                            <div class="md:col-span-2">
-                                <label class="flex items-center gap-4 cursor-pointer group">
-                                    <div class="relative">
-                                        <input type="checkbox" name="{{ con_form.is_sterile.name }}"
-                                            class="sr-only peer" {% if con_form.is_sterile.value %}checked{% endif %}>
-                                        <div
-                                            class="w-14 h-8 bg-white/10 rounded-full peer-checked:bg-white/30 transition-colors duration-200 border-2 border-white/30">
+                        <div class="p-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Material -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">Material</label>
+                                    <input type="text" name="{{ con_form.material.name }}" value="{{ con_form.material.value|default:'' }}" placeholder="e.g., Plastic, Glass, Latex" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
+                                </div>
+                                <!-- Size -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">Size/Dimensions</label>
+                                    <input type="text" name="{{ con_form.size.name }}" value="{{ con_form.size.value|default:'' }}" placeholder="e.g., 5ml, 21G, Medium" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
+                                </div>
+                                <!-- Sterile Toggle -->
+                                <div class="md:col-span-2">
+                                    <label class="flex items-center gap-4 cursor-pointer group">
+                                        <div class="relative">
+                                            <input type="checkbox" name="{{ con_form.is_sterile.name }}" class="sr-only peer" {% if con_form.is_sterile.value %}checked{% endif %}>
+                                            <div class="w-14 h-8 bg-white/10 rounded-full peer-checked:bg-white/30 transition-colors duration-200 border-2 border-white/30"></div>
+                                            <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-6"></div>
                                         </div>
-                                        <div
-                                            class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-6">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span
-                                            class="block text-sm font-semibold text-white group-hover:text-white/90">Sterile
+                                        <div>
+                                            <span class="block text-sm font-semibold text-white group-hover:text-white/90">Sterile
                                             Item</span>
-                                        <span class="block text-xs text-white/70">Check if this is a sterile medical
+                                            <span class="block text-xs text-white/70">Check if this is a sterile medical
                                             consumable</span>
-                                    </div>
-                                </label>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6 mt-8">
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <button type="submit"
-                        class="flex-1 sm:flex-[3] bg-gradient-to-r from-slate-900 to-slate-700 text-white px-8 py-4 rounded-xl font-bold text-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-3">
-                        <i class="fas fa-check-circle"></i>
-                        Register Item
-                    </button>
-                    <a href="{% url 'inventory:item_list' %}"
-                        class="flex-none sm:flex-1 px-8 py-4 bg-slate-50 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 text-center border border-slate-200">
-                        Cancel
-                    </a>
+                <!-- Action Buttons -->
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6 mt-8">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button type="submit" class="flex-1 sm:flex-[3] bg-gradient-to-r from-slate-900 to-slate-700 text-white px-8 py-4 rounded-xl font-bold text-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-3">
+                            <i class="fas fa-check-circle"></i>
+                            Register Item
+                        </button>
+                        <a href="{% url 'inventory:item_list' %}" class="flex-none sm:flex-1 px-8 py-4 bg-slate-50 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 text-center border border-slate-200">Cancel</a>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
-
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
         const categorySelect = document.getElementById('categorySelect');
         const medicationSection = document.getElementById('medicationSection');
@@ -349,9 +267,8 @@
         // Initial check
         updateSections();
     });
-</script>
-
-<style>
+    </script>
+    <style>
     .sr-only {
         position: absolute;
         width: 1px;
@@ -363,5 +280,5 @@
         white-space: nowrap;
         border-width: 0;
     }
-</style>
+    </style>
 {% endblock %}

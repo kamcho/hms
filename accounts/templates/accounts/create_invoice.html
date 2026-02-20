@@ -1,188 +1,186 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Create Invoice - Accounts{% endblock %}
-
 {% block content %}
-<div class="container">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="header-content">
-            <h1><i class="fas fa-file-invoice"></i> Create Invoice</h1>
-            <p>Create a new invoice for patient or deceased</p>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-file-invoice"></i> Create Invoice
+                </h1>
+                <p>Create a new invoice for patient or deceased</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'accounts:invoice_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Invoices
+                </a>
+            </div>
         </div>
-        <div class="header-actions">
-            <a href="{% url 'accounts:invoice_list' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Invoices
-            </a>
-        </div>
-    </div>
-
-    <!-- Entity Selection -->
-    {% if deceased_id or patient_id %}
-    <div class="selection-card">
-        <div class="selection-header">
-            <h3><i class="fas fa-user-check"></i> Selected Entity</h3>
-        </div>
-        <div class="selection-body">
-            {% if deceased_id %}
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="type" value="deceased">
-                    <input type="hidden" name="entity_id" value="{{ deceased_id }}">
-                    <div class="entity-info">
-                        <div class="entity-icon deceased">
-                            <i class="fas fa-cross"></i>
+        <!-- Entity Selection -->
+        {% if deceased_id or patient_id %}
+            <div class="selection-card">
+                <div class="selection-header">
+                    <h3>
+                        <i class="fas fa-user-check"></i> Selected Entity
+                    </h3>
+                </div>
+                <div class="selection-body">
+                    {% if deceased_id %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="type" value="deceased">
+                            <input type="hidden" name="entity_id" value="{{ deceased_id }}">
+                            <div class="entity-info">
+                                <div class="entity-icon deceased">
+                                    <i class="fas fa-cross"></i>
+                                </div>
+                                <div class="entity-details">
+                                    <h4>Deceased</h4>
+                                    <p class="entity-id">ID: {{ deceased_id }}</p>
+                                    <p class="confirm-text">Create invoice for this deceased person?</p>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-check"></i> Create Invoice
+                                </button>
+                                <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            </div>
+                        </form>
+                    {% elif patient_id %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="type" value="patient">
+                            <input type="hidden" name="entity_id" value="{{ patient_id }}">
+                            <div class="entity-info">
+                                <div class="entity-icon patient">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="entity-details">
+                                    <h4>Patient</h4>
+                                    <p class="entity-id">ID: {{ patient_id }}</p>
+                                    <p class="confirm-text">Create invoice for this patient?</p>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-check"></i> Create Invoice
+                                </button>
+                                <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <!-- Search Form -->
+            <div class="search-card">
+                <div class="search-header">
+                    <h3>
+                        <i class="fas fa-search"></i> Search for Entity
+                    </h3>
+                    <p>Find the patient or deceased to create an invoice for</p>
+                </div>
+                <div class="search-body">
+                    <div class="search-tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-btn active" onclick="switchTab('patient')">
+                                <i class="fas fa-user"></i> Patient
+                            </button>
+                            <button class="tab-btn" onclick="switchTab('deceased')">
+                                <i class="fas fa-cross"></i> Deceased
+                            </button>
                         </div>
-                        <div class="entity-details">
-                            <h4>Deceased</h4>
-                            <p class="entity-id">ID: {{ deceased_id }}</p>
-                            <p class="confirm-text">Create invoice for this deceased person?</p>
+                        <!-- Patient Search -->
+                        <div class="tab-content active" id="patient-tab">
+                            <form method="get" class="search-form">
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Search Patient</label>
+                                        <input type="text" name="patient_search" class="form-control" placeholder="Enter patient name, ID, or phone number...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-search"></i> Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Deceased Search -->
+                        <div class="tab-content" id="deceased-tab">
+                            <form method="get" class="search-form">
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Search Deceased</label>
+                                        <input type="text" name="deceased_search" class="form-control" placeholder="Enter deceased name, tag, or ID number...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-search"></i> Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            <i class="fas fa-check"></i> Create Invoice
-                        </button>
-                        <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
+                </div>
+            </div>
+            <!-- Search Results -->
+            {% if search_results %}
+                <div class="results-card">
+                    <div class="results-header">
+                        <h3>
+                            <i class="fas fa-list"></i> Search Results
+                        </h3>
+                        <span class="badge bg-info">{{ search_results.count }} results</span>
                     </div>
-                </form>
-            {% elif patient_id %}
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="type" value="patient">
-                    <input type="hidden" name="entity_id" value="{{ patient_id }}">
-                    <div class="entity-info">
-                        <div class="entity-icon patient">
-                            <i class="fas fa-user"></i>
+                    <div class="results-body">
+                        <div class="results-list">
+                            {% for entity in search_results %}
+                                <div class="result-item">
+                                    <div class="result-icon">
+                                        {% if entity|class_name == 'Patient' %}
+                                            <i class="fas fa-user"></i>
+                                        {% else %}
+                                            <i class="fas fa-cross"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="result-info">
+                                        <h4>{{ entity.full_name }}</h4>
+                                        <p class="result-meta">
+                                            {% if entity|class_name == 'Patient' %}
+                                                <span class="badge bg-primary">Patient</span>
+                                                <span>ID: {{ entity.id }}</span>
+                                                {% if entity.phone %}<span>Phone: {{ entity.phone }}</span>{% endif %}
+                                            {% else %}
+                                                <span class="badge bg-danger">Deceased</span>
+                                                <span>ID: {{ entity.id }}</span>
+                                                <span>Tag: {{ entity.tag }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="result-actions">
+                                        <a href="{% url 'accounts:create_invoice' %}?{% if entity|class_name == 'Patient' %}patient={{ entity.id }}{% else %}deceased={{ entity.id }}{% endif %}" class="btn btn-success">
+                                            <i class="fas fa-plus"></i> Create Invoice
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
-                        <div class="entity-details">
-                            <h4>Patient</h4>
-                            <p class="entity-id">ID: {{ patient_id }}</p>
-                            <p class="confirm-text">Create invoice for this patient?</p>
-                        </div>
                     </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            <i class="fas fa-check"></i> Create Invoice
-                        </button>
-                        <a href="{% url 'accounts:create_invoice' %}" class="btn btn-outline-secondary btn-lg">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
-                    </div>
-                </form>
+                </div>
             {% endif %}
-        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <!-- Search Form -->
-    <div class="search-card">
-        <div class="search-header">
-            <h3><i class="fas fa-search"></i> Search for Entity</h3>
-            <p>Find the patient or deceased to create an invoice for</p>
-        </div>
-        <div class="search-body">
-            <div class="search-tabs">
-                <div class="tab-buttons">
-                    <button class="tab-btn active" onclick="switchTab('patient')">
-                        <i class="fas fa-user"></i> Patient
-                    </button>
-                    <button class="tab-btn" onclick="switchTab('deceased')">
-                        <i class="fas fa-cross"></i> Deceased
-                    </button>
-                </div>
-                
-                <!-- Patient Search -->
-                <div class="tab-content active" id="patient-tab">
-                    <form method="get" class="search-form">
-                        <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label">Search Patient</label>
-                                <input type="text" name="patient_search" class="form-control" 
-                                       placeholder="Enter patient name, ID, or phone number...">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                
-                <!-- Deceased Search -->
-                <div class="tab-content" id="deceased-tab">
-                    <form method="get" class="search-form">
-                        <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label">Search Deceased</label>
-                                <input type="text" name="deceased_search" class="form-control" 
-                                       placeholder="Enter deceased name, tag, or ID number...">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search Results -->
-    {% if search_results %}
-    <div class="results-card">
-        <div class="results-header">
-            <h3><i class="fas fa-list"></i> Search Results</h3>
-            <span class="badge bg-info">{{ search_results.count }} results</span>
-        </div>
-        <div class="results-body">
-            <div class="results-list">
-                {% for entity in search_results %}
-                <div class="result-item">
-                    <div class="result-icon">
-                        {% if entity|class_name == 'Patient' %}
-                            <i class="fas fa-user"></i>
-                        {% else %}
-                            <i class="fas fa-cross"></i>
-                        {% endif %}
-                    </div>
-                    <div class="result-info">
-                        <h4>{{ entity.full_name }}</h4>
-                        <p class="result-meta">
-                            {% if entity|class_name == 'Patient' %}
-                                <span class="badge bg-primary">Patient</span>
-                                <span>ID: {{ entity.id }}</span>
-                                {% if entity.phone %}<span>Phone: {{ entity.phone }}</span>{% endif %}
-                            {% else %}
-                                <span class="badge bg-danger">Deceased</span>
-                                <span>ID: {{ entity.id }}</span>
-                                <span>Tag: {{ entity.tag }}</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div class="result-actions">
-                        <a href="{% url 'accounts:create_invoice' %}?{% if entity|class_name == 'Patient' %}patient={{ entity.id }}{% else %}deceased={{ entity.id }}{% endif %}" 
-                           class="btn btn-success">
-                            <i class="fas fa-plus"></i> Create Invoice
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
-</div>
-
-<style>
+    <style>
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -469,9 +467,8 @@
         gap: 0.5rem;
     }
 }
-</style>
-
-<script>
+    </style>
+    <script>
 function switchTab(tab) {
     // Remove active class from all tabs and buttons
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -486,5 +483,5 @@ function switchTab(tab) {
         document.getElementById('deceased-tab').classList.add('active');
     }
 }
-</script>
+    </script>
 {% endblock %}

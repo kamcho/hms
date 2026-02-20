@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Inventory Requests - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -218,59 +216,57 @@
             padding: 0.75rem;
         }
     }
-</style>
-
-<div class="container">
-    <div class="header-card">
-        <div class="header-title">
-            <h2>Inventory Requests</h2>
-            <p>View and manage all inventory requests across departments</p>
-        </div>
-        <a href="{% url 'inventory:create_request' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> New Request
-        </a>
-    </div>
-
-    <div class="requests-table">
-        {% if requests %}
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Quantity</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th>Requested By</th>
-                        <th>Requested At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for request in requests %}
-                        <tr>
-                            <td class="item-name">{{ request.item.name }}</td>
-                            <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
-                            <td><span class="location">{{ request.location }}</span></td>
-                            <td>
-                                <span class="status-badge status-{{ request.status|lower }}">
-                                    {{ request.status }}
-                                </span>
-                            </td>
-                            <td class="requested-by">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
-                            <td class="requested-at">{{ request.requested_at|date:"M d, Y H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-clipboard-list"></i>
-                <h3>No Inventory Requests</h3>
-                <p>There are no inventory requests yet. Create your first request to get started.</p>
-                <a href="{% url 'inventory:create_request' %}" class="btn btn-primary" style="margin-top: 1rem;">
-                    <i class="fas fa-plus"></i> Create First Request
-                </a>
+    </style>
+    <div class="container">
+        <div class="header-card">
+            <div class="header-title">
+                <h2>Inventory Requests</h2>
+                <p>View and manage all inventory requests across departments</p>
             </div>
-        {% endif %}
+            <a href="{% url 'inventory:create_request' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Request
+            </a>
+        </div>
+        <div class="requests-table">
+            {% if requests %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Requested By</th>
+                            <th>Requested At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in requests %}
+                            <tr>
+                                <td class="item-name">{{ request.item.name }}</td>
+                                <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
+                                <td>
+                                    <span class="location">{{ request.location }}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ request.status|lower }}">{{ request.status }}</span>
+                                </td>
+                                <td class="requested-by">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
+                                <td class="requested-at">{{ request.requested_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No Inventory Requests</h3>
+                    <p>There are no inventory requests yet. Create your first request to get started.</p>
+                    <a href="{% url 'inventory:create_request' %}" class="btn btn-primary" style="margin-top: 1rem;">
+                        <i class="fas fa-plus"></i> Create First Request
+                    </a>
+                </div>
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

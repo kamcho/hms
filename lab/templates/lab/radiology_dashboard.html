@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}{{ dashboard_title }} - HMS{% endblock %}
-
 {% block content %}
-<style>
+    <style>
     :root {
         --lab-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         --lab-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
@@ -476,330 +474,323 @@
         transform: translateY(-2px);
         box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
     }
-</style>
-
-<div class="radiology-dashboard">
-    <!-- Hero Header -->
-    <div class="lab-hero">
-        <div style="position: relative; z-index: 1;">
-            <h1><i class="fas fa-flask"></i> {{ dashboard_title }}</h1>
-            <p>Diagnostic excellence through synchronized laboratory and radiology operations</p>
-        </div>
-    </div>
-
-    <!-- Analytics Section -->
-    <div class="analytics-grid">
-        <div class="stat-card" style="--gradient: var(--lab-gradient-1)">
-            <div class="stat-icon">
-                <i class="fas fa-file-invoice"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Total Tests</h3>
-                <div class="number">{{ total_invoices }}</div>
+    </style>
+    <div class="radiology-dashboard">
+        <!-- Hero Header -->
+        <div class="lab-hero">
+            <div style="position: relative; z-index: 1;">
+                <h1>
+                    <i class="fas fa-flask"></i> {{ dashboard_title }}
+                </h1>
+                <p>Diagnostic excellence through synchronized laboratory and radiology operations</p>
             </div>
         </div>
-
-        <div class="stat-card" style="--gradient: var(--lab-gradient-4)">
-            <div class="stat-icon">
-                <i class="fas fa-check-double"></i>
+        <!-- Analytics Section -->
+        <div class="analytics-grid">
+            <div class="stat-card" style="--gradient: var(--lab-gradient-1)">
+                <div class="stat-icon">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Tests</h3>
+                    <div class="number">{{ total_invoices }}</div>
+                </div>
             </div>
-            <div class="stat-info">
-                <h3>Cleared (Paid)</h3>
-                <div class="number">{{ paid_count }}</div>
+            <div class="stat-card" style="--gradient: var(--lab-gradient-4)">
+                <div class="stat-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Cleared (Paid)</h3>
+                    <div class="number">{{ paid_count }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--lab-gradient-2)">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Unpaid</h3>
+                    <div class="number">{{ unpaid_count }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--lab-gradient-3)">
+                <div class="stat-icon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>In Lab</h3>
+                    <div class="number">{{ in_progress_results }}</div>
+                </div>
             </div>
         </div>
-
-        <div class="stat-card" style="--gradient: var(--lab-gradient-2)">
-            <div class="stat-icon">
-                <i class="fas fa-exclamation-circle"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Unpaid</h3>
-                <div class="number">{{ unpaid_count }}</div>
-            </div>
-        </div>
-
-        <div class="stat-card" style="--gradient: var(--lab-gradient-3)">
-            <div class="stat-icon">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <div class="stat-info">
-                <h3>In Lab</h3>
-                <div class="number">{{ in_progress_results }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="dashboard-main">
-        <div class="content-card">
-            <div class="card-header">
-                <h2><i class="fas fa-file-invoice"></i> Patient Service Invoices</h2>
-            </div>
-
-            <div class="search-filters">
-                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
-                <input type="text" class="search-input" placeholder="Search patients or services..."
-                    value="{{ search_query }}">
-                <select class="filter-select" name="service_type_filter" {% if dept_focus %}style="display:none;"{% endif %}>
-                    <option value="">All Service Types</option>
-                    {% for service_type in service_types %}
-                    <option value="{{ service_type.0 }}" {% if service_type_filter == service_type.0 %}selected{% endif %}>{{ service_type.1 }}</option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="payment_status">
-                    <option value="">All Payment Status</option>
-                    <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid / Cleared</option>
-                    <option value="Pending" {% if payment_filter == 'Pending' %}selected{% endif %}>Unpaid (Pending)
-                    </option>
-                    <option value="Partial" {% if payment_filter == 'Partial' %}selected{% endif %}>Partially Paid
-                    </option>
-                </select>
-            </div>
-
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Service</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for invoice in lab_invoices %}
-                        {% with related_result=invoice.related_results.0 %}
-                        <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}')"
-                            style="cursor: pointer;">
-                            {% endwith %}
-                            <td>
-                                <strong>{{ invoice.invoice.patient.full_name }}</strong>
-                            </td>
-                            <td>{{ invoice.service.name }}</td>
-                            <td>${{ invoice.service.price }}</td>
-                            <td>
-                                {% if invoice.invoice.status == 'Paid' %}
-                                <span class="badge-status status-completed"><i class="fas fa-check-circle"></i>
+        <div class="dashbard-main">
+            <div class="content-card">
+                <div class="card-header">
+                    <h2>
+                        <i class="fas fa-file-invoice"></i> Patient Service Invoices
+                    </h2>
+                </div>
+                <div class="search-filters">
+                    <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+                    <input type="text" class="search-input" placeholder="Search patients or services..." value="{{ search_query }}">
+                    <select class="filter-select" name="service_type_filter" {% if dept_focus %}style="display:none;"{% endif %}>
+                        <option value="">All Service Types</option>
+                        {% for service_type in service_types %}
+                            <option value="{{ service_type.0 }}" {% if service_type_filter == service_type.0 %}selected{% endif %}>{{ service_type.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="filter-select" name="payment_status">
+                        <option value="">All Payment Status</option>
+                        <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid / Cleared</option>
+                        <option value="Pending" {% if payment_filter == 'Pending' %}selected{% endif %}>Unpaid (Pending)</option>
+                        <option value="Partial" {% if payment_filter == 'Partial' %}selected{% endif %}>Partially Paid</option>
+                    </select>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Service</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in lab_invoices %}
+                                {% with related_result=invoice.related_results.0 %}
+                                    <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}')" style="cursor: pointer;">
+                                    {% endwith %}
+                                    <td>
+                                        <strong>{{ invoice.invoice.patient.full_name }}</strong>
+                                    </td>
+                                    <td>{{ invoice.service.name }}</td>
+                                    <td>${{ invoice.service.price }}</td>
+                                    <td>
+                                        {% if invoice.invoice.status == 'Paid' %}
+                                        <span class="badge-status status-completed"><i class="fas fa-check-circle"></i>
                                     PAID</span>
                                 {% elif invoice.invoice.status == 'Partial' %}
                                 <span class="badge-status status-in-progress"><i class="fas fa-adjust"></i>
-                                    PARTIAL</span>
-                                {% else %}
-                                <span class="badge-status status-pending"
-                                    style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i
-                                        class="fas fa-exclamation-triangle"></i> UNPAID</span>
-                                {% endif %}
-                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{ invoice.invoice.id }}</div>
-                            </td>
-                            <td>{{ invoice.created_at|date:"M d, Y" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="empty-state">
-                                <i class="fas fa-file-invoice"></i>
-                                <div>No service invoices found.</div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="content-card">
-            <div class="card-header">
-                <h2><i class="fas fa-flask"></i> {% if user_role == 'Radiographer' %}Radiology{% else %}Lab{% endif %}
-                    Results</h2>
-            </div>
-
-            <div class="search-filters">
-                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
-                <input type="text" class="search-input" placeholder="Search patients or services..."
-                    value="{{ search_query }}">
-                <select class="filter-select" name="status_filter">
-                    <option value="">All Status</option>
-                    {% for status in status_choices %}
-                    <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>{{ status.1 }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Test</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Requested</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in lab_results %}
-                        <tr>
-                            <td>
-                                <strong>{{ result.patient.full_name }}</strong>
-                            </td>
-                            <td>{{ result.service.name }}</td>
-                            <td>
-                                <span class="badge-status status-{{ result.status|slugify }}">{{ result.status }}</span>
-                            </td>
-                            <td>
-                                <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority }}</span>
-                            </td>
-                            <td>{{ result.requested_at|date:"M d, Y" }}</td>
-                            <td>
-                                <a href="{% url 'lab:lab_result_detail' result.id %}" class="action-link">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                        
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="empty-state">
-                                <i class="fas fa-flask"></i>
-                                <div>No lab results found.</div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                            PARTIAL</span>
+                        {% else %}
+                            <span class="badge-status status-pending" style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i class="fas fa-exclamation-triangle"></i> UNPAID</span>
+                        {% endif %}
+                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{ invoice.invoice.id }}</div>
+                    </td>
+                    <td>{{ invoice.created_at|date:"M d, Y" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <i class="fas fa-file-invoice"></i>
+                        <div>No service invoices found.</div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+<div class="content-card">
+    <div class="card-header">
+        <h2>
+            <i class="fas fa-flask"></i>
+            {% if user_role == 'Radiographer' %}
+                Radiology
+            {% else %}
+                Lab
+            {% endif %}
+            Results
+        </h2>
     </div>
-
-    <!-- Inventory Section -->
-    <div class="dashboard-main" style="margin-top: 1.5rem;">
-        <div class="content-card">
-            <div class="card-header">
-                <h2><i class="fas fa-boxes"></i> {% if user_role == 'Radiographer' %}Radiology{% else %}Lab{% endif %}
-                    Inventory</h2>
-                <div class="header-actions">
-                    <a href="{% url 'inventory:create_request' %}" class="btn-inventory-request">
-                        <i class="fas fa-plus-circle"></i> Request Stock
-                    </a>
-                </div>
+    <div class="search-filters">
+        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+        <input type="text" class="search-input" placeholder="Search patients or services..." value="{{ search_query }}">
+        <select class="filter-select" name="status_filter">
+            <option value="">All Status</option>
+            {% for status in status_choices %}
+                <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>{{ status.1 }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Test</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in lab_results %}
+                    <tr>
+                        <td>
+                            <strong>{{ result.patient.full_name }}</strong>
+                        </td>
+                        <td>{{ result.service.name }}</td>
+                        <td>
+                            <span class="badge-status status-{{ result.status|slugify }}">{{ result.status }}</span>
+                        </td>
+                        <td>
+                            <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority }}</span>
+                        </td>
+                        <td>{{ result.requested_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'lab:lab_result_detail' result.id %}" class="action-link">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-flask"></i>
+                            <div>No lab results found.</div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+<!-- Inventory Section -->
+<div class="dashboard-main" style="margin-top: 1.5rem;">
+    <div class="content-card">
+        <div class="card-header">
+            <h2>
+                <i class="fas fa-boxes"></i>
+                {% if user_role == 'Radiographer' %}
+                    Radiology
+                {% else %}
+                    Lab
+                {% endif %}
+                Inventory
+            </h2>
+            <div class="header-actions">
+                <a href="{% url 'inventory:create_request' %}" class="btn-inventory-request">
+                    <i class="fas fa-plus-circle"></i> Request Stock
+                </a>
             </div>
-
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Batch</th>
+                        <th>Quantity</th>
+                        <th>Expiry Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in lab_stock %}
                         <tr>
-                            <th>Item Name</th>
-                            <th>Batch</th>
-                            <th>Quantity</th>
-                            <th>Expiry Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stock in lab_stock %}
-                        <tr>
-                            <td><strong>{{ stock.item.name }}</strong></td>
+                            <td>
+                                <strong>{{ stock.item.name }}</strong>
+                            </td>
                             <td>{{ stock.batch_number }}</td>
                             <td>
-                                {% if stock.quantity <= stock.item.reorder_level %} <span
-                                    class="badge-status status-pending">{{ stock.quantity }}</span>
-                                    {% else %}
+                                {% if stock.quantity <= stock.item.reorder_level %}
+                                    <span class="badge-status status-pending">{{ stock.quantity }}</span>
+                                {% else %}
                                     {{ stock.quantity }}
-                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td>{{ stock.expiry_date|date:"M d, Y" }}</td>
                         </tr>
-                        {% empty %}
+                    {% empty %}
                         <tr>
                             <td colspan="4" class="empty-state">
                                 <i class="fas fa-box-open"></i>
                                 <div>No stock in Lab location.</div>
                             </td>
                         </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="content-card">
+        <div class="card-header">
+            <h2>
+                <i class="fas fa-clipboard-list"></i> Inventory Requests
+            </h2>
+            <div class="header-actions">
+                <a href="{% url 'inventory:request_list' %}" class="btn-inventory-view">
+                    <i class="fas fa-list"></i> View All
+                </a>
             </div>
         </div>
-
-        <div class="content-card">
-            <div class="card-header">
-                <h2><i class="fas fa-clipboard-list"></i> Inventory Requests</h2>
-                <div class="header-actions">
-                    <a href="{% url 'inventory:request_list' %}" class="btn-inventory-view">
-                        <i class="fas fa-list"></i> View All
-                    </a>
-                </div>
-            </div>
-
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Qty</th>
-                            <th>Status</th>
-                            <th>Requested</th>
-                            <th>Acknowledged</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for req in lab_requests %}
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th>Requested</th>
+                        <th>Acknowledged</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in lab_requests %}
                         <tr>
                             <td>{{ req.item.name }}</td>
                             <td>{{ req.quantity }}</td>
                             <td>
-                                <span
-                                    class="badge-status {% if req.status == 'Approved' %}status-completed{% elif req.status == 'Rejected' %}status-pending{% else %}status-in-progress{% endif %}">
-                                    {{ req.status }}
-                                </span>
+                                <span class="badge-status {% if req.status == 'Approved' %}status-completed{% elif req.status == 'Rejected' %}status-pending{% else %}status-in-progress{% endif %}">{{ req.status }}</span>
                             </td>
                             <td>{{ req.requested_at|date:"M d" }}</td>
                             <td>
                                 {% with req.acknowledgements.first as ack %}
-                                {% if ack %}
-                                <span class="text-success"><i class="fas fa-check"></i> {{ ack.received_at|date:"M d"
-                                    }}</span>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
+                                    {% if ack %}
+                                        <span class="text-success"><i class="fas fa-check"></i> {{ ack.received_at|date:"M d"
+                                        }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
                                 {% endwith %}
                             </td>
                         </tr>
-                        {% empty %}
+                    {% empty %}
                         <tr>
                             <td colspan="5" class="empty-state">
                                 <i class="fas fa-clipboard"></i>
                                 <div>No inventory requests found.</div>
                             </td>
                         </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Message Modal -->
-    <div id="messageModal" class="custom-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="messageModalTitle" style="font-size: 1.25rem; font-weight: 600;">Message</h3>
-                <button class="custom-btn btn-secondary" onclick="closeModal('messageModal')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p id="messageModalContent" style="margin: 0; font-size: 1rem; color: var(--text-primary);"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="custom-btn btn-primary" onclick="closeModal('messageModal')">OK</button>
-            </div>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-
+<!-- Message Modal -->
+<div id="messageModal" class="custom-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="messageModalTitle" style="font-size: 1.25rem; font-weight: 600;">Message</h3>
+            <button class="custom-btn btn-secondary" onclick="closeModal('messageModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="messageModalContent" style="margin: 0; font-size: 1rem; color: var(--text-primary);"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="custom-btn btn-primary" onclick="closeModal('messageModal')">OK</button>
+        </div>
+    </div>
+</div>
+</div>
 <script>
     function showMessageModal(title, message) {
         document.getElementById('messageModalTitle').textContent = title;

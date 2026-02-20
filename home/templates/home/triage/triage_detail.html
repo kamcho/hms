@@ -1,258 +1,270 @@
 {% extends 'users/dashboard_base.html' %}
-
 {% block title %}Triage Entry - {{ triage_entry.patient }} - HMS{% endblock %}
-
 {% block content %}
-<div class="dashboard-content">
-    <div class="page-header">
-        <h1><i class="fas fa-ambulance"></i> Triage Entry Details</h1>
-        <div class="header-actions">
-            <a href="{% url 'home:triage:edit' triage_entry.pk %}" class="btn btn-warning">
-                <i class="fas fa-edit"></i> Edit
-            </a>
-            {% if triage_entry.is_active %}
-            <a href="{% url 'home:triage:complete' triage_entry.pk %}" class="btn btn-success">
-                <i class="fas fa-check"></i> Mark Complete
-            </a>
-            {% endif %}
-            <a href="{% url 'home:triage:list' %}" class="btn btn-secondary">Back to List</a>
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-ambulance"></i> Triage Entry Details
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'home:triage:edit' triage_entry.pk %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                {% if triage_entry.is_active %}
+                    <a href="{% url 'home:triage:complete' triage_entry.pk %}" class="btn btn-success">
+                        <i class="fas fa-check"></i> Mark Complete
+                    </a>
+                {% endif %}
+                <a href="{% url 'home:triage:list' %}" class="btn btn-secondary">Back to List</a>
+            </div>
         </div>
-    </div>
-
-    <!-- Patient Information -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-user"></i> Patient Information</h3>
-        </div>
-        <div class="card-body">
-            <div class="patient-info-grid">
-                <div class="info-item">
-                    <strong>Name:</strong> {{ triage_entry.patient.first_name }} {{ triage_entry.patient.last_name }}
-                </div>
-                <div class="info-item">
-                    <strong>Age:</strong> {{ triage_entry.patient.age }} years
-                </div>
-                <div class="info-item">
-                    <strong>Gender:</strong> {{ triage_entry.patient.get_gender_display }}
-                </div>
-                <div class="info-item">
-                    <strong>Phone:</strong> {{ triage_entry.patient.phone }}
-                </div>
-                <div class="info-item">
-                    <strong>Location:</strong> {{ triage_entry.patient.location }}
+        <!-- Patient Information -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fas fa-user"></i> Patient Information
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="patient-info-grid">
+                    <div class="info-item">
+                        <strong>Name:</strong> {{ triage_entry.patient.first_name }} {{ triage_entry.patient.last_name }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Age:</strong> {{ triage_entry.patient.age }} years
+                    </div>
+                    <div class="info-item">
+                        <strong>Gender:</strong> {{ triage_entry.patient.get_gender_display }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Phone:</strong> {{ triage_entry.patient.phone }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Location:</strong> {{ triage_entry.patient.location }}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Triage Information -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-ambulance"></i> Triage Information</h3>
-            <span class="priority-badge" style="background-color: {{ triage_entry.get_priority_color }}; color: white;">
-                {{ triage_entry.get_priority_display }}
-            </span>
+        <!-- Triage Information -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fas fa-ambulance"></i> Triage Information
+                </h3>
+                <span class="priority-badge" style="background-color: {{ triage_entry.get_priority_color }}; color: white;">{{ triage_entry.get_priority_display }}</span>
+            </div>
+            <div class="card-body">
+                <div class="triage-info-grid">
+                    <div class="info-item">
+                        <strong>Entry Date:</strong> {{ triage_entry.entry_date|date:"F d, Y H:i" }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Triage Nurse:</strong> {{ triage_entry.triage_nurse.get_full_name|default:triage_entry.triage_nurse.username }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Category:</strong> {{ triage_entry.get_category_display }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Status:</strong>
+                        {% if triage_entry.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Completed ({{ triage_entry.completed_at|date:"M d, Y H:i" }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="triage-info-grid">
-                <div class="info-item">
-                    <strong>Entry Date:</strong> {{ triage_entry.entry_date|date:"F d, Y H:i" }}
-                </div>
-                <div class="info-item">
-                    <strong>Triage Nurse:</strong> {{ triage_entry.triage_nurse.get_full_name|default:triage_entry.triage_nurse.username }}
-                </div>
-                <div class="info-item">
-                    <strong>Category:</strong> {{ triage_entry.get_category_display }}
-                </div>
-                <div class="info-item">
-                    <strong>Status:</strong> 
-                    {% if triage_entry.is_active %}
-                        <span class="badge badge-success">Active</span>
-                    {% else %}
-                        <span class="badge badge-secondary">Completed ({{ triage_entry.completed_at|date:"M d, Y H:i" }})</span>
+        <!-- Chief Complaint -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fas fa-notes-medical"></i> Chief Complaint
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="complaint-section">
+                    <p>
+                        <strong>Chief Complaint:</strong> {{ triage_entry.chief_complaint }}
+                    </p>
+                    <p>
+                        <strong>Duration:</strong> {{ triage_entry.symptoms_duration }}
+                    </p>
+                    {% if triage_entry.symptom_description %}
+                        <p>
+                            <strong>Symptom Description:</strong>
+                        </p>
+                        <p>{{ triage_entry.symptom_description|linebreaks }}</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Chief Complaint -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-notes-medical"></i> Chief Complaint</h3>
-        </div>
-        <div class="card-body">
-            <div class="complaint-section">
-                <p><strong>Chief Complaint:</strong> {{ triage_entry.chief_complaint }}</p>
-                <p><strong>Duration:</strong> {{ triage_entry.symptoms_duration }}</p>
-                {% if triage_entry.symptom_description %}
-                <p><strong>Symptom Description:</strong></p>
-                <p>{{ triage_entry.symptom_description|linebreaks }}</p>
+        <!-- Vital Signs -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <i class="fas fa-heartbeat"></i> Vital Signs
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="vital-signs-grid">
+                    <div class="vital-item">
+                        <div class="vital-label">Temperature</div>
+                        <div class="vital-value">
+                            {% if triage_entry.temperature %}
+                                {{ triage_entry.temperature }}°C
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="vital-item">
+                        <div class="vital-label">Blood Pressure</div>
+                        <div class="vital-value">
+                            {% if triage_entry.blood_pressure_systolic and triage_entry.blood_pressure_diastolic %}
+                                {{ triage_entry.get_blood_pressure }} mmHg
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="vital-item">
+                        <div class="vital-label">Heart Rate</div>
+                        <div class="vital-value">
+                            {% if triage_entry.heart_rate %}
+                                {{ triage_entry.heart_rate }} bpm
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="vital-item">
+                        <div class="vital-label">Respiratory Rate</div>
+                        <div class="vital-value">
+                            {% if triage_entry.respiratory_rate %}
+                                {{ triage_entry.respiratory_rate }} breaths/min
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="vital-item">
+                        <div class="vital-label">O2 Saturation</div>
+                        <div class="vital-value">
+                            {% if triage_entry.oxygen_saturation %}
+                                {{ triage_entry.oxygen_saturation }}%
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="vital-item">
+                        <div class="vital-label">Blood Glucose</div>
+                        <div class="vital-value">
+                            {% if triage_entry.blood_glucose %}
+                                {{ triage_entry.blood_glucose }} mg/dL
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if vital_signs_issues %}
+                    <div class="alert alert-warning mt-3">
+                        <strong><i class="fas fa-exclamation-triangle"></i> Abnormal Vital Signs:</strong>
+                        <ul class="mb-0">
+                            {% for issue in vital_signs_issues %}<li>{{ issue }}</li>{% endfor %}
+                        </ul>
+                    </div>
                 {% endif %}
             </div>
         </div>
-    </div>
-
-    <!-- Vital Signs -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-heartbeat"></i> Vital Signs</h3>
-        </div>
-        <div class="card-body">
-            <div class="vital-signs-grid">
-                <div class="vital-item">
-                    <div class="vital-label">Temperature</div>
-                    <div class="vital-value">
-                        {% if triage_entry.temperature %}
-                            {{ triage_entry.temperature }}°C
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
+        <!-- Pain Assessment -->
+        {% if triage_entry.pain_scale or triage_entry.pain_location or triage_entry.pain_description %}
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        <i class="fas fa-frown"></i> Pain Assessment
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="pain-assessment">
+                        {% if triage_entry.pain_scale %}
+                            <div class="pain-scale">
+                                <strong>Pain Scale:</strong>
+                                <span class="pain-indicator">{{ triage_entry.pain_scale }}/10</span>
+                            </div>
+                        {% endif %}
+                        {% if triage_entry.pain_location %}
+                            <p>
+                                <strong>Location:</strong> {{ triage_entry.pain_location }}
+                            </p>
+                        {% endif %}
+                        {% if triage_entry.pain_description %}
+                            <p>
+                                <strong>Description:</strong>
+                            </p>
+                            <p>{{ triage_entry.pain_description|linebreaks }}</p>
                         {% endif %}
                     </div>
                 </div>
-                <div class="vital-item">
-                    <div class="vital-label">Blood Pressure</div>
-                    <div class="vital-value">
-                        {% if triage_entry.blood_pressure_systolic and triage_entry.blood_pressure_diastolic %}
-                            {{ triage_entry.get_blood_pressure }} mmHg
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
-                        {% endif %}
-                    </div>
+            </div>
+        {% endif %}
+        <!-- Medical History -->
+        {% if triage_entry.allergies or triage_entry.current_medications or triage_entry.medical_history %}
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        <i class="fas fa-history"></i> Medical History
+                    </h3>
                 </div>
-                <div class="vital-item">
-                    <div class="vital-label">Heart Rate</div>
-                    <div class="vital-value">
-                        {% if triage_entry.heart_rate %}
-                            {{ triage_entry.heart_rate }} bpm
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
+                <div class="card-body">
+                    <div class="medical-history">
+                        {% if triage_entry.allergies %}
+                            <div class="history-item">
+                                <strong>Allergies:</strong>
+                                <p>{{ triage_entry.allergies|linebreaks }}</p>
+                            </div>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="vital-item">
-                    <div class="vital-label">Respiratory Rate</div>
-                    <div class="vital-value">
-                        {% if triage_entry.respiratory_rate %}
-                            {{ triage_entry.respiratory_rate }} breaths/min
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
+                        {% if triage_entry.current_medications %}
+                            <div class="history-item">
+                                <strong>Current Medications:</strong>
+                                <p>{{ triage_entry.current_medications|linebreaks }}</p>
+                            </div>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="vital-item">
-                    <div class="vital-label">O2 Saturation</div>
-                    <div class="vital-value">
-                        {% if triage_entry.oxygen_saturation %}
-                            {{ triage_entry.oxygen_saturation }}%
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="vital-item">
-                    <div class="vital-label">Blood Glucose</div>
-                    <div class="vital-value">
-                        {% if triage_entry.blood_glucose %}
-                            {{ triage_entry.blood_glucose }} mg/dL
-                        {% else %}
-                            <span class="text-muted">Not recorded</span>
+                        {% if triage_entry.medical_history %}
+                            <div class="history-item">
+                                <strong>Relevant Medical History:</strong>
+                                <p>{{ triage_entry.medical_history|linebreaks }}</p>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            
-            {% if vital_signs_issues %}
-            <div class="alert alert-warning mt-3">
-                <strong><i class="fas fa-exclamation-triangle"></i> Abnormal Vital Signs:</strong>
-                <ul class="mb-0">
-                    {% for issue in vital_signs_issues %}
-                    <li>{{ issue }}</li>
-                    {% endfor %}
-                </ul>
+        {% endif %}
+        <!-- Assessment -->
+        {% if triage_entry.triage_notes or triage_entry.disposition %}
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        <i class="fas fa-clipboard-check"></i> Assessment & Disposition
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if triage_entry.triage_notes %}
+                        <div class="assessment-section">
+                            <strong>Triage Notes:</strong>
+                            <p>{{ triage_entry.triage_notes|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+                    {% if triage_entry.disposition %}
+                        <div class="disposition-section">
+                            <strong>Disposition:</strong>
+                            <p>{{ triage_entry.disposition }}</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
-        </div>
+        {% endif %}
     </div>
-
-    <!-- Pain Assessment -->
-    {% if triage_entry.pain_scale or triage_entry.pain_location or triage_entry.pain_description %}
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-frown"></i> Pain Assessment</h3>
-        </div>
-        <div class="card-body">
-            <div class="pain-assessment">
-                {% if triage_entry.pain_scale %}
-                <div class="pain-scale">
-                    <strong>Pain Scale:</strong> 
-                    <span class="pain-indicator">{{ triage_entry.pain_scale }}/10</span>
-                </div>
-                {% endif %}
-                {% if triage_entry.pain_location %}
-                <p><strong>Location:</strong> {{ triage_entry.pain_location }}</p>
-                {% endif %}
-                {% if triage_entry.pain_description %}
-                <p><strong>Description:</strong></p>
-                <p>{{ triage_entry.pain_description|linebreaks }}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Medical History -->
-    {% if triage_entry.allergies or triage_entry.current_medications or triage_entry.medical_history %}
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-history"></i> Medical History</h3>
-        </div>
-        <div class="card-body">
-            <div class="medical-history">
-                {% if triage_entry.allergies %}
-                <div class="history-item">
-                    <strong>Allergies:</strong>
-                    <p>{{ triage_entry.allergies|linebreaks }}</p>
-                </div>
-                {% endif %}
-                {% if triage_entry.current_medications %}
-                <div class="history-item">
-                    <strong>Current Medications:</strong>
-                    <p>{{ triage_entry.current_medications|linebreaks }}</p>
-                </div>
-                {% endif %}
-                {% if triage_entry.medical_history %}
-                <div class="history-item">
-                    <strong>Relevant Medical History:</strong>
-                    <p>{{ triage_entry.medical_history|linebreaks }}</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Assessment -->
-    {% if triage_entry.triage_notes or triage_entry.disposition %}
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-clipboard-check"></i> Assessment & Disposition</h3>
-        </div>
-        <div class="card-body">
-            {% if triage_entry.triage_notes %}
-            <div class="assessment-section">
-                <strong>Triage Notes:</strong>
-                <p>{{ triage_entry.triage_notes|linebreaks }}</p>
-            </div>
-            {% endif %}
-            {% if triage_entry.disposition %}
-            <div class="disposition-section">
-                <strong>Disposition:</strong>
-                <p>{{ triage_entry.disposition }}</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-</div>
 {% endblock %}

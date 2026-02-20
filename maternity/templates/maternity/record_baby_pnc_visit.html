@@ -1,165 +1,180 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Record Postnatal Visit (Baby) - HMS{% endblock %}
-
 {% block content %}
-<div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
-    <div style="margin-bottom: 30px;">
-        <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
-            style="color: #00a8e8; text-decoration: none; font-weight: 600;">
-            <i class="fas fa-arrow-left"></i> Back to Pregnancy Record
-        </a>
-    </div>
-
-    <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <div style="margin-bottom: 24px;">
-            <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">Postnatal Visit Checklist
-                (Baby {{ newborn.baby_number }})</h1>
-            <p style="color: #64748b; margin: 0;">{{ pregnancy.patient.full_name }} • Born {{
-                newborn.birth_datetime|date:"d M Y H:i" }}</p>
+    <div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+        <div style="margin-bottom: 30px;">
+            <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}" style="color: #00a8e8; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-arrow-left"></i> Back to Pregnancy Record
+            </a>
         </div>
-
-        <form method="POST">
-            {% csrf_token %}
-
-            <!-- Visit Information -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Visit Information
-                </h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Visit Date</strong></label>
-                        {{ form.visit_date }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Day Post-Delivery</strong></label>
-                        {{ form.visit_day }}
-                    </div>
-                </div>
+        <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div style="margin-bottom: 24px;">
+                <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
+                    Postnatal Visit Checklist
+                    (Baby {{ newborn.baby_number }})
+                </h1>
+                <p style="color: #64748b; margin: 0;">
+                    {{ pregnancy.patient.full_name }} • Born {{
+                    newborn.birth_datetime|date:"d M Y H:i" }}
+                </p>
             </div>
-
-            <!-- Measurements & Vitals -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Measurements & Vitals
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Weight (kg)</strong></label>
-                        {{ form.weight }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Length (cm)</strong></label>
-                        {{ form.length }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Head Circ. (cm)</strong></label>
-                        {{ form.head_circumference }}
-                    </div>
-                    <div>
-                        <label class="form-label"><strong>Temp (°C)</strong></label>
-                        {{ form.temperature }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Feeding & Nutrition -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Feeding & Nutrition
-                </h3>
-                <div
-                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; margin-bottom: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Feeding Type</strong></label>
-                        {{ form.feeding_type }}
-                    </div>
-                    <div class="form-check" style="margin-bottom: 10px;">
-                        {{ form.feeding_well }}
-                        <label class="form-check-label" for="{{ form.feeding_well.id_for_label }}">
-                            <strong>Baby Feeding Well</strong>
-                        </label>
-                    </div>
-                </div>
-                <div>
-                    <label class="form-label"><strong>Feeding Difficulties</strong></label>
-                    {{ form.feeding_difficulties }}
-                </div>
-            </div>
-
-            <!-- Physical Examination -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Physical Examination
-                </h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Umbilical Cord</strong></label>
-                        {{ form.umbilical_cord }}
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; align-items: end;">
-                        <div class="form-check" style="margin-bottom: 10px;">
-                            {{ form.jaundice }}
-                            <label class="form-check-label" for="{{ form.jaundice.id_for_label }}">
-                                <strong>Jaundice</strong>
+            <form method="POST">
+                {% csrf_token %}
+                <!-- Visit Information -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Visit Information</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Visit Date</strong>
                             </label>
+                            {{ form.visit_date }}
                         </div>
                         <div>
-                            {{ form.jaundice_level }}
+                            <label class="form-label">
+                                <strong>Day Post-Delivery</strong>
+                            </label>
+                            {{ form.visit_day }}
                         </div>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label class="form-label"><strong>Skin</strong></label>
-                        {{ form.skin_condition }}
+                <!-- Measurements & Vitals -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Measurements & Vitals</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Weight (kg)</strong>
+                            </label>
+                            {{ form.weight }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Length (cm)</strong>
+                            </label>
+                            {{ form.length }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Head Circ. (cm)</strong>
+                            </label>
+                            {{ form.head_circumference }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Temp (°C)</strong>
+                            </label>
+                            {{ form.temperature }}
+                        </div>
+                    </div>
+                </div>
+                <!-- Feeding & Nutrition -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Feeding & Nutrition</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Feeding Type</strong>
+                            </label>
+                            {{ form.feeding_type }}
+                        </div>
+                        <div class="form-check" style="margin-bottom: 10px;">
+                            {{ form.feeding_well }}
+                            <label class="form-check-label" for="{{ form.feeding_well.id_for_label }}">
+                                <strong>Baby Feeding Well</strong>
+                            </label>
+                        </div>
                     </div>
                     <div>
-                        <label class="form-label"><strong>Eyes</strong></label>
-                        {{ form.eyes }}
+                        <label class="form-label">
+                            <strong>Feeding Difficulties</strong>
+                        </label>
+                        {{ form.feeding_difficulties }}
+                    </div>
+                </div>
+                <!-- Physical Examination -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Physical Examination</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Umbilical Cord</strong>
+                            </label>
+                            {{ form.umbilical_cord }}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; align-items: end;">
+                            <div class="form-check" style="margin-bottom: 10px;">
+                                {{ form.jaundice }}
+                                <label class="form-check-label" for="{{ form.jaundice.id_for_label }}">
+                                    <strong>Jaundice</strong>
+                                </label>
+                            </div>
+                            <div>{{ form.jaundice_level }}</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Skin</strong>
+                            </label>
+                            {{ form.skin_condition }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Eyes</strong>
+                            </label>
+                            {{ form.eyes }}
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Alertness</strong>
+                            </label>
+                            {{ form.alertness }}
+                        </div>
                     </div>
                     <div>
-                        <label class="form-label"><strong>Alertness</strong></label>
-                        {{ form.alertness }}
+                        <label class="form-label">
+                            <strong>Vaccines Given This Visit</strong>
+                        </label>
+                        {{ form.vaccines_given }}
                     </div>
                 </div>
-                <div>
-                    <label class="form-label"><strong>Vaccines Given This Visit</strong></label>
-                    {{ form.vaccines_given }}
+                <!-- Clinical Assessment -->
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Assessment & Plan</h3>
+                    <div style="margin-bottom: 16px;">
+                        <label class="form-label">
+                            <strong>Complaints</strong>
+                        </label>
+                        {{ form.complaints }}
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="form-label">
+                            <strong>Clinical Findings</strong>
+                        </label>
+                        {{ form.findings }}
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="form-label">
+                            <strong>Plan</strong>
+                        </label>
+                        {{ form.plan }}
+                    </div>
+                    <div>
+                        <label class="form-label">
+                            <strong>Next Visit Date</strong>
+                        </label>
+                        {{ form.next_visit_date }}
+                    </div>
                 </div>
-            </div>
-
-            <!-- Clinical Assessment -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Assessment & Plan
-                </h3>
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label"><strong>Complaints</strong></label>
-                    {{ form.complaints }}
+                <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="submit" style="background: #00a8e8; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-check"></i> Save Visit Record
+                    </button>
+                    <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}" style="background: #e2e8f0; color: #475569; padding: 12px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block">Cancel</a>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label"><strong>Clinical Findings</strong></label>
-                    {{ form.findings }}
-                </div>
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label"><strong>Plan</strong></label>
-                    {{ form.plan }}
-                </div>
-                <div>
-                    <label class="form-label"><strong>Next Visit Date</strong></label>
-                    {{ form.next_visit_date }}
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                <button type="submit"
-                    style="background: #00a8e8; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-check"></i> Save Visit Record
-                </button>
-                <a href="{% url 'maternity:pregnancy_detail' pregnancy.id %}"
-                    style="background: #e2e8f0; color: #475569; padding: 12px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-block;">
-                    Cancel
-                </a>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}

@@ -1,10 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static custom_filters %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     :root {
         --dash-bg: #f8fafc;
         --card-bg: #ffffff;
@@ -422,327 +420,319 @@
     .hidden {
         display: none !important;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="insurance-container">
-    <!-- Header -->
-    <div class="flex justify-between items-end mb-10">
-        <div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">{{ title }}</h1>
-            <p class="text-slate-500 font-medium italic">Monitor and manage outstanding patient claims & insurance
-                balances</p>
-        </div>
-
-        <form method="GET" class="flex items-center gap-3">
-            <div class="relative">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" name="search" value="{{ search_query }}"
-                    placeholder="Search patient, ID or invoice..." class="search-input pl-11">
-            </div>
-            <button type="submit"
-                class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">
-                Search
-            </button>
-            {% if search_query %}
-            <a href="{% url 'accounts:insurance_manager' %}"
-                class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
-            {% endif %}
-        </form>
-    </div>
-
-    <div class="space-y-12">
-        <!-- OPD Section -->
-        <section>
-            <div class="glass-card">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
-                            <i class="fas fa-user-clock"></i>
-                        </span>
-                        Out-Patient (OPD) Pending Claims
-                        <span class="badge-count">{{ opd_invoices.count }}</span>
-                    </h2>
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Settlement
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Patient Details</th>
-                                <th>Invoice Date</th>
-                                <th>Total Bill</th>
-                                <th>Paid</th>
-                                <th>Balance Due</th>
-                                <th>Status</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for inv in opd_invoices %}
-                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
-                                <td>
-                                    <div class="patient-cell">
-                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
-                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
-                                    </div>
-                                </td>
-                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
-                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
-                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
-                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
-                                <td>
-                                    <span
-                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
-                                        {{ inv.get_status_display }}
-                                    </span>
-                                </td>
-                                <td class="text-right">
-                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
-                                        <i class="fas fa-eye text-[10px]"></i> View Details
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="empty-state">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <div
-                                            class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
-                                            <i class="fas fa-check-circle"></i>
-                                        </div>
-                                        <p class="font-bold text-slate-400">No pending OPD invoices found</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- IPD Section -->
-        <section>
-            <div class="glass-card border-indigo-100/50">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span
-                            class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
-                            <i class="fas fa-bed"></i>
-                        </span>
-                        In-Patient (IPD) Pending Claims
-                        <span class="badge-count">{{ ipd_invoices.count }}</span>
-                    </h2>
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding Hospital
-                        Bills</div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Patient Details</th>
-                                <th>Admission Date</th>
-                                <th>Ward/Bed</th>
-                                <th>Current Bill</th>
-                                <th>Balance Due</th>
-                                <th>Status</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for inv in ipd_invoices %}
-                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
-                                <td>
-                                    <div class="patient-cell">
-                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
-                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
-                                    </div>
-                                </td>
-                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
-                                <td>
-                                    {% if inv.visit.admissions.first %}
-                                    <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">
-                                        {{ inv.visit.admissions.first.bed.ward.name }} / {{
-                                        inv.visit.admissions.first.bed.bed_number }}
-                                    </span>
-                                    {% else %}
-                                    <span class="text-slate-300 italic">No Active Admission</span>
-                                    {% endif %}
-                                </td>
-                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
-                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
-                                <td>
-                                    <span
-                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
-                                        {{ inv.get_status_display }}
-                                    </span>
-                                </td>
-                                <td class="text-right">
-                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
-                                        <i class="fas fa-eye text-[10px]"></i> View Details
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="empty-state">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <div
-                                            class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
-                                            <i class="fas fa-check-circle"></i>
-                                        </div>
-                                        <p class="font-bold text-slate-400">No pending IPD invoices found</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        {% if other_invoices %}
-        <!-- Other/Morgue Section -->
-        <section>
-            <div class="glass-card">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                            <i class="fas fa-folder-open"></i>
-                        </span>
-                        Other Pending Claims
-                        <span class="badge-count">{{ other_invoices.count }}</span>
-                    </h2>
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Miscellaneous &
-                        External</div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Entity/Patient</th>
-                                <th>Date</th>
-                                <th>Total Bill</th>
-                                <th>Balance Due</th>
-                                <th>Status</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for inv in other_invoices %}
-                            <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                                onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name|default:inv.deceased.full_name }}', '{{ inv.balance|floatformat:2 }}')">
-                                <td>
-                                    <div class="patient-cell">
-                                        <span class="patient-name">
-                                            {% if inv.deceased %}
-                                            {{ inv.deceased.full_name }} (Deceased)
-                                            {% elif inv.patient %}
-                                            {{ inv.patient.full_name }}
-                                            {% else %}
-                                            Unspecified Entity
-                                            {% endif %}
-                                        </span>
-                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
-                                    </div>
-                                </td>
-                                <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
-                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
-                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
-                                <td>
-                                    <span
-                                        class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">
-                                        {{ inv.get_status_display }}
-                                    </span>
-                                </td>
-                                <td class="text-right">
-                                    <a href="{% url 'accounts:invoice_detail' inv.id %}"
-                                        onclick="event.stopPropagation()" class="action-btn btn-view">
-                                        <i class="fas fa-eye text-[10px]"></i> View Details
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Claim Processing Modal -->
-<div id="claimModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-xl font-black text-slate-900 mb-1">Process Insurance Claim</h3>
-                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest" id="modalPatientName">
-                        Loading...</p>
-                </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
-                    <i class="fas fa-times text-lg"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="modal-body">
-            <div id="itemsContainer" class="space-y-1">
-                <!-- Items will be injected here -->
-                <div class="flex justify-center py-12">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
-                </div>
-            </div>
-
-            <div id="claimInputs" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
-                <div class="mt-8 pt-8 border-t border-slate-100">
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Claim
-                        Reference / ID</label>
-                    <div class="relative">
-                        <i class="fas fa-shield-alt absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                        <input type="text" id="claimReference" placeholder="e.g. NHIF-CLAIM-8829"
-                            class="w-100 p-5 pl-12 rounded-3xl border border-slate-100 bg-slate-50 font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="claim-footer">
+    <div class="insurance-container">
+        <!-- Header -->
+        <div class="flex justify-between items-end mb-10">
             <div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total to Claim
-                    (Editable)</span>
-                <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-black text-slate-900">Ksh</span>
-                    <input type="text" id="claimAmountInput" class="claim-amount-input" inputmode="decimal"
-                        placeholder="0.00" onclick="this.focus(); event.stopPropagation();">
-                </div>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">{{ title }}</h1>
+                <p class="text-slate-500 font-medium italic">
+                    Monitor and manage outstanding patient claims & insurance
+                    balances
+                </p>
             </div>
-            <button onclick="submitInsurancePayment()" id="confirmBtn"
-                class="hidden bg-slate-900 text-white px-10 py-5 rounded-[24px] font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-                Confirm Insurance Claim
-            </button>
+            <form method="GET" class="flex items-center gap-3">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient, ID or invoice..." class="search-input pl-11">
+                </div>
+                <button type="submit" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">Search</button>
+                {% if search_query %}
+                    <a href="{% url 'accounts:insurance_manager' %}" class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="space-y-12">
+            <!-- OPD Section -->
+            <section>
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                <i class="fas fa-user-clock"></i>
+                            </span>
+                            Out-Patient (OPD) Pending Claims
+                            <span class="badge-count">{{ opd_invoices.count }}</span>
+                        </h2>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Settlement</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Details</th>
+                                    <th>Invoice Date</th>
+                                    <th>Total Bill</th>
+                                    <th>Paid</th>
+                                    <th>Balance Due</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in opd_invoices %}
+                                    <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td>
+                                            <div class="patient-cell">
+                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                        <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                        <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                        <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                        <td>
+                                            <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
+                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="empty-state">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </div>
+                                                <p class="font-bold text-slate-400">No pending OPD invoices found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            <!-- IPD Section -->
+            <section>
+                <div class="glass-card border-indigo-100/50">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                <i class="fas fa-bed"></i>
+                            </span>
+                            In-Patient (IPD) Pending Claims
+                            <span class="badge-count">{{ ipd_invoices.count }}</span>
+                        </h2>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Outstanding Hospital
+                            Bills
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Details</th>
+                                    <th>Admission Date</th>
+                                    <th>Ward/Bed</th>
+                                    <th>Current Bill</th>
+                                    <th>Balance Due</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in ipd_invoices %}
+                                    <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td>
+                                            <div class="patient-cell">
+                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                        <td>
+                                            {% if inv.visit.admissions.first %}
+                                                <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">
+                                                    {{ inv.visit.admissions.first.bed.ward.name }} / {{
+                                                    inv.visit.admissions.first.bed.bed_number }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-slate-300 italic">No Active Admission</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                        <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                        <td>
+                                            <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
+                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="empty-state">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </div>
+                                                <p class="font-bold text-slate-400">No pending IPD invoices found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            {% if other_invoices %}
+                <!-- Other/Morgue Section -->
+                <section>
+                    <div class="glass-card">
+                        <div class="section-header">
+                            <h2 class="section-title">
+                                <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <i class="fas fa-folder-open"></i>
+                                </span>
+                                Other Pending Claims
+                                <span class="badge-count">{{ other_invoices.count }}</span>
+                            </h2>
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Miscellaneous &
+                                External
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>Entity/Patient</th>
+                                        <th>Date</th>
+                                        <th>Total Bill</th>
+                                        <th>Balance Due</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inv in other_invoices %}
+                                        <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.deceased %}{{ inv.deceased.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                            <td>
+                                                <div class="patient-cell">
+                                                    <span class="patient-name">
+                                                        {% if inv.deceased %}
+                                                            {{ inv.deceased.full_name }} (Deceased)
+                                                        {% elif inv.patient %}
+                                                            {{ inv.patient.full_name }}
+                                                        {% else %}
+                                                            Unspecified Entity
+                                                        {% endif %}
+                                                    </span>
+                                                    <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                            <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                            <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                            <td>
+                                                <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
+                                            </td>
+                                            <td class="text-right">
+                                                <a href="{% url 'accounts:invoice_detail' inv.id %}" onclick="event.stopPropagation()" class="action-btn btn-view">
+                                                    <i class="fas fa-eye text-[10px]"></i> View Details
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
         </div>
     </div>
-</div>
-
+    <!-- Claim Processing Modal -->
+    <div id="claimModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-900 mb-1">Process Insurance Claim</h3>
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest" id="modalPatientName">Loading...</p>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- Per-Diem Info (Injected for IPD) -->
+                <div id="perDiemInfo" class="hidden mb-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Insurance Per-Diem
+                        Coverage</span>
+                        <span class="text-[10px] font-black text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100" id="perDiemRateLabel">Ksh 2,400 / Day</span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <div class="text-2xl font-black text-slate-900" id="perDiemTotalLabel">Ksh 0.00</div>
+                            <div class="text-[10px] font-bold text-slate-500" id="perDiemDaysLabel">
+                                Based on 0 days of
+                                admission
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">
+                                Facility
+                                Adjustment
+                            </div>
+                            <div class="text-lg font-black text-rose-600" id="adjustmentLabel">Ksh 0.00</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="itemsContainer" class="space-y-1">
+                    <!-- Items will be injected here -->
+                    <div class="flex justify-center py-12">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+                    </div>
+                </div>
+                <div id="claimInputs" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div class="mt-8 pt-8 border-t border-slate-100">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                            Claim
+                            Reference / ID
+                        </label>
+                        <div class="relative">
+                            <i class="fas fa-shield-alt absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                            <input type="text" id="claimReference" placeholder="e.g. NHIF-CLAIM-8829" class="w-100 p-5 pl-12 rounded-3xl border border-slate-100 bg-slate-50 font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="claim-footer">
+                <div>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total to Claim
+                    (Editable)</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-black text-slate-900">Ksh</span>
+                        <input type="text" id="claimAmountInput" class="claim-amount-input" inputmode="decimal" placeholder="0.00" onclick="this.focus(); event.stopPropagation();">
+                    </div>
+                </div>
+                <button onclick="submitInsurancePayment()" id="confirmBtn" class="hidden bg-slate-900 text-white px-10 py-5 rounded-[24px] font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">Confirm Insurance Claim</button>
+            </div>
+        </div>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     let currentInvoiceId = null;
     let selectedItemIds = new Set();
     let invoiceItems = [];
+    let currentAdmissionInfo = null;
+    let currentAdjustment = 0;
 
     function openClaimModal(invoiceId, patientName, balance) {
         currentInvoiceId = invoiceId;
@@ -756,14 +746,27 @@
             </div>
         `;
         document.getElementById('claimAmountInput').value = "0.00";
+        document.getElementById('claimAmountInput').readOnly = false; // Default to editable
         document.getElementById('confirmBtn').classList.add('hidden'); // Initially hidden
         document.getElementById('claimInputs').classList.add('hidden'); // Initially hidden
+        document.getElementById('perDiemInfo').classList.add('hidden');
         selectedItemIds.clear();
+        currentAdmissionInfo = null;
+        currentAdjustment = 0;
 
         fetch(`/accounts/api/insurance/invoice-items/${invoiceId}/`)
             .then(res => res.json())
             .then(data => {
                 invoiceItems = data.items;
+                currentAdmissionInfo = data.admission_info;
+
+                if (currentAdmissionInfo) {
+                    document.getElementById('perDiemInfo').classList.remove('hidden');
+                    document.getElementById('perDiemTotalLabel').textContent = `Ksh ${currentAdmissionInfo.per_diem_total.toLocaleString()}`;
+                    document.getElementById('perDiemDaysLabel').textContent = `Based on ${currentAdmissionInfo.days} days of admission`;
+                    document.getElementById('perDiemRateLabel').textContent = `Ksh ${currentAdmissionInfo.per_diem_rate.toLocaleString()} / Day`;
+                }
+
                 // Smart Defaulting: Select all non-settled items by default
                 invoiceItems.forEach(item => {
                     if (!item.is_settled) {
@@ -792,9 +795,7 @@
             const balanceLabel = isSettled ? 'Fully Paid' : `Ksh ${item.paid_amount.toLocaleString()} / ${item.amount.toLocaleString()} paid`;
 
             return `
-                <div class="item-row ${selectedItemIds.has(item.id.toString()) ? 'selected' : ''} ${isSettled ? 'is-settled' : ''}" 
-                     id="row-${item.id}" 
-                     onclick="${isSettled ? '' : `toggleItem('${item.id}')`}">
+                <div class="item-row ${selectedItemIds.has(item.id.toString()) ? 'selected' : ''} ${isSettled ? 'is-settled' : ''}" id="row-${item.id}" onclick="${isSettled ? '' : `toggleItem('${item.id}')`}">
                     
                     <input type="checkbox" class="item-checkbox" id="check-${item.id}" 
                            ${selectedItemIds.has(item.id.toString()) ? 'checked' : ''} 
@@ -841,8 +842,6 @@
         let totalSelected = 0;
         let invoiceBalance = 0;
 
-        // Find the current invoice data from somewhere or we need to pass it from openClaimModal
-        // Let's assume we store invoice balance when fetching items
         invoiceBalance = window.currentInvoiceBalance || 0;
 
         invoiceItems.forEach(item => {
@@ -852,7 +851,37 @@
         });
 
         const amountInput = document.getElementById('claimAmountInput');
-        amountInput.value = totalSelected.toFixed(2);
+
+        // Apply Per-Diem Logic for Inpatients
+        if (currentAdmissionInfo && selectedItemIds.size > 0) {
+            const perDiemTotal = currentAdmissionInfo.per_diem_total;
+            const totalBilled = currentAdmissionInfo.total_billed;
+
+            // Strictly use the per-diem total as requested, irregardless of what was billed
+            amountInput.value = perDiemTotal.toFixed(2);
+            amountInput.readOnly = true;
+            amountInput.classList.add('bg-slate-50', 'cursor-not-allowed');
+
+            // Calculate adjustment: Difference between billed and per-diem
+            // Positive = billed > per-diem (loss), Negative = billed < per-diem (profit)
+            currentAdjustment = totalSelected - perDiemTotal;
+
+            const adjustmentEl = document.getElementById('adjustmentLabel');
+            if (currentAdjustment > 0) {
+                adjustmentEl.textContent = `Ksh ${currentAdjustment.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                adjustmentEl.classList.remove('text-emerald-600');
+                adjustmentEl.classList.add('text-rose-600');
+            } else {
+                adjustmentEl.textContent = `Ksh ${Math.abs(currentAdjustment).toLocaleString(undefined, { minimumFractionDigits: 2 })} (Gain)`;
+                adjustmentEl.classList.remove('text-rose-600');
+                adjustmentEl.classList.add('text-emerald-600');
+            }
+        } else {
+            amountInput.value = totalSelected.toFixed(2);
+            amountInput.readOnly = false;
+            amountInput.classList.remove('bg-slate-50', 'cursor-not-allowed');
+            currentAdjustment = 0;
+        }
 
         validateAmount();
 
@@ -874,7 +903,11 @@
         const val = parseFloat(amountInput.value) || 0;
         const max = window.currentInvoiceBalance || 0;
 
-        if (val <= 0 || val > max) {
+        // Skip max amount check for IPD (Admission) because they pay flat rate 2400
+        const isIPD = currentAdmissionInfo !== null;
+        const isInvalid = val <= 0 || (!isIPD && val > max);
+
+        if (isInvalid) {
             amountInput.classList.add('border-rose-500', 'text-rose-600');
             confirmBtn.disabled = true;
             confirmBtn.classList.add('opacity-50', 'grayscale');
@@ -903,7 +936,8 @@
             invoice_id: currentInvoiceId,
             item_ids: Array.from(selectedItemIds),
             claim_id: document.getElementById('claimReference').value,
-            amount: document.getElementById('claimAmountInput').value
+            amount: document.getElementById('claimAmountInput').value,
+            adjustment: currentAdjustment
         };
 
         fetch('/accounts/api/insurance/process-claim/', {
@@ -940,5 +974,5 @@
             closeModal();
         }
     }
-</script>
+    </script>
 {% endblock %}

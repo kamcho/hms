@@ -1,149 +1,137 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
-
 {% block title %}Deceased List - Morgue{% endblock %}
-
 {% block content %}
-<div class="deceased-list-page">
-    <!-- Header Section -->
-    <header class="list-header">
-        <div class="header-content">
-            <div class="header-text">
-                <h1><i class="fas fa-users"></i> Deceased Registry</h1>
-                <p>Complete list of all deceased persons in the morgue system</p>
+    <div class="deceased-list-page">
+        <!-- Header Section -->
+        <header class="list-header">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>
+                        <i class="fas fa-users"></i> Deceased Registry
+                    </h1>
+                    <p>Complete list of all deceased persons in the morgue system</p>
+                </div>
+                <div class="header-stats">
+                    <div class="quick-stat">
+                        <span class="stat-number">{{ total_count }}</span>
+                        <span class="stat-label">Current Occupancy</span>
+                    </div>
+                    <div class="quick-stat">
+                        <span class="stat-number">{{ released_count }}</span>
+                        <span class="stat-label">Total Released</span>
+                    </div>
+                </div>
             </div>
-            <div class="header-stats">
-                <div class="quick-stat">
-                    <span class="stat-number">{{ total_count }}</span>
-                    <span class="stat-label">Current Occupancy</span>
-                </div>
-                <div class="quick-stat">
-                    <span class="stat-number">{{ released_count }}</span>
-                    <span class="stat-label">Total Released</span>
-                </div>
+            <div class="header-actions">
+                <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Admission
+                </a>
             </div>
-        </div>
-        <div class="header-actions">
-            <a href="{% url 'morgue:deceased_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> New Admission
-            </a>
-        </div>
-    </header>
-
-    <!-- Search Section -->
-    <section class="search-section">
-        <div class="search-container">
-            <form method="GET" class="search-form">
-                <div class="search-input-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" 
-                           name="search" 
-                           id="search_query" 
-                           value="{{ request.GET.search }}"
-                           placeholder="Search by name, tag, or ID number..."
-                           class="search-input">
+        </header>
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <form method="GET" class="search-form">
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="text" name="search" id="search_query" value="{{ request.GET.search }}" placeholder="Search by name, tag, or ID number..." class="search-input">
+                    </div>
+                    <div class="search-actions">
+                        <button type="submit" class="btn btn-search">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        {% if request.GET.search %}
+                            <a href="{% url 'morgue:deceased_list' %}" class="btn btn-clear">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </section>
+        <!-- Deceased Table -->
+        <section class="table-section">
+            <div class="table-container">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <th style="padding: 15px; text-align: left;">Tag</th>
+                            <th style="padding: 15px; text-align: left;">Name</th>
+                            <th style="padding: 15px; text-align: left;">Sex</th>
+                            <th style="padding: 15px; text-align: left;">Date of Death</th>
+                            <th style="padding: 15px; text-align: left;">Storage</th>
+                            <th style="padding: 15px; text-align: left;">Date Received</th>
+                            <th style="padding: 15px; text-align: left;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for deceased in deceased_list %}
+                            <tr class="deceased-row" data-url="{% url 'morgue:deceased_detail' deceased.pk %}" style="cursor: pointer; border-bottom: 1px solid #e9ecef;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                                <td style="padding: 15px;">{{ deceased.tag|default:"No Tag" }}</td>
+                                <td style="padding: 15px;">{{ deceased.surname|default:"N/A" }} {{ deceased.other_names|default:"" }}</td>
+                                <td style="padding: 15px;">{{ deceased.get_sex_display }}</td>
+                                <td style="padding: 15px;">{{ deceased.date_of_death|date:"M d, Y"|default:"N/A" }}</td>
+                                <td style="padding: 15px;">{{ deceased.get_storage_chamber_display|default:"N/A" }}</td>
+                                <td style="padding: 15px;">
+                                    {% if deceased.admissions.exists %}
+                                        {{ deceased.admissions.first.admission_datetime|date:"M d, Y H:i"|default:"N/A" }}
+                                    {% else %}
+                                        {{ deceased.created_at|date:"M d, Y H:i"|default:"N/A" }}
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 15px;">
+                                    {% if deceased.is_released %}
+                                        Released
+                                    {% else %}
+                                        Admitted
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">No deceased records found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <section class="pagination-section">
+                <div class="pagination-info">
+                    <span class="page-info">Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} records</span>
                 </div>
-                <div class="search-actions">
-                    <button type="submit" class="btn btn-search">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    {% if request.GET.search %}
-                    <a href="{% url 'morgue:deceased_list' %}" class="btn btn-clear">
-                        <i class="fas fa-times"></i> Clear
-                    </a>
+                <div class="pagination-controls">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            <i class="fas fa-angle-double-left"></i> First
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            <i class="fas fa-angle-left"></i> Previous
+                        </a>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="page-link current">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            Next <i class="fas fa-angle-right"></i>
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            Last <i class="fas fa-angle-double-right"></i>
+                        </a>
                     {% endif %}
                 </div>
-            </form>
-        </div>
-    </section>
-
-    <!-- Deceased Table -->
-    <section class="table-section">
-        <div class="table-container">
-            <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <thead>
-                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                        <th style="padding: 15px; text-align: left;">Tag</th>
-                        <th style="padding: 15px; text-align: left;">Name</th>
-                        <th style="padding: 15px; text-align: left;">Sex</th>
-                        <th style="padding: 15px; text-align: left;">Date of Death</th>
-                        <th style="padding: 15px; text-align: left;">Storage</th>
-                        <th style="padding: 15px; text-align: left;">Date Received</th>
-                        <th style="padding: 15px; text-align: left;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for deceased in deceased_list %}
-                    <tr class="deceased-row" data-url="{% url 'morgue:deceased_detail' deceased.pk %}" style="cursor: pointer; border-bottom: 1px solid #e9ecef;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                        <td style="padding: 15px;">{{ deceased.tag|default:"No Tag" }}</td>
-                        <td style="padding: 15px;">{{ deceased.surname|default:"N/A" }} {{ deceased.other_names|default:"" }}</td>
-                        <td style="padding: 15px;">{{ deceased.get_sex_display }}</td>
-                        <td style="padding: 15px;">{{ deceased.date_of_death|date:"M d, Y"|default:"N/A" }}</td>
-                        <td style="padding: 15px;">{{ deceased.get_storage_chamber_display|default:"N/A" }}</td>
-                        <td style="padding: 15px;">
-                            {% if deceased.admissions.exists %}
-                                {{ deceased.admissions.first.admission_datetime|date:"M d, Y H:i"|default:"N/A" }}
-                            {% else %}
-                                {{ deceased.created_at|date:"M d, Y H:i"|default:"N/A" }}
-                            {% endif %}
-                        </td>
-                        <td style="padding: 15px;">
-                            {% if deceased.is_released %}Released{% else %}Admitted{% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
-                            No deceased records found.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <section class="pagination-section">
-        <div class="pagination-info">
-            <span class="page-info">
-                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
-            </span>
-        </div>
-        
-        <div class="pagination-controls">
-            {% if page_obj.has_previous %}
-                <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
-                    <i class="fas fa-angle-double-left"></i> First
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
-                    <i class="fas fa-angle-left"></i> Previous
-                </a>
-            {% endif %}
-            
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="page-link current">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">{{ num }}</a>
-                {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
-                    Next <i class="fas fa-angle-right"></i>
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
-                    Last <i class="fas fa-angle-double-right"></i>
-                </a>
-            {% endif %}
-        </div>
-    </section>
-    {% endif %}
-</div>
-
-<style>
+            </section>
+        {% endif %}
+    </div>
+    <style>
 /* Reset and Base Styles */
 * {
     margin: 0;
@@ -748,9 +736,8 @@
 .table-container::-webkit-scrollbar-thumb:hover {
     background: #5a6fd8;
 }
-</style>
-
-<script>
+    </style>
+    <script>
 // Handle clickable rows
 document.addEventListener('DOMContentLoaded', function() {
     const deceasedRows = document.querySelectorAll('.deceased-row');
@@ -763,5 +750,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-</script>
+    </script>
 {% endblock %}
