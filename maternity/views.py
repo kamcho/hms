@@ -1,9 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.urls import reverse
+from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
-from django.contrib import messages # Added messages
+from django.contrib import messages
 from .models import (
     Pregnancy, AntenatalVisit, LaborDelivery, Newborn, 
     PostnatalMotherVisit, PostnatalBabyVisit, MaternityDischarge, MaternityReferral,
@@ -455,7 +457,6 @@ def receive_anc_arrival(request, que_id):
         sent_to__name__in=['ANC', 'Maternity']
     ).update(status='COMPLETED')
     
-    from django.contrib import messages
     messages.success(request, f'{que.visit.patient.full_name} has been received and queued for ANC.')
     
     return redirect('maternity:anc_dashboard')
@@ -469,7 +470,6 @@ def close_anc_visit(request, visit_id):
     anc_visit.service_received = True
     anc_visit.save()
     
-    from django.contrib import messages
     messages.success(request, f'ANC Visit #{anc_visit.visit_number} for {anc_visit.pregnancy.patient.full_name} has been closed.')
     
     return redirect('maternity:pregnancy_detail', pregnancy_id=anc_visit.pregnancy.id)
@@ -824,18 +824,38 @@ def pregnancy_detail(request, pregnancy_id):
 
 
 @login_required
-def record_anc_visit(request, pregnancy_id):
-    """Record ANC visit - handles both new visits and finishing queued/paid visits"""
+def update_pregnancy_blood_group(request, pregnancy_id):
+    """AJAX view to update pregnancy blood group"""
+    if request.method == 'POST':
+        pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
+        blood_group = request.POST.get('blood_group')
+        
+        if blood_group in dict(Pregnancy.BLOOD_GROUP_CHOICES).keys() or blood_group == '':
+            pregnancy.blood_group = blood_group
+            pregnancy.save()
+            return JsonResponse({'status': 'success', 'blood_group': pregnancy.blood_group})
+            
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def record_anc_visit(request, pregnancy_id, visit_id=None):
+    """Record ANC visit - handles new visits, queued visits, and updating existing visits"""
     from .forms import AntenatalVisitForm
     
     pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
     
-    # Check if there's a pending visit from the queue (paid but not seen)
-    pending_visit = pregnancy.anc_visits.filter(service_received=False).first()
+    # Identify which visit record to use/edit
+    if visit_id:
+        # Explicitly updating a specific visit
+        visit_instance = get_object_or_404(AntenatalVisit, id=visit_id, pregnancy=pregnancy)
+    else:
+        # Check if there's a pending visit from the queue (paid but not seen)
+        visit_instance = pregnancy.anc_visits.filter(service_received=False).first()
     
     if request.method == 'POST':
-        if pending_visit:
-            form = AntenatalVisitForm(request.POST, instance=pending_visit)
+        if visit_instance:
+            form = AntenatalVisitForm(request.POST, instance=visit_instance)
         else:
             form = AntenatalVisitForm(request.POST)
             
@@ -847,17 +867,25 @@ def record_anc_visit(request, pregnancy_id):
             anc_visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
-        # Auto-calculate visit number
-        last_completed = pregnancy.anc_visits.filter(service_received=True).order_by('-visit_number').first()
-        next_visit_number = (last_completed.visit_number + 1) if last_completed else 1
-        
-        if pending_visit:
-            form = AntenatalVisitForm(instance=pending_visit, initial={
-                'visit_number': next_visit_number,
-                'visit_date': timezone.now().date(),
-                'gestational_age': pregnancy.gestational_age_weeks
-            })
+        # For non-POST, prepare the form
+        if visit_instance:
+            # Editing existing or queued visit
+            form = AntenatalVisitForm(instance=visit_instance)
+            # If it's a queued visit (not yet filled), apply some defaults
+            if not visit_instance.service_received:
+                last_completed = pregnancy.anc_visits.filter(service_received=True).order_by('-visit_number').first()
+                next_visit_num = (last_completed.visit_number + 1) if last_completed else 1
+                
+                form.initial.update({
+                    'visit_number': next_visit_num,
+                    'visit_date': timezone.now().date(),
+                    'gestational_age': pregnancy.gestational_age_weeks
+                })
         else:
+            # Brand new visit from scratch
+            last_completed = pregnancy.anc_visits.filter(service_received=True).order_by('-visit_number').first()
+            next_visit_number = (last_completed.visit_number + 1) if last_completed else 1
+            
             form = AntenatalVisitForm(initial={
                 'visit_number': next_visit_number,
                 'visit_date': timezone.now().date(),
@@ -867,7 +895,8 @@ def record_anc_visit(request, pregnancy_id):
     context = {
         'form': form,
         'pregnancy': pregnancy,
-        'is_queued': pending_visit is not None,
+        'is_queued': visit_instance is not None and not visit_instance.service_received,
+        'is_edit': visit_id is not None,
     }
     
     return render(request, 'maternity/record_anc_visit.html', context)
@@ -978,7 +1007,6 @@ def register_newborn(request, pregnancy_id):
             newborn.delivery = delivery
             newborn.created_by = request.user
             newborn.save()
-            from django.urls import reverse
             return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
     else:
         # Auto-populate baby number (count existing + 1)

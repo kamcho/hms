@@ -84,29 +84,13 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: var(--gradient);
+        background: var(--gradient, var(--pharm-gradient-3));
     }
 
     .stat-card:hover {
         transform: translateY(-8px);
         border-color: rgba(148, 163, 184, 0.3);
         box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
-    }
-
-    .stat-card.pending::before {
-        background: var(--pharm-gradient-1);
-    }
-
-    .stat-card.low-stock::before {
-        background: var(--pharm-gradient-warning);
-    }
-
-    .stat-card.requests::before {
-        background: var(--pharm-gradient-2);
-    }
-
-    .stat-card.dispensed::before {
-        background: var(--pharm-gradient-4);
     }
 
     .stat-icon {
@@ -165,13 +149,6 @@
         gap: 0.75rem;
     }
 
-    .section-header h2 i {
-        background: var(--pharm-gradient-1);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
     .search-box {
         position: relative;
         margin: 1.5rem 2rem;
@@ -193,10 +170,6 @@
         background: rgba(255, 255, 255, 0.08);
         border-color: #667eea;
         box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    }
-
-    .search-box input::placeholder {
-        color: var(--text-secondary);
     }
 
     .search-box i {
@@ -253,14 +226,6 @@
     .patient-details h3 a {
         color: var(--text-primary);
         text-decoration: none;
-        transition: color 0.2s;
-    }
-
-    .patient-details h3 a:hover {
-        background: var(--pharm-gradient-1);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }
 
     .patient-meta {
@@ -268,12 +233,6 @@
         gap: 1.5rem;
         font-size: 0.85rem;
         color: var(--text-secondary);
-    }
-
-    .patient-meta span {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
     }
 
     .med-table {
@@ -290,8 +249,6 @@
         color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 1px;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 12px;
     }
 
     .med-table td {
@@ -301,103 +258,8 @@
         border-bottom: 1px solid var(--pharm-border);
     }
 
-    .med-table td:first-child {
-        border-left: 1px solid var(--pharm-border);
-        border-radius: 12px 0 0 12px;
-    }
-
-    .med-table td:last-child {
-        border-right: 1px solid var(--pharm-border);
-        border-radius: 0 12px 12px 0;
-    }
-
-    .med-name {
-        font-weight: 700;
-        font-size: 1rem;
-        color: var(--text-primary);
-        margin-bottom: 0.25rem;
-    }
-
-    .med-dosage {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-    }
-
-    .badge {
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-    .badge-success {
-        background: rgba(67, 233, 123, 0.15);
-        color: #43e97b;
-    }
-
-    .badge-warning {
-        background: rgba(254, 225, 64, 0.15);
-        color: #fee140;
-    }
-
-    .badge-danger {
-        background: rgba(245, 87, 108, 0.15);
-        color: #f5576c;
-    }
-
-    .badge-primary {
-        background: rgba(102, 126, 234, 0.15);
-        color: #667eea;
-    }
-
-    .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
-    }
-
-    .btn-primary {
-        background: var(--pharm-gradient-1);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 30px -5px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-success {
-        background: var(--pharm-gradient-4);
-        color: white;
-    }
-
-    .btn-success:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 30px -5px rgba(67, 233, 123, 0.4);
-    }
-
-    .btn-ghost {
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-primary);
-        border: 1px solid var(--pharm-border);
-    }
-
-    .btn-ghost:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
+    .med-table tr td:first-child { border-left: 1px solid var(--pharm-border); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+    .med-table tr td:last-child { border-right: 1px solid var(--pharm-border); border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
 
     .side-card {
         background: var(--pharm-card-bg);
@@ -417,436 +279,379 @@
         gap: 0.5rem;
     }
 
-    .alert-item {
-        padding: 1rem;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
-        margin-bottom: 0.75rem;
-        display: flex;
-        justify-content: space-between;
+    .badge {
+        display: inline-flex;
         align-items: center;
-        border-left: 3px solid;
-    }
-
-    .alert-item.warning {
-        border-left-color: #fee140;
-    }
-
-    .alert-item.danger {
-        border-left-color: #f5576c;
-    }
-
-    .empty-state {
-        padding: 4rem 2rem;
-        text-align: center;
-        color: var(--text-secondary);
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-    }
-
-    .empty-state h4 {
-        font-size: 1.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 8px;
+        font-size: 10px;
         font-weight: 800;
-        color: var(--text-primary);
-        margin: 0 0 0.5rem 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
 
-    .quick-actions {
-        position: relative;
-        z-index: 1;
-    }
-
-    .action-btn-group {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    @media (max-width: 768px) {
-        .pharmacy-hero h1 {
-            font-size: 1.75rem;
-        }
-
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+    .badge-primary { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+    .badge-success { background: rgba(56, 249, 215, 0.1); color: #38f9d7; }
+    .badge-warning { background: rgba(254, 225, 64, 0.1); color: #fee140; }
+    .badge-danger { background: rgba(245, 87, 108, 0.1); color: #f5576c; }
     </style>
+
     <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
         <!-- Hero Header -->
         <div class="pharmacy-hero">
-            <div class="quick-actions">
-                <h1>
-                    <i class="fas fa-pills"></i> Pharmacy Operations Center
-                </h1>
-                <p>Manage prescriptions, monitor stock levels, and ensure optimal patient care delivery</p>
-            </div>
+            <h1>
+                {% if user.role == 'Pharmacist' %}
+                    OPD Pharmacy Operations
+                {% else %}
+                    IPD Medication Management
+                {% endif %}
+            </h1>
+            <p>
+                {% if user.role == 'Pharmacist' %}
+                    Dispensing medications and consumables for Out-Patient visits from <strong>{{ pharmacy_dept.name }}</strong>.
+                {% else %}
+                    Managing medication charts and consumables for In-Patient admissions from <strong>{{ pharmacy_dept.name }}</strong>.
+                {% endif %}
+            </p>
         </div>
+
         <!-- Statistics Dashboard -->
         <div class="stats-grid">
-            <div class="stat-card pending">
-                <div class="stat-icon">
-                    <i class="fas fa-file-prescription"></i>
+            {% if user.role == 'Pharmacist' %}
+                <div class="stat-card" style="--gradient: var(--pharm-gradient-1)">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-label">Pending OPD</div>
+                    <div class="stat-value">{{ stats.pending_prescriptions }}</div>
                 </div>
-                <div class="stat-label">OPD Pending</div>
-                <div class="stat-value">{{ stats.pending_prescriptions }}</div>
-            </div>
-            <div class="stat-card requests" style="--gradient: var(--pharm-gradient-3)">
-                <div class="stat-icon">
-                    <i class="fas fa-bed-pulse"></i>
+            {% else %}
+                <div class="stat-card" style="--gradient: var(--pharm-gradient-2)">
+                    <div class="stat-icon"><i class="fas fa-procedures"></i></div>
+                    <div class="stat-label">Pending IPD</div>
+                    <div class="stat-value">{{ stats.pending_ipd_count }}</div>
                 </div>
-                <div class="stat-label">IPD Pending</div>
-                <div class="stat-value">{{ stats.pending_ipd_count }}</div>
-            </div>
-            <div class="stat-card low-stock">
-                <div class="stat-icon">
-                    <i class="fas fa-triangle-exclamation"></i>
-                </div>
-                <div class="stat-label">Stock Alerts</div>
+            {% endif %}
+            
+            <div class="stat-card" style="--gradient: var(--pharm-gradient-warning)">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-label">Low Stock ({{ pharmacy_dept.name }})</div>
                 <div class="stat-value">{{ stats.low_stock_count }}</div>
             </div>
-            <div class="stat-card requests">
-                <div class="stat-icon">
-                    <i class="fas fa-truck-ramp-box"></i>
-                </div>
-                <div class="stat-label">Pending Requests</div>
-                <div class="stat-value">{{ stats.pending_requests }}</div>
-            </div>
-            <div class="stat-card dispensed">
-                <div class="stat-icon">
-                    <i class="fas fa-check-double"></i>
-                </div>
+            
+            <div class="stat-card" style="--gradient: var(--pharm-gradient-4)">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="stat-label">Dispensed Today</div>
                 <div class="stat-value">{{ stats.dispensed_today }}</div>
             </div>
         </div>
+
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
             <div>
-                <!-- OPD Prescription & Consumable Queue -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-clinic-medical"></i> OPD Dispensing Queue
-                        </h2>
-                        <span class="badge badge-primary">{{ stats.pending_prescriptions }} Pending Items</span>
-                    </div>
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <form method="GET">
-                            <input type="text" name="search" placeholder="Search by patient name or medication..." value="{{ search_query }}">
-                        </form>
-                    </div>
-                    {% for group in opd_groups %}
-                        <div class="prescription-group">
-                            <div class="patient-header">
-                                <div class="patient-info">
-                                    <div class="patient-avatar">{{ group.patient.full_name|slice:":1" }}</div>
-                                    <div class="patient-details">
-                                        <h3>
-                                            <a href="{% url 'home:patient_detail' group.patient.pk %}">{{
-                                            group.patient.full_name }}</a>
-                                        </h3>
-                                        <div class="patient-meta">
-                                            {% if group.prescribed_at %}<span><i class="far fa-clock"></i> {{ group.prescribed_at|date:"M d, H:i" }}</span>{% endif %}
-                                            {% if group.prescribed_by %}<span><i class="fas fa-user-md"></i> Dr. {{ group.prescribed_by.last_name }}</span>{% endif %}
-                                            <span><i class="fas fa-file-invoice-dollar"></i> {{ group.invoice_status|upper
-                                            }}</span>
+                {% if user.role == 'Pharmacist' %}
+                    <!-- OPD Pending Items -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2><i class="fas fa-prescription-bottle-alt"></i> OPD Dispensing Queue</h2>
+                            <span class="badge badge-primary">{{ opd_groups|length }} Visits</span>
+                        </div>
+                        
+                        <div class="search-box">
+                            <form method="GET">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" placeholder="Search patient name or medication..." value="{{ search_query }}">
+                            </form>
+                        </div>
+
+                        {% for group in opd_groups %}
+                            <div class="prescription-group">
+                                <div class="patient-header">
+                                    <div class="patient-info">
+                                        <div class="patient-avatar">{{ group.patient.first_name|first }}{{ group.patient.last_name|first }}</div>
+                                        <div class="patient-details">
+                                            <h3><a href="{% url 'home:patient_detail' group.patient.id %}">{{ group.patient.full_name }}</a></h3>
+                                            <div class="patient-meta">
+                                                <span><i class="far fa-calendar"></i> {{ group.prescribed_at|date:"M d, H:i" }}</span>
+                                                <span><i class="far fa-user"></i> {{ group.prescribed_by.username }}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="action-btn-group">
-                                    {% if group.invoice_status == 'Paid' %}
-                                        <button class="btn btn-success dispense-all-btn" data-visit-id="{{ group.visit.id }}" data-patient="{{ group.patient.full_name }}">
-                                            <i class="fas fa-check-double"></i> Dispense All
+                                    <div class="flex items-center gap-4">
+                                        <span class="badge {% if group.invoice_status == 'Paid' %}badge-success{% else %}badge-warning{% endif %}">
+                                            {{ group.invoice_status }}
+                                        </span>
+                                        <button class="dispense-all-btn btn btn-success"
+                                                style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
+                                                data-visit-id="{{ group.visit.id }}"
+                                                data-patient="{{ group.patient.full_name }}"
+                                                {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
+                                            Dispense All
                                         </button>
-                                    {% else %}
-                                        <button class="btn btn-ghost" disabled title="Payment Required">
-                                            <i class="fas fa-lock"></i> Payment Pending
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <table class="med-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Type</th>
-                                        <th>Details</th>
-                                        <th>Quantity</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in group.prescriptions %}
-                                        <tr>
-                                            <td>
-                                                <div class="med-name">{{ item.medication.name }}</div>
-                                                <div class="med-dosage">{{ item.dose_count }} units / dose</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-primary"><i class="fas fa-pills"></i> Medication</span>
-                                            </td>
-                                            <td>
-                                                <div class="badge badge-primary">{{ item.frequency }}</div>
-                                            </td>
-                                            <td>
-                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
-                                                <span style="color: var(--text-secondary);">{{ item.medication.unit }}</span>
-                                            </td>
-                                            <td>
-                                                {% if group.invoice_status == 'Paid' %}
-                                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
-                                                {% else %}
-                                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
-                                                    group.invoice_status }}</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                    {% for ci in group.consumables %}
-                                        <tr>
-                                            <td>
-                                                <div class="med-name">{{ ci.inventory_item.name }}</div>
-                                                <div class="med-dosage">Consumable</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-warning"><i class="fas fa-box-open"></i> Consumable</span>
-                                            </td>
-                                            <td>&mdash;</td>
-                                            <td>
-                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ ci.quantity }}</span>
-                                                <span style="color: var(--text-secondary);"> {{
-                                                ci.inventory_item.unit|default:"units" }}</span>
-                                            </td>
-                                            <td>
-                                                {% if group.invoice_status == 'Paid' %}
-                                                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Paid</span>
-                                                {% else %}
-                                                    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{
-                                                    group.invoice_status }}</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% empty %}
-                        <div class="empty-state">
-                            <i class="fas fa-clipboard-check"></i>
-                            <h4>All Clear</h4>
-                            <p>No pending prescriptions or consumables. Queue is empty.</p>
-                        </div>
-                    {% endfor %}
-                </div>
-                <!-- IPD Dispensing Section -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-bed-pulse"></i> IPD Dispensing Queue
-                        </h2>
-                        <span class="badge badge-success">{{ stats.pending_ipd_count }} Pending Items</span>
-                    </div>
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <form method="GET">
-                            <input type="text" name="search" placeholder="Search inpatient or medication..." value="{{ search_query }}">
-                        </form>
-                    </div>
-                    {% for group in ipd_groups %}
-                        <div class="prescription-group">
-                            <div class="patient-header">
-                                <div class="patient-info">
-                                    <div class="patient-avatar" style="background: var(--pharm-gradient-3)">
-                                        {{
-                                        group.patient.full_name|slice:":1" }}
-                                    </div>
-                                    <div class="patient-details">
-                                        <h3>
-                                            <a href="{% url 'home:patient_detail' group.patient.pk %}">{{
-                                            group.patient.full_name }}</a>
-                                        </h3>
-                                        <div class="patient-meta">
-                                            {% if group.admission and group.admission.bed %}
-                                                <span><i class="fas fa-procedures"></i> {{ group.admission.bed.ward.name }} / Bed {{
-                                                group.admission.bed.bed_number }}</span>
-                                            {% endif %}
-                                        </div>
                                     </div>
                                 </div>
-                                <div class="action-btn-group">
-                                    <button class="btn btn-success dispense-all-btn" data-visit-id="{{ group.visit.id }}" data-patient="{{ group.patient.full_name }}">
-                                        <i class="fas fa-check-double"></i> Dispense All
-                                    </button>
-                                </div>
-                            </div>
-                            <table class="med-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Type</th>
-                                        <th>Regimen</th>
-                                        <th>Quantity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in group.medications %}
+
+                                <table class="med-table">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <div class="med-name">{{ item.item.name }}</div>
-                                                <div class="med-dosage">{{ item.dose_count }} units / dose</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-primary"><i class="fas fa-pills"></i> Medication</span>
-                                            </td>
-                                            <td>
-                                                <div class="badge badge-primary" style="background: rgba(79, 172, 254, 0.15); color: #4facfe;">
-                                                    {{ item.frequency
-                                                    }}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {% if item.quantity > 0 %}
-                                                    <span style="font-weight: 700; font-size: 1.1rem;">{{ item.quantity }}</span>
-                                                {% else %}
-                                                    <span style="font-weight: 700; font-size: 1.1rem; color: #4facfe;">Auto</span>
-                                                {% endif %}
-                                                <span style="color: var(--text-secondary);"> {{ item.item.unit|default:"units"
-                                                }}</span>
-                                            </td>
+                                            <th>Item Name</th>
+                                            <th>Category</th>
+                                            <th>Qty</th>
+                                            <th>Action</th>
                                         </tr>
-                                    {% endfor %}
-                                    {% for ci in group.consumables %}
-                                        <tr>
-                                            <td>
-                                                <div class="med-name">{{ ci.inventory_item.name|default:ci.item.name }}</div>
-                                                <div class="med-dosage">Consumable</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-warning"><i class="fas fa-box-open"></i> Consumable</span>
-                                            </td>
-                                            <td>&mdash;</td>
-                                            <td>
-                                                <span style="font-weight: 700; font-size: 1.1rem;">{{ ci.quantity }}</span>
-                                                <span style="color: var(--text-secondary);">
-                                                    {% if ci.inventory_item %}
-                                                        {{ ci.inventory_item.dispensing_unit|default:"units" }}
-                                                    {% else %}
-                                                        {{ ci.item.dispensing_unit|default:"units" }}
+                                    </thead>
+                                    <tbody>
+                                        {% for item in group.prescriptions %}
+                                            <tr>
+                                                <td class="font-bold whitespace-nowrap">{{ item.medication.name }}</td>
+                                                <td><span class="badge badge-primary">Medication</span></td>
+                                                <td class="font-bold">{{ item.quantity }}</td>
+                                                <td>
+                                                    {% if item.instructions %}
+                                                        <button onclick="showInstruction('{{ item.medication.name|escapejs }}', '{{ item.instructions|escapejs }}')" class="badge badge-primary" style="cursor: pointer; border: 0;">
+                                                            View Instructions
+                                                        </button>
                                                     {% endif %}
-                                                </span>
-                                            </td>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                        {% for item in group.consumables %}
+                                            <tr>
+                                                <td class="font-bold whitespace-nowrap">{{ item.inventory_item.name }}</td>
+                                                <td><span class="badge badge-warning">Consumable</span></td>
+                                                <td class="font-bold">{{ item.quantity }}</td>
+                                                <td>
+                                                    {% if item.instructions %}
+                                                        <button onclick="showInstruction('{{ item.inventory_item.name|escapejs }}', '{{ item.instructions|escapejs }}')" class="badge badge-primary" style="cursor: pointer; border: 0;">
+                                                            View Instructions
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <h4>All Clear</h4>
+                                <p>No pending OPD prescriptions.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if user.role == 'Nurse' %}
+                    <!-- IPD Pending Items -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2><i class="fas fa-procedures"></i> IPD Medication Chart</h2>
+                            <span class="badge badge-success">{{ ipd_groups|length }} Admissions</span>
+                        </div>
+
+                        <div class="search-box">
+                            <form method="GET">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" placeholder="Search admitted patient..." value="{{ search_query }}">
+                            </form>
+                        </div>
+
+                        {% for group in ipd_groups %}
+                            <div class="prescription-group">
+                                <div class="patient-header">
+                                    <div class="patient-info">
+                                        <div class="patient-avatar" style="background: var(--pharm-gradient-2)">{{ group.patient.first_name|first }}{{ group.patient.last_name|first }}</div>
+                                        <div class="patient-details">
+                                            <h3><a href="{% url 'home:patient_detail' group.patient.id %}">{{ group.patient.full_name }}</a></h3>
+                                            <div class="patient-meta">
+                                                <span class="badge badge-primary">Bed {{ group.admission.bed.number }} — {{ group.admission.bed.ward.name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="dispense-all-btn btn btn-success"
+                                                style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
+                                                data-visit-id="{{ group.visit.id }}"
+                                                data-patient="{{ group.patient.full_name }}">
+                                            Dispense IPD
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <table class="med-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Type</th>
+                                            <th>Regimen</th>
+                                            <th>Quantity</th>
                                         </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% empty %}
-                        <div class="empty-state">
-                            <i class="fas fa-bed"></i>
-                            <h4>No IPD Orders</h4>
-                            <p>No pending medications or consumables for inpatients.</p>
-                        </div>
-                    {% endfor %}
-                </div>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in group.medications %}
+                                            <tr>
+                                                <td class="font-bold">
+                                                    {{ item.item.name }}
+                                                    {% if item.instructions %}
+                                                        <button onclick="showInstruction('{{ item.item.name|escapejs }}', '{{ item.instructions|escapejs }}')" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                                                            <i class="fas fa-info-circle"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                                <td><span class="badge badge-primary">Med</span></td>
+                                                <td><span class="badge badge-primary">{{ item.frequency }}</span></td>
+                                                <td class="font-bold">{{ item.quantity|default:"Auto" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        {% for item in group.consumables %}
+                                            <tr>
+                                                <td class="font-bold">
+                                                    {% if item.item %}{{ item.item.name }}{% else %}{{ item.inventory_item.name }}{% endif %}
+                                                    {% if item.instructions %}
+                                                        <button onclick="showInstruction('{% if item.item %}{{ item.item.name|escapejs }}{% else %}{{ item.inventory_item.name|escapejs }}{% endif %}', '{{ item.instructions|escapejs }}')" style="background: none; border: none; color: #fee140; cursor: pointer;">
+                                                            <i class="fas fa-info-circle"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                                <td><span class="badge badge-warning">Consumable</span></td>
+                                                <td>&mdash;</td>
+                                                <td class="font-bold">{{ item.quantity }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">
+                                <i class="fas fa-bed"></i>
+                                <h4>No IPD Orders</h4>
+                                <p>No pending medication charts.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
-            <!-- Sidebar: Alerts & Requests -->
+
+            <!-- Sidebar -->
             <div>
+                <!-- Stock Record Section -->
+                <div class="side-card">
+                    <h3><i class="fas fa-boxes"></i> Current Stock</h3>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="text-align: left; color: var(--text-secondary);">
+                                    <th style="padding-bottom: 0.75rem;">Item</th>
+                                    <th style="padding-bottom: 0.75rem;">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in pharmacy_stock %}
+                                    <tr>
+                                        <td style="padding: 0.5rem 0;">{{ stock.item.name }}</td>
+                                        <td style="padding: 0.5rem 0;" class="font-bold {% if stock.quantity < stock.item.reorder_level %}text-red-400{% else %}text-emerald-400{% endif %}">
+                                            {{ stock.quantity }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Stock Alerts -->
                 <div class="side-card">
-                    <h3>
-                        <i class="fas fa-triangle-exclamation"></i> Stock Alerts
-                    </h3>
-                    {% for stock in pharmacy_stock %}
-                        {% if stock in low_stock_items or stock in expiring_soon_items %}
-                            <div class="alert-item {% if stock in expiring_soon_items %}danger{% else %}warning{% endif %}">
-                                <div>
-                                    <div style="font-weight: 700; color: var(--text-primary);">{{ stock.item.name }}</div>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Stock: {{ stock.quantity }} | Exp: {{ stock.expiry_date|date:"M Y"|default:"N/A" }}</div>
-                                </div>
-                                {% if stock in expiring_soon_items %}
-                                    <span class="badge badge-danger">Expiring</span>
-                                {% else %}
-                                    <span class="badge badge-warning">Low</span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% empty %}
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                            <div>All stock levels healthy</div>
+                    <h3><i class="fas fa-exclamation-triangle"></i> Alerts</h3>
+                    {% for item in low_stock_items %}
+                        <div style="padding: 1rem; background: rgba(245, 87, 108, 0.05); border-radius: 12px; margin-bottom: 0.75rem; border-left: 3px solid #f5576c;">
+                            <div style="font-weight: 700; font-size: 0.9rem;">{{ item.item.name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Low stock: {{ item.quantity }} (Limit: {{ item.reorder_level }})</div>
                         </div>
                     {% endfor %}
-                </div>
-                <!-- Inventory Requests -->
-                <div class="side-card">
-                    <h3>
-                        <i class="fas fa-history"></i> Recent Requests
-                    </h3>
-                    {% for request in inventory_requests %}
-                        <div class="alert-item" style="border-left-color: {% if request.status == 'Pending' %}#fee140{% elif request.status == 'Approved' %}#43e97b{% else %}#f5576c{% endif %};">
-                            <div>
-                                <div style="font-weight: 700; color: var(--text-primary);">{{ request.item.name }}</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Qty: {{ request.quantity }} | {{ request.requested_at|date:"M d" }}</div>
-                            </div>
-                            {% if request.status == 'Pending' %}
-                                <span class="badge badge-warning">Waiting</span>
-                            {% elif request.status == 'Approved' %}
-                                <span class="badge badge-success">Approved</span>
-                            {% else %}
-                                <span class="badge badge-danger">Declined</span>
-                            {% endif %}
-                        </div>
-                    {% empty %}
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                            <div>No recent requests</div>
+                    {% for item in expiring_soon_items %}
+                        <div style="padding: 1rem; background: rgba(254, 225, 64, 0.05); border-radius: 12px; margin-bottom: 0.75rem; border-left: 3px solid #fee140;">
+                            <div style="font-weight: 700; font-size: 0.9rem;">{{ item.item.name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Expiring: {{ item.expiry_date|date:"d M Y" }}</div>
                         </div>
                     {% endfor %}
+                    {% if not low_stock_items and not expiring_soon_items %}
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            <i class="fas fa-check-circle" style="font-size: 2rem; opacity: 0.2; margin-bottom: 0.5rem;"></i>
+                            <p style="font-size: 0.8rem;">All clear</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Instruction Modal (Fail-safe Inline Styles) -->
+    <div id="instructionModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
+        <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" onclick="hideInstruction()"></div>
+        <div style="position: relative; z-index: 10; width: 100%; max-width: 500px; background: #1e293b; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: white;">Instructions: <span id="instructionItemName" style="color: #667eea;"></span></h3>
+                <button onclick="hideInstruction()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.25rem;"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding: 2rem;">
+                <div style="padding: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <p id="instructionText" style="margin: 0; line-height: 1.6; color: #f1f5f9; white-space: pre-wrap;"></p>
+                </div>
+            </div>
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
+                <button onclick="hideInstruction()" class="btn btn-primary" style="padding: 0.75rem 2rem; border-radius: 12px; font-weight: 800; text-transform: uppercase; font-size: 10px;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-    // Dispense All items for a visit
-    document.querySelectorAll('.dispense-all-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const visitId = this.dataset.visitId;
-            const patient = this.dataset.patient;
+    function showInstruction(itemName, text) {
+        document.getElementById('instructionItemName').innerText = itemName;
+        document.getElementById('instructionText').innerText = text;
+        const modal = document.getElementById('instructionModal');
+        modal.style.setProperty('display', 'flex', 'important');
+        document.body.style.overflow = 'hidden';
+    }
 
-            if (confirm(`Dispense all pending items for ${patient}?`)) {
-                this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+    function hideInstruction() {
+        const modal = document.getElementById('instructionModal');
+        modal.style.setProperty('display', 'none', 'important');
+        document.body.style.overflow = '';
+    }
 
-                fetch(`/home/pharmacy/dispense-all/${visitId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.innerHTML = '<i class="fas fa-check"></i> Done';
-                            alert(data.message);
-                            setTimeout(() => location.reload(), 500);
-                        } else {
-                            alert('Error: ' + data.error);
-                            this.disabled = false;
-                            this.innerHTML = '<i class="fas fa-check-double"></i> Dispense All';
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dispense-all-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const visitId = this.dataset.visitId;
+                const patient = this.dataset.patient;
+
+                if (confirm(`Dispense all pending items for ${patient}?`)) {
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+
+                    fetch(`/home/pharmacy/dispense-all/${visitId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
                         }
                     })
-                    .catch(error => {
-                        alert('System error: ' + error);
-                        this.disabled = false;
-                        this.innerHTML = '<i class="fas fa-check-double"></i> Dispense All';
-                    });
-            }
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(data.message || 'Items dispensed successfully.');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + data.error);
+                                this.disabled = false;
+                                this.innerHTML = 'Dispense All';
+                            }
+                        })
+                        .catch(error => {
+                            alert('System error: ' + error);
+                            this.disabled = false;
+                            this.innerHTML = 'Dispense All';
+                        });
+                }
+            });
         });
     });
     </script>

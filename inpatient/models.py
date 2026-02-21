@@ -101,6 +101,7 @@ class MedicationChart(models.Model):
     is_dispensed = models.BooleanField(default=False, help_text="Has this been dispensed by pharmacy?")
     dispensed_at = models.DateTimeField(null=True, blank=True)
     dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_dispensed_ipd')
+    instructions = models.TextField(blank=True, null=True, help_text="Specific instructions for this medication")
     
     # Administration status
     administered_at = models.DateTimeField(null=True, blank=True)
@@ -277,6 +278,7 @@ class InpatientConsumable(models.Model):
     is_dispensed = models.BooleanField(default=False)
     dispensed_at = models.DateTimeField(null=True, blank=True)
     dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='consumables_dispensed')
+    instructions = models.TextField(blank=True, null=True, help_text="Specific instructions for this consumable")
 
     def __str__(self):
         return f"{self.item.name} x{self.quantity} for {self.admission.patient.full_name}"

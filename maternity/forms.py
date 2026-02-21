@@ -28,8 +28,9 @@ class PregnancyRegistrationForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make EDD optional since it will be auto-calculated
+        # Make optional since it might not be known at registration
         self.fields['edd'].required = False
+        self.fields['blood_group'].required = False
 
 
 class AntenatalVisitForm(forms.ModelForm):

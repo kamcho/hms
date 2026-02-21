@@ -817,8 +817,7 @@
                     </div>
                     {% if triage_search %}
                         <div class="search-results-info">
-                            Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search
-                            }}</strong>"
+                            Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search }}</strong>"
                         </div>
                     {% endif %}
                     <div class="table-responsive">
@@ -897,8 +896,7 @@
                     </div>
                     {% if pending_search %}
                         <div class="search-results-info">
-                            Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search
-                            }}</strong>"
+                            Found <strong>{{ visits_without_triage|length }}</strong> visit(s) matching "<strong>{{ pending_search }}</strong>"
                         </div>
                     {% endif %}
                     <div class="table-responsive">
@@ -985,8 +983,7 @@
                                                 <td>
                                                     <div class="patient-profile-inline">
                                                         <div class="avatar-initials" data-name="{{ admission.patient.first_name }}">
-                                                            {{ admission.patient.first_name|first }}{{
-                                                            admission.patient.last_name|first }}
+                                                            {{ admission.patient.first_name|first }}{{ admission.patient.last_name|first }}
                                                         </div>
                                                         <div class="name-id">
                                                             <span class="full-name">{{ admission.patient.full_name }}</span>
@@ -997,16 +994,13 @@
                                                 <td>
                                                     <div style="font-weight: 600; color: #10b981;">{{ admission.bed.ward.name }}</div>
                                                     <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                                                        Bed: {{
-                                                        admission.bed.bed_number }}
+                                                        Bed: {{ admission.bed.bed_number }}
                                                     </div>
                                                 </td>
                                                 <td>
                                                     <div class="time-cell">
-                                                        <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y"
-                                                        }}
-                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
-                                                        admission.admitted_at|date:"H:i" }}</span>
+                                                        <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y" }}
+                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admitted_at|date:"H:i" }}</span>
                                                     </div>
                                                 </td>
                                                 <td class="text-right">
@@ -1046,12 +1040,10 @@
                                                 <td>
                                                     <div class="patient-profile-inline">
                                                         <div class="avatar-initials" data-name="{{ admission.deceased.first_name }}" style="background: #475569;">
-                                                            {{ admission.deceased.first_name|first }}{{
-                                                            admission.deceased.last_name|first }}
+                                                            {{ admission.deceased.first_name|first }}{{ admission.deceased.last_name|first }}
                                                         </div>
                                                         <div class="name-id">
-                                                            <span class="full-name text-danger">{{ admission.deceased.full_name
-                                                            }}</span>
+                                                            <span class="full-name text-danger">{{ admission.deceased.full_name }}</span>
                                                             <span class="patient-id">S/N: {{ admission.admission_number }}</span>
                                                         </div>
                                                     </div>

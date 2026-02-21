@@ -47,8 +47,7 @@
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="block text-slate-500 text-xs">BP</span>
-                                <span class="font-medium text-slate-800">{{ triage.blood_pressure_systolic }}/{{
-                                triage.blood_pressure_diastolic }}</span>
+                                <span class="font-medium text-slate-800">{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }}</span>
                             </div>
                             <div>
                                 <span class="block text-slate-500 text-xs">Pulse</span>
@@ -81,6 +80,7 @@
                         </ul>
                     </div>
                 {% endif %}
+                
             </div>
             <!-- Referral Form (Right Column - Wider) -->
             <div class="lg:col-span-2">
@@ -91,8 +91,7 @@
                             <div>
                                 <p class="font-bold">Referral Letter Generated</p>
                                 <p class="text-sm">
-                                    Created on {{ referral.created_at|date:"M d, Y H:i" }} by {{
-                                    referral.doctor.get_full_name }}
+                                    Created on {{ referral.created_at|date:"M d, Y H:i" }} by {{ referral.doctor.get_full_name }}
                                 </p>
                             </div>
                         </div>
@@ -144,8 +143,7 @@
                             <div>
                                 <p class="text-sm text-slate-500">Date</p>
                                 <p class="font-bold border-b border-black inline-block min-w-[150px]">
-                                    {{ today|date:"d M Y"
-                                    }}
+                                    {{ today|date:"d M Y" }}
                                 </p>
                             </div>
                             <div class="text-right">
@@ -159,8 +157,7 @@
                         </h2>
                         <div class="mb-8">
                             <p class="mb-2">
-                                <strong>To:</strong> <span class="print-destination">{{
-                                referral.destination|default:"_____________________" }}</span>
+                                <strong>To:</strong> <span class="print-destination">{{referral.destination|default:"_____________________" }}</span>
                             </p>
                             <p class="mb-6">
                                 <strong>Re:</strong> {{ patient.full_name }} ({{ patient.get_gender_display }},
@@ -169,24 +166,20 @@
                             <p class="mb-4">Dear Colleague,</p>
                             <p class="mb-4">Thank you for seeing this patient who is being referred for:</p>
                             <p class="font-medium ml-4 mb-6 print-reason">
-                                {{ referral.reason|default:"_____________________"
-                                }}
+                                {{ referral.reason|default:"_____________________" }}
                             </p>
                         </div>
                         <div class="mb-6">
                             <h3 class="font-bold border-b border-slate-200 mb-2">Clinical Summary & History</h3>
                             <p class="whitespace-pre-line text-sm print-summary">
-                                {{ referral.clinical_summary|default:"(See
-                                attached notes)" }}
+                                {{ referral.clinical_summary|default:"(See attached notes)" }}
                             </p>
                         </div>
                         {% if triage %}
                             <div class="mb-6">
                                 <h3 class="font-bold border-b border-slate-200 mb-2">Vitals on Exam</h3>
                                 <p class="text-sm">
-                                    BP: {{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic
-                                    }} mmHg, HR: {{ triage.heart_rate }} bpm, Temp: {{ triage.temperature }}°C, SpO2: {{
-                                    triage.oxygen_saturation }}%
+                                    BP: {{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg, HR: {{ triage.heart_rate }} bpm, Temp: {{ triage.temperature }}°C, SpO2: {{ triage.oxygen_saturation }}%
                                 </p>
                             </div>
                         {% endif %}

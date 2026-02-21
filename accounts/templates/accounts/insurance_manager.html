@@ -16,9 +16,9 @@
     }
 
     .insurance-container {
-        background: var(--dash-bg);
+        background: #fdfdfd;
         min-height: 100vh;
-        padding: 2rem;
+        padding: 3rem 2rem;
     }
 
     .glass-card {
@@ -39,14 +39,43 @@
     }
 
     .section-title {
-        font-size: 0.875rem;
-        font-weight: 800;
+        font-size: 0.9rem;
+        font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.1em;
         color: var(--text-main);
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 1rem;
+    }
+
+    .opd-theme { 
+        --theme-primary: #6366f1; 
+        --theme-bg: #f5f3ff;
+        border-color: #e0e7ff !important;
+    }
+    .ipd-theme { 
+        --theme-primary: #10b981; 
+        --theme-bg: #f0fdf4;
+        border-color: #dcfce7 !important;
+    }
+    .other-theme { 
+        --theme-primary: #f59e0b; 
+        --theme-bg: #fffbeb;
+        border-color: #fef3c7 !important;
+    }
+
+    .theme-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: var(--theme-bg);
+        color: var(--theme-primary);
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
     }
 
     .invoice-table {
@@ -105,10 +134,12 @@
     }
 
     .balance-tag {
-        padding: 0.375rem 0.75rem;
-        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
         font-size: 0.75rem;
-        font-weight: 800;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .tag-pending {
@@ -119,6 +150,7 @@
     .tag-partial {
         background: rgba(99, 102, 241, 0.1);
         color: var(--clinical-primary);
+        border: 1px solid rgba(99, 102, 241, 0.1);
     }
 
     .action-btn {
@@ -141,6 +173,8 @@
     .btn-view:hover {
         border-color: var(--clinical-primary);
         color: var(--clinical-primary);
+        background: rgba(99, 102, 241, 0.02);
+        transform: translateY(-1px);
     }
 
     .search-input {
@@ -447,16 +481,16 @@
         <div class="space-y-12">
             <!-- OPD Section -->
             <section>
-                <div class="glass-card">
-                    <div class="section-header">
+                <div class="glass-card opd-theme">
+                    <div class="section-header !bg-indigo-50/30">
                         <h2 class="section-title">
-                            <span class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                            <span class="theme-icon">
                                 <i class="fas fa-user-clock"></i>
                             </span>
                             Out-Patient (OPD) Pending Claims
-                            <span class="badge-count">{{ opd_invoices.count }}</span>
+                            <span class="badge-count !bg-indigo-600 !shadow-indigo-200">{{ opd_invoices.count }}</span>
                         </h2>
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Settlement</div>
+                        <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Awaiting Settlement</div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="custom-table">
@@ -512,16 +546,16 @@
             </section>
             <!-- IPD Section -->
             <section>
-                <div class="glass-card border-indigo-100/50">
-                    <div class="section-header">
+                <div class="glass-card ipd-theme">
+                    <div class="section-header !bg-emerald-50/30">
                         <h2 class="section-title">
-                            <span class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
-                                <i class="fas fa-bed"></i>
+                            <span class="theme-icon">
+                                <i class="fas fa-procedures"></i>
                             </span>
                             In-Patient (IPD) Pending Claims
-                            <span class="badge-count">{{ ipd_invoices.count }}</span>
+                            <span class="badge-count !bg-emerald-600 !shadow-emerald-200">{{ ipd_invoices.count }}</span>
                         </h2>
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
                             Outstanding Hospital
                             Bills
                         </div>
@@ -552,8 +586,7 @@
                                         <td>
                                             {% if inv.visit.admissions.first %}
                                                 <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">
-                                                    {{ inv.visit.admissions.first.bed.ward.name }} / {{
-                                                    inv.visit.admissions.first.bed.bed_number }}
+                                                    {{ inv.visit.admissions.first.bed.ward.name }} / {{ inv.visit.admissions.first.bed.bed_number }}
                                                 </span>
                                             {% else %}
                                                 <span class="text-slate-300 italic">No Active Admission</span>
@@ -590,16 +623,16 @@
             {% if other_invoices %}
                 <!-- Other/Morgue Section -->
                 <section>
-                    <div class="glass-card">
-                        <div class="section-header">
+                    <div class="glass-card other-theme">
+                        <div class="section-header !bg-amber-50/30">
                             <h2 class="section-title">
-                                <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                                    <i class="fas fa-folder-open"></i>
+                                <span class="theme-icon">
+                                    <i class="fas fa-file-invoice-dollar"></i>
                                 </span>
-                                Other Pending Claims
-                                <span class="badge-count">{{ other_invoices.count }}</span>
+                                Other & External Claims
+                                <span class="badge-count !bg-amber-600 !shadow-amber-200">{{ other_invoices.count }}</span>
                             </h2>
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <div class="text-[10px] font-black text-amber-500 uppercase tracking-widest">
                                 Miscellaneous &
                                 External
                             </div>

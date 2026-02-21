@@ -296,94 +296,6 @@ def lab_result_detail(request, result_id):
                    for error in errors:
                        messages.error(request, f"Parameter Form Error ({field}): {error}")
         
-        elif 'dispense_consumable' in request.POST:
-            try:
-                item_id = request.POST.get('consumable_item')
-                quantity = int(request.POST.get('quantity', 0))
-                
-                if quantity <= 0:
-                    messages.error(request, "Quantity must be greater than zero.")
-                else:
-                    from inventory.models import InventoryItem, StockRecord, StockAdjustment, DispensedItem
-                    from home.models import Departments
-                    
-                    item = get_object_or_404(InventoryItem, id=item_id)
-                    
-                    # Determine source department based on user role
-                    dept_name = 'Lab'
-                    if request.user.role == 'Radiographer':
-                        dept_name = 'Imaging' # Or Radiology, assuming Imaging based on earlier code
-                    
-                    source_dept = Departments.objects.filter(name__icontains=dept_name).first()
-                    
-                    if not source_dept:
-                         messages.error(request, f"Source department '{dept_name}' not found.")
-                    else:
-                         # Check stock
-                        total_stock = StockRecord.objects.filter(
-                            item=item, 
-                            current_location=source_dept
-                        ).aggregate(Sum('quantity'))['quantity__sum'] or 0
-                        
-                        if total_stock < quantity:
-                            messages.error(request, f"Insufficient stock for {item.name}. Available: {total_stock}")
-                        else:
-                            # 1. Deduct Stock (FIFO)
-                            remaining_qty = quantity
-                            source_records = StockRecord.objects.filter(
-                                item=item, 
-                                current_location=source_dept, 
-                                quantity__gt=0
-                            ).order_by('expiry_date')
-
-                            for record in source_records:
-                                if remaining_qty <= 0:
-                                    break
-                                
-                                qty_to_take = min(record.quantity, remaining_qty)
-                                
-                                record.quantity -= qty_to_take
-                                record.save()
-                                
-                                remaining_qty -= qty_to_take
-                            
-                            # 2. Record Dispensed Item
-                            DispensedItem.objects.create(
-                                item=item,
-                                patient=lab_result.patient,
-                                visit=lab_result.invoice.visit if lab_result.invoice else None,
-                                quantity=quantity,
-                                dispensed_by=request.user,
-                                department=source_dept
-                            )
-                            
-                            # 3. Log Adjustment
-                            StockAdjustment.objects.create(
-                                item=item,
-                                quantity=-quantity,
-                                adjustment_type='Usage',
-                                reason=f'Used in Lab Test: {lab_result.service.name}',
-                                adjusted_by=request.user,
-                                adjusted_from=source_dept
-                            )
-                            
-                            # 4. Create Zero-Price Invoice Item (Tracking only)
-                            if lab_result.invoice:
-                                InvoiceItem.objects.create(
-                                    invoice=lab_result.invoice,
-                                    inventory_item=item,
-                                    name=f"{item.name} (Consumable)",
-                                    quantity=quantity,
-                                    unit_price=0, # Free as part of service
-                                )
-                                
-                            messages.success(request, f"Dispensed {quantity} x {item.name} successfully.")
-                            return redirect('lab:lab_result_detail', result_id=result_id)
-                            
-            except ValueError:
-                messages.error(request, "Invalid quantity.")
-            except Exception as e:
-                messages.error(request, f"Error dispensing: {str(e)}")
 
     else:
         initial_data = {}
@@ -396,22 +308,23 @@ def lab_result_detail(request, result_id):
     
     # Get available consumables for the user's department
     from inventory.models import InventoryItem, DispensedItem
+    from home.models import Departments, Visit
+    from home.views import _get_normalized_history
+    
     dept_focus = 'Imaging' if request.user.role == 'Radiographer' else 'Lab'
-    # Filter items that are consumables and have stock in the department
-    consumables = InventoryItem.objects.filter(
-        category__name__icontains='Consumable',
-        stock_records__current_location__name__icontains=dept_focus,
-        stock_records__quantity__gt=0
-    ).distinct()
     
     # Get previously dispensed items for this visit/context
-    dispensed_consumables = []
+    visit = None
     if lab_result.invoice and lab_result.invoice.visit:
-        # Filter dispensed items by this visit And maybe by this user department to be relevant
-        dispensed_consumables = DispensedItem.objects.filter(
-             visit=lab_result.invoice.visit,
-             department__name__icontains=dept_focus
-        ).select_related('item', 'dispensed_by')
+        visit = lab_result.invoice.visit
+    else:
+        # Fallback to latest active visit for this patient if not linked via invoice
+        visit = Visit.objects.filter(patient=lab_result.patient, is_active=True).order_by('-visit_date').first()
+        if not visit:
+            # Absolute fallback to latest visit
+            visit = Visit.objects.filter(patient=lab_result.patient).order_by('-visit_date').first()
+
+    dispensed_items = _get_normalized_history(visit, lab_result.patient) if visit else []
 
     return render(request, 'lab/lab_result_detail.html', {
         'lab_result': lab_result,
@@ -421,8 +334,10 @@ def lab_result_detail(request, result_id):
         'parameter_form': parameter_form,
         'title': f'Lab Result - {lab_result.patient.full_name}',
         'is_read_only': is_read_only,
-        'consumables': consumables,
-        'dispensed_consumables': dispensed_consumables
+        'dispensing_departments': Departments.objects.all().order_by('name'),
+        'dispensed_items': dispensed_items,
+        'visit': visit,
+        'patient': lab_result.patient,
     })
 
 class LabResultListView(LoginRequiredMixin, ListView):

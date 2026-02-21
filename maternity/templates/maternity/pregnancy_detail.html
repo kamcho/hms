@@ -300,10 +300,25 @@
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">EDD</div>
                                 <div class="text-sm font-bold text-violet-700 mt-0.5">{{ pregnancy.edd|date:"d M Y" }}</div>
                             </div>
-                            <div class="preg-stat-card">
+                            <div class="preg-stat-card relative group">
                                 <div class="preg-stat-icon bg-rose-100 text-rose-600"><i class="fas fa-tint"></i></div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Blood Group</div>
-                                <div class="text-sm font-bold text-slate-800 mt-0.5">{{ pregnancy.blood_group|default:"—" }}</div>
+                                <div class="mt-0.5">
+                                    <select onchange="updateBloodGroup(this)" class="text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 cursor-pointer p-0 w-full text-center appearance-none">
+                                        <option value="" {% if not pregnancy.blood_group %}selected{% endif %}>—</option>
+                                        <option value="A+" {% if pregnancy.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                                        <option value="A-" {% if pregnancy.blood_group == 'A-' %}selected{% endif %}>A-</option>
+                                        <option value="B+" {% if pregnancy.blood_group == 'B+' %}selected{% endif %}>B+</option>
+                                        <option value="B-" {% if pregnancy.blood_group == 'B-' %}selected{% endif %}>B-</option>
+                                        <option value="O+" {% if pregnancy.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                                        <option value="O-" {% if pregnancy.blood_group == 'O-' %}selected{% endif %}>O-</option>
+                                        <option value="AB+" {% if pregnancy.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                                        <option value="AB-" {% if pregnancy.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
+                                    </select>
+                                    <div id="blood-group-spinner" class="hidden absolute top-2 right-2">
+                                        <i class="fas fa-circle-notch fa-spin text-[10px] text-indigo-500"></i>
+                                    </div>
+                                </div>
                             </div>
                             <div class="preg-stat-card">
                                 <div class="preg-stat-icon bg-amber-100 text-amber-600"><i class="fas fa-procedures"></i></div>
@@ -439,7 +454,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         {% if not visit.is_closed %}
-                            <a href="{% url 'maternity:record_anc_visit' pregnancy.id %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm shadow-blue-100">
+                            <a href="{% url 'maternity:edit_anc_visit' pregnancy.id visit.id %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm shadow-blue-100">
                                 <i class="fas fa-edit"></i> Update Visit
                             </a>
                             <a href="{% url 'maternity:close_anc_visit' visit.id %}" onclick="return confirm('Close ANC Visit #{{ visit.visit_number }}? This will remove the patient from the ANC queue.')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-100">
@@ -447,6 +462,7 @@
                             </a>
                         {% endif %}
                     </div>
+                    
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Column 1: Vitals & Exam -->
@@ -462,10 +478,9 @@
                                     <span class="text-sm font-black text-slate-900">{{ visit.weight|default:"-" }}
                                     kg</span>
                                 </div>
-                                <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
-                                    <span class="text-xs font-bold text-slate-500">Blood Pressure</span>
-                                    <span class="text-sm font-black text-slate-900">{{ visit.bp_systolic }}/{{
-                                    visit.bp_diastolic }}</span>
+                                <div class="flex justify-between items-center p-3 rounded-xl border {% if visit.bp_systolic >= 140 or visit.bp_diastolic >= 90 %}bg-rose-50 border-rose-200 text-rose-900{% elif visit.bp_systolic <= 90 or visit.bp_diastolic <= 60 %}bg-orange-50 border-orange-200 text-orange-900{% else %}bg-emerald-50 border-emerald-200 text-emerald-900{% endif %}">
+                                    <span class="text-xs font-bold {% if visit.bp_systolic >= 140 or visit.bp_diastolic >= 90 %}text-rose-600{% elif visit.bp_systolic <= 90 or visit.bp_diastolic <= 60 %}text-orange-600{% else %}text-emerald-600{% endif %}">Blood Pressure</span>
+                                    <span class="text-sm font-black">{{ visit.bp_systolic }}/{{ visit.bp_diastolic }}</span>
                                 </div>
                                 <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
                                     <span class="text-xs font-bold text-slate-500">Temperature</span>
@@ -508,7 +523,7 @@
                             {% if visit.related_lab_results %}
                                 <div class="space-y-2">
                                     {% for result in visit.related_lab_results %}
-                                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group">
+                                        <a href="{% url 'lab:lab_result_detail' result.id %}" class="block p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group">
                                             <div class="flex justify-between items-center mb-1">
                                                 <span class="text-xs font-bold text-slate-800">{{ result.service.name }}</span>
                                                 <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest {{ result.status_class }} bg-white">{{ result.status }}</span>
@@ -516,7 +531,7 @@
                                             <div class="text-[10px] text-slate-500 truncate">
                                                 {{ result.results|default:"No description" }}
                                             </div>
-                                        </div>
+                                        </a>
                                     {% endfor %}
                                 </div>
                             {% else %}
@@ -843,9 +858,9 @@
                             <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Mother Vitals</h4>
                                 <div class="space-y-3">
-                                    <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
-                                        <span class="text-xs font-bold text-slate-500">Blood Pressure</span>
-                                        <span class="text-sm font-black text-slate-900">{{ visit.bp_systolic }}/{{ visit.bp_diastolic }}</span>
+                                    <div class="flex justify-between items-center p-3 rounded-xl border {% if visit.bp_systolic >= 140 or visit.bp_diastolic >= 90 %}bg-rose-50 border-rose-200 text-rose-900{% elif visit.bp_systolic <= 90 or visit.bp_diastolic <= 60 %}bg-orange-50 border-orange-200 text-orange-900{% else %}bg-emerald-50 border-emerald-200 text-emerald-900{% endif %}">
+                                        <span class="text-xs font-bold {% if visit.bp_systolic >= 140 or visit.bp_diastolic >= 90 %}text-rose-600{% elif visit.bp_systolic <= 90 or visit.bp_diastolic <= 60 %}text-orange-600{% else %}text-emerald-600{% endif %}">Blood Pressure</span>
+                                        <span class="text-sm font-black">{{ visit.bp_systolic }}/{{ visit.bp_diastolic }}</span>
                                     </div>
                                     <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
                                         <span class="text-xs font-bold text-slate-500">Pulse Rate</span>
@@ -938,13 +953,13 @@
                                 {% if visit.related_lab_results %}
                                     <div class="space-y-2">
                                         {% for result in visit.related_lab_results %}
-                                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer group">
+                                            <a href="{% url 'lab:lab_result_detail' result.id %}" class="block p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer group">
                                                 <div class="flex justify-between items-center mb-1">
                                                     <span class="text-xs font-bold text-slate-800">{{ result.service.name }}</span>
                                                     <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest {{ result.status_class }} bg-white">{{ result.status }}</span>
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 truncate">{{ result.results|default:"No description" }}</div>
-                                            </div>
+                                            </a>
                                         {% endfor %}
                                     </div>
                                 {% else %}
@@ -992,52 +1007,6 @@
         </div>
     </div>
 {% endif %}
-<!-- Lab Results & Investigations -->
-<!-- <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
-        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
-                <i class="fas fa-microscope text-blue-600"></i> Lab Results & Investigations
-            </h2>
-        </div>
-        <div class="p-6">
-            <div class="mt-6">
-                {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
-            </div>
-
-            {% if lab_reports %}
-            <div class="mt-8 pt-8 border-t border-slate-50">
-                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <i class="fas fa-file-medical text-blue-500"></i> Uploaded Lab Reports
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {% for report in lab_reports %}
-                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-blue-500 shadow-sm">
-                                <i class="fas fa-file-pdf"></i>
-                            </div>
-                            <div>
-                                <div class="text-xs font-bold text-slate-900">{{ report.lab_result.service.name }}</div>
-                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{
-                                    report.created_at|date:"d M Y" }}</div>
-                            </div>
-                        </div>
-                        {% if report.report_file %}
-                        <a href="{{ report.report_file.url }}" target="_blank" class="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-                            <i class="fas fa-download text-xs"></i>
-                        </a>
-                        {% else %}
-                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-300">
-                            <i class="fas fa-ban text-xs"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-</div> -->
 <!-- Dispense Consumables Widget -->
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
     <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50">
@@ -1252,6 +1221,41 @@
             btn.classList.remove('bg-slate-200');
             btn.innerHTML = '<i class="fas fa-chevron-down transition-transform duration-300"></i> See Delivery Digest';
         }
+    }
+
+    function updateBloodGroup(selectElement) {
+        const bloodGroup = selectElement.value;
+        const spinner = document.getElementById('blood-group-spinner');
+        
+        spinner.classList.remove('hidden');
+        selectElement.disabled = true;
+
+        fetch('{% url "maternity:update_pregnancy_blood_group" pregnancy.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `blood_group=${encodeURIComponent(bloodGroup)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Flash success
+                selectElement.classList.add('text-emerald-600');
+                setTimeout(() => selectElement.classList.remove('text-emerald-600'), 1500);
+            } else {
+                alert('Failed to update blood group.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred.');
+        })
+        .finally(() => {
+            spinner.classList.add('hidden');
+            selectElement.disabled = false;
+        });
     }
 
 </script>

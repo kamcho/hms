@@ -38,12 +38,13 @@ class AdmissionForm(forms.ModelForm):
 class MedicationChartForm(forms.ModelForm):
     class Meta:
         model = MedicationChart
-        fields = ['item', 'dose_count', 'frequency', 'quantity']
+        fields = ['item', 'dose_count', 'frequency', 'quantity', 'instructions']
         widgets = {
             'item': forms.Select(attrs={'class': 'medication-select'}),
             'dose_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Pills/Dose', 'class': 'form-control'}),
             'frequency': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'form-control', 'placeholder': 'Total Units'}),
+            'instructions': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Special instructions...', 'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):

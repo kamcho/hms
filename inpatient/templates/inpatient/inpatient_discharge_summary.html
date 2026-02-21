@@ -14,151 +14,150 @@
         </div>
     </div>
     <!-- Printable Document -->
-    <div class="max-w-[1000px] mx-auto bg-white shadow-lg mb-20 print:shadow-none border border-slate-200">
-        <!-- Document Header -->
-        <div class="bg-slate-900 px-16 py-12 text-white border-b-4 border-indigo-600">
-            <div class="flex justify-between items-start">
-                <div>
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-16 h-16 bg-white/10 flex items-center justify-center border-2 border-white/30">
-                            <i class="fas fa-file-medical-alt text-2xl"></i>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl font-black uppercase tracking-tight">Discharge Summary</h1>
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                                Official Clinical
-                                Release Document
-                            </p>
-                        </div>
+    <div class="max-w-[900px] mx-auto bg-white mb-20 print:mb-0 print:border-none border border-slate-200">
+        <!-- Document Header (Ink Efficient) -->
+        <div class="px-12 py-10 border-b-2 border-slate-900">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 flex items-center justify-center border-2 border-slate-900">
+                        <i class="fas fa-file-medical-alt text-xl text-slate-900"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black uppercase tracking-tight text-slate-900">Discharge Summary</h1>
+                        <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Official Clinical Release Document</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="text-xs font-bold uppercase text-slate-400">Document Reference</div>
-                    <div class="text-2xl font-black text-white mt-1">DIS-{{ discharge.id|stringformat:"04d" }}</div>
+                    <div class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Document Reference</div>
+                    <div class="text-xl font-black text-slate-900 mt-0.5">DIS-{{ discharge.id|stringformat:"04d" }}</div>
                 </div>
             </div>
         </div>
-        <div class="px-16 py-12">
+
+        <div class="px-12 py-10">
             <!-- Identity Section -->
-            <div class="grid grid-cols-2 gap-12 mb-12 pb-8 border-b-2 border-slate-200">
+            <div class="grid grid-cols-2 gap-10 mb-10 pb-6 border-b border-slate-200">
                 <div>
-                    <h6 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-slate-200">Patient Information</h6>
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-4">Patient Information</h6>
                     <div class="space-y-3">
                         <div>
-                            <div class="text-xl font-black text-slate-900">{{ discharge.admission.patient.full_name }}</div>
-                            <div class="text-[10px] font-bold text-slate-500 mt-1 uppercase">
-                                ID: {{
-                                discharge.admission.patient.id_number|default:"N/A" }}
+                            <div class="text-lg font-black text-slate-900">{{ discharge.admission.patient.full_name }}</div>
+                            <div class="text-[10px] font-bold text-slate-500 mt-0.5 uppercase">
+                                ID: {{ discharge.admission.patient.id_number|default:"N/A" }}
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 pt-3">
+                        <div class="grid grid-cols-2 gap-4 pt-2">
                             <div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase">Age / Gender</div>
-                                <div class="text-sm font-black text-slate-900 mt-1">
-                                    {{ discharge.admission.patient.age }}Y •
-                                    {{ discharge.admission.patient.get_gender_display }}
+                                <div class="text-[9px] font-bold text-slate-400 uppercase">Age / Gender</div>
+                                <div class="text-sm font-bold text-slate-900">
+                                    {{ discharge.admission.patient.age }}Y • {{ discharge.admission.patient.get_gender_display }}
                                 </div>
                             </div>
                             <div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase">Visit ID</div>
-                                <div class="text-sm font-black text-slate-900 mt-1">#{{ discharge.admission.visit.id }}</div>
+                                <div class="text-[9px] font-bold text-slate-400 uppercase">Visit ID</div>
+                                <div class="text-sm font-bold text-slate-900">#{{ discharge.admission.visit.id }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <h6 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-slate-200">Admission Details</h6>
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-4">Admission Details</h6>
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase">Admitted</div>
-                                <div class="text-sm font-black text-slate-900 mt-1">
-                                    {{
-                                    discharge.admission.admitted_at|date:"d M Y" }}
-                                </div>
+                                <div class="text-[9px] font-bold text-slate-400 uppercase">Admitted</div>
+                                <div class="text-sm font-bold text-slate-900">{{ discharge.admission.admitted_at|date:"d M Y" }}</div>
                             </div>
                             <div>
-                                <div class="text-[9px] font-black text-slate-400 uppercase">Discharged</div>
-                                <div class="text-sm font-black text-slate-900 mt-1">
-                                    {{ discharge.discharged_at|date:"d M Y"
-                                    }}
-                                </div>
+                                <div class="text-[9px] font-bold text-slate-400 uppercase">Discharged</div>
+                                <div class="text-sm font-bold text-slate-900">{{ discharge.discharged_at|date:"d M Y" }}</div>
                             </div>
                         </div>
                         <div>
-                            <div class="text-[9px] font-black text-slate-400 uppercase">Discharge Time</div>
-                            <div class="text-sm font-black text-slate-900 mt-1">
-                                {{ discharge.discharged_at|date:"H:i" }}
-                                Hours
-                            </div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase">Discharge Time</div>
+                            <div class="text-sm font-bold text-slate-900">{{ discharge.discharged_at|date:"H:i" }} Hours</div>
                         </div>
                     </div>
                 </div>
             </div>
+
             <!-- Clinical Block -->
-            <div class="space-y-8 mb-12">
+            <div class="space-y-8 mb-10">
                 <!-- Diagnosis -->
-                <div class="border-l-4 border-indigo-600 pl-6 py-4 bg-slate-50">
-                    <h6 class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <div class="border-2 border-slate-900 px-6 py-5">
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <i class="fas fa-stethoscope"></i> Final Clinical Diagnosis
                     </h6>
                     <p class="text-base font-black text-slate-900 leading-tight">{{ discharge.final_diagnosis }}</p>
                 </div>
+
                 <!-- Summary -->
                 <div>
-                    <h6 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-slate-200">Clinical Course & Treatment Summary</h6>
-                    <div class="text-sm font-medium text-slate-700 leading-relaxed bg-white border border-slate-200 p-6 whitespace-pre-wrap">{{ discharge.discharge_summary }}</div>
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Clinical Course & Treatment Summary</h6>
+                    <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.discharge_summary }}</div>
                 </div>
+
                 <!-- Instructions -->
                 {% if discharge.discharge_instructions %}
-                    <div class="border-l-4 border-amber-500 pl-6 py-4 bg-amber-50/30">
-                        <h6 class="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <div class="border border-slate-300 px-6 py-5 border-dashed">
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
                             <i class="fas fa-info-circle"></i> Post-Discharge Instructions
                         </h6>
-                        <p class="text-sm font-bold text-slate-800 leading-relaxed">{{ discharge.discharge_instructions }}</p>
+                        <p class="text-sm font-medium text-slate-800 leading-relaxed">{{ discharge.discharge_instructions }}</p>
                     </div>
                 {% endif %}
             </div>
+
             <!-- Verification -->
-            <div class="pt-12 border-t-2 border-slate-200 text-center">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                    Authorization / Electronic
-                    Signature
-                </p>
-                <div class="space-y-2">
-                    <div class="text-lg font-black text-slate-900">
-                        DR. {{
-                        discharge.discharged_by.last_name|upper|default:discharge.discharged_by.username|upper }}
-                    </div>
-                    <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Authorized Clinical Officer</div>
+            <div class="pt-10 border-t border-slate-900 mt-12 grid grid-cols-2 items-end">
+                <div class="text-left">
+                    <div class="text-[8px] text-slate-400 uppercase tracking-widest mb-8">Official Stamp / Date</div>
+                    <div class="w-32 h-16 border border-slate-200 border-dashed"></div>
                 </div>
-                <div class="mt-8 pt-6 border-t border-slate-100">
-                    <div class="text-[8px] text-slate-400 uppercase tracking-tight">
-                        This is a computer-generated clinical
-                        record. Internal Reference: DIS-{{ discharge.id }}
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Authorized Signature</p>
+                    <div class="space-y-1">
+                        <div class="text-lg font-black text-slate-900 leading-none">
+                            DR. {{ discharge.discharged_by.last_name|upper|default:discharge.discharged_by.username|upper }}
+                        </div>
+                        <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Medical Officer</div>
+                    </div>
+                    <div class="mt-6 text-[8px] text-slate-400 uppercase tracking-tight">
+                        Internal Ref: DIS-{{ discharge.id }} | Generated: {% now "d M Y H:i" %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <style>
     @media print {
+        @page {
+            margin: 1cm;
+            size: A4;
+        }
         body {
             background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
-
-        .no-print {
+        /* Hide all dashboard layout elements */
+        .sidebar, 
+        .top-bar, 
+        .no-print,
+        .messages {
             display: none !important;
         }
-
-        .shadow-lg {
-            box-shadow: none !important;
+        /* Reset main content container for full page print */
+        .main-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
         }
-
-        .bg-slate-900,
-        .bg-indigo-600 {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        main {
+            padding: 0 !important;
+            margin: 0 !important;
         }
     }
     </style>

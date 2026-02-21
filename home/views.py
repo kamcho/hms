@@ -1481,6 +1481,7 @@ def create_prescription(request, visit_id):
 def _get_normalized_history(visit, patient):
     from inventory.models import DispensedItem
     from accounts.models import InvoiceItem
+    from inpatient.models import MedicationChart, InpatientConsumable
     
     if not visit:
         return []
@@ -1493,12 +1494,28 @@ def _get_normalized_history(visit, patient):
         invoice__visit=visit,
         inventory_item__isnull=False
     ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')
+
+    # 3. Fetch IPD requests (not yet dispensed)
+    ipd_meds = MedicationChart.objects.filter(
+        admission__visit=visit,
+        is_dispensed=False
+    ).select_related('item', 'prescribed_by').order_by('-prescribed_at')
+    
+    ipd_consumables = InpatientConsumable.objects.filter(
+        admission__visit=visit,
+        is_dispensed=False
+    ).select_related('item', 'prescribed_by').order_by('-prescribed_at')
         
-    # 3. Combine and Normalize
+    # 4. Combine and Normalize with De-duplication
     history = []
     
-    # Add physically dispensed items
+    # Track dispensed items to suppress corresponding requests
+    # Frequency map: (item_id, quantity) -> count
+    dispensed_counts = {}
     for d in d_items:
+        key = (d.item.id, d.quantity)
+        dispensed_counts[key] = dispensed_counts.get(key, 0) + 1
+        
         history.append({
             'item_name': d.item.name,
             'quantity': d.quantity,
@@ -1508,21 +1525,54 @@ def _get_normalized_history(visit, patient):
             'status_class': 'bg-emerald-50 text-emerald-700'
         })
         
-    # Add billed items (only if NOT already in physically dispensed to avoid duplicates)
-    dispensed_keys = {(d.item.name, d.quantity) for d in d_items}
-    
+    # Add billed items (Requests) - Suppress if already dispensed
     for b in billed_items:
-        key = (b.inventory_item.name, b.quantity)
-        if key not in dispensed_keys:
-            # Use b.name because it might contain "(from Dept)" info
-            history.append({
-                'item_name': b.name if b.name else b.inventory_item.name,
-                'quantity': b.quantity,
-                'at': b.created_at,
-                'by': b.invoice.created_by,
-                'status': 'Requested',
-                'status_class': 'bg-amber-50 text-amber-700'
-            })
+        key = (b.inventory_item.id, b.quantity)
+        if dispensed_counts.get(key, 0) > 0:
+            dispensed_counts[key] -= 1
+            continue
+            
+        # Use b.name because it might contain "(from Dept)" info
+        history.append({
+            'item_name': b.name if b.name else b.inventory_item.name,
+            'quantity': b.quantity,
+            'at': b.created_at,
+            'by': b.invoice.created_by if b.invoice else b.created_by,
+            'status': 'Requested',
+            'status_class': 'bg-amber-50 text-amber-700'
+        })
+
+    # Add IPD Meds
+    for m in ipd_meds:
+        key = (m.item.id, m.quantity)
+        if dispensed_counts.get(key, 0) > 0:
+            dispensed_counts[key] -= 1
+            continue
+
+        history.append({
+            'item_name': m.item.name,
+            'quantity': m.quantity,
+            'at': m.prescribed_at,
+            'by': m.prescribed_by,
+            'status': 'Requested',
+            'status_class': 'bg-amber-50 text-amber-700'
+        })
+
+    # Add IPD Consumables
+    for c in ipd_consumables:
+        key = (c.item.id, c.quantity)
+        if dispensed_counts.get(key, 0) > 0:
+            dispensed_counts[key] -= 1
+            continue
+
+        history.append({
+            'item_name': c.item.name,
+            'quantity': c.quantity,
+            'at': c.prescribed_at,
+            'by': c.prescribed_by,
+            'status': 'Requested',
+            'status_class': 'bg-amber-50 text-amber-700'
+        })
     
     # Sort combined history by timestamp
     history.sort(key=lambda x: x['at'], reverse=True)
@@ -1659,13 +1709,19 @@ from inpatient.models import MedicationChart
 
 
 @login_required
+@login_required
 def pharmacy_dashboard(request):
     """Pharmacy dashboard showing prescriptions, consumables, stock, and requests"""
+    # Role-based access control
+    if request.user.role not in ['Pharmacist', 'Nurse']:
+        messages.error(request, "Access denied. Only pharmacists and nurses can access the pharmacy dashboard.")
+        return redirect('home:reception_dashboard')
 
-    # Get or create pharmacy department
+    # Determine department based on role
+    dept_name = 'Pharmacy' if request.user.role == 'Pharmacist' else 'mini pharmacy'
     pharmacy_dept, created = Departments.objects.get_or_create(
-        name='Pharmacy',
-        defaults={'abbreviation': 'PHR'}
+        name=dept_name,
+        defaults={'abbreviation': 'PHR' if dept_name == 'Pharmacy' else 'MPHR'}
     )
 
     # Search functionality
@@ -1927,7 +1983,7 @@ def pharmacy_dashboard(request):
     stats = {
         'pending_prescriptions': pending_items.count() + len([c for c in pending_consumable_list if not Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
         'pending_ipd_count': pending_ipd_items.count() + pending_ipd_consumables.count() + len([c for c in pending_consumable_list if Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
-        'low_stock_count': len(set(low_stock_items)),
+        'low_stock_count': len(low_stock_items),
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
             dispensed_at__date=today
@@ -1935,8 +1991,8 @@ def pharmacy_dashboard(request):
     }
 
     context = {
-        'opd_groups': opd_groups,
-        'ipd_groups': ipd_groups,
+        'opd_groups': opd_groups if request.user.role == 'Pharmacist' else [],
+        'ipd_groups': ipd_groups if request.user.role == 'Nurse' else [],
         'pending_items': pending_items,
         'pending_ipd_items': pending_ipd_items,
         'dispensed_items': dispensed_items,
@@ -1949,6 +2005,7 @@ def pharmacy_dashboard(request):
         'stock_search': stock_search,
         'dispensed_search': dispensed_search,
         'request_search': request_search,
+        'pharmacy_dept': pharmacy_dept,
     }
 
     return render(request, 'home/pharmacy_dashboard.html', context)
@@ -1969,10 +2026,23 @@ def dispense_all_visit_items(request, visit_id):
     try:
         visit = get_object_or_404(Visit, pk=visit_id)
         patient = visit.patient
-        pharmacy_dept = Departments.objects.get(name='Pharmacy')
-
+        
+        # Role-based validation
+        if request.user.role not in ['Pharmacist', 'Nurse']:
+            return JsonResponse({'success': False, 'error': 'Unauthorized role.'})
+            
         # Determine if IPD or OPD
         is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
+        
+        # Enforce role-based strictness
+        if is_ipd and request.user.role != 'Nurse':
+            return JsonResponse({'success': False, 'error': 'Only nurses can dispense IPD medications.'})
+        if not is_ipd and request.user.role != 'Pharmacist':
+            return JsonResponse({'success': False, 'error': 'Only pharmacists can dispense OPD medications.'})
+
+        # Determine department based on role
+        dept_name = 'Pharmacy' if request.user.role == 'Pharmacist' else 'Mini Pharmacy'
+        pharmacy_dept = Departments.objects.get(name=dept_name)
 
         # ---- Gather pending items ----
         # 1. Prescription medications (PrescriptionItem)
@@ -2319,10 +2389,12 @@ def opd_dashboard(request):
     
     # Waiting Patients (In queue for Consultation rooms)
     # Filter departments that look like consultation rooms and are PENDING
+    # Strictly filter for OUT-PATIENT visits to exclude admitted (IPD) patients
     consultation_queues = PatientQue.objects.filter(
         sent_to__name__icontains='Consultation',
         status='PENDING',
-        visit__is_active=True
+        visit__is_active=True,
+        visit__visit_type='OUT-PATIENT'
     ).select_related('visit__patient', 'sent_to', 'qued_from')
 
     # Apply Search Filter

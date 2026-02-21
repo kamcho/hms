@@ -597,7 +597,7 @@
                     <!-- DISPENSE TAB -->
                     <div id="dispense" class="tab-content">
                         {% if selected_visit or latest_visit %}
-                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit %}
+                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient %}
                         {% else %}
                             <div class="text-center py-8">
                                 <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>

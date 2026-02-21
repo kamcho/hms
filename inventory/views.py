@@ -7,6 +7,8 @@ from home.models import Departments, Patient, Visit
 from accounts.utils import get_or_create_invoice
 
 from django.db.models import Sum, Count
+from django.db import transaction
+from django.utils import timezone
 
 @login_required
 def item_list(request):
@@ -326,6 +328,7 @@ def dispense_item(request):
     visit_id = request.POST.get('visit_id')
     department_id = request.POST.get('department_id')
     quantity_str = request.POST.get('quantity', '0')
+    instructions = request.POST.get('instructions', '').strip()
 
     try:
         quantity = int(quantity_str)
@@ -345,68 +348,64 @@ def dispense_item(request):
             if not visit:
                 return JsonResponse({'status': 'error', 'message': 'Visit not identified'}, status=400)
 
-            # Block if not latest visit or if visit is not active
-            latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
-            if visit != latest_visit:
-                return JsonResponse({'status': 'error', 'message': 'Cannot dispense items to a previous visit.'}, status=400)
-            
+            # Block if visit is not active (optional, but keep for data integrity)
             if not visit.is_active:
-                # return JsonResponse({'status': 'error', 'message': 'Cannot dispense items to a closed visit.'}, status=400)
-                pass # Allow for now while debugging
+                 # messages.warning(request, "Note: Dispensing to a closed visit.")
+                 pass
 
-            # Find or create a pending invoice for this visit (only if not IPD or if we want to retain OPD behavior)
+            # Optional: Warning if not the latest visit, but DO NOT block.
+            # Clinicians/Technicians might be finishing up a specific visit's records.
+            latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
+
+            from .models import DispensedItem, StockRecord
             from inpatient.models import Admission, InpatientConsumable
             active_admission = Admission.objects.filter(visit=visit, status='Admitted').first()
 
+            # Record Physical Dispensing (Inventory Stock Movement)
+            # ONLY for departments other than Pharmacy/Mini Pharmacy
+            # because those two are handled at pickup.
+            is_pharmacy = department and department.name in ['Pharmacy', 'Mini Pharmacy']
+            
+            if not is_pharmacy:
+                DispensedItem.objects.create(
+                    item=item,
+                    patient=patient,
+                    visit=visit,
+                    quantity=quantity,
+                    department=department,
+                    dispensed_by=request.user
+                )
+
+                # Deduct Stock immediately for non-pharmacy departments
+                if department:
+                    sr = StockRecord.objects.filter(item=item, current_location=department).first()
+                    if sr:
+                        sr.quantity -= quantity
+                        sr.save()
+
             if active_admission:
-                # IPD Flow: Defer billing until pharmacy dispense
-                # We can't set department directly on InpatientConsumable easily without schema change, 
-                # but we can try to find a way or just proceed. 
-                # WAIT: InpatientConsumable doesn't have department field based on reading models.py earlier.
-                # However, DispensedItem DOES have it.
-                # Since this is "Dispense Widget", it seems to be creating a request/invoice-item, NOT necessarily dispensing physically yet?
-                # "Dispense Consumables / Items" title suggests immediate action or request.
-                # The view code says: "Creates an InvoiceItem for the consumable — NO stock deduction."
-                # So this is a BILLING/REQUEST action.
-                
-                # If we want to record the department preference, we might need to append it to the note/name logic?
-                # OR if using DispensedItem model later, we need it passed.
-                
-                # For IPD, it creates InpatientConsumable. check model... 
-                # InpatientConsumable has 'is_dispensed' etc.
-                # It does NOT have department. 
-                # The user intention "select user to dispense FROM" suggests immediate dispensing or directed request.
-                
-                # Let's create DispensedItem IMMEDIATELY if it's considered "Dispensed" ?
-                # The view docstring says "NO stock deduction. Stock is deducted later by the pharmacist".
-                # So this is a REQUEST.
-                # If so, "Dispense from" might mean "Request from".
-                # But the user said "where user can dispense from".
-                
-                # If I can't store department in InpatientConsumable, I'll stick to InvoiceItem for OPD where I can modify name.
-                
-                consumable = InpatientConsumable.objects.create(
+                # IPD Flow: Marks as dispensed ONLY if not pharmacy
+                InpatientConsumable.objects.create(
                     admission=active_admission,
                     item=item,
                     quantity=quantity,
-                    prescribed_by=request.user
+                    instructions=instructions,
+                    prescribed_by=request.user,
+                    is_dispensed=not is_pharmacy,
+                    dispensed_at=timezone.now() if not is_pharmacy else None,
+                    dispensed_by=request.user if not is_pharmacy else None
                 )
                 
-                # We can't easily attach department to InpatientConsumable without migration.
-                # But we can perhaps rely on the pharmacy knowing where to dispense from?
-                # User asked for "radio inputs for user to select the department".
-                # I will proceed with InvoiceItem logic for OPD.
-                
+                status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
                 return JsonResponse({
                     'status': 'success',
-                    'message': f'{item.name} x{quantity} requested for {patient.full_name}. Billing will be processed upon dispensing.'
+                    'message': f'{item.name} x{quantity} {status_msg} successfully.'
                 })
 
             # OPD Flow: Get or Create Consolidate Visit Invoice
             invoice = get_or_create_invoice(visit=visit, user=request.user)
 
-            # Create InvoiceItem for the consumable
-            # Append department to name to persist selection since InvoiceItem doesn't have dept field for inventory items specifically (it has service department)
+            # Create InvoiceItem for the consumable (Billing)
             item_name = f"{item.name} (Consumable)"
             if department:
                 item_name = f"{item.name} (from {department.name})"
@@ -419,16 +418,10 @@ def dispense_item(request):
                 unit_price=item.selling_price,
                 created_by=request.user
             )
-            
-            # NOTE: We do NOT create DispensedItem here for OPD.
-            # DispensedItem implies the item has been physically given to the patient and stock deducted.
-            # For OPD, this action creates a billing request (InvoiceItem). 
-            # The actual dispensing happens at the pharmacy, which should create the DispensedItem then.
-            # The department selection is preserved in the InvoiceItem name.
 
             return JsonResponse({
                 'status': 'success',
-                'message': f'{item.name} x{quantity} added to invoice INV-{invoice.id}'
+                'message': f'{item.name} x{quantity} dispensed and added to invoice INV-{invoice.id}'
             })
 
     except Exception as e:

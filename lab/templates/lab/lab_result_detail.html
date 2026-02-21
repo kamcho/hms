@@ -342,51 +342,34 @@
                 <div class="modern-card">
                     <div class="card-header">
                         <h2 class="card-title">
-                            <i class="fas fa-prescription-bottle-alt"></i> Consumables Used
+                            <i class="fas fa-prescription-bottle-alt"></i> Consumables & Items
                         </h2>
                     </div>
                     <div class="card-body">
-                        {% if dispensed_consumables %}
-                            <ul style="list-style: none; padding: 0; margin-bottom: 2rem;">
-                                {% for dispensed in dispensed_consumables %}
-                                    <li style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--clinical-border);">
-                                        <div>
-                                            <span style="font-weight: 600; color: var(--clinical-text-main); display: block;">{{ dispensed.item.name }}</span>
-                                            <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">By {{ dispensed.dispensed_by.username|title }} • {{ dispensed.dispensed_at|date:"M  d, H:i" }}</span>
-                                        </div>
-                                        <span style="font-weight: 700; color: var(--clinical-primary); background: var(--clinical-primary-light); padding: 0.2rem 0.6rem; border-radius: 6px; height: fit-content;">x{{ dispensed.quantity }}</span>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <p style="color: var(--clinical-text-muted); font-size: 0.9rem; text-align: center; margin-bottom: 2rem; padding: 1rem; border: 1px dashed var(--clinical-border); border-radius: 12px;">No consumables recorded for this test.</p>
-                        {% endif %}
                         {% if not is_read_only %}
-                            <h3 class="form-label" style="margin-bottom: 1rem;">
-                                <i class="fas fa-plus"></i> Dispense Consumable
-                            </h3>
-                            <form method="post">
-                                {% csrf_token %}
-                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <select name="consumable_item" class="form-control" required>
-                                            <option value="">Select Item...</option>
-                                            {% for item in consumables %}
-                                                <option value="{{ item.id }}">
-                                                    {{ item.name }} (Stock: {{
-                                                    item.stock_records.first.quantity }})
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <input type="number" name="quantity" class="form-control" placeholder="Qty" min="1" value="1" required>
-                                    </div>
+                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit dispensed_items=dispensed_items %}
+                        {% else %}
+                             <div class="space-y-4">
+                                <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Dispensed History (This Visit)</h5>
+                                <div id="dispensedHistoryList" class="space-y-3">
+                                    {% for dispensed in dispensed_items %}
+                                        <div class="bg-white border border-slate-100 p-4 rounded-xl flex justify-between items-center hover:border-indigo-100 transition-colors">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <div class="text-sm font-bold text-slate-800">{{ dispensed.item_name }}</div>
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter {{ dispensed.status_class }}">{{ dispensed.status }}</span>
+                                                </div>
+                                                <div class="text-[10px] font-bold text-slate-400 uppercase">{{ dispensed.at|date:"d M H:i" }} • By {{ dispensed.by.first_name|default:dispensed.by.id_number }}</div>
+                                            </div>
+                                            <div class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg ml-4">x{{ dispensed.quantity }}</div>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-center py-8 opacity-50">
+                                            <p class="text-xs font-bold text-slate-400 uppercase">No items dispensed yet</p>
+                                        </div>
+                                    {% endfor %}
                                 </div>
-                                <button type="submit" name="dispense_consumable" class="modern-btn" style="background: white; border: 1px solid var(--clinical-primary); color: var(--clinical-primary); width: 100%; justify-content: center;">
-                                    <i class="fas fa-box-open"></i> Dispense Item
-                                </button>
-                            </form>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -413,12 +396,10 @@
                                         {% for param in lab_result.parameters.all %}
                                             <tr style="border-bottom: 1px solid var(--clinical-border);">
                                                 <td style="padding: 0.75rem; font-weight: 600; color: var(--clinical-text-main);">
-                                                    {{
-                                                    param.name }}
+                                                    {{ param.name }}
                                                 </td>
                                                 <td style="padding: 0.75rem; font-weight: 700; color: var(--clinical-primary);">
-                                                    {{
-                                                    param.value }}
+                                                    {{ param.value }}
                                                 </td>
                                                 <td style="padding: 0.75rem; color: var(--clinical-text-muted);">{{ param.unit }}</td>
                                                 <td style="padding: 0.75rem; color: var(--clinical-text-muted);">{{ param.ranges }}</td>
@@ -479,15 +460,14 @@
                         </div>
                         {% if lab_result.clinical_notes %}
                             <div style="background: #eff6ff; padding: 1.25rem; border-radius: 12px; border: 1px solid #dbeafe; margin-bottom: 2rem;">
-                            <span class="item-label" style="color: #1d4ed8;"><i class="fas fa-comment-medical"></i>
-                        Clinician's Notes</span>
-                        <p style="margin: 0.5rem 0 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">
-                            {{
-                            lab_result.clinical_notes }}
-                        </p>
-                    </div>
-                {% endif %}
-                {% if not is_read_only %}
+                                <span class="item-label" style="color: #1d4ed8;"><i class="fas fa-comment-medical"></i>
+                                    Clinician's Notes</span>
+                                    <p style="margin: 0.5rem 0 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">
+                                    {{ lab_result.clinical_notes }}
+                                </p>
+                            </div>
+                        {% endif %}
+                        {% if not is_read_only %}
                     <form method="post">
                         {% csrf_token %}
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -547,8 +527,7 @@
                                     Finalized
                                 </h4>
                                 <p style="margin: 0.2rem 0 0; color: #059669; font-size: 0.8rem; font-weight: 600;">
-                                    {{
-                                    lab_report.created_at|date:"M d, Y • H:i" }}
+                                    {{ lab_report.created_at|date:"M d, Y • H:i" }}
                                 </p>
                             </div>
                         </div>

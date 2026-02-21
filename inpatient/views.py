@@ -67,6 +67,9 @@ def admit_patient(request, patient_id):
             admission.patient = patient
             admission.admitted_by = request.user
             
+            # Deactivate any existing active visits (e.g., from OPD or Maternity)
+            Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
+            
             # Always create a new IN-PATIENT visit
             visit = Visit.objects.create(
                 patient=patient,
@@ -74,7 +77,7 @@ def admit_patient(request, patient_id):
                 visit_mode='Walk In'
             )
             admission.visit = visit
-            messages.info(request, f"New IN-PATIENT visit created for {patient.full_name}.")
+            messages.info(request, f"Active visits closed. New IN-PATIENT visit created for {patient.full_name}.")
                 
             admission.save()
             messages.success(request, f"Patient {patient.full_name} admitted successfully.")
@@ -91,6 +94,7 @@ def admit_patient(request, patient_id):
 @login_required
 def patient_case_folder(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
+    all_admissions = Admission.objects.filter(patient=admission.patient).order_by('-admitted_at')
     
     # Clinical Data
     vitals = admission.vitals.all().order_by('-recorded_at')[:10]
@@ -355,6 +359,7 @@ def patient_case_folder(request, admission_id):
         'performed_procedures': performed_procedures,
         'dispensed_items': dispensed_items_ui,
         'admission': admission,
+        'all_admissions': all_admissions,
         'vitals': vitals,
         'vitals_history': vitals_history,
         'vitals_data': vitals_data,
@@ -689,6 +694,11 @@ def discharge_patient(request, admission_id):
             admission.discharged_at = now
             admission.discharged_by = request.user
             admission.save()
+
+            # Close associated visit
+            visit = admission.visit
+            visit.is_active = False
+            visit.save()
             
             messages.success(request, f"Patient {admission.patient.full_name} has been discharged.")
             return redirect('inpatient:discharge_summary', pk=discharge.pk)

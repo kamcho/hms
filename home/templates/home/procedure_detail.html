@@ -76,7 +76,7 @@
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
                     <!-- Use the partial widget -->
-                    {% include 'inventory/partials/dispense_widget.html' %}
+                    {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit %}
                 </div>
             </div>
         </div>

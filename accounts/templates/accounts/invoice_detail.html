@@ -244,11 +244,25 @@
                         <tr>
                             <td>
                                 {{ item.name }}
+                                {% if item.is_dispensed %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 ml-2">
+                                        Dispensed
+                                    </span>
+                                {% endif %}
+
                                 {% if item.paid_amount == 0 %}
-                                    {% if request.user.is_superuser or invoice.created_by == request.user or item.created_by == request.user %}
+                                    {% if request.user.is_superuser or request.user.role == 'Admin' %}
+                                        {# Admins can delete anything unpaid #}
                                         <button onclick="deleteInvoiceItem({{ item.id }})" class="ml-2 text-rose-500 hover:text-rose-700 transition-colors" title="Delete Item">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
+                                    {% elif not item.is_dispensed %}
+                                        {# Non-admins can only delete non-dispensed unpaid items #}
+                                        {% if invoice.created_by == request.user or item.created_by == request.user %}
+                                            <button onclick="deleteInvoiceItem({{ item.id }})" class="ml-2 text-rose-500 hover:text-rose-700 transition-colors" title="Delete Item">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </td>

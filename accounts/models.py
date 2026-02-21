@@ -145,6 +145,22 @@ class InvoiceItem(models.Model):
     def is_settled(self):
         return self.paid_amount >= self.amount
 
+    @property
+    def is_dispensed(self):
+        """
+        Checks if this item has been physically dispensed.
+        Matches by inventory_item, visit, and quantity.
+        """
+        if not self.inventory_item or not self.invoice.visit:
+            return False
+            
+        from inventory.models import DispensedItem
+        return DispensedItem.objects.filter(
+            visit=self.invoice.visit,
+            item=self.inventory_item,
+            quantity=self.quantity
+        ).exists()
+
     def save(self, *args, **kwargs):
         # Auto-calculate amount
         self.amount = self.quantity * self.unit_price

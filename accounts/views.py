@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .utils import get_or_create_invoice
 from django.db.models import Sum, Count, Q, F
+from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse, JsonResponse
@@ -442,13 +443,54 @@ def delete_invoice_item(request, item_id):
         else:
             return JsonResponse({'success': False, 'error': 'Only the item creator or invoice creator can delete items.'})
         
+        # Dispense Check: Only Superusers/Admins can delete dispensed items
+        if item.is_dispensed and not (request.user.is_superuser or request.user.role == 'Admin'):
+            return JsonResponse({'success': False, 'error': 'This item has already been physically dispensed. Only an Administrator can delete it to ensure stock integrity.'})
+        
         # State Check: Unpaid only
         if item.paid_amount > 0:
             return JsonResponse({'success': False, 'error': 'Cannot delete an item that has been partially or fully paid.'})
             
         try:
-            item.delete()
-            invoice.update_totals() # Recalculate invoice totals
+            with transaction.atomic():
+                # Handle Inventory Reversal if this is an inventory item
+                if item.inventory_item and invoice.visit:
+                    from inventory.models import DispensedItem, StockRecord
+                    from inpatient.models import InpatientConsumable
+
+                    # 1. Find and cleanup DispensedItem (Physical record)
+                    dispensed_record = DispensedItem.objects.filter(
+                        visit=invoice.visit,
+                        item=item.inventory_item,
+                        quantity=item.quantity
+                    ).order_by('-dispensed_at').first()
+
+                    if dispensed_record:
+                        # Reverse Stock if department was recorded
+                        if dispensed_record.department:
+                            sr = StockRecord.objects.filter(
+                                item=item.inventory_item, 
+                                current_location=dispensed_record.department
+                            ).first()
+                            if sr:
+                                sr.quantity += dispensed_record.quantity
+                                sr.save()
+                        
+                        dispensed_record.delete()
+
+                    # 2. Find and cleanup InpatientConsumable (IPD tracking)
+                    inpatient_req = InpatientConsumable.objects.filter(
+                        admission__visit=invoice.visit,
+                        item=item.inventory_item,
+                        quantity=item.quantity
+                    ).order_by('-prescribed_at').first()
+
+                    if inpatient_req:
+                        inpatient_req.delete()
+
+                item.delete()
+                invoice.update_totals() # Recalculate invoice totals
+            
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
