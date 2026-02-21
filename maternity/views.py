@@ -1055,6 +1055,23 @@ def register_newborn(request, pregnancy_id):
             newborn = form.save(commit=False)
             newborn.delivery = delivery
             newborn.created_by = request.user
+            
+            # Link/Create Patient Profile if named
+            first_name = form.cleaned_with_defaults.get('first_name')
+            last_name = form.cleaned_with_defaults.get('last_name')
+            
+            if first_name and last_name:
+                patient = Patient.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    date_of_birth=newborn.birth_datetime.date(),
+                    gender=newborn.gender,
+                    phone=pregnancy.patient.phone,
+                    location=pregnancy.patient.location,
+                    created_by=request.user
+                )
+                newborn.patient_profile = patient
+            
             newborn.save()
             return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
     else:

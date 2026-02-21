@@ -100,6 +100,9 @@ class LaborDeliveryForm(forms.ModelForm):
 
 
 class NewbornForm(forms.ModelForm):
+    first_name = forms.CharField(max_length=100, required=False, label="Baby's First Name")
+    last_name = forms.CharField(max_length=100, required=False, label="Baby's Last Name")
+
     birth_datetime = forms.DateTimeField(
         widget=forms.DateTimeInput(
             attrs={'class': 'form-control', 'type': 'datetime-local'},
@@ -146,6 +149,12 @@ class NewbornForm(forms.ModelForm):
             'bcg_given': 'BCG Vaccine Given',
             'opv_0_given': 'OPV 0 Given',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.patient_profile:
+            self.fields['first_name'].initial = self.instance.patient_profile.first_name
+            self.fields['last_name'].initial = self.instance.patient_profile.last_name
 
 class PostnatalBabyVisitForm(forms.ModelForm):
     class Meta:
