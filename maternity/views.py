@@ -113,45 +113,41 @@ def anc_dashboard(request):
         visit_date=today
     ).select_related('pregnancy__patient').order_by('created_at')
 
-    # New Arrivals from Triage (using PatientQue)
-    # We now filter by explicit 'ANC' department OR fallback to 'Maternity' (legacy) if needed,
-    # but primarily 'ANC'.
+    # New Arrivals (using PatientQue)
+    # Filter by 'ANC' department OR 'Maternity' fallback
     new_arrivals_raw = PatientQue.objects.filter(
-        Q(sent_to__name='ANC') | Q(sent_to__name='Maternity'), # Keep Maternity for fallback/legacy
+        Q(sent_to__name__iexact='ANC') | Q(sent_to__name__iexact='Maternity'),
         visit__visit_date__date=today,
-        status='PENDING'  # Only show unprocessed queue entries
+        visit__is_active=True,
+        status__iexact='PENDING'
     ).select_related('visit__patient').prefetch_related('visit__invoice__items').order_by('-created_at')
-
+ 
     new_arrivals = []
     seen_patients = set()
     
-    # Identify which are ANC based on Department OR Services (Legacy)
     for que in new_arrivals_raw:
-        # Avoid duplicates for the same patient (e.g. if queued multiple times)
         if que.visit.patient.id in seen_patients:
             continue
             
-        is_anc = False
+        # Determine if it's registration or follow-up
+        que.is_anc_registration = True
+        if hasattr(que.visit, 'invoice'):
+            for item in que.visit.invoice.items.all():
+                if item.service and "ANC" in item.service.name.upper():
+                    if any(x in item.service.name.upper() for x in ["FOLLOW", "REVISIT"]):
+                        que.is_anc_registration = False
+                    break
         
-        # 1. Explicit Department Routing (New Way)
-        if que.sent_to and que.sent_to.name == 'ANC':
-            is_anc = True
-            
-        # 2. Service-based fallback (Old Way - for legacy 'Maternity' queue items)
-        elif que.sent_to and que.sent_to.name == 'Maternity':
-            if hasattr(que.visit, 'invoice') and que.visit.invoice:
-                for item in que.visit.invoice.items.all():
-                    if item.service and "ANC" in item.service.name.upper():
-                        is_anc = True
-                        break
-        
-        if is_anc:
-            # Only show patients WITHOUT active pregnancies in New Arrivals.
-            # Patients with active pregnancies are auto-queued into Clinical Queue at reception.
-            active_pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Active').first()
-            if not active_pregnancy:
-                new_arrivals.append(que)
-                seen_patients.add(que.visit.patient.id)
+        que.active_pregnancy = Pregnancy.objects.filter(patient=que.visit.patient, status='Active').first()
+        que.linked_anc_visit = AntenatalVisit.objects.filter(visit=que.visit).first()
+        if que.active_pregnancy:
+            que.active_anc_visit = AntenatalVisit.objects.filter(
+                pregnancy=que.active_pregnancy, 
+                is_closed=False, 
+                visit_date=today
+            ).first()
+        new_arrivals.append(que)
+        seen_patients.add(que.visit.patient.id)
 
     if search_query:
         anc_queue = anc_queue.filter(
@@ -319,6 +315,13 @@ def register_pregnancy(request):
         form = PregnancyRegistrationForm(request.POST)
         if form.is_valid():
             pregnancy = form.save(commit=False)
+            
+            # Deactivate all previous active pregnancies for this patient
+            Pregnancy.objects.filter(
+                patient=pregnancy.patient, 
+                status='Active'
+            ).update(status='Delivered')
+            
             pregnancy.created_by = request.user
             pregnancy.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
@@ -442,6 +445,7 @@ def receive_anc_arrival(request, que_id):
         if not existing_visit:
             AntenatalVisit.objects.create(
                 pregnancy=pregnancy,
+                visit=que.visit,
                 visit_date=timezone.now().date(),
                 visit_number=(pregnancy.anc_visits.count() + 1),
                 gestational_age=pregnancy.gestational_age_weeks,
@@ -497,6 +501,7 @@ def receive_pnc_arrival(request, que_id):
             # Create a pending PNC visit record for baby
             PostnatalBabyVisit.objects.get_or_create(
                 newborn=newborn,
+                visit=que.visit,
                 visit_date=timezone.now().date(),
                 defaults={
                     'service_received': False,
@@ -526,6 +531,7 @@ def receive_pnc_arrival(request, que_id):
             # Create a pending PNC visit record
             PostnatalMotherVisit.objects.get_or_create(
                 delivery=delivery,
+                visit=que.visit,
                 visit_date=timezone.now().date(),
                 defaults={
                     'visit_day': (timezone.now().date() - delivery.delivery_datetime.date()).days,
@@ -589,9 +595,13 @@ def pregnancy_detail(request, pregnancy_id):
     # Lab results and reports
     # Get lab results and organize them by date
     from lab.models import LabResult, LabReport
+    from home.models import PrescriptionItem
     lab_results = LabResult.objects.filter(patient=pregnancy.patient).select_related('service', 'requested_by').order_by('-requested_at')
     
-    # Group lab results by date for easy linking
+    # Get prescriptions and organize them by date
+    prescriptions = PrescriptionItem.objects.filter(prescription__patient=pregnancy.patient).select_related('medication', 'prescription').order_by('-prescription__prescribed_at')
+    
+    # Group results and prescriptions by date for easy linking
     lab_results_by_date = {}
     for result in lab_results:
         date_key = result.requested_at.date()
@@ -599,13 +609,32 @@ def pregnancy_detail(request, pregnancy_id):
             lab_results_by_date[date_key] = []
         lab_results_by_date[date_key].append(result)
 
-    # Attach lab results to ANC visits
+    prescriptions_by_date = {}
+    for item in prescriptions:
+        date_key = item.prescription.prescribed_at.date()
+        if date_key not in prescriptions_by_date:
+            prescriptions_by_date[date_key] = []
+        prescriptions_by_date[date_key].append(item)
+
+    # Attach lab results and prescriptions to ANC visits
     for visit in anc_visits:
-        visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
+        if visit.visit:
+             # Exact match via Visit object
+             visit.related_lab_results = lab_results.filter(invoice__visit=visit.visit)
+             visit.related_prescriptions = prescriptions.filter(prescription__visit=visit.visit)
+        else:
+             # Fallback to date grouping if no direct link exists
+             visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
+             visit.related_prescriptions = prescriptions_by_date.get(visit.visit_date, [])
         
-    # Attach lab results to Mother PNC visits
+    # Attach lab results and prescriptions to Mother PNC visits
     for visit in mother_pnc_visits:
-        visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
+        if visit.visit:
+             visit.related_lab_results = lab_results.filter(invoice__visit=visit.visit)
+             visit.related_prescriptions = prescriptions.filter(prescription__visit=visit.visit)
+        else:
+             visit.related_lab_results = lab_results_by_date.get(visit.visit_date, [])
+             visit.related_prescriptions = prescriptions_by_date.get(visit.visit_date, [])
     
     # Get lab reports for this patient
     lab_report_ids = lab_results.values_list('id', flat=True)
@@ -864,10 +893,28 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
             anc_visit.pregnancy = pregnancy
             anc_visit.recorded_by = request.user
             anc_visit.service_received = True  # Mark as seen by doctor
+            
+            # Link to active hospital visit if not already set
+            if not anc_visit.visit:
+                latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
+                anc_visit.visit = latest_hosp_visit
+                
             anc_visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
         # For non-POST, prepare the form
+        today = timezone.now().date()
+        latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
+        
+        # Calculate suggested gestational age based on FIRST visit (Anchor)
+        # Fallback to LMP-based if no previous visit exists
+        first_visit = pregnancy.anc_visits.filter(service_received=True, gestational_age__isnull=False).order_by('visit_number', 'visit_date').first()
+        if first_visit:
+            days_passed = (today - first_visit.visit_date).days
+            calc_ga = first_visit.gestational_age + (days_passed // 7)
+        else:
+            calc_ga = pregnancy.gestational_age_weeks
+
         if visit_instance:
             # Editing existing or queued visit
             form = AntenatalVisitForm(instance=visit_instance)
@@ -877,9 +924,10 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
                 next_visit_num = (last_completed.visit_number + 1) if last_completed else 1
                 
                 form.initial.update({
+                    'visit': latest_hosp_visit,
                     'visit_number': next_visit_num,
-                    'visit_date': timezone.now().date(),
-                    'gestational_age': pregnancy.gestational_age_weeks
+                    'visit_date': today,
+                    'gestational_age': calc_ga
                 })
         else:
             # Brand new visit from scratch
@@ -887,9 +935,10 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
             next_visit_number = (last_completed.visit_number + 1) if last_completed else 1
             
             form = AntenatalVisitForm(initial={
+                'visit': latest_hosp_visit,
                 'visit_number': next_visit_number,
-                'visit_date': timezone.now().date(),
-                'gestational_age': pregnancy.gestational_age_weeks
+                'visit_date': today,
+                'gestational_age': calc_ga
             })
     
     context = {
@@ -1075,6 +1124,12 @@ def record_mother_pnc_visit(request, pregnancy_id):
             visit = form.save(commit=False)
             visit.delivery = delivery
             visit.recorded_by = request.user
+            
+            # Link to active hospital visit if not already set
+            if not visit.visit:
+                latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
+                visit.visit = latest_hosp_visit
+                
             visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
@@ -1082,8 +1137,10 @@ def record_mother_pnc_visit(request, pregnancy_id):
         delivery_date = delivery.delivery_datetime.date()
         today = timezone.now().date()
         visit_day = (today - delivery_date).days
+        latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
         
         form = PostnatalMotherVisitForm(initial={
+            'visit': latest_hosp_visit,
             'visit_date': today,
             'visit_day': max(0, visit_day),
         })
@@ -1111,15 +1168,23 @@ def record_baby_pnc_visit(request, newborn_id):
             visit = form.save(commit=False)
             visit.newborn = newborn
             visit.recorded_by = request.user
+            
+            # Link to active hospital visit if not already set
+            if not visit.visit:
+                latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
+                visit.visit = latest_hosp_visit
+                
             visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
         # Calculate visit day
-        delivery_date = newborn.delivery.delivery_datetime.date()
+        delivery_date = newborn.birth_datetime.date()
         today = timezone.now().date()
         visit_day = (today - delivery_date).days
+        latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
         
         form = PostnatalBabyVisitForm(initial={
+            'visit': latest_hosp_visit,
             'visit_date': today,
             'visit_day': max(0, visit_day),
             'weight': newborn.birth_weight,

@@ -56,8 +56,7 @@
                     <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <i class="fas fa-sign-in-alt text-amber-500"></i> New Arrivals from Triage
                     </h2>
-                    <span class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Pending
-                    Reception</span>
+                    <span class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Pending Reception</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
@@ -83,9 +82,31 @@
                                         <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px]">{{ arrival.qued_from.name|default:"Triage" }}</span>
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <a href="{% url 'maternity:register_pregnancy' %}?patient_id={{ arrival.visit.patient.id }}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
-                                            <i class="fas fa-user-plus"></i> Register Pregnancy
-                                        </a>
+                                        {% if arrival.is_anc_registration %}
+                                            <a href="{% url 'maternity:register_pregnancy' %}?patient_id={{ arrival.visit.patient.id }}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
+                                                <i class="fas fa-user-plus"></i> Register Pregnancy
+                                            </a>
+                                        {% else %}
+                                            {% if arrival.active_pregnancy %}
+                                                {% if arrival.linked_anc_visit %}
+                                                    <a href="{% url 'maternity:pregnancy_detail' arrival.active_pregnancy.id %}#visit-{{ arrival.linked_anc_visit.id }}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
+                                                        <i class="fas fa-eye"></i> View Record
+                                                    </a>
+                                                {% elif arrival.active_anc_visit %}
+                                                    <a href="{% url 'maternity:pregnancy_detail' arrival.active_pregnancy.id %}#visit-{{ arrival.active_anc_visit.id }}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
+                                                        <i class="fas fa-eye"></i> Resume Visit
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'maternity:record_anc_visit' arrival.active_pregnancy.id %}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
+                                                        <i class="fas fa-stethoscope"></i> Record Follow-up
+                                                    </a>
+                                                {% endif %}
+                                            {% else %}
+                                                <a href="{% url 'maternity:register_pregnancy' %}?patient_id={{ arrival.visit.patient.id }}" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-amber-700 transition-all shadow-md shadow-amber-100">
+                                                    <i class="fas fa-exclamation-triangle"></i> Register Needed
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -118,8 +139,7 @@
                             <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient Name</th>
                             <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visit #</th>
                             <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Clinical
-                                Alerts
+                                Clinical Alerts
                             </th>
                             <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pregnancy #</th>
                             <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Wait Time</th>
@@ -128,12 +148,11 @@
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         {% for visit in anc_queue %}
-                            <tr class="transition-colors hover:bg-blue-50/40 cursor-pointer {% if visit.is_high_risk %}bg-rose-50/30{% endif %}" onclick="window.location.href=' {% if visit.service_received %} {% url 'maternity:pregnancy_detail' visit.pregnancy.id %} {% else %} {% url 'maternity:record_anc_visit' visit.pregnancy.id %} {% endif %} '">
+                            <tr class="transition-colors hover:bg-blue-50/40 cursor-pointer {% if visit.is_high_risk %}bg-rose-50/30{% endif %}" onclick="window.location.href='{% url 'maternity:pregnancy_detail' visit.pregnancy.id %}#visit-{{ visit.id }}'">
                                 <td class="px-6 py-4 text-sm">
                                     <div class="font-bold text-slate-900">{{ visit.pregnancy.patient.full_name }}</div>
                                     <div class="text-[11px] font-bold text-slate-400">
-                                        G{{ visit.pregnancy.gravida }}P{{
-                                        visit.pregnancy.para }}
+                                        G{{ visit.pregnancy.gravida }}P{{ visit.pregnancy.para }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -154,8 +173,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px]">#{{
-                                    visit.pregnancy.id }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px]">#{{ visit.pregnancy.id }}</span>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-500 font-medium">{{ visit.created_at|timesince }}</td>
                                 <td class="px-6 py-4 text-right">
@@ -244,17 +262,13 @@
                                     {{ visit.visit_number }}</span>
                                 </td>
                                 <td class="px-6 py-4 text-sm font-bold text-slate-700">
-                                    {{ visit.bp_systolic }}/{{
-                                    visit.bp_diastolic }} <span class="text-slate-400 font-medium">|</span> {{ visit.temperature
-                                    }}°C
+                                    {{ visit.bp_systolic }}/{{ visit.bp_diastolic }} <span class="text-slate-400 font-medium">|</span> {{ visit.temperature }}°C
                                 </td>
                                 <td class="px-6 py-4 text-sm text-center font-bold text-slate-600">
-                                    {{
-                                    visit.fundal_height|default:"-" }}
+                                    {{ visit.fundal_height|default:"-" }}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-center font-bold text-slate-600">
-                                    {{
-                                    visit.fetal_heart_rate|default:"-" }}
+                                    {{ visit.fetal_heart_rate|default:"-" }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <a href="{% url 'maternity:pregnancy_detail' visit.pregnancy.id %}" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase tracking-widest transition-colors">Details</a>
@@ -273,17 +287,17 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         var ctx = document.getElementById('ancTrendChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [{% for t in trends %}"{{ t.label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+                labels: [{% for t in trends %}"{{ t.label }}"{% if not forloop.last %},{% endif %}{% endfor %}],
         datasets: [{
             label: 'ANC Visits',
-            data: [{% for t in trends %}{{ t.anc }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+            data: [{% for t in trends %}{{ t.anc }}{% if not forloop.last %},{% endif %}{% endfor %}],
     borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.05)',
             fill: true,

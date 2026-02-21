@@ -229,7 +229,7 @@
             </div>
         </div>
         {% block modals %}{% endblock %}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
         <script src="{% static 'users/js/dashboard.js' %}"></script>
         {% block extra_js %}{% endblock %}
     </body>

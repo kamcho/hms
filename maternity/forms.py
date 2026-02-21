@@ -36,12 +36,13 @@ class PregnancyRegistrationForm(forms.ModelForm):
 class AntenatalVisitForm(forms.ModelForm):
     class Meta:
         model = AntenatalVisit
-        fields = ['visit_date', 'visit_number', 'gestational_age', 'weight', 'bp_systolic', 'bp_diastolic', 
+        fields = ['visit', 'visit_date', 'visit_number', 'gestational_age', 'weight', 'bp_systolic', 'bp_diastolic', 
                   'temperature', 'fundal_height', 'fetal_heart_rate', 'fetal_presentation', 'fetal_movements',
                   'hemoglobin', 'blood_sugar', 'urine_protein', 'hiv_status',
                   'iron_supplements', 'folate_supplements', 'deworming', 'tetanus_toxoid',
                   'complaints', 'findings', 'plan', 'next_visit_date']
         widgets = {
+            'visit': forms.HiddenInput(),
             'visit_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'visit_number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'gestational_age': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
@@ -150,13 +151,14 @@ class PostnatalBabyVisitForm(forms.ModelForm):
     class Meta:
         model = PostnatalBabyVisit
         fields = [
-            'visit_date', 'visit_day', 'weight', 'length', 'head_circumference',
+            'visit', 'visit_date', 'visit_day', 'weight', 'length', 'head_circumference',
             'temperature', 'feeding_type', 'feeding_well', 'feeding_difficulties',
             'umbilical_cord', 'jaundice', 'jaundice_level', 'skin_condition',
             'eyes', 'vaccines_given', 'alertness', 'complaints', 'findings',
             'plan', 'next_visit_date'
         ]
         widgets = {
+            'visit': forms.HiddenInput(),
             'visit_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'visit_day': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 3'}),
             'weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'placeholder': 'kg'}),
@@ -189,13 +191,14 @@ class PostnatalMotherVisitForm(forms.ModelForm):
     class Meta:
         model = PostnatalMotherVisit
         fields = [
-            'visit_date', 'visit_day', 'bp_systolic', 'bp_diastolic', 
+            'visit', 'visit_date', 'visit_day', 'bp_systolic', 'bp_diastolic', 
             'temperature', 'pulse', 'uterus_involution', 'lochia', 
             'breastfeeding_status', 'perineum_wound', 'cs_wound',
             'family_planning_counseling', 'contraception_method',
             'mood_assessment', 'complaints', 'findings', 'plan', 'next_visit_date'
         ]
         widgets = {
+            'visit': forms.HiddenInput(),
             'visit_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'visit_day': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 3'}),
             'bp_systolic': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'mmHg'}),

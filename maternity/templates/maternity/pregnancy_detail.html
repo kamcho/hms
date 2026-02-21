@@ -360,7 +360,7 @@
         </div><!-- end preg-page-grid -->
         
         <!-- Antenatal Care Section (Tabbed) -->
-        <div x-data="{ activeTab: 'overview' }" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div x-data="{ activeTab: window.location.hash ? window.location.hash.substring(1) : 'overview' }" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
             <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex flex-col xl:flex-row justify-between items-center gap-6">
                 <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <i class="fas fa-baby-carriage text-blue-600"></i> Antenatal Care
@@ -426,7 +426,7 @@
                 </div>
                 <!-- Visit Tabs -->
                 {% for visit in anc_visits %}
-                    <div x-show="activeTab === 'visit-{{ visit.id }}'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                    <div id="visit-{{ visit.id }}" x-show="activeTab === 'visit-{{ visit.id }}'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
                         <!-- Visit Header -->
                         <div class="flex items-center justify-between gap-4 mb-8 pb-8 border-b border-slate-50">
                             <div class="flex items-center gap-4">
@@ -558,13 +558,32 @@
                                 Medications
                                 Given
                             </h4>
-                            <div class="flex flex-wrap gap-2">
+                            <div class="flex flex-wrap gap-2 mb-4">
                                 {% if visit.iron_supplements %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Iron</span>{% endif %}
                                 {% if visit.folate_supplements %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Folate</span>{% endif %}
                                 {% if visit.deworming %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Deworming</span>{% endif %}
                                 {% if visit.tetanus_toxoid %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Tetanus</span>{% endif %}
-                                {% if not visit.iron_supplements and not visit.folate_supplements and not visit.deworming and not visit.tetanus_toxoid %}<span class="text-xs text-blue-400 italic">No standard supplements recorded.</span>{% endif %}
                             </div>
+                            
+                            {% if visit.related_prescriptions %}
+                                <div class="space-y-2">
+                                    {% for item in visit.related_prescriptions %}
+                                        <div class="p-3 bg-white rounded-xl border {% if item.dispensed %}border-emerald-100 hover:border-emerald-300{% else %}border-rose-100 hover:border-rose-300{% endif %} flex justify-between items-center group transition-all">
+                                            <div>
+                                                <div class="text-xs font-bold text-slate-900">{{ item.medication.name }}</div>
+                                                <div class="text-[10px] text-slate-500 font-medium">{{ item.dose_count }} x {{ item.frequency }} ({{ item.quantity }} units)</div>
+                                            </div>
+                                            {% if item.dispensed %}
+                                                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" title="Dispensed"></span>
+                                            {% else %}
+                                                <span class="w-2 h-2 rounded-full bg-rose-600 shadow-sm shadow-rose-200" title="Pending (Not Dispensed)"></span>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif not visit.iron_supplements and not visit.folate_supplements and not visit.deworming and not visit.tetanus_toxoid %}
+                                <span class="text-xs text-blue-400 italic">No medications recorded.</span>
+                            {% endif %}
                         </div>
                     </div>
                     <!-- Column 3: Plan & Notes -->
@@ -969,13 +988,32 @@
 
                             <div class="bg-purple-50/50 p-5 rounded-2xl border border-purple-100">
                                 <h4 class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-4">Medications Given</h4>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-2 mb-4">
                                     {% if visit.iron_supplements %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> Iron</span>{% endif %}
                                     {% if visit.vitamin_a_supplements %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> Vitamin A</span>{% endif %}
                                     {% if visit.art %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> ART</span>{% endif %}
                                     {% if visit.ctx %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> CTX</span>{% endif %}
-                                    {% if not visit.iron_supplements and not visit.vitamin_a_supplements and not visit.art and not visit.ctx %}<span class="text-xs text-purple-400 italic">No standard supplements recorded.</span>{% endif %}
                                 </div>
+                                
+                                {% if visit.related_prescriptions %}
+                                    <div class="space-y-2">
+                                        {% for item in visit.related_prescriptions %}
+                                            <div class="p-3 bg-white rounded-xl border {% if item.dispensed %}border-emerald-100 hover:border-emerald-300{% else %}border-rose-100 hover:border-rose-300{% endif %} flex justify-between items-center group transition-all">
+                                                <div>
+                                                    <div class="text-xs font-bold text-slate-900">{{ item.medication.name }}</div>
+                                                    <div class="text-[10px] text-slate-500 font-medium">{{ item.dose_count }} x {{ item.frequency }} ({{ item.quantity }} units)</div>
+                                                </div>
+                                                {% if item.dispensed %}
+                                                    <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" title="Dispensed"></span>
+                                                {% else %}
+                                                    <span class="w-2 h-2 rounded-full bg-rose-600 shadow-sm shadow-rose-200" title="Pending (Not Dispensed)"></span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif not visit.iron_supplements and not visit.vitamin_a_supplements and not visit.art and not visit.ctx %}
+                                    <span class="text-xs text-purple-400 italic">No medications recorded.</span>
+                                {% endif %}
                             </div>
                             
                             <div class="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
@@ -1149,7 +1187,7 @@
     </div>
     
 {% endif %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
 <script>
     const opt = {
         responsive: true,

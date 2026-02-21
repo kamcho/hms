@@ -141,6 +141,7 @@ class AntenatalVisit(models.Model):
     """Individual ANC checkup records"""
     
     pregnancy = models.ForeignKey(Pregnancy, on_delete=models.CASCADE, related_name='anc_visits')
+    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='maternity_anc_visits')
     visit_date = models.DateField(default=timezone.now)
     visit_number = models.PositiveIntegerField(null=True, blank=True)
     gestational_age = models.PositiveIntegerField(help_text="Weeks", null=True, blank=True)
@@ -337,6 +338,7 @@ class PostnatalMotherVisit(models.Model):
     """Postnatal checkup for the mother"""
     
     delivery = models.ForeignKey(LaborDelivery, on_delete=models.CASCADE, related_name='mother_pnc_visits')
+    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='maternity_mother_pnc_visits')
     visit_date = models.DateField(default=timezone.now)
     visit_day = models.PositiveIntegerField(help_text="Days post-delivery", null=True, blank=True)
     service_received = models.BooleanField(default=False)
@@ -409,6 +411,7 @@ class PostnatalBabyVisit(models.Model):
     """Postnatal checkup for individual baby - handles multiple births correctly"""
     
     newborn = models.ForeignKey(Newborn, on_delete=models.CASCADE, related_name='pnc_visits')
+    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='maternity_baby_pnc_visits')
     visit_date = models.DateField(default=timezone.now)
     visit_day = models.PositiveIntegerField(help_text="Days post-delivery", null=True, blank=True)
     service_received = models.BooleanField(default=False)

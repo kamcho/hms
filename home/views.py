@@ -1257,7 +1257,24 @@ def admit_patient_visit(request):
                     unit_price=main_service.price,
                     quantity=1
                 )
-                billing_msg = " (Billed)"
+                
+                # Automated Payment (Patient pays before admission)
+                from accounts.models import Payment
+                Payment.objects.create(
+                    invoice=invoice,
+                    amount=invoice.total_amount,
+                    payment_method='Cash',
+                    notes='Automated payment at admission',
+                    created_by=request.user
+                )
+                
+                # Final check for 0-cost services to ensure status is 'Paid'
+                invoice.refresh_from_db()
+                if invoice.total_amount == 0 and invoice.status != 'Paid':
+                    invoice.status = 'Paid'
+                    invoice.save()
+                
+                billing_msg = " (Billed & Paid)"
             
             # Create PatientQue from reception to destination (Triage or Direct Maternity)
             que = PatientQue.objects.create(
@@ -1267,34 +1284,6 @@ def admit_patient_visit(request):
                 created_by=request.user
             )
             
-            # --- ANC Revisit: Auto-queue returning patients directly into Clinical Queue ---
-            if "ANC" in service_name_upper:
-                from maternity.models import Pregnancy, AntenatalVisit
-                active_pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
-                
-                if active_pregnancy:
-                    # Patient has active pregnancy → create AntenatalVisit directly
-                    # Only check for OPEN visits today (closed ones don't block a new revisit)
-                    existing_open_today = AntenatalVisit.objects.filter(
-                        pregnancy=active_pregnancy,
-                        visit_date=timezone.now().date(),
-                        is_closed=False
-                    ).first()
-                    
-                    if not existing_open_today:
-                        AntenatalVisit.objects.create(
-                            pregnancy=active_pregnancy,
-                            visit_date=timezone.now().date(),
-                            visit_number=(active_pregnancy.anc_visits.count() + 1),
-                            gestational_age=active_pregnancy.gestational_age_weeks,
-                            service_received=False,
-                            is_closed=False,
-                            recorded_by=request.user
-                        )
-                    
-                    # Mark queue as completed — patient goes straight to Clinical Queue
-                    que.status = 'COMPLETED'
-                    que.save()
             
             return JsonResponse({
                 'success': True, 
