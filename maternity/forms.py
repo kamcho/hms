@@ -4,6 +4,7 @@ from .models import (
     Vaccine, ImmunizationRecord, Pregnancy, AntenatalVisit, LaborDelivery, Newborn
 )
 from home.models import Patient
+from inpatient.models import Ward, Bed
 
 
 class PregnancyRegistrationForm(forms.ModelForm):
@@ -70,12 +71,25 @@ class AntenatalVisitForm(forms.ModelForm):
 
 
 class LaborDeliveryForm(forms.ModelForm):
+    ward = forms.ModelChoiceField(
+        queryset=Ward.objects.all(),
+        required=False,
+        help_text="Select ward for mother admission (optional)"
+    )
+    
+    bed = forms.ModelChoiceField(
+        queryset=Bed.objects.filter(is_occupied=False),
+        required=False,
+        empty_label="Select a Bed (optional)",
+        help_text="Select bed for mother admission"
+    )
+    
     class Meta:
         model = LaborDelivery
         fields = ['admission_date', 'gestational_age_at_delivery', 'labor_onset', 'rupture_of_membranes',
                   'labor_duration', 'delivery_datetime', 'delivery_mode', 'maternal_complications',
                   'episiotomy', 'perineal_tear', 'estimated_blood_loss', 'blood_transfusion',
-                  'placenta_delivery', 'mother_condition', 'delivery_notes']
+                  'placenta_delivery', 'mother_condition', 'delivery_notes', 'ward', 'bed']
         widgets = {
             'admission_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'gestational_age_at_delivery': forms.NumberInput(attrs={'class': 'form-control', 'min': '20', 'max': '45'}),
@@ -97,11 +111,27 @@ class LaborDeliveryForm(forms.ModelForm):
             'rupture_of_membranes': 'Rupture of Membranes (ROM)',
             'estimated_blood_loss': 'Estimated Blood Loss (EBL)',
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['bed'].queryset = Bed.objects.filter(is_occupied=False).select_related('ward')
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({'class': 'form-control'})
 
 
 class NewbornForm(forms.ModelForm):
-    first_name = forms.CharField(max_length=100, required=False, label="Baby's First Name")
-    last_name = forms.CharField(max_length=100, required=False, label="Baby's Last Name")
+    first_name = forms.CharField(
+        max_length=100, 
+        required=False, 
+        label="Baby's First Name",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter baby\'s first name'})
+    )
+    last_name = forms.CharField(
+        max_length=100, 
+        required=False, 
+        label="Baby's Last Name",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter baby\'s last name'})
+    )
 
     birth_datetime = forms.DateTimeField(
         widget=forms.DateTimeInput(

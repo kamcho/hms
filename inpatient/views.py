@@ -16,14 +16,14 @@ from home.models import Patient, Visit, Departments
 from django.db.models import Count, Q, Sum, F
 from django.utils import timezone
 import math
-from accounts.models import Service
+from accounts.models import Service, Invoice, InvoiceItem
 from lab.models import LabResult
 @login_required
 def dashboard(request):
     # Analytics
     active_admissions = Admission.objects.filter(status='Admitted').select_related(
         'patient', 'bed', 'bed__ward'
-    ).prefetch_related('vitals')
+    ).prefetch_related('vitals', 'delivery')
     
     total_admitted = active_admissions.count()
     
@@ -49,16 +49,46 @@ def dashboard(request):
 
 @login_required
 def admit_patient(request, patient_id):
-    if request.user.role != 'Doctor':
-        messages.error(request, "Only doctors can admit patients.")
+    # Debug: Check user role
+    print(f"DEBUG: User role = {request.user.role}")
+    print(f"DEBUG: User = {request.user}")
+    print(f"DEBUG: Is authenticated = {request.user.is_authenticated}")
+    
+    if request.user.role not in ['Doctor', 'Nurse']:
+        print(f"DEBUG: Access denied for role: {request.user.role}")
+        messages.error(request, "Only doctors and nurses can admit patients.")
         return redirect('home:patient_detail', pk=patient_id)
     
+    print(f"DEBUG: Access granted for role: {request.user.role}")
     patient = get_object_or_404(Patient, id=patient_id)
+    print(f"DEBUG: Patient = {patient.full_name} (ID: {patient.id})")
+    
+    # Get invoice_id from URL parameter (for Extend to IPD functionality)
+    invoice_id = request.GET.get('invoice_id')
+    print(f"DEBUG: Invoice ID from URL = {invoice_id}")
     
     # Check if already admitted
-    if Admission.objects.filter(patient=patient, status='Admitted').exists():
+    is_already_admitted = Admission.objects.filter(patient=patient, status='Admitted').exists()
+    print(f"DEBUG: Is already admitted = {is_already_admitted}")
+    
+    # For Extend to IPD functionality, allow admission even if already admitted
+    # This will close the current admission and create a new one
+    if is_already_admitted and not invoice_id:
+        print(f"DEBUG: Patient already admitted without invoice_id, redirecting...")
         messages.warning(request, f"{patient.full_name} is already admitted.")
         return redirect('home:patient_detail', pk=patient.pk)
+    
+    print(f"DEBUG: Continuing with admission process...")
+    
+    previous_invoice = None
+    if invoice_id:
+        try:
+            previous_invoice = Invoice.objects.get(id=invoice_id, patient=patient)
+            print(f"DEBUG: Previous invoice found = {previous_invoice}")
+        except Invoice.DoesNotExist:
+            print(f"DEBUG: Invoice not found, clearing invoice_id")
+            messages.error(request, "Invalid invoice ID provided.")
+            invoice_id = None
     
     if request.method == 'POST':
         form = AdmissionForm(request.POST, patient=patient)
@@ -66,6 +96,22 @@ def admit_patient(request, patient_id):
             admission = form.save(commit=False)
             admission.patient = patient
             admission.admitted_by = request.user
+            
+            # For Extend to IPD: Close existing admission if exists
+            if is_already_admitted:
+                print(f"DEBUG: Closing existing admission for Extend to IPD")
+                existing_admission = Admission.objects.get(patient=patient, status='Admitted')
+                existing_admission.status = 'Discharged'
+                existing_admission.discharged_at = timezone.now()
+                existing_admission.discharged_by = request.user
+                existing_admission.save()
+                
+                # Release the bed
+                if existing_admission.bed:
+                    existing_admission.bed.is_occupied = False
+                    existing_admission.bed.save()
+                
+                messages.info(request, f"Previous admission closed. Extending to new IPD admission.")
             
             # Deactivate any existing active visits (e.g., from OPD or Maternity)
             Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
@@ -77,8 +123,52 @@ def admit_patient(request, patient_id):
                 visit_mode='Walk In'
             )
             admission.visit = visit
-            messages.info(request, f"Active visits closed. New IN-PATIENT visit created for {patient.full_name}.")
+            
+            # Handle invoice mirroring if previous_invoice exists
+            if previous_invoice:
+                # Create new invoice for the new visit
+                from accounts.utils import get_or_create_invoice
+                new_invoice = get_or_create_invoice(visit=visit, user=request.user)
                 
+                # Copy only Normal Delivery items from previous invoice to new invoice
+                for item in previous_invoice.items.all():
+                    print(f"DEBUG: Checking item - Service: {item.service}, Name: {item.name}, Amount: {item.amount}")
+                    
+                    # Only copy Normal Delivery service items
+                    if item.service and item.service.name == 'Normal Delivery':
+                        InvoiceItem.objects.create(
+                            invoice=new_invoice,
+                            service=item.service,
+                            inventory_item=item.inventory_item,
+                            name=item.name,
+                            quantity=item.quantity,
+                            unit_price=item.unit_price,
+                            amount=item.amount,
+                            paid_amount=item.paid_amount,
+                            created_by=request.user
+                        )
+                        print(f"DEBUG: Copied Normal Delivery item: {item.name} (Amount: {item.amount})")
+                    else:
+                        print(f"DEBUG: Skipped non-Normal Delivery item: {item.name}")
+                
+                # Set all unpaid items in previous invoice to paid (only if not already paid)
+                unpaid_items = previous_invoice.items.filter(
+                    Q(paid_amount__lt=F('amount')) | Q(paid_amount=0)
+                )
+                if unpaid_items.exists():
+                    # Mark items as fully paid by setting paid_amount = amount
+                    unpaid_items.update(paid_amount=F('amount'))
+                    print(f"DEBUG: Marked {unpaid_items.count()} unpaid items as paid in previous invoice")
+                    
+                    # Update invoice status to Canceled since it was transferred to IPD
+                    previous_invoice.status = 'Canceled'
+                    previous_invoice.save()
+                    print(f"DEBUG: Updated invoice #{previous_invoice.id} status to: {previous_invoice.status}")
+                else:
+                    print(f"DEBUG: All items already paid in previous invoice")
+                
+                messages.success(request, f"Extended to IPD successfully. Unpaid items from Invoice #{previous_invoice.id} have been transferred to new visit.")
+            
             admission.save()
             messages.success(request, f"Patient {patient.full_name} admitted successfully.")
             return redirect('inpatient:patient_case_folder', admission_id=admission.id)
@@ -88,7 +178,8 @@ def admit_patient(request, patient_id):
     return render(request, 'inpatient/admit_patient.html', {
         'form': form,
         'patient': patient,
-        'title': f'Admit Patient: {patient.full_name}'
+        'title': f'Admit Patient: {patient.full_name}',
+        'previous_invoice': previous_invoice
     })
 
 @login_required

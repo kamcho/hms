@@ -31,6 +31,28 @@
                 <!-- Baby Information -->
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                     <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Baby Information</h3>
+                    <div style="background: #e0f2fe; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
+                        <p style="margin: 0; font-size: 14px; color: #0369a1;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Optional:</strong> Adding first and last names will create a patient record for the baby in the system
+                        </p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Baby's First Name</strong>
+                            </label>
+                            {{ form.first_name }}
+                            <small style="color: #64748b; display: block; margin-top: 4px;">Optional - Leave blank if not naming yet</small>
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Baby's Last Name</strong>
+                            </label>
+                            {{ form.last_name }}
+                            <small style="color: #64748b; display: block; margin-top: 4px;">Optional - Leave blank if not naming yet</small>
+                        </div>
+                    </div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
                         <div>
                             <label class="form-label">

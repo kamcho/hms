@@ -87,14 +87,32 @@
                                         <td class="px-8 py-5">
                                             <div class="flex items-center gap-4">
                                                 <div class="flex items-center gap-2">
-                                                    <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Clinical Case Folder">
-                                                        <i class="fas fa-folder-open text-xs"></i>
-                                                    </a>
+                                                    {% if admission.delivery %}
+                                                        <!-- For maternity patients, link to pregnancy detail -->
+                                                        <a href="{% url 'maternity:pregnancy_detail' admission.delivery.pregnancy.id %}#delivery-section" class="p-2 bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-600 hover:text-white transition-all shadow-sm" title="Pregnancy & Delivery Details">
+                                                            <i class="fas fa-baby-carriage text-xs"></i>
+                                                        </a>
+                                                    {% else %}
+                                                        <!-- For regular patients, link to case folder -->
+                                                        <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Clinical Case Folder">
+                                                            <i class="fas fa-folder-open text-xs"></i>
+                                                        </a>
+                                                    {% endif %}
                                                     <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-white">{{ admission.patient.first_name|first }}</div>
                                                 </div>
                                                 <div>
                                                     <div class="text-sm font-black text-slate-900">{{ admission.patient.full_name }}</div>
                                                     <div class="text-[10px] font-bold text-slate-400 mt-0.5">VISIT #{{ admission.visit.id }}</div>
+                                                    <!-- Check if this admission has a linked delivery -->
+                                                    {% if admission.delivery %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-pink-100 text-pink-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-pink-200 ml-2">
+                                                            <i class="fas fa-baby-carriage text-[8px]"></i> Maternity
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-gray-200 ml-2">
+                                                            <i class="fas fa-user text-[8px]"></i> Regular
+                                                        </span>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </td>
@@ -108,8 +126,20 @@
                                             <div class="text-[11px] font-black text-slate-900">{{ admission.admitted_at|date:"d M Y" }}</div>
                                             <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase">{{ admission.admitted_at|timesince }}</div>
                                         </td>
-                                        <td class="px-8 py-5 text-right">
-                                            <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="inline-flex items-center px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm">Open Folder</a>
+                                        <td class="px-8 py-5 whitespace-nowrap">
+                                            <div class="text-right">
+                                                {% if admission.delivery %}
+                                                    <!-- For maternity patients, link to pregnancy detail -->
+                                                    <a href="{% url 'maternity:pregnancy_detail' admission.delivery.pregnancy.id %}#delivery-section" class="inline-flex items-center px-4 py-2 bg-pink-50 text-pink-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-600 hover:text-white transition-all shadow-sm">
+                                                        <i class="fas fa-baby-carriage text-[8px]"></i> Open Folder
+                                                    </a>
+                                                {% else %}
+                                                    <!-- For regular patients, link to case folder -->
+                                                    <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                                        <i class="fas fa-folder-open text-xs"></i> Open Folder
+                                                    </a>
+                                                {% endif %}
+                                            </div>
                                         </td>
                                     </tr>
                                 {% empty %}

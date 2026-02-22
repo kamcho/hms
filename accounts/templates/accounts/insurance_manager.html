@@ -585,9 +585,7 @@
                                         <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
                                         <td>
                                             {% if inv.visit.admissions.first %}
-                                                <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">
-                                                    {{ inv.visit.admissions.first.bed.ward.name }} / {{ inv.visit.admissions.first.bed.bed_number }}
-                                                </span>
+                                                <span class="font-bold text-[11px] px-2 py-1 bg-slate-100 rounded text-slate-600">{{ inv.visit.admissions.first.bed.ward.name }} / {{ inv.visit.admissions.first.bed.bed_number }}</span>
                                             {% else %}
                                                 <span class="text-slate-300 italic">No Active Admission</span>
                                             {% endif %}
@@ -620,71 +618,68 @@
                     </div>
                 </div>
             </section>
-            {% if other_invoices %}
-                <!-- Other/Morgue Section -->
-                <section>
-                    <div class="glass-card other-theme">
-                        <div class="section-header !bg-amber-50/30">
-                            <h2 class="section-title">
-                                <span class="theme-icon">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </span>
-                                Other & External Claims
-                                <span class="badge-count !bg-amber-600 !shadow-amber-200">{{ other_invoices.count }}</span>
-                            </h2>
-                            <div class="text-[10px] font-black text-amber-500 uppercase tracking-widest">
-                                Miscellaneous &
-                                External
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>Entity/Patient</th>
-                                        <th>Date</th>
-                                        <th>Total Bill</th>
-                                        <th>Balance Due</th>
-                                        <th>Status</th>
-                                        <th class="text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for inv in other_invoices %}
-                                        <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.deceased %}{{ inv.deceased.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
-                                            <td>
-                                                <div class="patient-cell">
-                                                    <span class="patient-name">
-                                                        {% if inv.deceased %}
-                                                            {{ inv.deceased.full_name }} (Deceased)
-                                                        {% elif inv.patient %}
-                                                            {{ inv.patient.full_name }}
-                                                        {% else %}
-                                                            Unspecified Entity
-                                                        {% endif %}
-                                                    </span>
-                                                    <span class="invoice-id">#INV-{{ inv.id }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
-                                            <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
-                                            <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
-                                            <td>
-                                                <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
-                                            </td>
-                                            <td class="text-right">
-                                                <a href="{% url 'accounts:invoice_detail' inv.id %}" onclick="event.stopPropagation()" class="action-btn btn-view">
-                                                    <i class="fas fa-eye text-[10px]"></i> View Details
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+            <!-- Maternity Section -->
+            <section>
+                <div class="glass-card maternity-theme">
+                    <div class="section-header !bg-pink-50/30">
+                        <h2 class="section-title">
+                            <span class="theme-icon">
+                                <i class="fas fa-baby-carriage"></i>
+                            </span>
+                            Maternity Services
+                        </h2>
                     </div>
-                </section>
-            {% endif %}
+                    <div class="overflow-x-auto">
+                        <table class="modern-table">
+                            <thead>
+                                <tr class="modern-table-header">
+                                    <th>Patient</th>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Total Amount</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in maternity_invoices %}
+                                    <tr class="cursor-pointer hover:bg-pink-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td>
+                                            <div class="patient-cell">
+                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                        <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                        <td class="amount-cell text-rose-600">Ksh {{ inv.balance|floatformat:2 }}</td>
+                                        <td>
+                                            <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="{% url 'accounts:invoice_detail' inv.id %}" onclick="event.stopPropagation()" class="action-btn btn-view">
+                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="empty-state">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                    <i class="fas fa-baby-carriage"></i>
+                                                </div>
+                                                <p class="font-bold text-slate-400">No maternity invoices found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
     <!-- Claim Processing Modal -->
@@ -888,7 +883,8 @@
         // Apply Per-Diem Logic for Inpatients
         if (currentAdmissionInfo && selectedItemIds.size > 0) {
             const perDiemTotal = currentAdmissionInfo.per_diem_total;
-            const totalBilled = currentAdmissionInfo.total_billed;
+            const totalBilled = currentAdmissionInfo.total_billed_for_per_diem; // Use per-diem calculation amount (excludes Normal Delivery)
+            const normalDeliveryTotal = currentAdmissionInfo.normal_delivery_total || 0; // Show Normal Delivery separately
 
             // Strictly use the per-diem total as requested, irregardless of what was billed
             amountInput.value = perDiemTotal.toFixed(2);
@@ -897,6 +893,7 @@
 
             // Calculate adjustment: Difference between billed and per-diem
             // Positive = billed > per-diem (loss), Negative = billed < per-diem (profit)
+            // Use total_billed_for_per_diem for adjustment calculation
             currentAdjustment = totalSelected - perDiemTotal;
 
             const adjustmentEl = document.getElementById('adjustmentLabel');

@@ -1,0 +1,244 @@
+<div class="bg-blue-50/30 border border-blue-100 rounded-[32px] p-8 mb-6">
+    <h5 class="text-xs font-black text-blue-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+        <i class="fas fa-box-open"></i> Dispense Vaccination Consumables
+    </h5>
+    
+    <!-- Hidden Context Fields -->
+    {% if patient %}
+        <input type="hidden" id="vacc_dispense_patient_id" value="{{ patient.id }}">
+    {% endif %}
+    {% if visit %}
+        <input type="hidden" id="vacc_dispense_visit_id" value="{{ visit.id }}">
+    {% endif %}
+    {% if que %}
+        <input type="hidden" id="vacc_dispense_department_id" value="{{ que.sent_to.id }}">
+    {% endif %}
+    
+    {% csrf_token %}
+    
+    <!-- Item Search -->
+    <div class="mb-6">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+            Search Consumable Item
+        </label>
+        <div class="relative">
+            <input type="text" id="vaccItemSearch" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Type to search items (e.g., Syringe, Needle, Cotton wool)..." oninput="debouncedVaccItemSearch(this.value)" autocomplete="off">
+            <input type="hidden" id="selectedVaccItemId">
+            <!-- Dropdown Results -->
+            <div id="vaccItemSearchResults" class="absolute w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-100 z-50 hidden max-h-60 overflow-y-auto"></div>
+        </div>
+    </div>
+    
+    <!-- Item Details (shown after selection) -->
+    <div id="vaccItemDetails" class="hidden space-y-4 mb-6">
+        <div class="bg-white rounded-xl p-4 border border-blue-100">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h6 id="selectedVaccItemName" class="font-black text-slate-900 text-sm"></h6>
+                    <div class="flex gap-2 mt-1">
+                        <span id="selectedVaccItemStock" class="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100"></span>
+                        <span id="selectedVaccItemPrice" class="text-xs font-black text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100"></span>
+                    </div>
+                </div>
+                <button type="button" onclick="clearVaccItemSelection()" class="text-rose-500 hover:text-rose-700 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Quantity *
+                    </label>
+                    <input type="number" id="vaccItemQuantity" name="quantity" min="1" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="0">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Notes
+                    </label>
+                    <input type="text" id="vaccItemNotes" name="notes" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Optional notes...">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Select Common Items -->
+    <div class="mb-6">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+            Quick Select - Common Vaccination Items
+        </label>
+        <div class="flex flex-wrap gap-2" id="quickSelectItems">
+            <button type="button" onclick="quickSelectItem('Syringe 2ml')" class="px-3 py-1 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 transition-colors">
+                <i class="fas fa-syringe mr-1"></i> Syringe 2ml
+            </button>
+            <button type="button" onclick="quickSelectItem('Needle 21G')" class="px-3 py-1 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 transition-colors">
+                <i class="fas fa-arrow-right mr-1"></i> Needle 21G
+            </button>
+            <button type="button" onclick="quickSelectItem('Cotton Wool')" class="px-3 py-1 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 transition-colors">
+                <i class="fas fa-circle mr-1"></i> Cotton Wool
+            </button>
+            <button type="button" onclick="quickSelectItem('Spirit')" class="px-3 py-1 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 transition-colors">
+                <i class="fas fa-tint mr-1"></i> Spirit
+            </button>
+            <button type="button" onclick="quickSelectItem('Gloves')" class="px-3 py-1 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 transition-colors">
+                <i class="fas fa-hand-paper mr-1"></i> Gloves
+            </button>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+        <button type="button" onclick="submitVaccDispense()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-check"></i> Dispense Item
+        </button>
+        <button type="button" onclick="clearVaccDispenseForm()" class="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors">
+            Clear
+        </button>
+    </div>
+</div>
+
+<script>
+// Debounce function for search
+function vaccDebounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Vaccination item search
+const debouncedVaccItemSearch = vaccDebounce(function(query) {
+    if (query.length < 2) {
+        document.getElementById('vaccItemSearchResults').classList.add('hidden');
+        return;
+    }
+    
+    const departmentId = document.getElementById('vacc_dispense_department_id').value;
+    const url = departmentId ? 
+        `/api/inventory/search-by-department/${departmentId}/?q=${encodeURIComponent(query)}` :
+        `/api/inventory/search/?q=${encodeURIComponent(query)}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('vaccItemSearchResults');
+            resultsDiv.innerHTML = '';
+            
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-4 text-xs font-bold text-slate-400 text-center">No items found.</div>';
+            } else {
+                data.forEach(item => {
+                    const isOutOfStock = item.stock_quantity <= 0;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`;
+                    itemDiv.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-slate-700 text-sm">${item.name}</div>
+                                <div class="text-xs text-slate-500">${item.description || ''}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] font-black ${isOutOfStock ? 'text-rose-500' : 'text-emerald-500'}">
+                                    ${isOutOfStock ? 'Out of Stock' : `${item.stock_quantity} in stock`}
+                                </div>
+                                <div class="text-[10px] font-bold text-slate-400">KES ${item.selling_price}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (!isOutOfStock) {
+                        itemDiv.onclick = () => selectVaccItem(item);
+                    }
+                    
+                    resultsDiv.appendChild(itemDiv);
+                });
+            }
+            resultsDiv.classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error searching items:', error);
+        });
+}, 300);
+
+function selectVaccItem(item) {
+    document.getElementById('selectedVaccItemId').value = item.id;
+    document.getElementById('selectedVaccItemName').textContent = item.name;
+    document.getElementById('selectedVaccItemStock').textContent = `${item.stock_quantity} in stock`;
+    document.getElementById('selectedVaccItemPrice').textContent = `KES ${item.selling_price}`;
+    document.getElementById('vaccItemSearch').value = item.name;
+    document.getElementById('vaccItemSearchResults').classList.add('hidden');
+    document.getElementById('vaccItemDetails').classList.remove('hidden');
+}
+
+function quickSelectItem(itemName) {
+    document.getElementById('vaccItemSearch').value = itemName;
+    debouncedVaccItemSearch(itemName);
+}
+
+function clearVaccItemSelection() {
+    document.getElementById('selectedVaccItemId').value = '';
+    document.getElementById('vaccItemSearch').value = '';
+    document.getElementById('vaccItemDetails').classList.add('hidden');
+    document.getElementById('vaccItemSearchResults').classList.add('hidden');
+}
+
+function submitVaccDispense() {
+    const patientId = document.getElementById('vacc_dispense_patient_id').value;
+    const visitId = document.getElementById('vacc_dispense_visit_id').value;
+    const itemId = document.getElementById('selectedVaccItemId').value;
+    const quantity = document.getElementById('vaccItemQuantity').value;
+    const notes = document.getElementById('vaccItemNotes').value;
+    
+    if (!patientId || !itemId || !quantity) {
+        alert('Please select an item and enter quantity.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('patient_id', patientId);
+    if (visitId) formData.append('visit_id', visitId);
+    formData.append('item_id', itemId);
+    formData.append('quantity', quantity);
+    if (notes) formData.append('notes', notes);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('/api/inventory/dispense/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Item dispensed successfully!');
+            clearVaccDispenseForm();
+            // Optionally refresh the page to show dispensed items
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error dispensing item:', error);
+        alert('Error dispensing item. Please try again.');
+    });
+}
+
+function clearVaccDispenseForm() {
+    clearVaccItemSelection();
+    document.getElementById('vaccItemQuantity').value = '';
+    document.getElementById('vaccItemNotes').value = '';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const searchContainer = document.querySelector('#vaccItemSearch').parentElement;
+    if (!searchContainer.contains(e.target)) {
+        document.getElementById('vaccItemSearchResults').classList.add('hidden');
+    }
+});
+</script>

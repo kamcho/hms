@@ -19,7 +19,9 @@ from .forms import (
 from accounts.models import InvoiceItem, Service, Invoice
 from accounts.utils import get_or_create_invoice
 from home.models import PatientQue, Departments, Visit, Prescription, PrescriptionItem # Added Visit, Prescription, PrescriptionItem
-from home.forms import PrescriptionItemForm # Added PrescriptionItemForm
+from home.forms import PrescriptionItemForm, Patient # Added PrescriptionItemForm
+from inpatient.models import Admission, Ward, Bed
+from inpatient.forms import AdmissionForm
 
 
 @login_required
@@ -652,11 +654,24 @@ def pregnancy_detail(request, pregnancy_id):
     from accounts.models import Invoice, InvoiceItem
     
     today = timezone.now().date()
-    latest_visit = Visit.objects.filter(
+    
+    # Check if patient has an active inpatient admission (IPD visits span multiple days)
+    from inpatient.models import Admission
+    active_admission = Admission.objects.filter(
         patient=pregnancy.patient,
-        visit_date__date=today,
-        is_active=True
-    ).last()
+        status='Admitted'
+    ).first()
+    
+    if active_admission and active_admission.visit and active_admission.visit.is_active:
+        # For IPD patients, use the admission visit (spans multiple days)
+        latest_visit = active_admission.visit
+    else:
+        # For OPD patients, only look for today's active visit
+        latest_visit = Visit.objects.filter(
+            patient=pregnancy.patient,
+            visit_date__date=today,
+            is_active=True
+        ).last()
     
     # 1. Fetch physical dispensations (Stock deducted)
     if latest_visit:
@@ -829,6 +844,13 @@ def pregnancy_detail(request, pregnancy_id):
         dispense_form = PrescriptionItemForm()
         inventory_form = DispenseInventoryForm()
 
+    # Check if patient is currently admitted to IPD
+    from inpatient.models import Admission
+    current_ipd_admission = Admission.objects.filter(
+        patient=pregnancy.patient, 
+        status='Admitted'
+    ).first()
+    
     context = {
         'pregnancy': pregnancy,
         'anc_visits': anc_visits,
@@ -847,6 +869,7 @@ def pregnancy_detail(request, pregnancy_id):
         'lab_reports': lab_reports,
         'dispensed_items': dispensed_items,
         'latest_visit': latest_visit,
+        'current_ipd_admission': current_ipd_admission,
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)
@@ -977,6 +1000,10 @@ def record_delivery(request, pregnancy_id):
             delivery_record.pregnancy = pregnancy
             delivery_record.delivery_by = request.user
             
+            # Get ward and bed from form
+            selected_ward = form.cleaned_data.get('ward')
+            selected_bed = form.cleaned_data.get('bed')
+            
             # Auto-create Visit and Invoice if this is a new delivery
             if is_new:
                 from home.models import Visit
@@ -989,6 +1016,24 @@ def record_delivery(request, pregnancy_id):
                     visit_date=timezone.now()
                 )
                 delivery_record.visit = visit
+                
+                # Create admission if ward is selected
+                if selected_ward:
+                    admission = Admission.objects.create(
+                        patient=pregnancy.patient,
+                        visit=visit,
+                        bed=selected_bed,
+                        provisional_diagnosis=f"Delivery - {delivery_record.get_delivery_mode_display()}",
+                        admitted_by=request.user
+                    )
+                    delivery_record.admission = admission
+                    
+                    if selected_bed:
+                        messages.success(request, f"Mother admitted to {selected_ward.name} - Bed {selected_bed.bed_number}")
+                    else:
+                        messages.warning(request, f"Mother admitted to {selected_ward.name} without bed assignment. Please assign bed manually.")
+                else:
+                    messages.info(request, "Delivery recorded without ward admission.")
             
             delivery_record.save()
             
@@ -1057,20 +1102,26 @@ def register_newborn(request, pregnancy_id):
             newborn.created_by = request.user
             
             # Link/Create Patient Profile if named
-            first_name = form.cleaned_with_defaults.get('first_name')
-            last_name = form.cleaned_with_defaults.get('last_name')
+            first_name = form.cleaned_data.get('first_name')
+            last_name = form.cleaned_data.get('last_name')
             
             if first_name and last_name:
-                patient = Patient.objects.create(
-                    first_name=first_name,
-                    last_name=last_name,
-                    date_of_birth=newborn.birth_datetime.date(),
-                    gender=newborn.gender,
-                    phone=pregnancy.patient.phone,
-                    location=pregnancy.patient.location,
-                    created_by=request.user
-                )
-                newborn.patient_profile = patient
+                try:
+                    patient = Patient.objects.create(
+                        first_name=first_name,
+                        last_name=last_name,
+                        date_of_birth=newborn.birth_datetime.date(),
+                        gender=newborn.gender,
+                        phone=pregnancy.patient.phone,
+                        location=pregnancy.patient.location,
+                        created_by=request.user
+                    )
+                    newborn.patient_profile = patient
+                    messages.success(request, f"Patient profile created for {patient.full_name}")
+                        
+                except Exception as e:
+                    messages.error(request, f"Error creating patient profile: {str(e)}")
+                    # At least save the newborn record if profile creation fails
             
             newborn.save()
             return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
@@ -1105,7 +1156,41 @@ def edit_newborn(request, newborn_id):
     if request.method == 'POST':
         form = NewbornForm(request.POST, instance=newborn)
         if form.is_valid():
-            form.save()
+            newborn = form.save(commit=False)
+            newborn.created_by = request.user
+            
+            # Link/Create Patient Profile if named
+            first_name = form.cleaned_data.get('first_name')
+            last_name = form.cleaned_data.get('last_name')
+            
+            if first_name and last_name:
+                if newborn.patient_profile:
+                    # Update existing patient profile
+                    patient = newborn.patient_profile
+                    patient.first_name = first_name
+                    patient.last_name = last_name
+                    patient.date_of_birth = newborn.birth_datetime.date()
+                    patient.gender = newborn.gender
+                    patient.save()
+                else:
+                    # Create new patient profile
+                    patient = Patient.objects.create(
+                        first_name=first_name,
+                        last_name=last_name,
+                        date_of_birth=newborn.birth_datetime.date(),
+                        gender=newborn.gender,
+                        phone=pregnancy.patient.phone,
+                        location=pregnancy.patient.location,
+                        created_by=request.user
+                    )
+                    newborn.patient_profile = patient
+            else:
+                # If names cleared, remove patient profile link
+                if newborn.patient_profile:
+                    # Don't delete patient record, just unlink
+                    newborn.patient_profile = None
+            
+            newborn.save()
             from django.urls import reverse
             return redirect(f"{reverse('maternity:pregnancy_detail', args=[pregnancy.id])}#delivery-section")
     else:
@@ -1230,7 +1315,8 @@ def record_maternity_discharge(request, pregnancy_id):
     if hasattr(pregnancy, 'delivery') and pregnancy.delivery.visit:
         if hasattr(pregnancy.delivery.visit, 'invoice'):
             invoice = pregnancy.delivery.visit.invoice
-            if invoice.status != 'Paid':
+            # Allow discharge if invoice is Paid OR Canceled
+            if invoice.status not in ['Paid', 'Canceled']:
                 messages.error(request, f"Cannot discharge patient. There is an unpaid invoice for the delivery visit (Invoice #{invoice.id}). Please clear it first.")
                 return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     

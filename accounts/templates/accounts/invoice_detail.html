@@ -244,12 +244,7 @@
                         <tr>
                             <td>
                                 {{ item.name }}
-                                {% if item.is_dispensed %}
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 ml-2">
-                                        Dispensed
-                                    </span>
-                                {% endif %}
-
+                                {% if item.is_dispensed %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 ml-2">Dispensed</span>{% endif %}
                                 {% if item.paid_amount == 0 %}
                                     {% if request.user.is_superuser or request.user.role == 'Admin' %}
                                         {# Admins can delete anything unpaid #}

@@ -214,15 +214,13 @@ def insurance_manager(request):
 
     # Grouping by visit type
     opd_invoices = unpaid_invoices.filter(visit__visit_type='OUT-PATIENT')
-    ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT')
-    
-    # Invoices without a visit (e.g., external lab requests or mortuary)
-    other_invoices = unpaid_invoices.filter(visit__isnull=True)
+    ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=True)  # Exclude maternity cases
+    maternity_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=False)  # IPD visits with linked delivery records
 
     context = {
         'opd_invoices': opd_invoices,
         'ipd_invoices': ipd_invoices,
-        'other_invoices': other_invoices,
+        'maternity_invoices': maternity_invoices,
         'search_query': search_query,
         'title': 'Insurance & Credit Manager'
     }
@@ -235,6 +233,14 @@ def get_invoice_items(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     items_data = []
     for item in invoice.items.all().order_by('created_at'):
+        # Get delivery info safely
+        delivery_id = None
+        if item.invoice.visit:
+            try:
+                delivery_id = item.invoice.visit.labor_delivery.id
+            except:
+                delivery_id = None
+        
         items_data.append({
             'id': item.id,
             'name': item.name,
@@ -243,7 +249,8 @@ def get_invoice_items(request, invoice_id):
             'amount': float(item.amount),
             'paid_amount': float(item.paid_amount),
             'balance': float(item.balance),
-            'is_settled': item.is_settled
+            'is_settled': item.is_settled,
+            'delivery': delivery_id,  # Add delivery info
         })
     
     # For IPD invoices, include admission days and per-diem info
@@ -256,11 +263,22 @@ def get_invoice_items(request, invoice_id):
             else:
                 days = max(1, (timezone.now() - admission.admitted_at).days)
             per_diem_rate = 2400
+            
+            # Calculate total billed excluding Normal Delivery for per-diem calculation
+            normal_delivery_total = invoice.items.filter(
+                service__name='Normal Delivery'
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            
+            # Total billed for per-diem calculation excludes Normal Delivery
+            total_billed_for_per_diem = Decimal(invoice.total_amount) - normal_delivery_total
+            
             admission_info = {
                 'days': days,
                 'per_diem_rate': per_diem_rate,
                 'per_diem_total': days * per_diem_rate,
-                'total_billed': float(invoice.total_amount),
+                'total_billed': float(invoice.total_amount),  # Keep full total for display
+                'normal_delivery_total': float(normal_delivery_total),  # Show Normal Delivery separately
+                'total_billed_for_per_diem': total_billed_for_per_diem,  # Used for per-diem calculation
                 'current_adjustment': float(invoice.insurance_adjustment),
             }
     

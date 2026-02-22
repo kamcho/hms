@@ -1,0 +1,219 @@
+<div class="bg-emerald-50/30 border border-emerald-100 rounded-[32px] p-8 mb-6">
+    <h5 class="text-xs font-black text-emerald-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+        <i class="fas fa-pills"></i> Prescribe Medication
+    </h5>
+    
+    <!-- Hidden Context Fields -->
+    {% if patient %}
+        <input type="hidden" id="prescribe_patient_id" value="{{ patient.id }}">
+    {% endif %}
+    {% if visit %}
+        <input type="hidden" id="prescribe_visit_id" value="{{ visit.id }}">
+    {% endif %}
+    
+    {% csrf_token %}
+    
+    <!-- Diagnosis Field -->
+    <div class="mb-6">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+            Clinical Diagnosis *
+        </label>
+        <textarea id="prescribe_diagnosis" name="diagnosis" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all" placeholder="Enter diagnosis..." required></textarea>
+    </div>
+    
+    <!-- Medication Search -->
+    <div class="mb-6">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+            Search Medication
+        </label>
+        <div class="relative">
+            <input type="text" id="medicationSearch" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all" placeholder="Type to search medications..." oninput="debouncedMedSearch(this.value)" autocomplete="off">
+            <input type="hidden" id="selectedMedicationId">
+            <!-- Dropdown Results -->
+            <div id="medSearchResults" class="absolute w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-100 z-50 hidden max-h-60 overflow-y-auto"></div>
+        </div>
+    </div>
+    
+    <!-- Medication Details (shown after selection) -->
+    <div id="medicationDetails" class="hidden space-y-4 mb-6">
+        <div class="bg-white rounded-xl p-4 border border-emerald-100">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h6 id="selectedMedName" class="font-black text-slate-900 text-sm"></h6>
+                    <p id="selectedMedGeneric" class="text-xs text-slate-500"></p>
+                </div>
+                <button type="button" onclick="clearMedicationSelection()" class="text-rose-500 hover:text-rose-700 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Dose/Units
+                    </label>
+                    <input type="text" id="doseCount" name="dose_count" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="e.g., 500mg">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Frequency
+                    </label>
+                    <select id="frequency" name="frequency" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        <option value="">Select...</option>
+                        <option value="Once daily">Once daily</option>
+                        <option value="Twice daily">Twice daily</option>
+                        <option value="Three times daily">Three times daily</option>
+                        <option value="Four times daily">Four times daily</option>
+                        <option value="As needed">As needed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Total Quantity
+                    </label>
+                    <input type="number" id="quantity" name="quantity" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="0">
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    Specific Instructions
+                </label>
+                <textarea id="instructions" name="instructions" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="Take with food, etc..."></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+        <button type="button" onclick="submitPrescription()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-check"></i> Prescribe
+        </button>
+        <button type="button" onclick="clearPrescriptionForm()" class="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors">
+            Clear
+        </button>
+    </div>
+</div>
+
+<script>
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Medication search
+const debouncedMedSearch = debounce(function(query) {
+    if (query.length < 2) {
+        document.getElementById('medSearchResults').classList.add('hidden');
+        return;
+    }
+    
+    fetch(`/api/medications/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('medSearchResults');
+            resultsDiv.innerHTML = '';
+            
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-4 text-xs font-bold text-slate-400 text-center">No medications found.</div>';
+            } else {
+                data.forEach(med => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'p-3 hover:bg-emerald-50 cursor-pointer border-b border-slate-50 last:border-0';
+                    itemDiv.innerHTML = `
+                        <div class="font-bold text-slate-700 text-sm">${med.name}</div>
+                        <div class="text-xs text-slate-500">${med.generic_name || ''} • ${med.formulation || ''}</div>
+                    `;
+                    itemDiv.onclick = () => selectMedication(med);
+                    resultsDiv.appendChild(itemDiv);
+                });
+            }
+            resultsDiv.classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error searching medications:', error);
+        });
+}, 300);
+
+function selectMedication(medication) {
+    document.getElementById('selectedMedicationId').value = medication.id;
+    document.getElementById('selectedMedName').textContent = medication.name;
+    document.getElementById('selectedMedGeneric').textContent = medication.generic_name || '';
+    document.getElementById('medicationSearch').value = medication.name;
+    document.getElementById('medSearchResults').classList.add('hidden');
+    document.getElementById('medicationDetails').classList.remove('hidden');
+}
+
+function clearMedicationSelection() {
+    document.getElementById('selectedMedicationId').value = '';
+    document.getElementById('medicationSearch').value = '';
+    document.getElementById('medicationDetails').classList.add('hidden');
+    document.getElementById('medSearchResults').classList.add('hidden');
+}
+
+function submitPrescription() {
+    const patientId = document.getElementById('prescribe_patient_id').value;
+    const visitId = document.getElementById('prescribe_visit_id').value;
+    const medicationId = document.getElementById('selectedMedicationId').value;
+    const diagnosis = document.getElementById('prescribe_diagnosis').value;
+    
+    if (!patientId || !medicationId || !diagnosis) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('patient_id', patientId);
+    if (visitId) formData.append('visit_id', visitId);
+    formData.append('medication_id', medicationId);
+    formData.append('diagnosis', diagnosis);
+    formData.append('dose_count', document.getElementById('doseCount').value);
+    formData.append('frequency', document.getElementById('frequency').value);
+    formData.append('quantity', document.getElementById('quantity').value);
+    formData.append('instructions', document.getElementById('instructions').value);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('/api/prescriptions/create/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Prescription created successfully!');
+            clearPrescriptionForm();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error creating prescription:', error);
+        alert('Error creating prescription. Please try again.');
+    });
+}
+
+function clearPrescriptionForm() {
+    document.getElementById('prescribe_diagnosis').value = '';
+    clearMedicationSelection();
+    document.getElementById('doseCount').value = '';
+    document.getElementById('frequency').value = '';
+    document.getElementById('quantity').value = '';
+    document.getElementById('instructions').value = '';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const searchContainer = document.querySelector('#medicationSearch').parentElement;
+    if (!searchContainer.contains(e.target)) {
+        document.getElementById('medSearchResults').classList.add('hidden');
+    }
+});
+</script>

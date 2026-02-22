@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Pregnancy Record - {{ pregnancy.patient.full_name }} - HMS{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .preg-profile-sidebar {
         position: sticky;
         top: 1.5rem;
@@ -129,7 +129,7 @@
         .preg-page-grid { grid-template-columns: 1fr; }
         .preg-profile-sidebar { position: static; }
     }
-</style>
+    </style>
 {% endblock %}
 {% block content %}
     <div class="max-w-[1400px] mx-auto p-5">
@@ -203,14 +203,18 @@
                     {% if contacts %}
                         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-4">
                             <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                                <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-heart text-rose-400"></i> Emergency Contacts</h3>
+                                <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                    <i class="fas fa-heart text-rose-400"></i> Emergency Contacts
+                                </h3>
                             </div>
                             <div class="p-4 space-y-2">
                                 {% for contact in contacts %}
                                     <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
                                         <div>
                                             <div class="text-xs font-bold text-slate-800">{{ contact.name }}</div>
-                                            <div class="text-[10px] text-slate-500 font-semibold"><i class="fas fa-phone text-[8px]"></i> {{ contact.phone }}</div>
+                                            <div class="text-[10px] text-slate-500 font-semibold">
+                                                <i class="fas fa-phone text-[8px]"></i> {{ contact.phone }}
+                                            </div>
                                         </div>
                                         <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">{{ contact.get_relationship_display }}</span>
                                     </div>
@@ -222,7 +226,9 @@
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-4">
                     <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                        <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-bolt text-amber-400"></i> Quick Actions</h3>
+                        <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-bolt text-amber-400"></i> Quick Actions
+                        </h3>
                     </div>
                     <div class="p-4 space-y-2">
                         {% if pregnancy.status == 'Active' %}
@@ -235,13 +241,24 @@
                             <a href="{% url 'maternity:record_mother_pnc_visit' pregnancy.id %}" class="preg-action-btn bg-emerald-600 text-white hover:bg-emerald-700"><i class="fas fa-user-nurse"></i> Record PNC Visit</a>
                         {% endif %}
                         {% if not discharge %}
-                            <a href="{% url 'maternity:record_maternity_discharge' pregnancy.id %}" class="preg-action-btn bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-sign-out-alt"></i> Record Discharge</a>
+                            <!-- Check if there's an unpaid delivery invoice AND patient is not currently admitted to IPD AND delivery visit is the latest visit -->
+                            {% if delivery and delivery.visit and delivery.visit.invoice and delivery.visit.invoice.status != 'Paid' and not current_ipd_admission and delivery.visit == latest_visit %}
+                                <!-- Show Extend to IPD button for unpaid invoices -->
+                                <button onclick="console.log('Button clicked'); showExtendToIPDModal({{ delivery.visit.invoice.id }})" class="preg-action-btn bg-amber-600 text-white hover:bg-amber-700">
+                                    <i class="fas fa-bed"></i> Extend to IPD
+                                </button>
+                            {% else %}
+                                <!-- Show regular discharge button for paid/no invoices OR if already admitted to IPD OR if delivery visit is not latest -->
+                                <a href="{% url 'maternity:record_maternity_discharge' pregnancy.id %}" class="preg-action-btn bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-sign-out-alt"></i> Record Discharge</a>
+                            {% endif %}
                         {% endif %}
                         <a href="{% url 'maternity:record_maternity_referral' pregnancy.id %}" class="preg-action-btn bg-orange-600 text-white hover:bg-orange-700"><i class="fas fa-truck-medical"></i> Referral Out</a>
                         {% if latest_visit %}
                             <a href="{% url 'home:create_prescription' latest_visit.pk %}" class="preg-action-btn bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-200"><i class="fas fa-prescription"></i> Write Prescription</a>
                         {% else %}
-                            <button disabled class="preg-action-btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200" title="Requires an active visit today"><i class="fas fa-prescription text-slate-300"></i> Write Prescription</button>
+                            <button disabled class="preg-action-btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200" title="Requires an active visit today">
+                                <i class="fas fa-prescription text-slate-300"></i> Write Prescription
+                            </button>
                         {% endif %}
                     </div>
                 </div>
@@ -251,7 +268,9 @@
                 <!-- Pregnancy Overview Card -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
                     <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-violet-50 flex justify-between items-center flex-wrap gap-3">
-                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2.5"><i class="fas fa-baby-carriage text-indigo-500"></i> Pregnancy Overview</h2>
+                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2.5">
+                            <i class="fas fa-baby-carriage text-indigo-500"></i> Pregnancy Overview
+                        </h2>
                         <div class="flex items-center gap-2">
                             <span class="px-3 py-1 bg-white text-indigo-700 rounded-lg text-sm font-black border border-indigo-100 shadow-sm">{{ pregnancy.para_code }}</span>
                             <span class="px-3 py-1 bg-white rounded-lg text-sm font-bold border border-slate-100 shadow-sm text-slate-600"><i class="fas fa-calendar-alt text-slate-400 mr-1"></i> Reg: {{ pregnancy.registration_date|date:"d M Y" }}</span>
@@ -264,7 +283,9 @@
                                 <div class="flex justify-between items-end mb-2">
                                     <div>
                                         <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Gestational Age</div>
-                                        <div class="text-3xl font-black text-indigo-700">{{ pregnancy.gestational_age_weeks|default:"0" }} <span class="text-base font-bold text-indigo-400">weeks</span></div>
+                                        <div class="text-3xl font-black text-indigo-700">
+                                            {{ pregnancy.gestational_age_weeks|default:"0" }} <span class="text-base font-bold text-indigo-400">weeks</span>
+                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-0.5">Expected Delivery</div>
@@ -281,7 +302,9 @@
                             </div>
                         {% else %}
                             <div class="mb-6 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl"><i class="fas fa-check-circle"></i></div>
+                                <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
                                 <div>
                                     <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Status</div>
                                     <div class="text-lg font-bold text-emerald-700">{{ pregnancy.get_status_display }} — EDD was {{ pregnancy.edd|date:"d M Y" }}</div>
@@ -291,17 +314,23 @@
                         <!-- Key Metrics Grid -->
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                             <div class="preg-stat-card">
-                                <div class="preg-stat-icon bg-blue-100 text-blue-600"><i class="fas fa-calendar-day"></i></div>
+                                <div class="preg-stat-icon bg-blue-100 text-blue-600">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">LMP</div>
                                 <div class="text-sm font-bold text-slate-800 mt-0.5">{{ pregnancy.lmp|date:"d M Y" }}</div>
                             </div>
                             <div class="preg-stat-card">
-                                <div class="preg-stat-icon bg-violet-100 text-violet-600"><i class="fas fa-calendar-check"></i></div>
+                                <div class="preg-stat-icon bg-violet-100 text-violet-600">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">EDD</div>
                                 <div class="text-sm font-bold text-violet-700 mt-0.5">{{ pregnancy.edd|date:"d M Y" }}</div>
                             </div>
                             <div class="preg-stat-card relative group">
-                                <div class="preg-stat-icon bg-rose-100 text-rose-600"><i class="fas fa-tint"></i></div>
+                                <div class="preg-stat-icon bg-rose-100 text-rose-600">
+                                    <i class="fas fa-tint"></i>
+                                </div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Blood Group</div>
                                 <div class="mt-0.5">
                                     <select onchange="updateBloodGroup(this)" class="text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 cursor-pointer p-0 w-full text-center appearance-none">
@@ -321,14 +350,30 @@
                                 </div>
                             </div>
                             <div class="preg-stat-card">
-                                <div class="preg-stat-icon bg-amber-100 text-amber-600"><i class="fas fa-procedures"></i></div>
+                                <div class="preg-stat-icon bg-amber-100 text-amber-600">
+                                    <i class="fas fa-procedures"></i>
+                                </div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Prev. CS</div>
-                                <div class="text-sm font-bold mt-0.5 {% if pregnancy.previous_cs %}text-rose-600{% else %}text-slate-800{% endif %}">{% if pregnancy.previous_cs %}Yes{% else %}No{% endif %}</div>
+                                <div class="text-sm font-bold mt-0.5 {% if pregnancy.previous_cs %}text-rose-600{% else %}text-slate-800{% endif %}">
+                                    {% if pregnancy.previous_cs %}
+                                        Yes
+                                    {% else %}
+                                        No
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="preg-stat-card">
-                                <div class="preg-stat-icon bg-purple-100 text-purple-600"><i class="fas fa-baby"></i></div>
+                                <div class="preg-stat-icon bg-purple-100 text-purple-600">
+                                    <i class="fas fa-baby"></i>
+                                </div>
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Multi-Gest.</div>
-                                <div class="text-sm font-bold mt-0.5 {% if pregnancy.is_multiple_gestation %}text-rose-600{% else %}text-slate-800{% endif %}">{% if pregnancy.is_multiple_gestation %}Yes{% else %}No{% endif %}</div>
+                                <div class="text-sm font-bold mt-0.5 {% if pregnancy.is_multiple_gestation %}text-rose-600{% else %}text-slate-800{% endif %}">
+                                    {% if pregnancy.is_multiple_gestation %}
+                                        Yes
+                                    {% else %}
+                                        No
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         <!-- Medical History Alerts -->
@@ -336,7 +381,9 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {% if pregnancy.allergies %}
                                     <div class="flex gap-3 items-start p-3.5 bg-rose-50 rounded-xl border border-rose-100">
-                                        <div class="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-sm"><i class="fas fa-allergies"></i></div>
+                                        <div class="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-sm">
+                                            <i class="fas fa-allergies"></i>
+                                        </div>
                                         <div class="min-w-0">
                                             <div class="text-[9px] font-black text-rose-400 uppercase tracking-widest">Allergies</div>
                                             <div class="text-sm font-bold text-rose-800 mt-0.5">{{ pregnancy.allergies }}</div>
@@ -345,7 +392,9 @@
                                 {% endif %}
                                 {% if pregnancy.chronic_conditions %}
                                     <div class="flex gap-3 items-start p-3.5 bg-amber-50 rounded-xl border border-amber-100">
-                                        <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-sm"><i class="fas fa-heartbeat"></i></div>
+                                        <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-sm">
+                                            <i class="fas fa-heartbeat"></i>
+                                        </div>
                                         <div class="min-w-0">
                                             <div class="text-[9px] font-black text-amber-400 uppercase tracking-widest">Chronic Conditions</div>
                                             <div class="text-sm font-bold text-amber-800 mt-0.5">{{ pregnancy.chronic_conditions }}</div>
@@ -356,9 +405,10 @@
                         {% endif %}
                     </div>
                 </div>
-            </div><!-- end right column -->
-        </div><!-- end preg-page-grid -->
-        
+            </div>
+            <!-- end right column -->
+        </div>
+        <!-- end preg-page-grid -->
         <!-- Antenatal Care Section (Tabbed) -->
         <div x-data="{ activeTab: window.location.hash ? window.location.hash.substring(1) : 'overview' }" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
             <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex flex-col xl:flex-row justify-between items-center gap-6">
@@ -462,7 +512,6 @@
                             </a>
                         {% endif %}
                     </div>
-                    
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Column 1: Vitals & Exam -->
@@ -528,9 +577,7 @@
                                                 <span class="text-xs font-bold text-slate-800">{{ result.service.name }}</span>
                                                 <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest {{ result.status_class }} bg-white">{{ result.status }}</span>
                                             </div>
-                                            <div class="text-[10px] text-slate-500 truncate">
-                                                {{ result.results|default:"No description" }}
-                                            </div>
+                                            <div class="text-[10px] text-slate-500 truncate">{{ result.results|default:"No description" }}</div>
                                         </a>
                                     {% endfor %}
                                 </div>
@@ -564,7 +611,6 @@
                                 {% if visit.deworming %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Deworming</span>{% endif %}
                                 {% if visit.tetanus_toxoid %}<span class="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold border border-blue-100 flex items-center gap-1"><i class="fas fa-check"></i> Tetanus</span>{% endif %}
                             </div>
-                            
                             {% if visit.related_prescriptions %}
                                 <div class="space-y-2">
                                     {% for item in visit.related_prescriptions %}
@@ -609,9 +655,7 @@
                                 Plan &
                                 Follow-up
                             </h4>
-                            <p class="text-sm font-bold text-slate-800 mb-3">
-                                {{ visit.plan|default:"Continue regular care." }}
-                            </p>
+                            <p class="text-sm font-bold text-slate-800 mb-3">{{ visit.plan|default:"Continue regular care." }}</p>
                             {% if visit.next_visit_date %}
                                 <div class="flex items-center gap-2 p-3 bg-white rounded-xl border border-amber-100 shadow-sm">
                                     <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
@@ -619,9 +663,7 @@
                                     </div>
                                     <div>
                                         <div class="text-[9px] font-black text-amber-400 uppercase">Next Appointment</div>
-                                        <div class="text-xs font-bold text-slate-900">
-                                            {{ visit.next_visit_date|date:"l, d M Y" }}
-                                        </div>
+                                        <div class="text-xs font-bold text-slate-900">{{ visit.next_visit_date|date:"l, d M Y" }}</div>
                                     </div>
                                 </div>
                             {% endif %}
@@ -632,7 +674,6 @@
         {% endfor %}
     </div>
 </div>
-
 <!-- Delivery & Labor Section -->
 <div id="delivery-section" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
     <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -640,12 +681,11 @@
             <i class="fas fa-baby-carriage text-pink-600"></i> Labour & Delivery
         </h2>
         {% if not delivery %}
-        <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
-            <i class="fas fa-plus"></i> Record Delivery
-        </a>
+            <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
+                <i class="fas fa-plus"></i> Record Delivery
+            </a>
         {% endif %}
     </div>
-
     <div class="p-6">
         {% if delivery %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -659,7 +699,6 @@
                         <div class="text-sm font-bold text-slate-900">{{ delivery.delivery_datetime|date:"d M Y, H:i" }}</div>
                     </div>
                 </div>
-
                 <!-- Mode of Delivery -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3">
                     <div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-pink-500 shadow-sm shrink-0">
@@ -670,7 +709,6 @@
                         <div class="text-sm font-bold text-slate-900">{{ delivery.get_delivery_mode_display }}</div>
                     </div>
                 </div>
-
                 <!-- GA at Delivery -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3">
                     <div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-pink-500 shadow-sm shrink-0">
@@ -681,7 +719,6 @@
                         <div class="text-sm font-bold text-slate-900">{{ delivery.gestational_age_at_delivery }} Weeks</div>
                     </div>
                 </div>
-
                 <!-- Delivered By -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3">
                     <div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-pink-500 shadow-sm shrink-0">
@@ -693,25 +730,27 @@
                     </div>
                 </div>
             </div>
-
             <!-- Notes or Complications (if any) -->
             {% if delivery.maternal_complications or delivery.delivery_notes %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {% if delivery.maternal_complications %}
-                <div class="bg-rose-50 p-5 rounded-xl border border-rose-100">
-                    <h4 class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Complications</h4>
-                    <p class="text-sm font-medium text-rose-900">{{ delivery.maternal_complications }}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {% if delivery.maternal_complications %}
+                        <div class="bg-rose-50 p-5 rounded-xl border border-rose-100">
+                            <h4 class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle"></i> Complications
+                            </h4>
+                            <p class="text-sm font-medium text-rose-900">{{ delivery.maternal_complications }}</p>
+                        </div>
+                    {% endif %}
+                    {% if delivery.delivery_notes %}
+                        <div class="bg-amber-50 p-5 rounded-xl border border-amber-100">
+                            <h4 class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="fas fa-sticky-note"></i> Delivery Notes
+                            </h4>
+                            <p class="text-sm font-medium text-amber-900">{{ delivery.delivery_notes }}</p>
+                        </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-                {% if delivery.delivery_notes %}
-                <div class="bg-amber-50 p-5 rounded-xl border border-amber-100">
-                    <h4 class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="fas fa-sticky-note"></i> Delivery Notes</h4>
-                    <p class="text-sm font-medium text-amber-900">{{ delivery.delivery_notes }}</p>
-                </div>
-                {% endif %}
-            </div>
             {% endif %}
-
             <!-- Newborns Section -->
             <div class="border-t border-slate-100 pt-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -722,14 +761,12 @@
                         <i class="fas fa-plus"></i> Add Baby
                     </a>
                 </div>
-
                 {% if newborns %}
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {% for baby in newborns %}
                             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors">
                                 <!-- Gender accent bar -->
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 {% if baby.gender == 'Male' %}bg-blue-400{% elif baby.gender == 'Female' %}bg-pink-400{% else %}bg-slate-400{% endif %}"></div>
-                                
                                 <div class="flex justify-between items-start pl-3 mb-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shadow-inner">
@@ -742,20 +779,32 @@
                                             {% endif %}
                                         </div>
                                         <div>
-                                            <h4 class="text-base font-bold text-slate-900">{% if baby.gender == 'Male' %}Boy{% elif baby.gender == 'Female' %}Girl{% else %}Baby{% endif %}</h4>
-                                            <div class="text-xs font-medium text-slate-500 mt-0.5">{{ baby.time_of_birth|time:"H:i" }}</div>
+                                            <h4 class="text-base font-bold text-slate-900">
+                                                {% if baby.patient_profile %}
+                                                    {{ baby.patient_profile.full_name }}
+                                                {% else %}
+                                                    {% if baby.gender == 'Male' %}
+                                                        Boy
+                                                    {% elif baby.gender == 'Female' %}
+                                                        Girl
+                                                    {% else %}
+                                                        Baby
+                                                    {% endif %}
+                                                {% endif %}
+                                            </h4>
+                                            <div class="text-xs font-medium text-slate-500 mt-0.5">
+                                                {{ baby.time_of_birth|time:"H:i" }}
+                                                {% if baby.patient_profile %}• {{ baby.patient_profile.age }} old{% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3">
-                                        <div class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest {% if baby.status == 'Alive' %}bg-emerald-100 text-emerald-700{% elif baby.status == 'Macerated Still Birth' or baby.status == 'Fresh Still Birth' %}bg-rose-100 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">
-                                            {{ baby.status_at_birth }}
-                                        </div>
+                                        <div class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest {% if baby.status == 'Alive' %}bg-emerald-100 text-emerald-700{% elif baby.status == 'Macerated Still Birth' or baby.status == 'Fresh Still Birth' %}bg-rose-100 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ baby.status_at_birth }}</div>
                                         <a href="{% url 'maternity:edit_newborn' baby.id %}" class="w-8 h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" title="Edit Baby">
                                             <i class="fas fa-edit text-xs"></i>
                                         </a>
                                     </div>
                                 </div>
-                                
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-3 pt-4 border-t border-slate-50">
                                     <div>
                                         <div class="text-[9px] font-black text-slate-400 border-b border-slate-200 uppercase tracking-widest mb-1 pb-1 hover:text-slate-500 transition-colors">Weight</div>
@@ -805,7 +854,6 @@
         {% endif %}
     </div>
 </div>
-
 {% if mother_pnc %}
     <!-- Postnatal Care Section (Tabbed) -->
     <div x-data="{ activePncTab: 'overview' }" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
@@ -817,9 +865,7 @@
                 <!-- Tab Navigation -->
                 <div class="flex p-1 bg-slate-200/50 rounded-xl">
                     <button @click="activePncTab = 'overview'" :class="activePncTab === 'overview' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap">Overview</button>
-                    {% for visit in mother_pnc %}
-                        <button @click="activePncTab = 'pnc-visit-{{ visit.id }}'" :class="activePncTab === 'pnc-visit-{{ visit.id }}' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap">Day {{ visit.visit_day }}</button>
-                    {% endfor %}
+                    {% for visit in mother_pnc %}<button @click="activePncTab = 'pnc-visit-{{ visit.id }}'" :class="activePncTab === 'pnc-visit-{{ visit.id }}' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap">Day {{ visit.visit_day }}</button>{% endfor %}
                 </div>
                 <!-- Action Button -->
                 <a href="{% url 'maternity:record_mother_pnc_visit' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-100 hover:bg-emerald-700 transition-all whitespace-nowrap shrink-0">
@@ -827,7 +873,6 @@
                 </a>
             </div>
         </div>
-        
         <div class="p-6">
             <!-- Overview Tab (Charts) -->
             <div x-show="activePncTab === 'overview'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
@@ -852,7 +897,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- PNC Visit Tabs -->
             {% for visit in mother_pnc %}
                 <div x-show="activePncTab === 'pnc-visit-{{ visit.id }}'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
@@ -870,7 +914,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <!-- Column 1: Vitals & General -->
                         <div class="space-y-6">
@@ -895,7 +938,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">General Condition</h4>
                                 <div class="space-y-3">
@@ -918,7 +960,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- Column 2: Obstetric Exam -->
                         <div class="space-y-6">
                             <div class="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
@@ -942,7 +983,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Screening</h4>
                                 <div class="space-y-3">
@@ -961,7 +1001,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- Column 3: Meds & Plan -->
                         <div class="space-y-6">
                             <!-- Linked Lab Results -->
@@ -985,7 +1024,6 @@
                                     <div class="text-center py-6 text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">No lab results linked to this visit date.</div>
                                 {% endif %}
                             </div>
-
                             <div class="bg-purple-50/50 p-5 rounded-2xl border border-purple-100">
                                 <h4 class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-4">Medications Given</h4>
                                 <div class="flex flex-wrap gap-2 mb-4">
@@ -994,7 +1032,6 @@
                                     {% if visit.art %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> ART</span>{% endif %}
                                     {% if visit.ctx %}<span class="px-3 py-1 bg-white text-purple-700 rounded-lg text-xs font-bold border border-purple-100 flex items-center gap-1"><i class="fas fa-check"></i> CTX</span>{% endif %}
                                 </div>
-                                
                                 {% if visit.related_prescriptions %}
                                     <div class="space-y-2">
                                         {% for item in visit.related_prescriptions %}
@@ -1015,7 +1052,6 @@
                                     <span class="text-xs text-purple-400 italic">No medications recorded.</span>
                                 {% endif %}
                             </div>
-                            
                             <div class="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
                                 <h4 class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4">Plan & Notes</h4>
                                 <div class="space-y-4">
@@ -1040,7 +1076,8 @@
                         </div>
                     </div>
                 </div>
-                <br><br>
+                <br>
+                <br>
             {% endfor %}
         </div>
     </div>
@@ -1089,7 +1126,8 @@
         {% endif %}
     </div>
 </div>
-</div><!-- end max-w container -->
+</div>
+<!-- end max-w container -->
 <!-- Clinical Transitions Section (Discharge & Referral) -->
 {% if discharge or referrals %}
     <div class="max-w-[1400px] mx-auto p-5 pt-0">
@@ -1185,9 +1223,8 @@
             {% endif %}
         </div>
     </div>
-    
 {% endif %}
-    <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
+<script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
 <script>
     const opt = {
         responsive: true,
@@ -1295,6 +1332,84 @@
             selectElement.disabled = false;
         });
     }
+
+// Extend to IPD Modal Function
+function showExtendToIPDModal(invoiceId) {
+    console.log('showExtendToIPDModal called with invoiceId:', invoiceId);
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center';
+    modal.style.zIndex = '9999';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-xl" style="background: white; border-radius: 1rem; padding: 1.5rem; max-width: 28rem; margin: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center" style="width: 3rem; height: 3rem; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-bed text-amber-600 text-lg" style="color: #d97706;"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900" style="font-size: 1.125rem; font-weight: 700; color: #0f172a;">Extend to IPD</h3>
+                    <p class="text-sm text-slate-600" style="font-size: 0.875rem; color: #475569;">Inpatient Department Admission</p>
+                </div>
+            </div>
+            
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4" style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem;">
+                <h4 class="font-bold text-amber-900 mb-2" style="font-weight: 700; color: #78350f; margin-bottom: 0.5rem;">What will happen:</h4>
+                <ul class="text-sm text-amber-800 space-y-1" style="font-size: 0.875rem; color: #92400e;">
+                    <li>• Current visit will be closed</li>
+                    <li>• Current admission will be closed</li>
+                    <li>• Bed will be released</li>
+                    <li>• New IPD admission will be created</li>
+                    <li>• Unpaid items will be transferred to new visit</li>
+                </ul>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4" style="background: #eff6ff; border: 1px solid #3b82f6; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem;">
+                <h4 class="font-bold text-blue-900 mb-2" style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.5rem;">Financial Impact:</h4>
+                <p class="text-sm text-blue-800" style="font-size: 0.875rem; color: #1e40af;">
+                    Unpaid invoice items will be mirrored to the new IPD visit. 
+                    The previous invoice will be zeroed out for audit purposes.
+                </p>
+            </div>
+            
+            <div class="flex gap-3" style="display: flex; gap: 0.75rem;">
+                <button onclick="closeExtendToIPDModal(this)" class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors" style="flex: 1; padding: 0.5rem 1rem; background: #f1f5f9; color: #334155; border-radius: 0.75rem; border: none; cursor: pointer;">
+                    Cancel
+                </button>
+                <button onclick="proceedWithExtendToIPD(${invoiceId})" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors" style="flex: 1; padding: 0.5rem 1rem; background: #d97706; color: white; border-radius: 0.75rem; border: none; cursor: pointer;">
+                    Proceed
+                </button>
+            </div>
+        </div>
+    `;
+    
+    console.log('Modal created:', modal);
+    document.body.appendChild(modal);
+    console.log('Modal appended to body');
+    
+    // Add a red border for debugging
+    modal.style.border = '3px solid red';
+    console.log('Modal styles applied, should be visible now');
+}
+
+function closeExtendToIPDModal(button) {
+    const modal = button.closest('.fixed');
+    modal.remove();
+}
+
+function proceedWithExtendToIPD(invoiceId) {
+    // Redirect to admission page with invoice_id parameter
+    window.location.href = `/inpatient/patients/{{ pregnancy.patient.id }}/admit/?invoice_id=${invoiceId}`;
+}
 
 </script>
 {% endblock %}

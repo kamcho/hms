@@ -46,6 +46,29 @@
                         </div>
                     </div>
                 </div>
+                <!-- Mother Admission Information -->
+                <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #92400e;">
+                        <i class="fas fa-hospital"></i> Mother Admission (Optional)
+                    </h3>
+                    <p style="margin: 0 0 16px 0; font-size: 14px; color: #92400e;">Select a ward and bed to admit the mother for postpartum care. Leave blank if mother will not be admitted.</p>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">
+                                <strong>Ward</strong>
+                            </label>
+                            {{ form.ward }}
+                            <small style="color: #64748b; display: block; margin-top: 4px;">{{ form.ward.help_text }}</small>
+                        </div>
+                        <div>
+                            <label class="form-label">
+                                <strong>Bed</strong>
+                            </label>
+                            {{ form.bed }}
+                            <small style="color: #64748b; display: block; margin-top: 4px;">{{ form.bed.help_text }}</small>
+                        </div>
+                    </div>
+                </div>
                 <!-- Labor Details -->
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                     <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Labor Details</h3>
