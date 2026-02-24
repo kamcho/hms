@@ -94,7 +94,7 @@ def dashboard_view(request):
     
     # Morgue "On the Table" Statistics
     # Assuming 'TEMPORARY' storage area represents "on the table"
-    on_the_table_count = Deceased.objects.filter(is_released=False, storage_area='TEMPORARY').count()
+    on_the_table_count = Deceased.objects.filter(is_released=False, storage_area__name__iexact='TEMPORARY').count()
     
     # Ward Occupancy Data for Charts
     wards = Ward.objects.annotate(patient_count=Count('beds', filter=F('beds__is_occupied')))
@@ -102,14 +102,12 @@ def dashboard_view(request):
     ward_data = [w.patient_count for w in wards]
     
     # Storage Area Distribution for Charts
-    storage_distributions = Deceased.objects.filter(is_released=False).values('storage_area').annotate(count=Count('id'))
+    storage_distributions = Deceased.objects.filter(is_released=False, storage_area__isnull=False).values('storage_area__name').annotate(count=Count('id'))
     storage_labels = []
     storage_data = []
     
-    # Map choice keys to display names
-    storage_area_map = dict(Deceased.STORAGE_AREA_CHOICES)
     for entry in storage_distributions:
-        storage_labels.append(storage_area_map.get(entry['storage_area'], entry['storage_area']))
+        storage_labels.append(entry['storage_area__name'])
         storage_data.append(entry['count'])
 
     context = {
