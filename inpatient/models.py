@@ -89,10 +89,10 @@ class MedicationChart(models.Model):
     frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     quantity = models.PositiveIntegerField(default=1, help_text="Total units to dispense")
     
+    duration_days = models.PositiveIntegerField(default=1, help_text="Number of days the medication should be given")
     # DEPRECATED: Kept for backwards compatibility with existing records
     dosage = models.CharField(max_length=100, blank=True, null=True)
     frequency_count = models.PositiveIntegerField(default=1, help_text="DEPRECATED - kept for old records")
-    duration_days = models.PositiveIntegerField(default=1, help_text="DEPRECATED - kept for old records")
     
     prescribed_at = models.DateTimeField(auto_now_add=True)
     prescribed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='medications_prescribed')
@@ -103,13 +103,41 @@ class MedicationChart(models.Model):
     dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_dispensed_ipd')
     instructions = models.TextField(blank=True, null=True, help_text="Specific instructions for this medication")
     
-    # Administration status
+    # Administration status - Top level legacy status
     administered_at = models.DateTimeField(null=True, blank=True)
     administered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_administered')
     is_administered = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.item.name} - {self.dose_count} x {self.frequency} for {self.admission.patient.full_name}"
+
+class MedicationAdministrationRecord(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Administered', 'Administered'),
+        ('Missed', 'Missed')
+    ]
+    
+    chart = models.ForeignKey(MedicationChart, on_delete=models.CASCADE, related_name='administration_records')
+    day_number = models.PositiveIntegerField(help_text="The day number of the prescription (e.g. Day 1, Day 2)")
+    dose_number = models.PositiveIntegerField(help_text="The dose sequence for that day (e.g. Dose 1, Dose 2)")
+    scheduled_time = models.DateTimeField(null=True, blank=True, help_text="Expected time of administration")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    
+    administered_at = models.DateTimeField(null=True, blank=True)
+    administered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='doses_administered')
+    notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['day_number', 'dose_number']
+        unique_together = ('chart', 'day_number', 'dose_number')
+        verbose_name = "MAR Entry"
+        verbose_name_plural = "MAR Entries"
+        
+    def __str__(self):
+        return f"{self.chart.item.name} - Day {self.day_number} Dose {self.dose_number} ({self.status})"
+
 
 class ServiceAdmissionLink(models.Model):
     admission = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='services')

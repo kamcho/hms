@@ -603,6 +603,38 @@ def add_medication(request, admission_id):
             med.admission = admission
             med.prescribed_by = request.user
             med.save()
+            
+            # Auto-generate MAR grid
+            from .models import MedicationAdministrationRecord
+            
+            # Map frequency strings to doses per day
+            freq_map = {
+                'Once Daily': 1,
+                'Twice Daily': 2,
+                'Thrice Daily': 3,
+                'Four Times Daily': 4,
+                'Every 6 Hours': 4,
+                'Every 8 Hours': 3,
+                'Every 12 Hours': 2,
+                'Every 24 Hours': 1,
+                'As Needed': 1, # Default to 1 slot for PRN, can be expanded later
+            }
+            doses_per_day = freq_map.get(med.frequency, 1)
+            
+            mar_entries = []
+            for day in range(1, med.duration_days + 1):
+                for dose in range(1, doses_per_day + 1):
+                    mar_entries.append(
+                        MedicationAdministrationRecord(
+                            chart=med,
+                            day_number=day,
+                            dose_number=dose,
+                            status='Pending'
+                        )
+                    )
+            if mar_entries:
+                MedicationAdministrationRecord.objects.bulk_create(mar_entries)
+
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'message': 'Medication added successfully.'})
             messages.success(request, "Medication added.")
@@ -647,7 +679,19 @@ def add_service(request, admission_id):
 
 @login_required
 def administer_medication(request, medication_id):
-    medication = get_object_or_404(MedicationChart, id=medication_id)
+    from .models import MedicationAdministrationRecord
+    
+    # In the new flow, the ID passed is actually the MedicationAdministrationRecord ID
+    try:
+        record = MedicationAdministrationRecord.objects.get(id=medication_id)
+        medication = record.chart
+        is_legacy = False
+    except MedicationAdministrationRecord.DoesNotExist:
+        # Fallback for old prescriptions before we added MAR
+        medication = get_object_or_404(MedicationChart, id=medication_id)
+        record = None
+        is_legacy = True
+        
     admission = medication.admission
     
     # Block if not latest visit
@@ -659,15 +703,35 @@ def administer_medication(request, medication_id):
             return JsonResponse({'success': False, 'error': error_msg})
         messages.error(request, error_msg)
         return redirect('inpatient:patient_case_folder', admission_id=admission.id)
-    if not medication.is_administered:
-        medication.is_administered = True
-        medication.administered_at = timezone.now()
-        medication.administered_by = request.user
-        medication.save()
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': f'{medication.item.name} administered.'})
-        messages.success(request, f"Medication {medication.item.name} administered.")
-    return redirect('inpatient:patient_case_folder', admission_id=medication.admission.id)
+        
+    if not is_legacy:
+        if record.status != 'Administered':
+            record.status = 'Administered'
+            record.administered_at = timezone.now()
+            record.administered_by = request.user
+            record.save()
+            
+            # Update parent chart to show latest activity
+            medication.is_administered = True
+            medication.administered_at = record.administered_at
+            medication.administered_by = record.administered_by
+            medication.save()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': f'{medication.item.name} Dose {record.dose_number} administered.'})
+            messages.success(request, f"Dose {record.dose_number} of {medication.item.name} administered.")
+    else:
+        # Legacy fallback
+        if not medication.is_administered:
+            medication.is_administered = True
+            medication.administered_at = timezone.now()
+            medication.administered_by = request.user
+            medication.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': f'{medication.item.name} administered.'})
+            messages.success(request, f"Medication {medication.item.name} administered.")
+            
+    return redirect(f'/inpatient/admissions/{admission.id}/case-folder/?tab=medications')
 
 @login_required
 def add_doctor_instruction(request, admission_id):
