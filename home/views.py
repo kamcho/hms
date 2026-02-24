@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta
-from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral
+from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
@@ -2361,7 +2361,97 @@ def dispense_all_visit_items(request, visit_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
+def appointments_dashboard(request):
+    """
+    Dashboard for Doctors to view Appointments
+    Shows analytics and a schedule of appointments
+    """
+    today = timezone.now().date()
+    
+    # Base query for all active appointments
+    appointments = Appointments.objects.all().select_related('patient').order_by('appointment_date')
+    
+    # 1. Analytics
+    # Today's Appointments
+    today_appointments = appointments.filter(
+        appointment_date__date=today
+    )
+    todays_count = today_appointments.count()
+    
+    # Upcoming Appointments (Future dates)
+    upcoming_appointments = appointments.filter(
+        appointment_date__date__gt=today,
+        is_completed=False
+    )
+    upcoming_count = upcoming_appointments.count()
+    
+    # Missed Appointments (Past dates, not completed)
+    missed_appointments = appointments.filter(
+        appointment_date__lt=timezone.now(),
+        is_completed=False
+    )
+    missed_count = missed_appointments.count()
+    
+    # Completed Appointments (Any date)
+    completed_appointments = appointments.filter(
+        is_completed=True
+    )
+    completed_count = completed_appointments.count()
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        appointments = appointments.filter(
+            Q(patient__first_name__icontains=search_query) |
+            Q(patient__last_name__icontains=search_query) |
+            Q(patient__id_number__icontains=search_query) |
+            Q(appointment_type__icontains=search_query)
+        )
+        
+    # Time-based exact filtering (24h/48h)
+    now = timezone.now()
+    next_24h = now + timedelta(hours=24)
+    next_48h = now + timedelta(hours=48)
+        
+    # Default to showing today's appointments if no filter is specified
+    filter_type = request.GET.get('filter', 'today')
+    if filter_type == 'upcoming':
+        display_appointments = upcoming_appointments
+    elif filter_type == '24h':
+        display_appointments = upcoming_appointments.filter(appointment_date__lte=next_24h)
+    elif filter_type == '48h':
+        display_appointments = upcoming_appointments.filter(appointment_date__lte=next_48h)
+    elif filter_type == 'missed':
+        display_appointments = missed_appointments
+    elif filter_type == 'completed':
+        display_appointments = completed_appointments
+    elif filter_type == 'all':
+        display_appointments = appointments
+    else:  # 'today'
+        display_appointments = today_appointments
+        
+    if search_query:
+        display_appointments = appointments  # Override filter if searching
+    
+    # Pagination
+    paginator = Paginator(display_appointments, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'filter_type': filter_type,
+        'todays_count': todays_count,
+        'upcoming_count': upcoming_count,
+        'missed_count': missed_count,
+        'completed_count': completed_count,
+        'today': today,
+    }
+    
+    return render(request, 'home/appointments_dashboard.html', context)
 
+@login_required
 def opd_dashboard(request):
     """
     Dashboard for Outpatient Department (Doctors)
@@ -2651,3 +2741,48 @@ def ambulance_dashboard(request):
     }
     
     return render(request, 'home/ambulance_dashboard.html', context)
+
+@login_required
+def ward_management(request):
+    """View to list all wards and their bed counts"""
+    from inpatient.models import Ward, Bed
+    from .forms import WardForm, BedForm
+    wards = Ward.objects.prefetch_related('beds').all()
+    ward_form = WardForm()
+    bed_form = BedForm()
+    
+    context = {
+        'wards': wards,
+        'ward_form': ward_form,
+        'bed_form': bed_form,
+    }
+    return render(request, 'home/ward_management.html', context)
+
+@login_required
+@require_http_methods(['POST'])
+def add_ward(request):
+    """View to handle adding a new ward"""
+    from .forms import WardForm
+    form = WardForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Ward added successfully.')
+        return redirect('home:ward_management')
+    
+    messages.error(request, 'Failed to add ward. Please check the form.')
+    return redirect('home:ward_management')
+
+@login_required
+@require_http_methods(['POST'])
+def add_bed(request):
+    """View to handle adding a new bed to a ward"""
+    from .forms import BedForm
+    form = BedForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Bed added successfully.')
+        return redirect('home:ward_management')
+    
+    messages.error(request, 'Failed to add bed. Please check the form.')
+    return redirect('home:ward_management')
+

@@ -1,0 +1,44 @@
+{% extends 'users/dashboard_base.html' %}
+
+{% block content %}
+<div class="p-4 sm:ml-64 mt-14">
+    <div class="mb-4 flex justify-between items-center">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">Call Center</h2>
+        <div id="connection-status">
+            <span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20">Connecting...</span>
+        </div>
+    </div>
+
+    <!-- User List -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {% for u in users %}
+        {% if u != user %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                        {{ u.first_name|default:u.id_number|make_list|first|upper }}
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                        {{ u.get_full_name }}
+                    </p>
+                    <p class="text-xs text-gray-500 truncate">
+                        {{ u.role }} • {{ u.id_number }}
+                    </p>
+                </div>
+            </div>
+            <div class="mt-4 flex space-x-2">
+                <button type="button" 
+                        onclick="initiateCall('{{ u.id }}', '{{ u.get_full_name }}')"
+                        class="flex-1 inline-flex justify-center items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors">
+                    <i class="fa-solid fa-phone mr-2"></i> Voice Call
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

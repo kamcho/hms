@@ -34,6 +34,8 @@ class DeceasedAdmissionForm(forms.ModelForm):
             'nationality': forms.TextInput(attrs={'class': 'form-control'}),
             'place_of_death': forms.TextInput(attrs={'class': 'form-control'}),
             'tag': forms.TextInput(attrs={'class': 'form-control'}),
+            'storage_area': forms.Select(attrs={'class': 'form-control'}),
+            'storage_chamber': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -133,6 +135,8 @@ class DeceasedForm(forms.ModelForm):
             'nationality': forms.TextInput(attrs={'class': 'form-control'}),
             'place_of_death': forms.TextInput(attrs={'class': 'form-control'}),
             'tag': forms.TextInput(attrs={'class': 'form-control'}),
+            'storage_area': forms.Select(attrs={'class': 'form-control'}),
+            'storage_chamber': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -262,3 +266,24 @@ class MortuaryDischargeForm(forms.ModelForm):
             field.required = True
         
         self.fields['notes'].required = False
+
+from .models import Morgue, Chamber
+
+class MorgueForm(forms.ModelForm):
+    class Meta:
+        model = Morgue
+        fields = ['name', 'description', 'base_charge_per_day']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Morgue Name'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Optional details'}),
+            'base_charge_per_day': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+
+class ChamberForm(forms.ModelForm):
+    class Meta:
+        model = Chamber
+        fields = ['morgue', 'chamber_number']
+        widgets = {
+            'morgue': forms.Select(attrs={'class': 'form-control'}),
+            'chamber_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. C-01'}),
+        }

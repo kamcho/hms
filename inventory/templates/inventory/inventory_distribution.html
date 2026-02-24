@@ -213,8 +213,7 @@
     <div class="stat-card">
         <div class="stat-label">Total Inventory</div>
         <div class="stat-value">{{ total_stock }} <span
-                style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">{{ item.dispensing_unit
-                }}</span></div>
+                style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">{{ item.dispensing_unit }}</span></div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Reporting Departments</div>
@@ -302,10 +301,8 @@
                     {% if adj.quantity > 0 %}+{% endif %}{{ adj.quantity }}
                 </td>
                 <td><span
-                        style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-secondary);">{{
-                        adj.adjustment_type }}</span></td>
-                <td style="color: var(--text-primary); font-weight: 600;">{{
-                    adj.adjusted_by.get_full_name|default:adj.adjusted_by.username }}</td>
+                        style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-secondary);">{{ adj.adjustment_type }}</span></td>
+                <td style="color: var(--text-primary); font-weight: 600;">{{ adj.adjusted_by.get_full_name|default:adj.adjusted_by.username }}</td>
             </tr>
             {% empty %}
             <tr>

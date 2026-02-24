@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .models import InventoryItem, InventoryCategory, Supplier, StockRecord, InventoryRequest, StockAdjustment
 from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, StockRecordForm, InventoryRequestForm, MedicationForm, ConsumableDetailForm
@@ -60,6 +60,26 @@ def item_list(request):
     }
     
     return render(request, 'inventory/item_list.html', context)
+
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+def update_item_price(request, item_id):
+    item = get_object_or_404(InventoryItem, id=item_id)
+    new_price = request.POST.get('new_price')
+    try:
+        new_price_val = float(new_price)
+        if new_price_val < 0:
+            raise ValueError("Price cannot be negative")
+        old_price = item.selling_price
+        item.selling_price = new_price_val
+        item.save()
+        messages.success(request, f'Price for "{item.name}" updated successfully from KES {old_price} to KES {new_price_val}.')
+    except (ValueError, TypeError):
+        messages.error(request, 'Invalid selling price provided.')
+    
+    return redirect('inventory:item_list')
 
 @login_required
 def add_item(request):
@@ -604,7 +624,11 @@ def inventory_distribution(request, item_id):
     
     return render(request, 'inventory/inventory_distribution.html', context)
 
+def is_pharmacist_or_admin(user):
+    return user.is_authenticated and (user.is_superuser or user.role in ['Pharmacist', 'Admin'])
+
 @login_required
+@user_passes_test(is_pharmacist_or_admin)
 def transfer_stock(request):
     """
     View to handle stock transfers between departments.

@@ -400,8 +400,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <div class="badge-muted" style="padding: 0.6rem 1.25rem; border-radius: 12px; font-size: 0.8rem; font-weight: 800;">
-                    TOTAL: <strong style="color: #1e293b; margin-left: 0.25rem;">KES {{ purchase.total_amount|floatformat:2
-                }}</strong>
+                    TOTAL: <strong style="color: #1e293b; margin-left: 0.25rem;">KES {{ purchase.total_amount|floatformat:2 }}</strong>
             </div>
             <div style="padding: 0.6rem 1.25rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; font-size: 0.75rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.05em;">{{ purchase.status|default:"Draft" }}</div>
             {% if added_items %}
@@ -424,8 +423,7 @@
         </div>
         <div class="info-chip">
             <div class="chip-icon" style="background: #1e293b; color: white; font-weight: 900; font-size: 0.75rem;">
-                {{
-                purchase.supplier.name|slice:":1"|upper }}
+                {{ purchase.supplier.name|slice:":1"|upper }}
             </div>
             <div>
                 <div class="chip-label">Supplier</div>
@@ -441,8 +439,7 @@
                 <div class="chip-value">
                     {% if purchase.invoice_ref %}
                         #{{ purchase.invoice_ref.invoice_number }}
-                    {% else
-                        %}
+                    {% else %}
                         Not Linked
                     {% endif %}
                 </div>
@@ -575,8 +572,7 @@
         <div class="items-panel">
             <div class="panel-header">
                 <h3>
-                    <i class="fas fa-list-ul" style="margin-right: 0.5rem; color: #6366f1;"></i> Received Items ({{
-                    added_items|length }})
+                    <i class="fas fa-list-ul" style="margin-right: 0.5rem; color: #6366f1;"></i> Received Items ({{ added_items|length }})
                 </h3>
                 {% if added_items %}
                     <a href="{% url 'inventory:procurement_dashboard' %}" class="finish-btn">
@@ -619,12 +615,10 @@
                                     <span class="badge badge-dark">{{ record.quantity }}</span>
                                 </td>
                                 <td style="text-align: right; font-weight: 600; color: #475569;">
-                                    KES {{
-                                    record.purchase_price|floatformat:2 }}
+                                    KES {{ record.purchase_price|floatformat:2 }}
                                 </td>
                                 <td style="text-align: right;">
-                                    <span class="badge badge-muted">{{ record.current_location.name
-                                    }}</span>
+                                    <span class="badge badge-muted">{{ record.current_location.name }}</span>
                                 </td>
                             </tr>
                         {% endfor %}

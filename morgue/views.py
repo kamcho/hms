@@ -271,15 +271,15 @@ def morgue_dashboard(request):
     ).count()
     
     # Storage occupancy
+    chambers = Chamber.objects.select_related('morgue').all()
     chamber_occupancy = {}
-    for chamber_choice in Deceased.STORAGE_CHAMBER_CHOICES:
-        chamber_key = chamber_choice[0]
-        chamber_name = chamber_choice[1]
+    for chamber in chambers:
         count = Deceased.objects.filter(
-            storage_chamber=chamber_key,
+            storage_chamber=chamber,
             is_released=False
         ).count()
-        chamber_occupancy[chamber_name] = count
+        chamber_occupancy[f"{chamber.chamber_number} ({chamber.morgue.name})"] = count
+
     
     # Recent admissions
     recent_admissions = Deceased.objects.filter(
@@ -507,3 +507,48 @@ def create_admission(request, deceased_pk):
     
     messages.success(request, f'Admission record {admission.admission_number} created successfully.')
     return redirect('morgue:deceased_detail', pk=deceased_pk)
+
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from .models import Morgue, Chamber
+from .forms import MorgueForm, ChamberForm
+
+@login_required
+def morgue_management(request):
+    """View to list all morgues and their chambers"""
+    morgues = Morgue.objects.prefetch_related('chambers').all()
+    morgue_form = MorgueForm()
+    chamber_form = ChamberForm()
+    
+    context = {
+        'morgues': morgues,
+        'morgue_form': morgue_form,
+        'chamber_form': chamber_form,
+    }
+    return render(request, 'morgue/morgue_management.html', context)
+
+@login_required
+@require_http_methods(['POST'])
+def add_morgue(request):
+    """View to handle adding a new morgue"""
+    form = MorgueForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Morgue added successfully.')
+        return redirect('morgue:morgue_management')
+    
+    messages.error(request, 'Failed to add morgue. Please check the form.')
+    return redirect('morgue:morgue_management')
+
+@login_required
+@require_http_methods(['POST'])
+def add_chamber(request):
+    """View to handle adding a new chamber to a morgue"""
+    form = ChamberForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Chamber added successfully.')
+        return redirect('morgue:morgue_management')
+    
+    messages.error(request, 'Failed to add chamber. Please check the form.')
+    return redirect('morgue:morgue_management')

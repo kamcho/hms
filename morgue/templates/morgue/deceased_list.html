@@ -72,7 +72,7 @@
                                 <td style="padding: 15px;">{{ deceased.surname|default:"N/A" }} {{ deceased.other_names|default:"" }}</td>
                                 <td style="padding: 15px;">{{ deceased.get_sex_display }}</td>
                                 <td style="padding: 15px;">{{ deceased.date_of_death|date:"M d, Y"|default:"N/A" }}</td>
-                                <td style="padding: 15px;">{{ deceased.get_storage_chamber_display|default:"N/A" }}</td>
+                                <td style="padding: 15px;">{% if deceased.storage_chamber %}{{ deceased.storage_chamber.chamber_number }}{% else %}N/A{% endif %}</td>
                                 <td style="padding: 15px;">
                                     {% if deceased.admissions.exists %}
                                         {{ deceased.admissions.first.admission_datetime|date:"M d, Y H:i"|default:"N/A" }}

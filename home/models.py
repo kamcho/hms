@@ -221,6 +221,17 @@ class ConsultationNotes(models.Model):
     created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='consultation_notes_created')
     updated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='consultation_notes_updated')
 
+class Appointments(models.Model):
+    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='appointments')
+    appointment_date = models.DateTimeField()
+    appointment_type = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='appointments_created')
+    updated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='appointments_updated')
+    is_completed = models.BooleanField(default=False)
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.appointment_date}"
 
 class EmergencyContact(models.Model):
     """Model for storing emergency contact information for patients"""

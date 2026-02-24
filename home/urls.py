@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path('dashboard/', views.reception_dashboard, name='reception_dashboard'),
+    path('appointments/', views.appointments_dashboard, name='appointments_dashboard'),
     path('opd-dashboard/', views.opd_dashboard, name='opd_dashboard'),
     path('patients/', views.PatientListView.as_view(), name='patient_list'),
     path('patients/add/', views.PatientCreateView.as_view(), name='patient_create'),
@@ -46,4 +47,9 @@ urlpatterns = [
     
     # Ambulance URLs
     path('ambulance/dashboard/', views.ambulance_dashboard, name='ambulance_dashboard'),
+    
+    # Ward Management URLs
+    path('ward-management/', views.ward_management, name='ward_management'),
+    path('ward-management/add-ward/', views.add_ward, name='add_ward'),
+    path('ward-management/add-bed/', views.add_bed, name='add_bed'),
 ]

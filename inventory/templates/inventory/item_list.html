@@ -247,48 +247,7 @@
             </div>
         </form>
     </div>
-    <!-- Inventory Requests Section -->
-    <div class="inventory-table-container" style="margin-bottom: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">Inventory Requests</h2>
-            <a href="{% url 'inventory:create_request' %}" class="btn-add" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                <i class="fas fa-plus"></i> New Request
-            </a>
-        </div>
-        <table class="inventory-table">
-            <thead>
-                <tr>
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th>Location</th>
-                    <th>Requested By</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in inventory_requests %}
-                    <tr onclick="openRequestModal('{{ req.id }}', '{{ req.item.name|escapejs }}', '{{ req.quantity }}', '{{ req.location.name|escapejs }}', '{{ req.requested_by.get_full_name|default:req.requested_by.username|escapejs }}', '{{ req.requested_at|date:'M d, Y' }}', '{{ req.status }}', '{{ req.adjusted_quantity|default:req.quantity }}')" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.background='rgba(99, 102, 241, 0.05)'" onmouseout="this.style.background='transparent'">
-                        <td style="font-weight: 600; color: var(--text-primary);">{{ req.item.name }}</td>
-                        <td>{{ req.quantity }} units</td>
-                        <td>{{ req.location.name }}</td>
-                        <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
-                        <td>
-                            <span class="stock-status {% if req.status == 'Pending' %}status-normal{% elif req.status == 'Approved' %}status-normal{% else %}status-critical{% endif %}" style="{% if req.status == 'Pending' %}background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.2);{% endif %}">
-                                <i class="fas {% if req.status == 'Pending' %}fa-clock{% elif req.status == 'Approved' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
-                                {{ req.status }}
-                            </span>
-                        </td>
-                        <td>{{ req.requested_at|date:"M d, Y" }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No active inventory requests.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+
     <div class="inventory-table-container">
         <table class="inventory-table">
             <thead>
@@ -310,16 +269,18 @@
                             <span class="badge-category">{{ item.category }}</span>
                         </td>
                         <td class="price-tag">Kes {{ item.selling_price }}</td>
-                        <td>
-                            <div class="stock-status {% if item.total_stock <= item.reorder_level %}status-critical{% else %}status-normal{% endif %}">
+                        <td onclick="event.stopPropagation(); window.location='{% url 'inventory:add_stock' item.id %}'" style="cursor: pointer;" onmouseover="this.querySelector('.stock-status').style.transform='scale(1.05)'" onmouseout="this.querySelector('.stock-status').style.transform='scale(1)'">
+                            <div class="stock-status {% if item.total_stock <= item.reorder_level %}status-critical{% else %}status-normal{% endif %}" style="transition: transform 0.2s ease;">
                                 <i class="fas fa-layer-group"></i>
                                 {{ item.total_stock|default:0 }}
                             </div>
                         </td>
                         <td>
                             <div style="display: flex; gap: 0.75rem;">
-                                <a href="#" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-edit"></i></a>
-                                <a href="#" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
+                                <button type="button" onclick="event.stopPropagation(); openPriceModal('{{ item.id }}', '{{ item.name|escapejs }}', '{{ item.selling_price|default:0 }}');" style="background: none; border: none; color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px; cursor: pointer;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="#" onclick="event.stopPropagation();" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
                             </div>
                         </td>
                     </tr>
@@ -341,6 +302,39 @@
             </tbody>
         </table>
     </div>
+    <!-- Price Update Modal -->
+    <div id="priceModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Update Price</h3>
+                <button type="button" onclick="closePriceModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="priceUpdateForm" method="post" action="">
+                {% csrf_token %}
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Item</div>
+                    <div id="price-modal-item" style="font-weight: 600; color: #1e293b; font-size: 1.125rem;">-</div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="new_price" style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem; display: block;">
+                        New Selling Price (KES)
+                    </label>
+                    <input type="number" name="new_price" id="new_price" class="filter-input" style="width: 100%; font-weight: 600; font-size: 1.125rem;" min="0" step="0.01" required>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="closePriceModal()" style="background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        Cancel
+                    </button>
+                    <button type="submit" style="background: var(--primary-gradient); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); transition: all 0.2s;">
+                        <i class="fas fa-save"></i> Save Price
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Request Action Modal -->
     <div id="requestModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div style="background: white; width: 100%; max-width: 500px; border-radius: 20px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out;">
@@ -396,6 +390,28 @@
         </div>
     </div>
     <script>
+    function openPriceModal(id, item_name, current_price) {
+        document.getElementById('price-modal-item').textContent = item_name;
+        document.getElementById('new_price').value = current_price;
+        
+        // Update form action
+        const form = document.getElementById('priceUpdateForm');
+        form.action = `/inventory/items/${id}/update-price/`;
+        
+        const modal = document.getElementById('priceModal');
+        modal.style.display = 'flex';
+        document.body.appendChild(modal);
+    }
+    
+    function closePriceModal() {
+        document.getElementById('priceModal').style.display = 'none';
+    }
+    
+    // Close on click outside for price modal
+    document.getElementById('priceModal').addEventListener('click', function(e) {
+        if(e.target === this) closePriceModal();
+    });
+
     function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty) {
         document.getElementById('modal-item').textContent = item;
         document.getElementById('modal-quantity').textContent = quantity + ' units';

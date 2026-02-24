@@ -33,6 +33,7 @@ urlpatterns = [
     # Add login/logout URLs for the browsable API
     # path('api-auth/', include('rest_framework.urls')),
     path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),  # Accounts app
+    path('comms/', include(('comms.urls', 'comms'), namespace='comms')),  # Comms app
 ]
 
 # Serve static and media files during development

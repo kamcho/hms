@@ -2,6 +2,21 @@ from django.db import models
 from django.utils import timezone
 from users.models import User
 
+class Morgue(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    base_charge_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return self.name
+
+class Chamber(models.Model):
+    morgue = models.ForeignKey(Morgue, on_delete=models.CASCADE, related_name='chambers')
+    chamber_number = models.CharField(max_length=20)
+    is_occupied = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.chamber_number} - {self.morgue.name}"
 
 class Deceased(models.Model):
     """Model for storing deceased person information"""
@@ -31,21 +46,6 @@ class Deceased(models.Model):
         ('OTHER', 'Other'),
     ]
     
-    STORAGE_AREA_CHOICES = [
-        ('MAIN_MORGUE', 'Main Morgue'),
-        ('TEMPORARY', 'Temporary Storage'),
-        ('EMERGENCY', 'Emergency Storage'),
-    ]
-    
-    STORAGE_CHAMBER_CHOICES = [
-        ('CHAMBER_A', 'Chamber A'),
-        ('CHAMBER_B', 'Chamber B'),
-        ('CHAMBER_C', 'Chamber C'),
-        ('CHAMBER_D', 'Chamber D'),
-        ('CHAMBER_E', 'Chamber E'),
-        ('CHAMBER_F', 'Chamber F'),
-    ]
-    
     # Deceased Details
     deceased_type = models.CharField(max_length=20, choices=DECEASED_TYPE_CHOICES, default='INTERNAL')
     surname = models.CharField(max_length=100)
@@ -68,8 +68,8 @@ class Deceased(models.Model):
     cause_of_death = models.TextField()
     
     # Storage Details
-    storage_area = models.CharField(max_length=20, choices=STORAGE_AREA_CHOICES)
-    storage_chamber = models.CharField(max_length=20, choices=STORAGE_CHAMBER_CHOICES)
+    storage_area = models.ForeignKey(Morgue, on_delete=models.SET_NULL, null=True, blank=True)
+    storage_chamber = models.ForeignKey(Chamber, on_delete=models.SET_NULL, null=True, blank=True)
     expected_removal_date = models.DateField()
     tag = models.CharField(max_length=50, unique=True, help_text="Unique identification tag for the deceased")
     

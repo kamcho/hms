@@ -140,3 +140,4 @@
   ID=22 | Name='CWC' | Price=100.00
   ID=19 | Name='OPD Consultation' | Price=50.00
   ID=135 | Name='General Consultation' | Price=500.00
+pip install channels uvicorn gunicorn channels-redis

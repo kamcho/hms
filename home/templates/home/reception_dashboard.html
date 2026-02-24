@@ -1780,11 +1780,17 @@
                         showNotification(`${method.toUpperCase()} payment processed successfully!`, 'success');
                         paymentModal.style.display = 'none';
 
+                        // Check if a payment_id was returned so we can print the receipt
+                        if (data.payment_id) {
+                             // Open the receipt in a new popup window
+                             window.open('/accounts/payment/' + data.payment_id + '/receipt/', 'Receipt', 'width=400,height=600');
+                        }
+
                         // Force a full page reload to ensure state consistency and prevent double clicks
                         // especially for the 'Process Quick Invoice' flow which might be behind this
                         setTimeout(() => {
                             window.location.reload();
-                        }, 1000);
+                        }, 1500); // slightly longer delay to allow popup to open without blocking
                     } else {
                         showNotification('Payment processing failed: ' + (data.error || 'Unknown error'), 'error');
                         // Re-enable buttons if payment failed

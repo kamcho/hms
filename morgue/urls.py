@@ -23,6 +23,9 @@ urlpatterns = [
     
     # Mortuary Services
     path('deceased/<int:deceased_pk>/log-service/', views.log_mortuary_service, name='log_service'),
+    path('management/', views.morgue_management, name='morgue_management'),
+    path('management/add-morgue/', views.add_morgue, name='add_morgue'),
+    path('management/add-chamber/', views.add_chamber, name='add_chamber'),
     path('deceased/<int:deceased_pk>/create-invoice/', views.create_deceased_invoice, name='create_deceased_invoice'),
     path('discharges/<int:pk>/summary/', views.discharge_summary, name='discharge_summary'),
 ]

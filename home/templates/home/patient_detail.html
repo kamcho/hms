@@ -224,7 +224,7 @@
     /* Tabs Customization */
     .modern-tabs {
         display: flex;
-        gap: 2rem;
+        width: 100%;
         margin-bottom: 2rem;
         border-bottom: 2px solid var(--clinical-border);
         overflow-x: auto;
@@ -233,6 +233,8 @@
     }
 
     .tab-item {
+        flex: 1;
+        justify-content: center;
         padding: 1rem 0;
         color: var(--clinical-text-muted);
         font-weight: 600;
@@ -597,7 +599,7 @@
                     <!-- DISPENSE TAB -->
                     <div id="dispense" class="tab-content">
                         {% if selected_visit or latest_visit %}
-                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient %}
+                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient allowed_departments="Pharmacy" %}
                         {% else %}
                             <div class="text-center py-8">
                                 <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>

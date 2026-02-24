@@ -9,3 +9,4 @@ migrations/
 *.log
 
 
+db.sqlite3

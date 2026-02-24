@@ -140,13 +140,13 @@
                             <span class="label">Date Time Received:</span>
                             <span class="value">{{ deceased.date_time_received|date:"F d, Y H:i" }}</span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Storage Area:</span>
-                            <span class="value">{{ deceased.get_storage_area_display }}</span>
+                        <div class="info-group">
+                            <span class="label">Storage Area</span>
+                            <span class="value">{% if deceased.storage_area %}{{ deceased.storage_area.name }}{% else %}N/A{% endif %}</span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Storage Chamber:</span>
-                            <span class="value">{{ deceased.get_storage_chamber_display }}</span>
+                        <div class="info-group">
+                            <span class="label">Chamber</span>
+                            <span class="value">{% if deceased.storage_chamber %}{{ deceased.storage_chamber.chamber_number }}{% else %}N/A{% endif %}</span>
                         </div>
                         <div class="info-item">
                             <span class="label">Expected Removal Date:</span>

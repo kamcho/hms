@@ -37,6 +37,7 @@ AUTH_USER_MODEL = 'users.User'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'channels',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'inpatient',
     'lab',
     'maternity',
+    'comms',
 ]
 
 MIDDLEWARE = [
@@ -99,6 +101,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'hms.wsgi.application'
+ASGI_APPLICATION = 'hms.asgi.application'
+
+# Channel Layers (using Redis for production/real-time signaling)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 
 # Database

@@ -72,16 +72,14 @@
                                 <td class="px-10 py-7 text-left">
                                     <div class="flex flex-col text-left gap-1">
                                         {% if pur.invoice_ref %}
-                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">#{{
-                                            pur.invoice_ref.invoice_number }}</span>
+                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">#{{ pur.invoice_ref.invoice_number }}</span>
                                         {% else %}
                                             <span class="px-3 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black rounded-lg border border-slate-200 self-start uppercase tracking-widest">UNLINKED</span>
                                         {% endif %}
                                     </div>
                                 </td>
                                 <td class="px-10 py-7 text-right">
-                                    <span class="text-base font-black text-slate-950 tracking-tighter">KES {{
-                                    pur.total_amount|floatformat:2 }}</span>
+                                    <span class="text-base font-black text-slate-950 tracking-tighter">KES {{ pur.total_amount|floatformat:2 }}</span>
                                 </td>
                                 <td class="px-10 py-7 text-right">
                                     <a href="{% url 'inventory:add_grn_item' grn_id=pur.id %}" class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all inline-block">

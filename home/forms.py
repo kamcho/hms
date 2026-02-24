@@ -249,3 +249,24 @@ class ReferralForm(forms.ModelForm):
             'clinical_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Summary of findings, treatment given...'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes...'}),
         }
+
+from inpatient.models import Ward, Bed
+class WardForm(forms.ModelForm):
+    class Meta:
+        model = Ward
+        fields = ['name', 'ward_type', 'base_charge_per_day']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ward Name (e.g., Male Surgical Wing)'}),
+            'ward_type': forms.Select(attrs={'class': 'form-control'}),
+            'base_charge_per_day': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Daily Charge'}),
+        }
+
+class BedForm(forms.ModelForm):
+    class Meta:
+        model = Bed
+        fields = ['ward', 'bed_number', 'bed_type']
+        widgets = {
+            'ward': forms.Select(attrs={'class': 'form-control'}),
+            'bed_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., B-101'}),
+            'bed_type': forms.Select(attrs={'class': 'form-control'}),
+        }

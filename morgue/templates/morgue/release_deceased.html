@@ -45,7 +45,7 @@
                     </div>
                     <div class="summary-item">
                         <span class="label">Storage:</span>
-                        <span class="value">{{ deceased.get_storage_chamber_display }}</span>
+                        <span class="value">{% if deceased.storage_chamber %}{{ deceased.storage_chamber.chamber_number }}{% else %}N/A{% endif %}</span>
                     </div>
                 </div>
             </div>

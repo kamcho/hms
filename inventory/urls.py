@@ -20,5 +20,6 @@ urlpatterns = [
     path('procurement/add/', views.add_inventory_purchase, name='add_inventory_purchase'),
     path('procurement/<int:grn_id>/add-items/', views.add_grn_item, name='add_grn_item'),
     path('items/<int:item_id>/distribution/', views.inventory_distribution, name='inventory_distribution'),
+    path('items/<int:item_id>/update-price/', views.update_item_price, name='update_item_price'),
     path('transfer/', views.transfer_stock, name='transfer_stock'),
 ]

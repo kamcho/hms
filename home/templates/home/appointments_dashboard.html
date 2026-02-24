@@ -1,0 +1,811 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}Appointments Dashboard - HMS Premium{% endblock %}
+{% block content %}
+    <div class="dashboard-wrapper-premium">
+        <!-- Header Section -->
+        <div class="header-premium glass-card">
+            <div class="header-content">
+                <div class="brand-section">
+                    <div class="brand-icon-wrapper pulse-blue">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h1>Appointments Dashboard</h1>
+                        <p>
+                            <i class="fas fa-clock"></i> View and manage patient appointments
+                        </p>
+                    </div>
+                </div>
+                <div class="header-metadata">
+                    <div class="date-badge">
+                        <i class="far fa-calendar-alt"></i>
+                        <span>{{ today|date:"l, F d, Y" }}</span>
+                    </div>
+                    <div class="live-clock" id="liveClock">--:--:--</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analytics Dashboard -->
+        <div class="analytics-grid" style="gap: 1rem;">
+            <!-- Today Card -->
+            <a href="?filter=today{% if search_query %}&search={{ search_query }}{% endif %}" class="stat-card-premium glass-card hover-glow-indigo {% if filter_type == 'today' %}active-filter{% endif %}" style="text-decoration: none; padding: 0.5rem 1rem;">
+                <div class="card-bg-decoration"></div>
+                <div class="card-content">
+                    <div class="card-header" style="margin-bottom: 0.5rem;">
+                        <div class="icon-box-indigo" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value" style="font-size: 1.25rem;">{{ todays_count }}</h2>
+                        <p class="stat-label" style="font-size: 0.65rem; margin-top: 0.25rem;">Today</p>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Upcoming Card -->
+            <a href="?filter=upcoming{% if search_query %}&search={{ search_query }}{% endif %}" class="stat-card-premium glass-card hover-glow-emerald {% if filter_type == 'upcoming' %}active-filter{% endif %}" style="text-decoration: none; padding: 0.5rem 1rem;">
+                <div class="card-bg-decoration emerald"></div>
+                <div class="card-content">
+                    <div class="card-header" style="margin-bottom: 0.5rem;">
+                        <div class="icon-box-emerald" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value text-emerald-600" style="font-size: 1.25rem;">{{ upcoming_count }}</h2>
+                        <p class="stat-label" style="font-size: 0.65rem; margin-top: 0.25rem;">Upcoming</p>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Missed Card -->
+            <a href="?filter=missed{% if search_query %}&search={{ search_query }}{% endif %}" class="stat-card-premium glass-card hover-glow-rose {% if filter_type == 'missed' %}active-filter{% endif %}" style="text-decoration: none; padding: 0.5rem 1rem;">
+                <div class="card-bg-decoration rose"></div>
+                <div class="card-content">
+                    <div class="card-header" style="margin-bottom: 0.5rem;">
+                        <div class="icon-box-rose" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                            <i class="fas fa-calendar-times"></i>
+                        </div>
+                        {% if missed_count > 0 %}<span class="status-indicator alert" style="padding: 0.2rem 0.5rem; font-size: 0.55rem;">Attention</span>{% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value text-rose-600" style="font-size: 1.25rem;">{{ missed_count }}</h2>
+                        <p class="stat-label" style="font-size: 0.65rem; margin-top: 0.25rem;">Missed</p>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Completed Card -->
+            <a href="?filter=completed{% if search_query %}&search={{ search_query }}{% endif %}" class="stat-card-premium glass-card hover-glow-indigo {% if filter_type == 'completed' %}active-filter{% endif %}" style="text-decoration: none; padding: 0.5rem 1rem;">
+                <div class="card-bg-decoration" style="background: rgba(16, 185, 129, 0.05);"></div>
+                <div class="card-content">
+                    <div class="card-header" style="margin-bottom: 0.5rem;">
+                        <div class="icon-box-indigo" style="background: #e0f2fe; color: #0284c7; width: 28px; height: 28px; font-size: 0.8rem;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="stat-value" style="color: #0284c7; font-size: 1.25rem;">{{ completed_count }}</h2>
+                        <p class="stat-label" style="font-size: 0.65rem; margin-top: 0.25rem;">Completed</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-dashboard-grid" style="grid-template-columns: 1fr;">
+            <!-- Schedule Section -->
+            <div class="queue-section-wrapper glass-card">
+                <div class="section-toolbar">
+                    <div class="toolbar-left">
+                        <h2>
+                            <i class="fas fa-list-ul"></i> 
+                            {% if filter_type == 'today' %}Today's Appointments
+                            {% elif filter_type == 'upcoming' %}Upcoming Appointments
+                            {% elif filter_type == '24h' %}Next 24 Hours
+                            {% elif filter_type == '48h' %}Next 48 Hours
+                            {% elif filter_type == 'missed' %}Missed Appointments
+                            {% elif filter_type == 'completed' %}Completed Appointments
+                            {% else %}All Appointments{% endif %}
+                        </h2>
+                    </div>
+                    <div class="toolbar-right">
+                        <form method="GET" class="search-form-premium" style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select name="filter" class="form-select" style="padding: 0.75rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.875rem; font-weight: 600; color: #475569; background-color: white; outline: none;" onchange="this.form.submit()">
+                                <option value="today" {% if filter_type == 'today' %}selected{% endif %}>Today</option>
+                                <option value="upcoming" {% if filter_type == 'upcoming' %}selected{% endif %}>All Upcoming</option>
+                                <option value="24h" {% if filter_type == '24h' %}selected{% endif %}>Next 24 Hours</option>
+                                <option value="48h" {% if filter_type == '48h' %}selected{% endif %}>Next 48 Hours</option>
+                                <option value="missed" {% if filter_type == 'missed' %}selected{% endif %}>Missed</option>
+                                <option value="completed" {% if filter_type == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Time</option>
+                            </select>
+                            
+                            <div class="search-input-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient name...">
+                            </div>
+                            <button type="submit" class="btn-search-premium">Search</button>
+                            {% if search_query %}
+                                <a href="{% url 'home:appointments_dashboard' %}?filter={{ filter_type }}" class="btn-clear-search"><i class="fas fa-times"></i></a>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="queue-table-container">
+                    <table class="premium-data-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th class="text-center">Patient File</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in page_obj %}
+                                <tr class="queue-row-premium">
+                                    <td>
+                                        <div class="patient-info-cell">
+                                            <div class="patient-avatar-mini" data-initials="{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}">{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}</div>
+                                            <div class="patient-details">
+                                                <span class="p-name">{{ item.patient.full_name }}</span>
+                                                <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{ item.patient.age }}Y • {{ item.patient.gender|default:"N/A"|first }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="time-tracking">
+                                            <i class="far fa-clock"></i>
+                                            <span>{{ item.appointment_date|date:"M d, Y" }}</span>
+                                            <small>{{ item.appointment_date|time:"h:i A" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="type-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
+                                            <i class="fas fa-stethoscope"></i>
+                                            {{ item.appointment_type|default:"General" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if item.is_completed %}
+                                            <span class="priority-chip priority-low">
+                                                <i class="fas fa-check"></i> Completed
+                                            </span>
+                                        {% elif item.appointment_date < timezone.now %}
+                                            <span class="priority-chip priority-critical">
+                                                <i class="fas fa-times"></i> Missed
+                                            </span>
+                                        {% else %}
+                                            <span class="priority-chip priority-normal">
+                                                <i class="fas fa-hourglass-half"></i> Upcoming
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn-consult-start" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                            View Profile <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-queue-state">
+                                            <div class="empty-icon-wrapper">
+                                                <i class="fas fa-calendar-times" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
+                                            </div>
+                                            <h3>No Appointments Found</h3>
+                                            <p>There are no appointments matching the current criteria.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <div class="pagination-container" style="display: flex; justify-content: center; padding: 1rem;">
+                        <ul class="pagination" style="display: flex; list-style: none; gap: 0.5rem;">
+                            {% if page_obj.has_previous %}
+                                <li><a href="?page={{ page_obj.previous_page_number }}&filter={{ filter_type }}{% if search_query %}&search={{ search_query }}{% endif %}" style="padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; color: #475569;">&laquo; Prev</a></li>
+                            {% endif %}
+                            
+                            <li><span style="padding: 0.5rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; color: #0f172a; font-weight: 600;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                            
+                            {% if page_obj.has_next %}
+                                <li><a href="?page={{ page_obj.next_page_number }}&filter={{ filter_type }}{% if search_query %}&search={{ search_query }}{% endif %}" style="padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; color: #475569;">Next &raquo;</a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+    :root {
+        --primary-indigo: #4338ca;
+        --primary-light: #e0e7ff;
+        --clinical-bg: #f8fbff;
+        --card-border: #cbd5e1;
+        --glass-bg: rgba(255, 255, 255, 0.98);
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --rose-glow: 0 10px 15px -3px rgba(244, 63, 94, 0.2);
+        --indigo-glow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+        --emerald-glow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+    }
+
+    body {
+        background-color: var(--clinical-bg);
+        color: var(--text-dark);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .dashboard-wrapper-premium {
+        padding: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+    }
+
+    /* Glass Effect Utility */
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        box-shadow: 0 15px 35px -12px rgba(67, 56, 202, 0.12), 0 4px 10px -5px rgba(67, 56, 202, 0.08);
+    }
+
+    /* Header Styling */
+    .header-premium {
+        padding: 1.5rem 2.5rem;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .brand-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .brand-icon-wrapper {
+        width: 54px;
+        height: 54px;
+        background: var(--primary-indigo);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 10px 15px -3px rgba(67, 56, 202, 0.4);
+    }
+
+    .brand-text h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+        margin: 4px 0 0;
+        color: var(--text-muted);
+        font-size: 0.9375rem;
+        font-weight: 500;
+    }
+
+    .header-metadata {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .date-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 1.25rem;
+        background: white;
+        border-radius: 12px;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        border: 1px solid #f1f5f9;
+    }
+
+    .live-clock {
+        font-family: 'Monaco', monospace;
+        font-weight: 800;
+        color: var(--primary-indigo);
+        background: #f1f5ff;
+        padding: 0.625rem 1.25rem;
+        border-radius: 12px;
+        letter-spacing: 0.05em;
+    }
+
+    /* Analytics Grid */
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card-premium {
+        position: relative;
+        padding: 0.75rem 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        display: block;
+    }
+    
+    .active-filter {
+        border-color: var(--primary-indigo);
+        box-shadow: 0 0 0 2px var(--primary-indigo);
+    }
+
+    .stat-card-premium:hover {
+        transform: translateY(-8px);
+        border-color: rgba(67, 56, 202, 0.3);
+    }
+
+    .hover-glow-indigo:hover {
+        box-shadow: var(--indigo-glow);
+    }
+
+    .hover-glow-rose:hover {
+        box-shadow: var(--rose-glow);
+    }
+
+    .hover-glow-emerald:hover {
+        box-shadow: var(--emerald-glow);
+    }
+
+    .card-bg-decoration {
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 140px;
+        height: 140px;
+        background: rgba(67, 56, 202, 0.05);
+        border-radius: 50%;
+        transition: all 0.5s ease;
+    }
+
+    .card-bg-decoration.rose {
+        background: rgba(244, 63, 94, 0.05);
+    }
+
+    .card-bg-decoration.emerald {
+        background: rgba(16, 185, 129, 0.05);
+    }
+
+    .stat-card-premium:hover .card-bg-decoration {
+        transform: scale(1.5);
+        opacity: 0.1;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .icon-box-indigo {
+        width: 36px;
+        height: 36px;
+        background: #eef2ff;
+        color: #4338ca;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .icon-box-rose {
+        width: 36px;
+        height: 36px;
+        background: #fff1f2;
+        color: #e11d48;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .icon-box-emerald {
+        width: 36px;
+        height: 36px;
+        background: #ecfdf5;
+        color: #059669;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .status-indicator {
+        padding: 0.375rem 0.875rem;
+        border-radius: 20px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-indicator.alert {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        color: var(--text-dark);
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        margin: 0.75rem 0 0;
+    }
+
+    .card-footer-info {
+        margin-top: 0.5rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0.8;
+        color: var(--text-muted);
+    }
+
+    /* Main Grid Layout */
+    .main-dashboard-grid {
+        display: grid;
+        gap: 2rem;
+    }
+
+    /* Queue Section Styling */
+    .queue-section-wrapper {
+        min-height: 500px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .section-toolbar {
+        padding: 1.5rem 2.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .section-toolbar h2 {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .section-toolbar h2 i {
+        color: var(--primary-indigo);
+    }
+
+    /* Search Premium */
+    .search-form-premium {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-input-wrapper i {
+        position: absolute;
+        left: 1.25rem;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+
+    .search-input-wrapper input {
+        padding: 0.75rem 1.25rem 0.75rem 3rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        width: 260px;
+        transition: all 0.2s ease;
+    }
+
+    .search-input-wrapper input:focus {
+        outline: none;
+        border-color: var(--primary-indigo);
+        box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.1);
+        width: 320px;
+    }
+
+    .btn-search-premium {
+        background: var(--primary-indigo);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-search {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        color: #ef4444;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-search:hover {
+        background: #fff1f2;
+    }
+
+    /* Table Premium Styling */
+    .queue-table-container {
+        padding: 1rem;
+    }
+
+    .premium-data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 1.25rem;
+    }
+
+    .premium-data-table th {
+        padding: 0.75rem 1.5rem;
+        text-align: left;
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--text-muted);
+        letter-spacing: 0.1em;
+    }
+
+    .queue-row-premium {
+        background: white;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 16px;
+        position: relative;
+    }
+
+    .queue-row-premium:hover {
+        transform: scale(1.01) translateX(4px);
+        box-shadow: 0 12px 20px -10px rgba(67, 56, 202, 0.15);
+        z-index: 10;
+        background: #fdfdff;
+    }
+
+    .queue-row-premium td {
+        padding: 1.25rem 1.5rem;
+        border-top: 2px solid var(--card-border);
+        border-bottom: 2px solid var(--card-border);
+    }
+
+    .queue-row-premium td:first-child {
+        border-left: 2px solid var(--card-border);
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+
+    .queue-row-premium td:last-child {
+        border-right: 2px solid var(--card-border);
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    /* Patient Identity Cell */
+    .patient-info-cell {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .patient-avatar-mini {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--primary-light);
+        color: var(--primary-indigo);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8125rem;
+        flex-shrink: 0;
+    }
+
+    .patient-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .patient-details .p-name {
+        font-weight: 800;
+        font-size: 0.9375rem;
+        color: var(--text-dark);
+    }
+
+    .patient-details .p-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Priority Chips */
+    .priority-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.875rem;
+        border-radius: 8px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+    }
+
+    .priority-critical {
+        background: #fff1f2;
+        color: #e11d48;
+    }
+
+    .priority-normal {
+        background: #f0f9ff;
+        color: #0284c7;
+    }
+
+    .priority-low {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    /* Time Tracking */
+    .time-tracking {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        color: var(--text-muted);
+    }
+
+    .time-tracking i {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+
+    .time-tracking span {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: var(--text-dark);
+    }
+
+    .time-tracking small {
+        font-size: 0.625rem;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    /* Type Badges */
+    .type-badge {
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-transform: uppercase;
+        width: fit-content;
+    }
+
+    /* Consult Button */
+    .btn-consult-start {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--primary-indigo);
+        color: white;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-consult-start:hover {
+        background: #312e81;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+        color: white;
+    }
+    
+    .empty-queue-state {
+        text-align: center;
+        padding: 2rem;
+    }
+    .empty-queue-state h3 {
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+    .empty-queue-state p {
+        color: var(--text-muted);
+    }
+
+    </style>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+            
+            hours = hours < 10 ? '0' + hours : hours;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            
+            document.getElementById('liveClock').textContent = hours + ':' + minutes + ':' + seconds;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+{% endblock %}

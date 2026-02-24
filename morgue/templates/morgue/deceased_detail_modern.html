@@ -39,8 +39,8 @@
                                 <i class="fas fa-cross text-indigo-500"></i> DOD: {{ deceased.date_of_death|date:"d M Y" }}
                             </div>
                             <div class="flex items-center gap-2 text-slate-500 font-bold text-sm">
-                                <i class="fas fa-snowflake text-indigo-500"></i> {{ deceased.get_storage_area_display }} •
-                                {{ deceased.get_storage_chamber_display }}
+                                <i class="fas fa-snowflake text-indigo-500"></i> {% if deceased.storage_area %}{{ deceased.storage_area.name }}{% else %}N/A{% endif %} • 
+                                {% if deceased.storage_chamber %}{{ deceased.storage_chamber.chamber_number }}{% else %}N/A{% endif %}
                             </div>
                         </div>
                     </div>

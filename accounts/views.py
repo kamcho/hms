@@ -418,10 +418,67 @@ def record_payment(request, pk):
             )
             from django.contrib import messages
             messages.success(request, f"Payment of {amount} recorded successfully.")
-            return HttpResponse(json.dumps({'success': True}), content_type="application/json")
+            return HttpResponse(json.dumps({'success': True, 'payment_id': payment.id}), content_type="application/json")
         except Exception as e:
             return HttpResponse(json.dumps({'success': False, 'error': str(e)}), content_type="application/json")
     return HttpResponse(status=405)
+
+@login_required
+@user_passes_test(is_billing_staff)
+def print_receipt(request, payment_id):
+    payment = get_object_or_404(Payment, id=payment_id)
+    invoice = payment.invoice
+    
+    # Calculate which items were paid for by THIS specific payment
+    # Payments are distributed FIFO. We need to find the specific range of paid amounts
+    # that this payment covers.
+    
+    # 1. Calculate the total paid amounts for all payments BEFORE this one
+    prior_payments = invoice.payments.filter(payment_date__lt=payment.payment_date).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # The range of value this payment covers is [prior_payments, prior_payments + payment.amount]
+    start_value = prior_payments
+    end_value = prior_payments + payment.amount
+    
+    covered_items = []
+    current_cumulative_item_amount = Decimal('0')
+    
+    # Go through items in order of creation (same order distribute_payments uses)
+    for item in invoice.items.all().order_by('created_at'):
+        item_start = current_cumulative_item_amount
+        item_end = current_cumulative_item_amount + item.amount
+        
+        # Check if there is an intersection between the payment value range and the item's value range
+        overlap_start = max(start_value, item_start)
+        overlap_end = min(end_value, item_end)
+        
+        if overlap_start < overlap_end:
+            # This item is partially or fully covered by this payment
+            amount_covered_by_this_payment = overlap_end - overlap_start
+            covered_items.append({
+                'name': item.name,
+                'quantity': item.quantity,
+                'unit_price': item.unit_price,
+                'subtotal': item.amount,
+                'amount_paid_now': amount_covered_by_this_payment
+            })
+            
+        current_cumulative_item_amount = item_end
+        
+        if current_cumulative_item_amount >= end_value:
+            # We've found all items covered by this payment
+            break
+            
+    context = {
+        'payment': payment,
+        'invoice': invoice,
+        'covered_items': covered_items,
+        'hospital_name': "Hospital Management System", # You can make this dynamic if needed
+        'hospital_address': "123 Health Street, City",
+        'hospital_phone': "+254 700 000 000",
+    }
+    
+    return render(request, 'accounts/receipt_thermal.html', context)
 
 @login_required
 @user_passes_test(is_billing_staff)

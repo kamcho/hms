@@ -146,9 +146,9 @@
                                         <span class="meta-item">
                                             <i class="fas fa-tag"></i> {{ admission.tag }}
                                         </span>
-                                        <span class="meta-item">
-                                            <i class="fas fa-snowflake"></i> {{ admission.get_storage_chamber_display }}
-                                        </span>
+                                        <p class="mb-1 text-sm text-gray-600">
+                                            <i class="fas fa-snowflake"></i> {% if admission.deceased.storage_chamber %}{{ admission.deceased.storage_chamber.chamber_number }}{% else %}N/A{% endif %}
+                                        </p>
                                     </div>
                                     <div class="recent-time">
                                         <i class="fas fa-clock"></i> {{ admission.date_time_received|date:"M d, Y H:i" }}
@@ -205,6 +205,15 @@
                     <div class="action-content">
                         <h4>Add Next of Kin</h4>
                         <p>Manage contact information</p>
+                    </div>
+                </a>
+                <a href="{% url 'morgue:morgue_management' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-snowflake"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Morgue Management</h4>
+                        <p>Configure morgues and chambers</p>
                     </div>
                 </a>
                 <a href="#" class="action-card">
@@ -402,7 +411,8 @@
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 5px;
 }
 
 .stat-card:hover {
@@ -499,7 +509,7 @@
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e0e0;
     transition: all 0.3s ease;
 }
 
@@ -553,7 +563,7 @@
     border-radius: 12px;
     padding: 15px;
     text-align: center;
-    border: 2px solid transparent;
+    border: 1px solid #e0e0e0;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -775,7 +785,7 @@
     align-items: center;
     gap: 20px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e0e0;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;

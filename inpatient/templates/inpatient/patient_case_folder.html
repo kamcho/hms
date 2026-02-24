@@ -193,9 +193,7 @@
                             <button onclick="showClinicalTab('consumables')" id="tab-btn-consumables" class="clinical-tab px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all">
                                 <i class="fas fa-box-open mr-2"></i> Consumables
                             </button>
-                            <button onclick="showClinicalTab('instructions')" id="tab-btn-instructions" class="clinical-tab px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all">
-                                <i class="fas fa-user-md mr-2"></i> Instructions
-                            </button>
+                            
                             <button onclick="showClinicalTab('investigations')" id="tab-btn-investigations" class="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 border-b-2 border-transparent transition-all clinical-tab whitespace-nowrap">
                                 <i class="fas fa-microscope mr-2"></i> Investigations
                             </button>
@@ -334,7 +332,7 @@
                         <!-- Consumables Tab Content -->
                         <div id="clinical-consumables" class="clinical-pane space-y-6" style="display: none;">
                             {% if admission.status != 'Discharged' %}
-                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit %}
+                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit allowed_departments="Mini Pharmacy,Pharmacy" %}
                             {% else %}
                                 <div class="py-20 flex flex-col items-center justify-center text-center opacity-40">
                                     <i class="fas fa-lock text-6xl text-slate-200 mb-6"></i>
@@ -407,46 +405,7 @@
                                 </table>
                             </div>
                         </div>
-                        <!-- Instructions Tab Content -->
-                        <div id="clinical-instructions" class="clinical-pane" style="display: none;">
-                            <div class="flex justify-between items-center mb-8">
-                                <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest border-l-4 border-amber-500 pl-4">Physician Orders</h4>
-                                {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
-                                    <button onclick="showModal('instructionModal')" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 shadow-md">
-                                        <i class="fas fa-plus mr-2"></i> New Instruction
-                                    </button>
-                                {% endif %}
-                            </div>
-                            <div class="space-y-4">
-                                {% for ins in instructions %}
-                                    <div class="bg-amber-50/30 border border-amber-100 rounded-[20px] p-6">
-                                        <div class="flex justify-between mb-4">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-xs font-black text-amber-900 uppercase tracking-widest">{{ ins.instruction_type }}</span>
-                                                {% if ins.is_completed %}<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded-lg uppercase">Completed</span>{% endif %}
-                                            </div>
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ ins.created_at|date:"d M @ H:i" }}</span>
-                                        </div>
-                                        <p class="text-sm font-medium text-slate-700">{{ ins.instruction }}</p>
-                                        <div class="mt-4 pt-4 border-t border-amber-100 flex justify-between items-center text-[10px] font-black text-amber-800 uppercase tracking-wide">
-                                            {% if not ins.is_completed and user.role == 'Nurse' and admission.status != 'Discharged' %}
-                                                <a href="{% url 'inpatient:complete_instruction' ins.id %}" class="text-indigo-600 hover:text-indigo-800">
-                                                    MARK AS COMPLETED <i class="fas fa-check-circle ml-1"></i>
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% empty %}
-                                    <div class="py-20 flex flex-col items-center justify-center opacity-40">
-                                        <i class="fas fa-user-md text-6xl text-slate-200 mb-6"></i>
-                                        <p class="font-black text-slate-400 uppercase tracking-widest">
-                                            Monitoring without
-                                            specific orders
-                                        </p>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                     
                         <!-- Nutrition Tab Content -->
                         <div id="clinical-nutrition" class="clinical-pane" style="display: none;">
                             <div class="flex justify-between items-center mb-8">
@@ -608,25 +567,29 @@
                         <div class="space-y-8 relative pl-8">
                             <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-100 ml-3.5"></div>
                             {% for log in activity_log %}
-                                <div class="relative">
-                                    <div class="absolute -left-[45px] top-0 w-9 h-9 rounded-xl bg-{{ log.color }}-50 text-{{ log.color }}-600 border border-{{ log.color }}-100 flex items-center justify-center shadow-sm z-10 transition-transform hover:scale-110">
+                                <div class="relative pl-6"> <!-- Container padding to separate text from icon -->
+                                    <div class="absolute -left-9 top-4 w-9 h-9 rounded-xl bg-{{ log.color }}-50 text-{{ log.color }}-600 border border-{{ log.color }}-100 flex items-center justify-center shadow-sm z-10 transition-transform hover:scale-110">
                                         <i class="fas {{ log.icon }} text-xs"></i>
                                     </div>
-                                    <div class="bg-white border border-slate-100 p-5 rounded-2xl hover:border-slate-300 transition-all group">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h5 class="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                    <div class="bg-white border border-slate-100 p-6 rounded-2xl hover:border-slate-300 transition-all group shadow-sm">
+                                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3"> <!-- Added flex layout for title/time -->
+                                            <h5 class="text-xs font-black text-slate-900 uppercase tracking-widest leading-relaxed"> <!-- Added leading-relaxed -->
                                                 {{ log.title}}
                                             </h5>
-                                            <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg">{{ log.time|date:"H:i" }}</span>
+                                            <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-lg shrink-0">{{ log.time|date:"H:i" }}</span> <!-- Added px-3 py-1 and shrink-0 -->
                                         </div>
-                                        <p class="text-sm font-medium text-slate-600 mb-4 group-hover:text-slate-900">
+                                        <p class="text-sm font-medium text-slate-600 mb-5 leading-relaxed group-hover:text-slate-900"> <!-- Added mb-5 and leading-relaxed -->
                                             {{ log.detail }}
                                         </p>
-                                        <div class="flex items-center justify-between">
+                                        <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-50"> <!-- Added flex-wrap, gap, and top border -->
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{{ log.time|date:"d M Y" }}</span>
+                                                <i class="far fa-calendar-alt text-slate-300 text-[10px]"></i> <!-- Added Calendar Icon -->
+                                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ log.time|date:"d M Y" }}</span> <!-- Removed italic -->
                                             </div>
-                                            <div class="text-[8px] font-black text-slate-400 uppercase tracking-widest border border-slate-100 px-2 py-1 rounded-md">BY: {{ log.user.username|upper|default:"SYSTEM" }}</div>
+                                            <div class="text-[8px] font-black text-slate-500 uppercase tracking-widest bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"> <!-- Better styling for BY user tag -->
+                                                <i class="fas fa-user-circle text-slate-400"></i>
+                                                {{ log.user.username|upper|default:"SYSTEM" }}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1059,7 +1022,7 @@
 
         if (activeTab) {
             // Valid tabs: notes, medications, fluids, instructions, investigations, nutrition, timeline
-            const validTabs = ['notes', 'medications', 'fluids', 'instructions', 'investigations', 'nutrition', 'timeline'];
+            const validTabs = ['notes', 'medications', 'fluids', 'investigations', 'nutrition', 'timeline'];
             if (validTabs.includes(activeTab)) {
                 showClinicalTab(activeTab);
             }

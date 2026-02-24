@@ -23,82 +23,184 @@
                     </button>
                 </div>
                 <div class="sidebar-menu">
-                    <a href="{% url 'inventory:transfer_stock' %}" class="menu-item submenu-item">
-                        <i class="fas fa-exchange-alt"></i>
-                        <span>Stock Transfer</span>
+                   
+                    <a href="{% url 'comms:call_center' %}" 
+                       hx-get="{% url 'comms:call_center' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                       class="menu-item {% if request.resolver_match.namespace == 'comms' %}active{% endif %}">
+                        <i class="fas fa-headset"></i>
+                        <span>Call Center</span>
                     </a>
                     {% if user.role == 'Doctor' %}
-                        <a href="{% url 'home:opd_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
+                        <a href="{% url 'home:opd_dashboard' %}" 
+                           hx-get="{% url 'home:opd_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
                             <i class="fas fa-stethoscope"></i>
                             <span>OPD</span>
                         </a>
-                        <a href="{% url 'inpatient:dashboard' %}" class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
+                        <a href="{% url 'home:appointments_dashboard' %}" 
+                           hx-get="{% url 'home:appointments_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'appointments_dashboard' %}active{% endif %}">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Appointments</span>
+                        </a>
+                        <a href="{% url 'inpatient:dashboard' %}" 
+                           hx-get="{% url 'inpatient:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Inpatient</span>
                         </a>
-                        <a href="{% url 'home:patient_list' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
+                        <a href="{% url 'home:patient_list' %}" 
+                           hx-get="{% url 'home:patient_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Patients</span>
                         </a>
-                        <a href="{% url 'inventory:create_request' %}" class="menu-item">
+                        <a href="{% url 'inventory:create_request' %}" 
+                           hx-get="{% url 'inventory:create_request' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item">
                             <i class="fas fa-plus-circle"></i>
                             <span>New Request</span>
                         </a>
                     {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'Receptionist' %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'reception_dashboard' %}active{% endif %}">
+                    {% if user.role == 'Receptionist' %}
+                        <a href="{% url 'home:reception_dashboard' %}" 
+                           hx-get="{% url 'home:reception_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'reception_dashboard' %}active{% endif %}">
                             <i class="fas fa-hospital"></i>
                             <span>Reception Dashboard</span>
                         </a>
-                        <a href="{% url 'accounts:insurance_manager' %}" class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                            <span>Insurance Manager</span>
-                        </a>
-                        <a href="{% url 'home:patient_list' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
+                        
+                        <a href="{% url 'home:patient_list' %}" 
+                           hx-get="{% url 'home:patient_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Patients</span>
                         </a>
-                        <a href="{% url 'home:patient_create' %}" class="menu-item {% if request.resolver_match.url_name == 'patient_create' %}active{% endif %}">
+                        <a href="{% url 'home:patient_create' %}" 
+                           hx-get="{% url 'home:patient_create' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'patient_create' %}active{% endif %}">
                             <i class="fas fa-user-plus"></i>
                             <span>Add Patient</span>
                         </a>
-                        <a href="{% url 'accounts:discharge_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
+                        <a href="{% url 'accounts:discharge_dashboard' %}" 
+                           hx-get="{% url 'accounts:discharge_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Discharge Billing</span>
                         </a>
                     {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'Triage Nurse' %}
-                        <a href="{% url 'home:reception_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'triage_dashboard' %}active{% endif %}">
+                    {% if  user.role == 'Triage Nurse' %}
+                        <a href="{% url 'home:reception_dashboard' %}" 
+                           hx-get="{% url 'home:reception_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'triage_dashboard' %}active{% endif %}">
                             <i class="fas fa-heartbeat"></i>
                             <span>Triage Dashboard</span>
                         </a>
                     {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'Morgue Attendant' %}
-                        <a href="{% url 'morgue:dashboard' %}" class="menu-item {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}">
+                    {% if user.role ==  'Morgue Attendant' %}
+                        <a href="{% url 'morgue:dashboard' %}" 
+                           hx-get="{% url 'morgue:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}">
                             <i class="fas fa-skull-crossbones"></i>
                             <span>Morgue</span>
                         </a>
+                    {% elif user.role == 'Admin' %}
+                        <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}" id="morgueMenu">
+                            <i class="fas fa-skull-crossbones"></i>
+                            <span>Morgue</span>
+                            <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
+                        </a>
+                        <div class="submenu" id="morgueSubmenu">
+                            <a href="{% url 'morgue:dashboard' %}" 
+                               hx-get="{% url 'morgue:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'morgue' %}active{% endif %}">
+                                <i class="fas fa-th-large"></i>
+                                <span>Dashboard</span>
+                            </a>
+                            <a href="{% url 'morgue:morgue_management' %}" 
+                               hx-get="{% url 'morgue:morgue_management' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'morgue_management' %}active{% endif %}">
+                                <i class="fas fa-snowflake"></i>
+                                <span>Management</span>
+                            </a>
+                        </div>
                     {% endif %}
-                    {% if user.role == 'Radiographer' or user.role == 'Lab Technician' %}
-                        <a href="{% url 'lab:radiology_dashboard' %}" class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
+                    {% if user.role == 'Radiographer' %}
+                        <a href="{% url 'lab:radiology_dashboard' %}" 
+                           hx-get="{% url 'lab:radiology_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
+                            <i class="fas fa-flask"></i>
+                            <span>Radiology</span>
+                        </a>
+                    {% endif %}
+                     {% if user.role == 'Lab Technician' %}
+                        <a href="{% url 'lab:radiology_dashboard' %}" 
+                           hx-get="{% url 'lab:radiology_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
                             <i class="fas fa-flask"></i>
                             <span>Laboratory</span>
                         </a>
                     {% endif %}
+                   
                     {% if user.role == 'Pharmacist' %}
-                        <a href="{% url 'home:pharmacy_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'pharmacy_dashboard' %}active{% endif %}">
+                        <a href="{% url 'home:pharmacy_dashboard' %}" 
+                           hx-get="{% url 'home:pharmacy_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-pills"></i>
                             <span>Pharmacy</span>
                         </a>
+                       
                     {% endif %}
                     {% if user.role == 'Admin' %}
-                        <a href="{% url 'home:ambulance_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'ambulance_dashboard' %}active{% endif %}">
+                        <a href="{% url 'home:ambulance_dashboard' %}" 
+                           hx-get="{% url 'home:ambulance_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'ambulance_dashboard' %}active{% endif %}">
                             <i class="fas fa-ambulance"></i>
                             <span>Ambulance</span>
                         </a>
+                        <a href="{% url 'home:ward_management' %}" 
+                           hx-get="{% url 'home:ward_management' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'ward_management' %}active{% endif %}">
+                            <i class="fas fa-hospital-user"></i>
+                            <span>Ward Management</span>
+                        </a>
+
+                        <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}" id="inventoryMenu">
+                            <i class="fas fa-boxes"></i>
+                            <span>Inventory</span>
+                            <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
+                        </a>
+                        <div class="submenu" id="inventorySubmenu">
+                            <a href="{% url 'inventory:item_list' %}" 
+                               hx-get="{% url 'inventory:item_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'item_list' %}active{% endif %}">
+                                <i class="fas fa-box-open"></i>
+                                <span>Inventories</span>
+                            </a>
+                            <a href="{% url 'inventory:procurement_dashboard' %}" 
+                               hx-get="{% url 'inventory:procurement_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'procurement_dashboard' %}active{% endif %}">
+                                <i class="fas fa-truck-loading"></i>
+                                <span>Procurement & Stock</span>
+                            </a>
+                            <a href="{% url 'inventory:request_list' %}" 
+                               hx-get="{% url 'inventory:request_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
+                                <i class="fas fa-list"></i>
+                                <span>View Requests</span>
+                            </a>
+                            <a href="{% url 'inventory:transfer_stock' %}" 
+                               hx-get="{% url 'inventory:transfer_stock' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'transfer_stock' %}active{% endif %}">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span>Stock Transfer</span>
+                            </a>
+                        </div>
                     {% endif %}
                     {% if user.role == 'Nurse' %}
-                        <a href="{% url 'inpatient:dashboard' %}" class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
+                        <a href="{% url 'inpatient:dashboard' %}" 
+                           hx-get="{% url 'inpatient:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Inpatient</span>
                         </a>
@@ -108,74 +210,64 @@
                             <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
                         </a>
                         <div class="submenu" id="maternitySubmenu">
-                            <a href="{% url 'maternity:dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'maternity' %}active{% endif %}">
+                            <a href="{% url 'maternity:dashboard' %}" 
+                               hx-get="{% url 'maternity:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'maternity' %}active{% endif %}">
                                 <i class="fas fa-bed"></i>
                                 <span>Ward Management</span>
                             </a>
-                            <a href="{% url 'maternity:anc_dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'anc_dashboard' %}active{% endif %}">
+                            <a href="{% url 'maternity:anc_dashboard' %}" 
+                               hx-get="{% url 'maternity:anc_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'anc_dashboard' %}active{% endif %}">
                                 <i class="fas fa-hand-holding-heart"></i>
                                 <span>ANC Dashboard</span>
                             </a>
-                            <a href="{% url 'maternity:pnc_dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'pnc_dashboard' %}active{% endif %}">
+                            <a href="{% url 'maternity:pnc_dashboard' %}" 
+                               hx-get="{% url 'maternity:pnc_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'pnc_dashboard' %}active{% endif %}">
                                 <i class="fas fa-baby-carriage"></i>
                                 <span>PNC Dashboard</span>
                             </a>
-                            <a href="{% url 'maternity:vaccination_dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'vaccination_dashboard' %}active{% endif %}">
+                            <a href="{% url 'maternity:vaccination_dashboard' %}" 
+                               hx-get="{% url 'maternity:vaccination_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'vaccination_dashboard' %}active{% endif %}">
                                 <i class="fas fa-syringe"></i>
                                 <span>Vaccination Clinic</span>
                             </a>
                         </div>
                     {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'Accountant' or user.role == 'Store Manager' %}
-                        <a href="{% url 'accounts:expense_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'expense_dashboard' %}active{% endif %}">
+                    {% if user.role == 'Admin' or user.role == 'Accountant'  %}
+                        <a href="{% url 'accounts:expense_dashboard' %}" 
+                           hx-get="{% url 'accounts:expense_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'expense_dashboard' %}active{% endif %}">
                             <i class="fas fa-money-bill-wave"></i>
                             <span>Expenses & Purchases</span>
                         </a>
-                        <a href="{% url 'inventory:procurement_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'procurement_dashboard' %}active{% endif %}">
-                            <i class="fas fa-truck-loading"></i>
-                            <span>Procurement & Stock</span>
-                        </a>
-                        <a href="{% url 'inventory:create_request' %}" class="menu-item submenu-item">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>Create Request</span>
-                        </a>
-                        <a href="{% url 'inventory:request_list' %}" class="menu-item submenu-item">
-                            <i class="fas fa-list"></i>
-                            <span>View Requests</span>
-                        </a>
-                        <a href="{% url 'inventory:transfer_stock' %}" class="menu-item submenu-item">
-                            <i class="fas fa-exchange-alt"></i>
-                            <span>Stock Transfer</span>
-                        </a>
-                    {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'SHA' %}
-                        <a href="{% url 'accounts:accountant_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'accountant_dashboard' %}active{% endif %}">
-                            <i class="fas fa-calculator"></i>
-                            <span>Accountant Dashboard</span>
-                        </a>
-                        <a href="{% url 'accounts:insurance_manager' %}" class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
+                         <a href="{% url 'accounts:insurance_manager' %}" 
+                           hx-get="{% url 'accounts:insurance_manager' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Insurance Manager</span>
                         </a>
-                        <a href="{% url 'accounts:discharge_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Discharge Billing</span>
+                        
+                    {% endif %}
+                    {% if user.role == 'SHA' %}
+                        
+                        <a href="{% url 'accounts:insurance_manager' %}" 
+                           hx-get="{% url 'accounts:insurance_manager' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Insurance Manager</span>
                         </a>
-                        <a href="#" class="menu-item">
-                            <i class="fas fa-file-medical"></i>
-                            <span>Reports</span>
-                        </a>
+                        
                     {% endif %}
                 </div>
                 <div class="sidebar-footer">
                     {% if user.role != 'Doctors' %}
-                        <a href="{% url 'inventory:create_request' %}" class="btn-add" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                            <i class="fas fa-plus"></i> New Request
-                        </a>
-                        <a href="{% url 'home:health_records' %}" class="btn-add" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                            <i class="fas fa-plus"></i> HR
-                        </a>
-                        <a href="{% url 'users:profile' %}" class="menu-item">
+                        
+                        <a href="{% url 'users:profile' %}" 
+                           hx-get="{% url 'users:profile' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                           class="menu-item">
                             <i class="fas fa-user"></i>
                             <span>Profile</span>
                         </a>
@@ -229,8 +321,308 @@
             </div>
         </div>
         {% block modals %}{% endblock %}
+
+        <!-- HTMX for Persistent Navigation (Prevents full page reloads/call drops) -->
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+        <!-- Global VoIP Elements -->
+        <audio id="remoteAudio" autoplay></audio>
+        <audio id="localAudio" autoplay muted></audio>
+        <!-- In-call bar: show when in active call so user can hang up -->
+        <div id="in-call-bar" style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 2147483646;">
+            <div style="background: white; border-radius: 16px; padding: 12px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 16px;">
+                <span style="font-size: 13px; font-weight: 700; color: #16a34a;">In call</span>
+                <button type="button" onclick="endCall()" style="background: #dc2626; color: white; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 12px; border: none; cursor: pointer;">End call</button>
+            </div>
+        </div>
+        
+        <!-- Premium Bottom-Right Call Notification -->
+        <div id="incoming-call-modal" 
+             style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; width: 350px;" 
+             role="dialog" aria-modal="true">
+            
+            <!-- Animated Ring Background -->
+            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur opacity-25 animate-pulse"></div>
+            
+            <div style="position: relative; background: white; border-radius: 24px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);">
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                    <div style="position: relative; flex-shrink: 0;">
+                        <div style="height: 64px; width: 64px; border-radius: 20px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);">
+                            <i class="fa-solid fa-phone" style="color: white; font-size: 24px;" class="animate-bounce"></i>
+                        </div>
+                        <div style="position: absolute; -bottom: 2px; -right: 2px; height: 16px; width: 16px; background: #22c55e; border-radius: 50%; border: 3px solid white;"></div>
+                    </div>
+                    <div style="text-align: left; overflow: hidden;">
+                        <span style="font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Incoming Voice Call</span>
+                        <h4 style="font-size: 18px; font-weight: 900; color: #111827; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="display-caller-name">Staff Member</h4>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button onclick="answerCall()" 
+                            style="background: #16a34a; color: white !important; padding: 14px; border-radius: 14px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-check"></i> ACCEPT
+                    </button>
+                    <button onclick="rejectCall()" 
+                            style="background: #fef2f2; color: #dc2626 !important; padding: 14px; border-radius: 14px; font-weight: 700; font-size: 14px; border: 1px solid #fee2e2; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-xmark"></i> IGNORE
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
         <script src="{% static 'users/js/dashboard.js' %}"></script>
+        
+        {% if user.is_authenticated %}
+        <script>
+            let localStream;
+            let peerConnection;
+            let signalingWebsocket;
+            let targetUserId;
+            let isCaller = false;
+            let restoringAsCallee = false;
+
+            const rtcConfig = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            };
+
+            const ACTIVE_CALL_KEY = 'voip_active_call';
+
+            function persistActiveCall(peerId, role, callerName) {
+                try {
+                    sessionStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify({ peerId, role, callerName: callerName || '' }));
+                } catch (e) {}
+            }
+            function clearActiveCall() {
+                try {
+                    sessionStorage.removeItem(ACTIVE_CALL_KEY);
+                } catch (e) {}
+            }
+            function showInCallBar(show) {
+                const bar = document.getElementById('in-call-bar');
+                if (bar) bar.style.display = show ? 'block' : 'none';
+            }
+
+            function initVoIPWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                signalingWebsocket = new WebSocket(`${protocol}://${window.location.host}/ws/call/`);
+
+                signalingWebsocket.onopen = () => {
+                    restoringAsCallee = false;
+                };
+
+                signalingWebsocket.onmessage = async (e) => {
+                    const message = JSON.parse(e.data);
+                    const data = message.data;
+                    const senderId = message.sender_id;
+
+                    if (message.type === 'call_restore') {
+                        targetUserId = message.peer_id;
+                        isCaller = message.role === 'caller';
+                        restoringAsCallee = message.role === 'callee';
+                        if (isCaller) {
+                            try {
+                                await startLocalStream();
+                                createPeerConnection();
+                                const offer = await peerConnection.createOffer();
+                                await peerConnection.setLocalDescription(offer);
+                                signalingWebsocket.send(JSON.stringify({
+                                    type: 'offer',
+                                    target_id: targetUserId,
+                                    offer: offer,
+                                    caller_name: "{{ user.get_full_name }}"
+                                }));
+                                persistActiveCall(targetUserId, 'caller', message.caller_name);
+                                showInCallBar(true);
+                            } catch (err) { }
+                        } else {
+                            signalingWebsocket.send(JSON.stringify({
+                                type: 'reoffer_request',
+                                target_id: targetUserId
+                            }));
+                            persistActiveCall(targetUserId, 'callee', message.caller_name);
+                        }
+                        return;
+                    }
+
+                    if (data && data.type === 'call_ended') {
+                        if (peerConnection) {
+                            peerConnection.close();
+                            peerConnection = null;
+                        }
+                        targetUserId = null;
+                        clearActiveCall();
+                        showInCallBar(false);
+                        restoringAsCallee = false;
+                        return;
+                    }
+
+                    if (data && data.type === 'reoffer_request') {
+                        if (senderId === targetUserId && isCaller) {
+                            try {
+                                if (!localStream) await startLocalStream();
+                                if (!peerConnection) createPeerConnection();
+                                const offer = await peerConnection.createOffer();
+                                await peerConnection.setLocalDescription(offer);
+                                signalingWebsocket.send(JSON.stringify({
+                                    type: 'offer',
+                                    target_id: targetUserId,
+                                    offer: offer,
+                                    caller_name: "{{ user.get_full_name }}"
+                                }));
+                            } catch (err) { }
+                        }
+                        return;
+                    }
+
+                    if (data.type === 'offer') {
+                        targetUserId = senderId;
+                        if (restoringAsCallee) {
+                            restoringAsCallee = false;
+                            try {
+                                await startLocalStream();
+                                createPeerConnection();
+                                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                                const answer = await peerConnection.createAnswer();
+                                await peerConnection.setLocalDescription(answer);
+                                signalingWebsocket.send(JSON.stringify({
+                                    type: 'answer',
+                                    target_id: targetUserId,
+                                    answer: answer
+                                }));
+                                showInCallBar(true);
+                            } catch (err) { }
+                        } else {
+                            const modal = document.getElementById('incoming-call-modal');
+                            const nameSpan = document.getElementById('display-caller-name');
+                            if (modal && nameSpan) {
+                                nameSpan.innerText = `${data.caller_name || 'Staff Member'} is calling...`;
+                                modal.style.display = 'block';
+                            }
+                            window.pendingOffer = data.offer;
+                        }
+                    } else if (data.type === 'answer') {
+                        if (peerConnection) {
+                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                            showInCallBar(true);
+                        }
+                    } else if (data.type === 'ice-candidate') {
+                        if (peerConnection && peerConnection.remoteDescription) {
+                            try {
+                                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            } catch (err) { }
+                        }
+                    }
+                };
+
+                signalingWebsocket.onclose = () => setTimeout(initVoIPWebSocket, 5000);
+            }
+
+            async function startLocalStream() {
+                if (localStream) return;
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    const el = document.getElementById('localAudio');
+                    if (el) el.srcObject = localStream;
+                } catch (err) {
+                    alert("Microphone access denied. VoIP calls will not work.");
+                    throw err;
+                }
+            }
+
+            function createPeerConnection() {
+                if (peerConnection) return;
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate && signalingWebsocket && signalingWebsocket.readyState === WebSocket.OPEN && targetUserId) {
+                        signalingWebsocket.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            target_id: targetUserId,
+                            candidate: event.candidate
+                        }));
+                    }
+                };
+                peerConnection.ontrack = (event) => {
+                    const el = document.getElementById('remoteAudio');
+                    if (el) el.srcObject = event.streams[0];
+                };
+                if (localStream) {
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                }
+            }
+
+            async function initiateCall(id, name) {
+                targetUserId = id;
+                isCaller = true;
+                try {
+                    await startLocalStream();
+                    createPeerConnection();
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    signalingWebsocket.send(JSON.stringify({
+                        type: 'offer',
+                        target_id: id,
+                        offer: offer,
+                        caller_name: "{{ user.get_full_name }}"
+                    }));
+                    persistActiveCall(id, 'caller', "{{ user.get_full_name }}");
+                    showInCallBar(true);
+                } catch (err) { }
+            }
+
+            async function answerCall() {
+                const modal = document.getElementById('incoming-call-modal');
+                if (modal) modal.style.display = 'none';
+                try {
+                    await startLocalStream();
+                    createPeerConnection();
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(window.pendingOffer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingWebsocket.send(JSON.stringify({
+                        type: 'answer',
+                        target_id: targetUserId,
+                        answer: answer
+                    }));
+                    persistActiveCall(targetUserId, 'callee', '');
+                    showInCallBar(true);
+                } catch (err) { }
+            }
+
+            function rejectCall() {
+                const modal = document.getElementById('incoming-call-modal');
+                if (modal) modal.style.display = 'none';
+            }
+
+            function endCall() {
+                if (!targetUserId || !signalingWebsocket || signalingWebsocket.readyState !== WebSocket.OPEN) {
+                    if (peerConnection) peerConnection.close();
+                    peerConnection = null;
+                    targetUserId = null;
+                    clearActiveCall();
+                    showInCallBar(false);
+                    return;
+                }
+                signalingWebsocket.send(JSON.stringify({
+                    type: 'hangup',
+                    target_id: targetUserId
+                }));
+                if (peerConnection) peerConnection.close();
+                peerConnection = null;
+                targetUserId = null;
+                clearActiveCall();
+                showInCallBar(false);
+            }
+            window.endCall = endCall;
+
+            initVoIPWebSocket();
+        </script>
+        {% endif %}
+
         {% block extra_js %}{% endblock %}
     </body>
 </html>
