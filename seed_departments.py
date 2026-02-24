@@ -18,6 +18,15 @@ def seed_departments():
         {'name': 'Inpatient', 'abbreviation': 'IPD'},
         {'name': 'Morgue', 'abbreviation': 'MOR'},
         {'name': 'Accounts', 'abbreviation': 'ACC'},
+        {'name': 'Main Store', 'abbreviation': 'MST'},
+        {'name': 'ANC', 'abbreviation': 'ANC-MAT'},
+        {'name': 'Procedure Room', 'abbreviation': 'INJ'},
+        {'name': 'PNC', 'abbreviation': 'PNC=MAT'},
+        {'name': 'CWC', 'abbreviation': 'CWC'},
+        {'name': 'Maternity', 'abbreviation': 'MAT'},
+        {'name': 'OPD', 'abbreviation': None},
+        {'name': 'Consultation Room 2', 'abbreviation': 'CR2'},
+        {'name': 'Consultation Room 1', 'abbreviation': 'CR1'},
     ]
 
     print("Deleting existing departments...")

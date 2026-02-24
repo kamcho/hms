@@ -6,6 +6,6 @@ migrations/
 .DS_Store
 *.pyc
 *.log
-
+.env
 
 db.sqlite3
