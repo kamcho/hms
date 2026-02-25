@@ -529,14 +529,17 @@
                                     </a>
                                 {% endif %}
                             {% endif %}
-                            {% if user.role == 'Doctor' %}
-                                {% with visit_id=selected_visit.id|default:latest_visit.id %}
                                     {% if visit_id %}
                                         <a href="{% url 'home:create_prescription' visit_id %}" class="modern-btn btn-success" style="width: 100%;">
                                             <i class="fas fa-prescription"></i> New Prescription
                                         </a>
                                     {% endif %}
                                 {% endwith %}
+                            {% endif %}
+                            {% if user.role == 'Doctor' or user.role == 'Admin' %}
+                                <button onclick="showModal('appointmentModal')" class="modern-btn btn-primary" style="width: 100%; border: none;">
+                                    <i class="fas fa-calendar-plus"></i> Book Appointment
+                                </button>
                             {% endif %}
                         {% else %}
                             <div style="background: #f1f5f9; padding: 1rem; border-radius: 12px; border: 1px solid var(--clinical-border); text-align: center;">
@@ -1205,6 +1208,44 @@
             </div>
         </div>
         <!-- Unified Message Modal -->
+        <!-- Appointment Modal -->
+        <div id="appointmentModal" class="custom-modal">
+            <div class="custom-modal-content" style="max-width: 500px;">
+                <div class="custom-modal-header">
+                    <h3 class="custom-modal-title">Schedule Appointment</h3>
+                    <button class="custom-modal-close" onclick="closeModal('appointmentModal')">&times;</button>
+                </div>
+                <div class="custom-modal-body">
+                    <form id="appointmentForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                        
+                        <div class="form-group mb-4">
+                            <label class="clinical-label">Appointment Type</label>
+                            <select name="appointment_type" class="clinical-input" required>
+                                <option value="Follow-up">Follow-up</option>
+                                <option value="Consultation">New Consultation</option>
+                                <option value="Check-up">Routine Check-up</option>
+                                <option value="Surgery">Surgery Scheduling</option>
+                                <option value="Lab Review">Lab Results Review</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="clinical-label">Date & Time</label>
+                            <input type="datetime-local" name="appointment_date" class="clinical-input" required>
+                        </div>
+
+                        <div class="custom-modal-footer">
+                            <button type="button" class="modern-btn btn-secondary" onclick="closeModal('appointmentModal')">Cancel</button>
+                            <button type="button" onclick="submitAppointment()" class="modern-btn btn-primary">Schedule Appointment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div id="messageModal" class="custom-modal">
             <div class="modal-content" style="max-width: 400px; border-radius: 20px; overflow: hidden; border: none;">
                 <div id="messageModalIndicator" style="height: 6px; background: var(--clinical-primary);"></div>
@@ -1470,6 +1511,27 @@
         };
 
         showModal('messageModal');
+    }
+    function submitAppointment() {
+        const form = document.getElementById('appointmentForm');
+        const formData = new FormData(form);
+        const url = "{% url 'home:add_appointment' %}";
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal('appointmentModal');
+                    showMessageModal('Success', data.message, () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to schedule appointment.', null, 'error');
+                }
+            })
+            .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
         </script>
     {% endblock %}

@@ -11,13 +11,13 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta
-from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments
+from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
 from inpatient.models import Admission
 from morgue.models import MorgueAdmission
-from .forms import EmergencyContactForm, PatientForm, ReferralForm
+from .forms import EmergencyContactForm, PatientForm, ReferralForm, AppointmentForm
 from django.db.models import Q
 from inventory.models import DispensedItem
 class PatientListView(LoginRequiredMixin, ListView):
@@ -101,24 +101,34 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
                 # Get or Create Visit Invoice (Consolidated)
                 invoice = get_or_create_invoice(visit=visit, user=self.request.user)
                 
+                # Handle Free Visit logic
+                unit_price = selected_service.price
+                if payment_method == 'Free Visit':
+                    unit_price = 0
+
                 # Create InvoiceItem
                 item = InvoiceItem.objects.create(
                     invoice=invoice,
                     service=selected_service,
                     name=selected_service.name,
-                    unit_price=selected_service.price,
+                    unit_price=unit_price,
                     quantity=1
                 )
                 
-                # Record Payment
-                Payment.objects.create(
-                    invoice=invoice,
-                    amount=item.amount,
-                    payment_method=payment_method,
-                    created_by=self.request.user
-                )
+                # Record Payment (unless it's a Free Visit)
+                if payment_method != 'Free Visit':
+                    Payment.objects.create(
+                        invoice=invoice,
+                        amount=item.amount,
+                        payment_method=payment_method,
+                        created_by=self.request.user
+                    )
                 
-                messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+                if payment_method == 'Free Visit':
+                    messages.success(self.request, f"Patient registered with a Free Visit for {selected_service.name}.")
+                else:
+                    messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+
             
             # --- Smart Routing ---
             reception_dept, _ = Departments.objects.get_or_create(
@@ -154,23 +164,31 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
                     status='Pending',
                     created_by=self.request.user
                 )
-                
+                # Handle Free Visit logic
+                unit_price = selected_service.price
+                if payment_method == 'Free Visit':
+                    unit_price = 0
+
                 item = InvoiceItem.objects.create(
                     invoice=invoice,
                     service=selected_service,
                     name=selected_service.name,
-                    unit_price=selected_service.price,
+                    unit_price=unit_price,
                     quantity=1
                 )
                 
-                Payment.objects.create(
-                    invoice=invoice,
-                    amount=item.amount,
-                    payment_method=payment_method,
-                    created_by=self.request.user
-                )
+                if payment_method != 'Free Visit':
+                    Payment.objects.create(
+                        invoice=invoice,
+                        amount=item.amount,
+                        payment_method=payment_method,
+                        created_by=self.request.user
+                    )
                 
-                messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+                if payment_method == 'Free Visit':
+                    messages.success(self.request, f"Patient registered with a Free Visit for {selected_service.name}.")
+                else:
+                    messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
             else:
                 messages.success(self.request, "Patient registered successfully.")
         
@@ -2786,3 +2804,33 @@ def add_bed(request):
     messages.error(request, 'Failed to add bed. Please check the form.')
     return redirect('home:ward_management')
 
+
+@login_required
+def add_appointment(request):
+    """View to handle appointment booking via AJAX"""
+    if request.user.role not in ['Doctor', 'Nurse', 'Receptionist', 'Admin']:
+        return JsonResponse({'success': False, 'error': 'Unauthorized action.'})
+    
+    if request.method == 'POST':
+        try:
+            patient_id = request.POST.get('patient_id')
+            patient = get_object_or_404(Patient, pk=patient_id)
+            
+            form = AppointmentForm(request.POST)
+            if form.is_valid():
+                appointment = form.save(commit=False)
+                appointment.patient = patient
+                appointment.created_by = request.user
+                appointment.save()
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Appointment booked for {patient.full_name} on {appointment.appointment_date.strftime("%M %d, %Y at %H:%M")}'
+                })
+            else:
+                return JsonResponse({'success': False, 'error': form.errors.as_text()})
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+            
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

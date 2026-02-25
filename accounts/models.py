@@ -178,6 +178,7 @@ class Payment(models.Model):
         ('M-Pesa', 'M-Pesa'),
         ('Insurance', 'Insurance'),
         ('Bank Transfer', 'Bank Transfer'),
+        ('Free Visit', 'Free Visit'),
         ('Other', 'Other'),
     ]
     

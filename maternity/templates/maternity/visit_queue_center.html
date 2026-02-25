@@ -1,0 +1,352 @@
+{% extends "users/dashboard_base.html" %}
+{% load static %}
+{% block title %}Visit Queue Center - HMS{% endblock title %}
+{% block content %}
+<div class="max-w-[1600px] mx-auto p-6 bg-slate-50/50 min-h-screen">
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <i class="fas fa-users-cog text-xl"></i>
+                </div>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">Visit Queue Center</h1>
+            </div>
+            <p class="text-slate-500 font-medium text-lg ml-1">
+                Centralized clinical workflow for ANC, PNC, and CWC patients
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4">
+            <a href="{% url 'maternity:dashboard' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-slate-700 border border-slate-200 font-bold text-sm transition-all hover:bg-slate-50 shadow-sm">
+                <i class="fas fa-hospital text-indigo-500"></i> Ward Hub
+            </a>
+            <form method="get" class="flex items-center gap-2">
+                <div class="relative group">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-indigo-500 transition-colors"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search name or ID..." class="pl-11 pr-5 py-2.5 border border-slate-200 rounded-xl text-sm w-64 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all shadow-sm bg-white">
+                </div>
+                {% if search_query %}
+                    <a href="{% url 'maternity:visit_queue_center' %}" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold border border-slate-200 transition-all hover:bg-slate-200">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+            <div class="text-4xl font-black text-slate-900 mb-1">{{ stats.total }}</div>
+            <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Waiting</div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-indigo-500"></div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+            <div class="text-4xl font-black text-slate-900 mb-1">{{ stats.anc }}</div>
+            <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">ANC Queue</div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500"></div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+            <div class="text-4xl font-black text-slate-900 mb-1">{{ stats.pnc }}</div>
+            <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">PNC Queue</div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-rose-500"></div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+            <div class="text-4xl font-black text-slate-900 mb-1">{{ stats.cwc }}</div>
+            <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">CWC Queue</div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-emerald-500"></div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
+            <div class="text-4xl font-black text-rose-600 mb-1">{{ stats.high_risk }}</div>
+            <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">High Risk</div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-rose-600"></div>
+        </div>
+    </div>
+
+    <!-- Main Queue Card -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-100">
+        <div class="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                    <i class="fas fa-list-ul"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-800 tracking-tight">Active Clinical Queue</h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">Patients ready for assessment</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-widest border border-indigo-100">Live Updates</span>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient Details</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Visit Category</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Risk / Status</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Wait Time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in queue %}
+                    <tr onclick="openActionModal(this)" 
+                        class="group hover:bg-slate-50/50 transition-all cursor-pointer {% if item.is_high_risk %}bg-rose-50/30{% endif %}"
+                        data-id="{{ item.visit.patient.id }}"
+                        data-name="{{ item.visit.patient.full_name }}"
+                        data-age="{{ item.visit.patient.age }}"
+                        data-gender="{{ item.visit.patient.gender }}"
+                        data-que-id="{{ item.id }}"
+                        data-category="{{ item.category }}"
+                        data-newborn-id="{% if item.linked_newborn %}{{ item.linked_newborn.id }}{% endif %}"
+                        data-pregnancies='[
+                            {% for p in item.active_pregnancies %}
+                            {"id": "{{ p.id }}", "edd": "{{ p.edd|date:"d M Y" }}", "ga": "{{ p.gestational_age_weeks|default:0 }}"}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]'>
+                        <td class="px-8 py-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                    {{ item.visit.patient.first_name|first }}{{ item.visit.patient.last_name|first }}
+                                </div>
+                                <div>
+                                    <div class="font-black text-slate-900 text-base leading-none">{{ item.visit.patient.full_name }}</div>
+                                    <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
+                                        ID: #{{ item.visit.patient.id }} | {{ item.visit.patient.get_gender_display }} | {{ item.visit.patient.age }} yrs
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6">
+                            {% if item.category == 'ANC' %}
+                                <span class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-black text-[10px] uppercase tracking-widest border border-blue-100">
+                                    <i class="fas fa-female mr-1"></i> ANC
+                                </span>
+                            {% elif 'PNC' in item.category %}
+                                <span class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-black text-[10px] uppercase tracking-widest border border-rose-100">
+                                    <i class="fas fa-heart mr-1"></i> {{ item.category }}
+                                </span>
+                            {% elif item.category == 'CWC' %}
+                                <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
+                                    <i class="fas fa-baby mr-1"></i> CWC
+                                </span>
+                            {% else %}
+                                <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border border-slate-200">
+                                    {{ item.category }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="flex flex-col gap-1.5">
+                                {% for alert in item.alerts %}
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider {% if alert.type == 'danger' %} bg-rose-100 text-rose-700 ring-1 ring-rose-200 {% else %} bg-amber-100 text-amber-700 ring-1 ring-amber-200 {% endif %}">
+                                        <i class="fas fa-exclamation-triangle text-[8px]"></i> {{ alert.message }}
+                                    </span>
+                                {% empty %}
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-1.5 h-1.5 rounded-full {% if item.is_high_risk %}bg-rose-500{% else %}bg-emerald-500{% endif %} animate-pulse"></div>
+                                        <span class="text-[10px] font-black uppercase tracking-widest {% if item.is_high_risk %}text-rose-600{% else %}text-emerald-600{% endif %}">
+                                            {% if item.is_high_risk %}High Risk{% else %}Stable{% endif %}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ item.created_at|timesince }} ago</div>
+                            <div class="text-[8px] font-bold text-slate-300 mt-1 uppercase tracking-tighter">FROM: {{ item.qued_from.name|default:"Triage" }}</div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-8 py-32 text-center">
+                            <div class="flex flex-col items-center gap-4 text-slate-300">
+                                <div class="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center text-4xl">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </div>
+                                <p class="font-black uppercase tracking-widest text-xs">All queues are clear</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Clinical Workflow Selector Modal -->
+<div id="actionModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="closeActionModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full ring-1 ring-slate-100">
+            <!-- Modal Header -->
+            <div class="bg-indigo-600 px-8 py-10 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10">
+                    <i class="fas fa-stethoscope text-9xl"></i>
+                </div>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div id="modalPatientInitial" class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-xl border border-white/30"></div>
+                                <div>
+                                    <h3 class="text-2xl font-black tracking-tight" id="modalPatientName"></h3>
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-100" id="modalPatientMeta"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="closeActionModal()" class="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center hover:bg-black/20 transition-all">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-8 bg-slate-50/50">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Select Clinical Workflow</p>
+                
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- ANC Section -->
+                    <div id="ancWorkflow" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:border-blue-300 transition-all">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-100">
+                                <i class="fas fa-female text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800">Antenatal Care (ANC)</h4>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Pregnancy tracking & monitoring</p>
+                            </div>
+                        </div>
+                        <div id="ancPregnancyList" class="flex flex-col gap-3">
+                            <!-- Populated dynamic -->
+                        </div>
+                        <a id="ancNewPregnancy" href="#" class="mt-4 flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-all group">
+                            <i class="fas fa-plus group-hover:rotate-90 transition-transform"></i> Register General/New Pregnancy
+                        </a>
+                    </div>
+
+                    <!-- PNC Section -->
+                    <div id="pncWorkflow" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:border-rose-300 transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-100">
+                                <i class="fas fa-heart text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800">Postnatal Care (PNC)</h4>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">After-birth recovery & checkup</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <a id="pncMotherAction" href="#" class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white transition-all group">
+                                <i class="fas fa-female text-lg group-hover:scale-110 transition-transform"></i>
+                                <span class="font-black text-[9px] uppercase tracking-widest">Mother PNC Visit</span>
+                            </a>
+                            <a id="pncBabyAction" href="#" class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white transition-all group">
+                                <i class="fas fa-baby text-lg group-hover:scale-110 transition-transform"></i>
+                                <span class="font-black text-[9px] uppercase tracking-widest">Baby PNC Visit</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- CWC Section -->
+                    <div id="cwcWorkflow" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:border-emerald-300 transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-100">
+                                <i class="fas fa-baby-carriage text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800">Child Welfare (CWC)</h4>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Immunizations & growth monitoring</p>
+                            </div>
+                        </div>
+                        <a id="cwcAction" href="#" class="flex items-center justify-center gap-3 w-full p-4 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-emerald-100">
+                            <i class="fas fa-syringe"></i> Process Vaccination / CWC Record
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-8 py-6 bg-white border-t border-slate-50 flex justify-end">
+                <button onclick="closeActionModal()" class="px-6 py-2 rounded-xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openActionModal(row) {
+    const data = row.dataset;
+    const pregnancies = JSON.parse(data.pregnancies || '[]');
+    
+    const modal = document.getElementById('actionModal');
+    const patientName = document.getElementById('modalPatientName');
+    const patientMeta = document.getElementById('modalPatientMeta');
+    const patientInitial = document.getElementById('modalPatientInitial');
+    
+    patientName.textContent = data.name;
+    patientMeta.textContent = `ID: #${data.id} | ${data.age} Yrs | ${data.gender === 'F' ? 'Female' : 'Male'}`;
+    patientInitial.textContent = data.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+    
+    // ANC Setup
+    const ancPregList = document.getElementById('ancPregnancyList');
+    ancPregList.innerHTML = '';
+    
+    if (pregnancies.length > 0) {
+        pregnancies.forEach(p => {
+            const btn = document.createElement('a');
+            btn.href = `/maternity/anc/arrivals/${data.queId}/receive/`;
+            btn.className = 'flex items-center justify-between p-4 rounded-2xl bg-blue-600 text-white hover:bg-slate-900 transition-all shadow-md shadow-blue-100 group';
+            btn.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="text-[8px] font-black uppercase tracking-widest opacity-70 leading-none mb-1">Active Pregnancy</span>
+                    <span class="font-black text-xs">EDD: ${p.edd} (${p.ga} weeks)</span>
+                </div>
+                <i class="fas fa-chevron-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+            `;
+            ancPregList.appendChild(btn);
+        });
+    } else {
+        const info = document.createElement('div');
+        info.className = 'p-4 rounded-2xl bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-bold text-center';
+        info.textContent = 'No active pregnancy record found for this patient.';
+        ancPregList.appendChild(info);
+    }
+    
+    document.getElementById('ancNewPregnancy').href = `{% url 'maternity:register_pregnancy' %}?patient_id=${data.id}`;
+    
+    // PNC Setup
+    document.getElementById('pncMotherAction').href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
+    document.getElementById('pncBabyAction').href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
+    
+    // CWC Setup
+    document.getElementById('cwcAction').href = `/maternity/vaccination/administer/${data.queId}/`;
+    
+    // Highlight relevant section based on queue category
+    const sections = ['ancWorkflow', 'pncWorkflow', 'cwcWorkflow'];
+    sections.forEach(s => {
+        document.getElementById(s).classList.remove('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
+    });
+    
+    const category = data.category;
+    if (category === 'ANC') {
+        document.getElementById('ancWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
+    } else if (category.includes('PNC')) {
+        document.getElementById('pncWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
+    } else if (category === 'CWC') {
+        document.getElementById('cwcWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
+    }
+    
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeActionModal() {
+    document.getElementById('actionModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+</script>
+{% endblock content %}

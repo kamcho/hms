@@ -26,6 +26,7 @@ urlpatterns = [
     path('newborn/<int:newborn_id>/vaccination/add/', views.record_vaccination, name='record_vaccination'),
     path('vaccination/', views.vaccination_dashboard, name='vaccination_dashboard'),
     path('vaccination/administer/<int:que_id>/', views.administer_vaccine, name='administer_vaccine'),
+    path('visit-queue-center/', views.visit_queue_center, name='visit_queue_center'),
 
     path('referral/<int:referral_id>/print/', views.generate_referral_letter, name='generate_referral_letter'),
     path('pregnancy/<int:pregnancy_id>/discharge/print/', views.generate_discharge_summary, name='generate_discharge_summary'),

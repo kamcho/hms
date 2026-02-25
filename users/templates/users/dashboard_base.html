@@ -170,6 +170,8 @@
                             <span>Inventory</span>
                             <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
                         </a>
+                    {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
                         <div class="submenu" id="inventorySubmenu">
                             <a href="{% url 'inventory:item_list' %}" 
                                hx-get="{% url 'inventory:item_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"

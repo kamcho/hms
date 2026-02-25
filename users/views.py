@@ -13,37 +13,58 @@ from morgue.models import Deceased, MorgueAdmission
 from inpatient.models import Admission, Ward, Bed
 from datetime import datetime, timedelta, date
 
+from .forms import SignUpForm
+
+def get_dashboard_url(user):
+    """Centralized role-based redirection logic."""
+    role = user.role
+    if role == 'Admin':
+        return reverse_lazy('users:dashboard')
+    elif role in ['Receptionist', 'Triage Nurse']:
+        return reverse_lazy('home:reception_dashboard')
+    elif role == 'Doctor':
+        return reverse_lazy('home:opd_dashboard')
+    elif role == 'Nurse':
+        return reverse_lazy('inpatient:dashboard')
+    elif role == 'Pharmacist':
+        return reverse_lazy('home:pharmacy_dashboard')
+    elif role in ['Lab Technician', 'Radiographer']:
+        return reverse_lazy('lab:radiology_dashboard')
+    elif role in ['Accountant', 'SHA Manager']:
+        return reverse_lazy('accounts:accountant_dashboard')
+    elif role == 'Procurement Officer':
+        return reverse_lazy('inventory:item_list')
+    return reverse_lazy('users:dashboard')
+
 class CustomLoginView(LoginView):
     template_name = 'users/login.html'
     redirect_authenticated_user = True
     
-    def form_valid(self, form):
-        # Get the user from the form
-        user = form.get_user()
-        # Log the user in
-        login(self.request, user)
+    def get_success_url(self):
+        return get_dashboard_url(self.request.user)
+
+def signup_view(request):
+    """View for user registration."""
+    if request.user.is_authenticated:
+        return redirect(get_dashboard_url(request.user))
         
-        # Role-based redirection
-        role = user.role
-        if role == 'Admin':
-            return redirect('users:dashboard')
-        elif role in ['Receptionist', 'Triage Nurse']:
-            return redirect('home:reception_dashboard')
-        elif role == 'Doctor':
-            return redirect('home:opd_dashboard')
-        elif role == 'Nurse':
-            return redirect('inpatient:dashboard')
-        elif role == 'Pharmacist':
-            return redirect('home:pharmacy_dashboard')
-        elif role in ['Lab Technician', 'Radiographer']:
-            return redirect('lab:radiology_dashboard')
-        elif role in ['Accountant', 'SHA Manager']:
-            return redirect('accounts:accountant_dashboard')
-        elif role == 'Procurement Officer':
-             return redirect('inventory:item_list')
-             
-        # Redirect to dashboard page after login
-        return redirect('users:dashboard')
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_staff = True  # All current roles require staff permissions
+            user.save()
+            
+            # Log the user in
+            login(request, user)
+            messages.success(request, f'Welcome, {user.first_name}! Your account has been created successfully.')
+            return redirect(get_dashboard_url(user))
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = SignUpForm()
+    
+    return render(request, 'users/signup.html', {'form': form})
 
 @login_required
 def dashboard_view(request):

@@ -251,6 +251,7 @@ class ReferralForm(forms.ModelForm):
         }
 
 from inpatient.models import Ward, Bed
+from .models import Appointments
 class WardForm(forms.ModelForm):
     class Meta:
         model = Ward
@@ -270,3 +271,32 @@ class BedForm(forms.ModelForm):
             'bed_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., B-101'}),
             'bed_type': forms.Select(attrs={'class': 'form-control'}),
         }
+
+class AppointmentForm(forms.ModelForm):
+    """Form for booking patient appointments"""
+    
+    class Meta:
+        model = Appointments
+        fields = ['appointment_date', 'appointment_type']
+        widgets = {
+            'appointment_date': forms.DateTimeInput(attrs={
+                'class': 'clinical-input',
+                'type': 'datetime-local',
+                'placeholder': 'Select date and time'
+            }),
+            'appointment_type': forms.Select(choices=[
+                ('Follow-up', 'Follow-up'),
+                ('Consultation', 'New Consultation'),
+                ('Check-up', 'Routine Check-up'),
+                ('Surgery', 'Surgery Scheduling'),
+                ('Lab Review', 'Lab Results Review'),
+                ('Other', 'Other')
+            ], attrs={'class': 'clinical-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'w-full rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 text-sm font-bold placeholder-slate-400 shadow-sm transition-all bg-slate-50 focus:bg-white px-4 py-3'
+            })

@@ -308,6 +308,111 @@ def pnc_dashboard(request):
 
 
 @login_required
+def visit_queue_center(request):
+    """Centralized Clinical Queue Center for ANC, PNC (Mother & Baby), and CWC"""
+    today = timezone.now().date()
+    search_query = request.GET.get('q', '')
+
+    # 1. Fetch all pending queues for maternity-related departments
+    maternity_queues = PatientQue.objects.filter(
+        sent_to__name__in=['ANC', 'PNC', 'CWC', 'Maternity'],
+        visit__visit_date__date=today,
+        status='PENDING'
+    ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
+
+    # 2. Process and categorize queue entries
+    processed_queue = []
+    
+    for que in maternity_queues:
+        patient = que.visit.patient
+        que.category = 'Other'
+        que.arrival_type = None
+        que.linked_pregnancy = None
+        que.linked_newborn = None
+        que.is_high_risk = False
+        que.alerts = []
+
+        # Find all active pregnancies for this patient to support modal choices
+        que.active_pregnancies = []
+        for p in Pregnancy.objects.filter(patient=patient, status='Active'):
+            que.active_pregnancies.append({
+                'id': p.id,
+                'edd': p.edd,
+                'lmp': p.lmp,
+                'gestational_age_weeks': p.gestational_age_weeks
+            })
+
+        # Determine Category and Arrival Type (Default label based on department)
+        dept_name = que.sent_to.name.upper() if que.sent_to else ''
+        
+        # ANC Case
+        if dept_name == 'ANC' or (dept_name == 'MATERNITY' and que.visit.visit_type == 'OUT-PATIENT' and patient.gender == 'F'):
+            que.category = 'ANC'
+            # For the dashboard's initial display, we still use the 'main' pregnancy if it exists
+            que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
+            if que.linked_pregnancy:
+                que.alerts = que.linked_pregnancy.get_active_alerts()
+                que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
+            else:
+                que.arrival_type = 'Registration Needed'
+
+        # PNC Case
+        elif dept_name == 'PNC':
+            if patient.gender == 'F' and patient.age >= 12:
+                que.category = 'PNC (Mother)'
+                que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').order_by('-created_at').first()
+                if que.linked_pregnancy:
+                    que.alerts = que.linked_pregnancy.get_active_alerts()
+                    que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
+            elif patient.age <= 5:
+                que.category = 'PNC (Baby)'
+                que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                if not que.linked_newborn:
+                    # Fuzzy match fallback
+                    que.linked_newborn = Newborn.objects.filter(
+                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                        birth_datetime__date=patient.date_of_birth
+                    ).first()
+
+        # CWC Case
+        elif dept_name == 'CWC':
+            que.category = 'CWC'
+            if patient.age <= 5:
+                que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                if not que.linked_newborn:
+                    que.linked_newborn = Newborn.objects.filter(
+                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                        birth_datetime__date=patient.date_of_birth
+                    ).first()
+            if que.linked_newborn:
+                que.linked_pregnancy = que.linked_newborn.delivery.pregnancy
+
+        # Filtering by search query
+        if search_query:
+            if search_query.lower() not in patient.full_name.lower() and search_query not in str(patient.id):
+                continue
+
+        processed_queue.append(que)
+
+    # 3. Stats for the Queue Center
+    stats = {
+        'total': len(processed_queue),
+        'anc': sum(1 for q in processed_queue if q.category == 'ANC'),
+        'pnc': sum(1 for q in processed_queue if 'PNC' in q.category),
+        'cwc': sum(1 for q in processed_queue if q.category == 'CWC'),
+        'high_risk': sum(1 for q in processed_queue if q.is_high_risk),
+    }
+
+    context = {
+        'queue': processed_queue,
+        'stats': stats,
+        'search_query': search_query,
+        'today': today,
+    }
+    return render(request, 'maternity/visit_queue_center.html', context)
+
+
+@login_required
 def register_pregnancy(request):
     """Register new pregnancy"""
     from .forms import PregnancyRegistrationForm
@@ -1536,6 +1641,24 @@ def administer_vaccine(request, que_id):
     
     # Identify context: Newborn or Just Patient
     newborn = Newborn.objects.filter(patient_profile=patient).first()
+    
+    # Automated CWC Billing
+    try:
+        cwc_service = Service.objects.filter(name__iexact='CWC', is_active=True).first()
+        if cwc_service:
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            # Check if already billed
+            if not InvoiceItem.objects.filter(invoice=invoice, service=cwc_service).exists():
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=cwc_service,
+                    name=cwc_service.name,
+                    unit_price=cwc_service.price,
+                    quantity=1
+                )
+                messages.info(request, f"Automated billing: {cwc_service.name} service charge added.")
+    except Exception as e:
+        print(f"Error during automated CWC billing: {e}")
     
     if request.method == 'POST':
         if 'administer_vaccine' in request.POST:
