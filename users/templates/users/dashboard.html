@@ -27,8 +27,7 @@
                     <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                         <i class="fas fa-user-injured text-xl"></i>
                     </div>
-                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">+{{
-                    new_patients_30d }} New</span>
+                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">+{{ new_patients_30d }} New</span>
                 </div>
                 <div class="text-3xl font-black text-slate-900 mb-1">{{ total_patients }}</div>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Patients</div>
@@ -39,8 +38,7 @@
                     <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-all">
                         <i class="fas fa-skull-crossbones text-xl"></i>
                     </div>
-                    <span class="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{
-                    currently_admitted_deceased }} Occupied</span>
+                    <span class="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ currently_admitted_deceased }} Occupied</span>
                 </div>
                 <div class="text-3xl font-black text-slate-900 mb-1">{{ total_deceased }}</div>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Morgue Records</div>
@@ -51,8 +49,7 @@
                     <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
                         <i class="fas fa-check-circle text-xl"></i>
                     </div>
-                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{
-                    released_deceased_30d }} (30d)</span>
+                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ released_deceased_30d }} (30d)</span>
                 </div>
                 <div class="text-3xl font-black text-slate-900 mb-1">{{ released_deceased_30d }}</div>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Recent Releases</div>
@@ -63,8 +60,7 @@
                     <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
                         <i class="fas fa-file-invoice-dollar text-xl"></i>
                     </div>
-                    <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{
-                    total_pending_invoices }} Pending</span>
+                    <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ total_pending_invoices }} Pending</span>
                 </div>
                 <div class="text-2xl font-black text-slate-900 mb-1">${{ total_pending_amount|floatformat:2 }}</div>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Outstanding Revenue</div>
@@ -193,19 +189,16 @@
                                             <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs uppercase">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
                                             <div>
                                                 <div class="text-sm font-black text-slate-900">
-                                                    {{ patient.first_name }} {{
-                                                    patient.last_name }}
+                                                    {{ patient.first_name }} {{ patient.last_name }}
                                                 </div>
                                                 <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                                    {{
-                                                    patient.get_gender_display }} • {{ patient.age }} yrs
+                                                    {{ patient.get_gender_display }} • {{ patient.age }} yrs
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 font-mono text-xs font-bold text-slate-500">
-                                        ID: {{
-                                        patient.id_number|default:"N/A" }}
+                                        ID: {{ patient.id_number|default:"N/A" }}
                                     </td>
                                     <td class="px-4 py-4 text-xs font-black text-slate-900">{{ patient.phone }}</td>
                                     <td class="px-4 py-4 text-xs text-slate-400">{{ patient.created_at|date:"d M, H:i" }}</td>
@@ -244,25 +237,21 @@
                                             <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-xs uppercase">{{ record.first_name|first }}{{ record.last_name|first }}</div>
                                             <div>
                                                 <div class="text-sm font-black text-slate-900">
-                                                    {{ record.first_name }} {{
-                                                    record.last_name }}
+                                                    {{ record.first_name }} {{ record.last_name }}
                                                 </div>
                                                 <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                                    {{
-                                                    record.get_sex_display }} • {{ record.get_deceased_type_display }}
+                                                    {{ record.get_sex_display }} • {{ record.get_deceased_type_display }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 text-xs font-bold text-slate-500">
-                                        {{ record.town }}, {{
-                                        record.residence }}
+                                        {{ record.town }}, {{ record.residence }}
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="text-xs font-black text-slate-900">{{ record.date_of_death|date:"d M Y" }}</div>
                                         <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                            {{
-                                            record.cause_of_death|truncatechars:20 }}
+                                            {{ record.cause_of_death|truncatechars:20 }}
                                         </div>
                                     </td>
                                     <td class="px-4 py-4">
@@ -303,29 +292,24 @@
                                     <td class="px-4 py-4">
                                         <div class="text-sm font-black text-slate-900">
                                             {% if invoice.patient %}
-                                                {{ invoice.patient.first_name }} {{
-                                                invoice.patient.last_name }}
+                                                {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}
                                             {% elif invoice.deceased %}
-                                                {{
-                                                invoice.deceased.first_name }} {{ invoice.deceased.last_name }}
+                                                {{ invoice.deceased.first_name }} {{ invoice.deceased.last_name }}
                                             {% endif %}
                                         </div>
                                         <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                            Created {{
-                                            invoice.created_at|date:"d M Y" }}
+                                            Created {{ invoice.created_at|date:"d M Y" }}
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 font-mono text-xs font-bold text-indigo-600 uppercase">
-                                        INV-{{
-                                        invoice.id }}
+                                        INV-{{ invoice.id }}
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="text-sm font-black text-slate-900">${{ invoice.balance|floatformat:2 }}</div>
                                         <div class="text-[10px] font-bold text-slate-400 uppercase">Outstanding</div>
                                     </td>
                                     <td class="px-4 py-4">
-                                        <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{
-                                        invoice.get_status_display }}</span>
+                                        <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ invoice.get_status_display }}</span>
                                     </td>
                                     <td class="px-4 py-4 text-right">
                                         <a href="{% url 'accounts:invoice_detail' invoice.pk %}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-600 hover:text-indigo-600 transition-all">
