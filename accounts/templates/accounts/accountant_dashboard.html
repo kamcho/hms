@@ -346,8 +346,6 @@
         }
     }
     </style>
-{% endblock %}
-{% block content %}
     <div>
         <!-- Header -->
         <div class="page-header">
@@ -486,18 +484,15 @@
                 <ul class="custom-list">
                     <li class="custom-list-item">
                         <span>0 - 7 Days</span>
-                        <span class="custom-badge badge-success">Ksh {{ aging_debtors|get_item:'0-7 Days'|format_number:2
-                        }}</span>
+                        <span class="custom-badge badge-success">Ksh {{ aging_debtors|get_item:'0-7 Days'|format_number:2 }}</span>
                     </li>
                     <li class="custom-list-item">
                         <span>8 - 30 Days</span>
-                        <span class="custom-badge badge-warning">Ksh {{ aging_debtors|get_item:'8-30 Days'|format_number:2
-                        }}</span>
+                        <span class="custom-badge badge-warning">Ksh {{ aging_debtors|get_item:'8-30 Days'|format_number:2 }}</span>
                     </li>
                     <li class="custom-list-item">
                         <span>30+ Days</span>
-                        <span class="custom-badge badge-danger">Ksh {{ aging_debtors|get_item:'30+ Days'|format_number:2
-                        }}</span>
+                        <span class="custom-badge badge-danger">Ksh {{ aging_debtors|get_item:'30+ Days'|format_number:2 }}</span>
                     </li>
                 </ul>
             </div>

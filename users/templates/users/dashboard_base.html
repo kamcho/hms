@@ -25,38 +25,38 @@
                 <div class="sidebar-menu">
                    
                     <a href="{% url 'comms:call_center' %}" 
-                       hx-get="{% url 'comms:call_center' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                      
                        class="menu-item {% if request.resolver_match.namespace == 'comms' %}active{% endif %}">
                         <i class="fas fa-headset"></i>
                         <span>Call Center</span>
                     </a>
                     {% if user.role == 'Doctor' %}
                         <a href="{% url 'home:opd_dashboard' %}" 
-                           hx-get="{% url 'home:opd_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
                             <i class="fas fa-stethoscope"></i>
                             <span>OPD</span>
                         </a>
                         <a href="{% url 'home:appointments_dashboard' %}" 
-                           hx-get="{% url 'home:appointments_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'appointments_dashboard' %}active{% endif %}">
                             <i class="fas fa-calendar-check"></i>
                             <span>Appointments</span>
                         </a>
                         <a href="{% url 'inpatient:dashboard' %}" 
-                           hx-get="{% url 'inpatient:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Inpatient</span>
                         </a>
                         <a href="{% url 'home:patient_list' %}" 
-                           hx-get="{% url 'home:patient_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Patients</span>
                         </a>
                         <a href="{% url 'inventory:create_request' %}" 
-                           hx-get="{% url 'inventory:create_request' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item">
                             <i class="fas fa-plus-circle"></i>
                             <span>New Request</span>
@@ -64,26 +64,26 @@
                     {% endif %}
                     {% if user.role == 'Receptionist' %}
                         <a href="{% url 'home:reception_dashboard' %}" 
-                           hx-get="{% url 'home:reception_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'reception_dashboard' %}active{% endif %}">
                             <i class="fas fa-hospital"></i>
                             <span>Reception Dashboard</span>
                         </a>
                         
                         <a href="{% url 'home:patient_list' %}" 
-                           hx-get="{% url 'home:patient_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Patients</span>
                         </a>
                         <a href="{% url 'home:patient_create' %}" 
-                           hx-get="{% url 'home:patient_create' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'patient_create' %}active{% endif %}">
                             <i class="fas fa-user-plus"></i>
                             <span>Add Patient</span>
                         </a>
                         <a href="{% url 'accounts:discharge_dashboard' %}" 
-                           hx-get="{% url 'accounts:discharge_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'discharge_dashboard' %}active{% endif %}">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Discharge Billing</span>
@@ -91,7 +91,7 @@
                     {% endif %}
                     {% if  user.role == 'Triage Nurse' %}
                         <a href="{% url 'home:reception_dashboard' %}" 
-                           hx-get="{% url 'home:reception_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'triage_dashboard' %}active{% endif %}">
                             <i class="fas fa-heartbeat"></i>
                             <span>Triage Dashboard</span>
@@ -99,13 +99,13 @@
                     {% endif %}
                     {% if user.role ==  'Morgue Attendant' %}
                         <a href="{% url 'morgue:dashboard' %}" 
-                           hx-get="{% url 'morgue:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}">
                             <i class="fas fa-skull-crossbones"></i>
                             <span>Morgue</span>
                         </a>
                     {% elif user.role == 'Admin' %}
-                     <a href="{% url 'accounts:service_list' %}" hx-get="{% url 'accounts:service_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true" class="menu-item {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
+                     <a href="{% url 'accounts:service_list' %}" class="menu-item {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
                             <i class="fas fa-concierge-bell"></i>
                             <span>Services</span>
                         </a>
@@ -116,13 +116,13 @@
                         </a>
                         <div class="submenu" id="morgueSubmenu">
                             <a href="{% url 'morgue:dashboard' %}" 
-                               hx-get="{% url 'morgue:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'morgue' %}active{% endif %}">
                                 <i class="fas fa-th-large"></i>
                                 <span>Dashboard</span>
                             </a>
                             <a href="{% url 'morgue:morgue_management' %}" 
-                               hx-get="{% url 'morgue:morgue_management' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'morgue_management' %}active{% endif %}">
                                 <i class="fas fa-snowflake"></i>
                                 <span>Management</span>
@@ -131,7 +131,7 @@
                     {% endif %}
                     {% if user.role == 'Radiographer' %}
                         <a href="{% url 'lab:radiology_dashboard' %}" 
-                           hx-get="{% url 'lab:radiology_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
                             <i class="fas fa-flask"></i>
                             <span>Radiology</span>
@@ -139,7 +139,7 @@
                     {% endif %}
                      {% if user.role == 'Lab Technician' %}
                         <a href="{% url 'lab:radiology_dashboard' %}" 
-                           hx-get="{% url 'lab:radiology_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.namespace == 'lab' %}active{% endif %}">
                             <i class="fas fa-flask"></i>
                             <span>Laboratory</span>
@@ -148,7 +148,7 @@
                    
                     {% if user.role == 'Pharmacist' %}
                         <a href="{% url 'home:pharmacy_dashboard' %}" 
-                           hx-get="{% url 'home:pharmacy_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-pills"></i>
                             <span>Pharmacy</span>
@@ -157,13 +157,19 @@
                     {% endif %}
                     {% if user.role == 'Admin' %}
                         <a href="{% url 'home:ambulance_dashboard' %}" 
-                           hx-get="{% url 'home:ambulance_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'ambulance_dashboard' %}active{% endif %}">
                             <i class="fas fa-ambulance"></i>
                             <span>Ambulance</span>
                         </a>
+                        <a href="{% url 'home:opd_dashboard' %}" 
+                          
+                           class="menu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
+                            <i class="fas fa-hospital-user"></i>
+                            <span>OPD</span>
+                        </a>
                         <a href="{% url 'home:ward_management' %}" 
-                           hx-get="{% url 'home:ward_management' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'ward_management' %}active{% endif %}">
                             <i class="fas fa-hospital-user"></i>
                             <span>Ward Management</span>
@@ -178,25 +184,25 @@
                     {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
                         <div class="submenu" id="inventorySubmenu">
                             <a href="{% url 'inventory:item_list' %}" 
-                               hx-get="{% url 'inventory:item_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'item_list' %}active{% endif %}">
                                 <i class="fas fa-box-open"></i>
                                 <span>Inventories</span>
                             </a>
                             <a href="{% url 'inventory:procurement_dashboard' %}" 
-                               hx-get="{% url 'inventory:procurement_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'procurement_dashboard' %}active{% endif %}">
                                 <i class="fas fa-truck-loading"></i>
                                 <span>Procurement & Stock</span>
                             </a>
                             <a href="{% url 'inventory:request_list' %}" 
-                               hx-get="{% url 'inventory:request_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
                                 <i class="fas fa-list"></i>
                                 <span>View Requests</span>
                             </a>
                             <a href="{% url 'inventory:transfer_stock' %}" 
-                               hx-get="{% url 'inventory:transfer_stock' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'transfer_stock' %}active{% endif %}">
                                 <i class="fas fa-exchange-alt"></i>
                                 <span>Stock Transfer</span>
@@ -205,7 +211,7 @@
                     {% endif %}
                     {% if user.role == 'Nurse' %}
                         <a href="{% url 'inpatient:dashboard' %}" 
-                           hx-get="{% url 'inpatient:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Inpatient</span>
@@ -217,31 +223,31 @@
                         </a>
                         <div class="submenu" id="maternitySubmenu">
                             <a href="{% url 'maternity:visit_queue_center' %}" 
-                               hx-get="{% url 'maternity:visit_queue_center' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'visit_queue_center' %}active{% endif %}">
                                 <i class="fas fa-users-cog"></i>
                                 <span>Visit Queue Center</span>
                             </a>
                             <a href="{% url 'maternity:dashboard' %}" 
-                               hx-get="{% url 'maternity:dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'maternity' %}active{% endif %}">
                                 <i class="fas fa-bed"></i>
                                 <span>Ward Management</span>
                             </a>
                             <a href="{% url 'maternity:anc_dashboard' %}" 
-                               hx-get="{% url 'maternity:anc_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'anc_dashboard' %}active{% endif %}">
                                 <i class="fas fa-hand-holding-heart"></i>
                                 <span>ANC Dashboard</span>
                             </a>
                             <a href="{% url 'maternity:pnc_dashboard' %}" 
-                               hx-get="{% url 'maternity:pnc_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'pnc_dashboard' %}active{% endif %}">
                                 <i class="fas fa-baby-carriage"></i>
                                 <span>PNC Dashboard</span>
                             </a>
                             <a href="{% url 'maternity:vaccination_dashboard' %}" 
-                               hx-get="{% url 'maternity:vaccination_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                              
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'vaccination_dashboard' %}active{% endif %}">
                                 <i class="fas fa-syringe"></i>
                                 <span>Vaccination Clinic</span>
@@ -250,24 +256,29 @@
                     {% endif %}
                     {% if user.role == 'Admin' or user.role == 'Accountant'  %}
                         <a href="{% url 'accounts:expense_dashboard' %}" 
-                           hx-get="{% url 'accounts:expense_dashboard' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'expense_dashboard' %}active{% endif %}">
                             <i class="fas fa-money-bill-wave"></i>
                             <span>Expenses & Purchases</span>
                         </a>
                          <a href="{% url 'accounts:insurance_manager' %}" 
-                           hx-get="{% url 'accounts:insurance_manager' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Insurance Manager</span>
                         </a>
                        
-                        
+                        <a href="{% url 'accounts:accountant_dashboard' %}" 
+                          
+                           class="menu-item {% if request.resolver_match.url_name == 'accountant_dashboard' %}active{% endif %}">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Accountant Dashboard</span>
+                        </a>
                     {% endif %}
                     {% if user.role == 'SHA Manager' %}
                         
                         <a href="{% url 'accounts:insurance_manager' %}" 
-                           hx-get="{% url 'accounts:insurance_manager' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item {% if request.resolver_match.url_name == 'insurance_manager' %}active{% endif %}">
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Insurance Manager</span>
@@ -277,12 +288,12 @@
                 </div>
                 <div class="sidebar-footer">
                     {% if user.role != 'Doctors' %}
-                        <a href="" hx-get="{% url 'accounts:service_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true" class="menu-item {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
+                        <a href="javascript:void(0)" class="menu-item">
                             <i class="fas fa-concierge-bell"></i>
                             <span>Help ? 07-421-344-31</span>
                         </a>
                         <a href="{% url 'users:profile' %}" 
-                           hx-get="{% url 'users:profile' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
+                          
                            class="menu-item">
                             <i class="fas fa-user"></i>
                             <span>Profile</span>
@@ -337,9 +348,6 @@
             </div>
         </div>
         {% block modals %}{% endblock %}
-
-        <!-- HTMX for Persistent Navigation (Prevents full page reloads/call drops) -->
-        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
         <!-- Global VoIP Elements -->
         <audio id="remoteAudio" autoplay></audio>
