@@ -105,6 +105,10 @@
                             <span>Morgue</span>
                         </a>
                     {% elif user.role == 'Admin' %}
+                     <a href="{% url 'accounts:service_list' %}" hx-get="{% url 'accounts:service_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true" class="menu-item {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
+                            <i class="fas fa-concierge-bell"></i>
+                            <span>Services</span>
+                        </a>
                         <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'morgue' %}active{% endif %}" id="morgueMenu">
                             <i class="fas fa-skull-crossbones"></i>
                             <span>Morgue</span>
@@ -251,6 +255,7 @@
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Insurance Manager</span>
                         </a>
+                       
                         
                     {% endif %}
                     {% if user.role == 'SHA' %}
@@ -266,7 +271,10 @@
                 </div>
                 <div class="sidebar-footer">
                     {% if user.role != 'Doctors' %}
-                        
+                        <a href="" hx-get="{% url 'accounts:service_list' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true" class="menu-item {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
+                            <i class="fas fa-concierge-bell"></i>
+                            <span>Help ? 07-421-344-31</span>
+                        </a>
                         <a href="{% url 'users:profile' %}" 
                            hx-get="{% url 'users:profile' %}" hx-target="#mainContent" hx-select="#mainContent" hx-swap="outerHTML" hx-push-url="true"
                            class="menu-item">

@@ -101,6 +101,15 @@
         transition: all 0.3s ease;
     }
 
+    .inventory-table tr.row-needs-update {
+        background-color: rgba(220, 38, 38, 0.08);
+        border-left: 3px solid rgba(220, 38, 38, 0.4);
+    }
+
+    .inventory-table tr.row-needs-update:hover {
+        background-color: rgba(220, 38, 38, 0.12);
+    }
+
     .badge-category {
         background: var(--primary-gradient);
         color: white;
@@ -261,7 +270,7 @@
             </thead>
             <tbody>
                 {% for item in items %}
-                    <tr onclick="window.location='{% url 'inventory:inventory_distribution' item.id %}'" style="cursor: pointer;">
+                    <tr{% if not item.is_updated %} class="row-needs-update"{% endif %} onclick="window.location='{% url 'inventory:inventory_distribution' item.id %}'" style="cursor: pointer;">
                         <td>
                             <a href="{% url 'inventory:inventory_distribution' item.id %}" style="text-decoration: none; color: var(--text-primary); font-weight: 600; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 6px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.background='transparent'">{{ item.name }}</a>
                         </td>

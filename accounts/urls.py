@@ -33,4 +33,10 @@ urlpatterns = [
     # Procedure APIs
     path('api/procedures/search/', views.search_procedures, name='search_procedures'),
     path('api/procedures/charge/', views.charge_procedure, name='charge_procedure'),
+
+    # Service Management
+    path('services/', views.service_list, name='service_list'),
+    path('services/create/', views.create_service, name='create_service'),
+    path('services/<int:pk>/edit/', views.edit_service, name='edit_service'),
+    path('services/<int:pk>/toggle/', views.toggle_service, name='toggle_service'),
 ]

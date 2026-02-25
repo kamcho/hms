@@ -15,7 +15,7 @@ from .models import (
 )
 from .forms import (
     ExpenseForm, InventoryPurchaseForm, ExpenseCategoryForm, 
-    SupplierInvoiceForm, SupplierPaymentForm
+    SupplierInvoiceForm, SupplierPaymentForm, ServiceForm
 )
 from home.models import Patient, Departments, Visit
 from morgue.models import Deceased, MorgueAdmission
@@ -1088,3 +1088,98 @@ def charge_procedure(request):
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ─── Service Management ──────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_accountant)
+def service_list(request):
+    """List all services with search and filter"""
+    services = Service.objects.all().select_related('department')
+
+    search = request.GET.get('search', '')
+    department_filter = request.GET.get('department', '')
+    status_filter = request.GET.get('status', '')
+
+    if search:
+        services = services.filter(
+            Q(name__icontains=search) | Q(department__name__icontains=search)
+        )
+    if department_filter:
+        services = services.filter(department_id=department_filter)
+    if status_filter == 'active':
+        services = services.filter(is_active=True)
+    elif status_filter == 'inactive':
+        services = services.filter(is_active=False)
+
+    from home.models import Departments
+    context = {
+        'services': services,
+        'form': ServiceForm(),
+        'search_query': search,
+        'department_filter': department_filter,
+        'status_filter': status_filter,
+        'departments': Departments.objects.all().order_by('name'),
+        'total_services': services.count(),
+        'active_count': services.filter(is_active=True).count(),
+        'inactive_count': services.filter(is_active=False).count(),
+    }
+    return render(request, 'accounts/service_manager.html', context)
+
+
+@login_required
+@user_passes_test(is_accountant)
+@require_POST
+def create_service(request):
+    """Create a new service"""
+    form = ServiceForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"Service '{form.cleaned_data['name']}' created successfully.")
+    else:
+        messages.error(request, f"Error creating service: {form.errors.as_text()}")
+    return redirect('accounts:service_list')
+
+
+@login_required
+@user_passes_test(is_accountant)
+def edit_service(request, pk):
+    """Edit a service — GET returns JSON, POST updates"""
+    service = get_object_or_404(Service, pk=pk)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'id': service.id,
+            'name': service.name,
+            'department': service.department_id,
+            'price': float(service.price),
+            'description': service.description or '',
+            'is_active': service.is_active,
+        })
+
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, instance=service)
+        if form.is_valid():
+            svc = form.save(commit=False)
+            svc.is_updated = True
+            svc.save()
+            messages.success(request, f"Service '{service.name}' updated successfully.")
+        else:
+            messages.error(request, f"Error updating service: {form.errors.as_text()}")
+        return redirect('accounts:service_list')
+
+    return HttpResponse(status=405)
+
+
+@login_required
+@user_passes_test(is_accountant)
+@require_POST
+def toggle_service(request, pk):
+    """Toggle a service's active status"""
+    service = get_object_or_404(Service, pk=pk)
+    service.is_active = not service.is_active
+    service.save()
+    status_text = 'activated' if service.is_active else 'deactivated'
+    messages.success(request, f"Service '{service.name}' {status_text}.")
+    return redirect('accounts:service_list')

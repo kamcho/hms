@@ -1,5 +1,5 @@
 from django import forms
-from .models import Expense, InventoryPurchase, ExpenseCategory, SupplierInvoice, SupplierPayment
+from .models import Expense, InventoryPurchase, ExpenseCategory, SupplierInvoice, SupplierPayment, Service
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
@@ -59,4 +59,16 @@ class ExpenseCategoryForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+class ServiceForm(forms.ModelForm):
+    class Meta:
+        model = Service
+        fields = ['name', 'department', 'price', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. General Consultation'}),
+            'department': forms.Select(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional description'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

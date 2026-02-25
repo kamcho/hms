@@ -74,6 +74,7 @@ def update_item_price(request, item_id):
             raise ValueError("Price cannot be negative")
         old_price = item.selling_price
         item.selling_price = new_price_val
+        item.is_updated = True
         item.save()
         messages.success(request, f'Price for "{item.name}" updated successfully from KES {old_price} to KES {new_price_val}.')
     except (ValueError, TypeError):

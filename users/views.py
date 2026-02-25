@@ -52,6 +52,7 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
             user.is_staff = True  # All current roles require staff permissions
             user.save()
             

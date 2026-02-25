@@ -44,6 +44,7 @@ class InventoryItem(models.Model):
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Selling price per dispensing unit")
     buying_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Cost price per dispensing unit")
     reorder_level = models.IntegerField(default=10, help_text="Minimum stock level before reordering")
+    is_updated = models.BooleanField(default=False, help_text="Set to True once the item has been reviewed/updated")
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

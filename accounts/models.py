@@ -21,6 +21,7 @@ class Service(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    is_updated = models.BooleanField(default=False, help_text="Set to True once the service has been reviewed/updated")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
