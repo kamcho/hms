@@ -54,6 +54,13 @@ class SupplierForm(forms.ModelForm):
     class Meta:
         model = Supplier
         fields = ['name', 'contact_person', 'phone', 'email', 'address']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Medical Supplies Ltd'}),
+            'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Jane Smith'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 0712345678'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'e.g. info@supplier.com'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Physical office location'}),
+        }
 
 class StockRecordForm(forms.ModelForm):
     class Meta:

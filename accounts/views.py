@@ -15,7 +15,7 @@ from .models import (
 )
 from .forms import (
     ExpenseForm, InventoryPurchaseForm, ExpenseCategoryForm, 
-    SupplierInvoiceForm, SupplierPaymentForm, ServiceForm
+    SupplierInvoiceForm, SupplierPaymentForm, ServiceForm, SupplierForm
 )
 from home.models import Patient, Departments, Visit
 from morgue.models import Deceased, MorgueAdmission
@@ -759,6 +759,7 @@ def expense_dashboard(request):
         'category_form': ExpenseCategoryForm(),
         'invoice_form': SupplierInvoiceForm(),
         'payment_form': SupplierPaymentForm(),
+        'supplier_form': SupplierForm(),
         'from_date': from_date,
         'to_date': to_date,
         'today': today,
@@ -818,6 +819,18 @@ def add_expense_category(request):
             messages.success(request, "Expense category added.")
         else:
             messages.error(request, "Error adding category.")
+    return redirect('accounts:expense_dashboard')
+
+@login_required
+@user_passes_test(is_accountant)
+def add_supplier(request):
+    if request.method == 'POST':
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Supplier '{form.cleaned_data['name']}' added successfully.")
+        else:
+            messages.error(request, f"Error adding supplier: {form.errors}")
     return redirect('accounts:expense_dashboard')
 
 @login_required

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import LabResult, LabReport, ServiceParameters
+from .models import LabResult, LabReport, ServiceParameters, AmbulanceCharge
 from accounts.models import Invoice
 
 User = get_user_model()
@@ -51,4 +51,13 @@ class ServiceParameterForm(forms.ModelForm):
             'value': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Result Value'}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unit (e.g. g/dL)'}),
             'ranges': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Reference Range (e.g. 12-16)'}),
+        }
+class AmbulanceRouteForm(forms.ModelForm):
+    class Meta:
+        model = AmbulanceCharge
+        fields = ['from_location', 'to_location', 'price']
+        widgets = {
+            'from_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'From Location'}),
+            'to_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'To Location'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }

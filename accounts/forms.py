@@ -1,5 +1,6 @@
 from django import forms
 from .models import Expense, InventoryPurchase, ExpenseCategory, SupplierInvoice, SupplierPayment, Service
+from inventory.forms import SupplierForm
 
 class ExpenseForm(forms.ModelForm):
     class Meta:

@@ -15,6 +15,7 @@ from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation,
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
+from lab.forms import AmbulanceRouteForm
 from inpatient.models import Admission
 from morgue.models import MorgueAdmission
 from .forms import EmergencyContactForm, PatientForm, ReferralForm, AppointmentForm
@@ -2637,8 +2638,22 @@ def ambulance_dashboard(request):
     from django.utils import timezone
     import json
 
-    # Handle New Trip Creation
+    # Handle New Trip Creation / New Route
     if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add_route':
+            try:
+                route_form = AmbulanceRouteForm(request.POST)
+                if route_form.is_valid():
+                    route_form.save()
+                    messages.success(request, 'New ambulance route added successfully.')
+                else:
+                    messages.error(request, 'Error adding route. Please check the form.')
+            except Exception as e:
+                messages.error(request, f'Error creating route: {str(e)}')
+            return redirect('home:ambulance_dashboard')
+            
         try:
             patient_id = request.POST.get('patient')
             route_id = request.POST.get('route')
@@ -2753,6 +2768,7 @@ def ambulance_dashboard(request):
         'activities': activities,
         'routes': routes,
         'patients': patients,
+        'route_form': AmbulanceRouteForm(),
         'chart_labels': json.dumps(dates),
         'chart_counts': json.dumps(counts),
         'chart_revenues': json.dumps(revenues),

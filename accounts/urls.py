@@ -19,6 +19,7 @@ urlpatterns = [
     path('expenses/category/add/', views.add_expense_category, name='add_expense_category'),
     path('expenses/invoice/add/', views.add_supplier_invoice, name='add_supplier_invoice'),
     path('expenses/payment/add/', views.record_supplier_payment, name='record_supplier_payment'),
+    path('expenses/supplier/add/', views.add_supplier, name='add_supplier'),
 
     # Discharge Billing
     path('discharge/dashboard/', views.discharge_billing_dashboard, name='discharge_dashboard'),
