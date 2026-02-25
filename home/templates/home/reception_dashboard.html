@@ -1053,10 +1053,8 @@
                                                 </td>
                                                 <td>
                                                     <div class="time-cell">
-                                                        <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M
-                                                        d, Y" }}
-                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{
-                                                        admission.admission_datetime|date:"H:i" }}</span>
+                                                        <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M d, Y" }}
+                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admission_datetime|date:"H:i" }}</span>
                                                     </div>
                                                 </td>
                                                 <td class="text-right">
@@ -1132,14 +1130,12 @@
                                         <td>
                                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                                 <span style="font-weight: 600;">{{ patient.age }} yrs</span>
-                                                <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{
-                                                patient.get_gender_display }}</span>
+                                                <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{ patient.get_gender_display }}</span>
                                             </div>
                                         </td>
                                         <td>
                                             <div style="font-size: 0.85rem; color: var(--text-primary);">
-                                                <i class="fas fa-phone-alt" style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{
-                                                patient.phone }}
+                                                <i class="fas fa-phone-alt" style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{ patient.phone }}
                                             </div>
                                         </td>
                                         <td>
