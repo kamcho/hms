@@ -209,7 +209,7 @@
                             </a>
                         </div>
                     {% endif %}
-                    {% if user.role == 'Nurse' %}
+                    {% if user.role == 'Nurse' or user.role == 'Admin' %}
                         <a href="{% url 'inpatient:dashboard' %}" 
                           
                            class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">

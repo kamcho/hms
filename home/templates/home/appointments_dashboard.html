@@ -188,9 +188,15 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn-consult-start" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                            View Profile <i class="fas fa-chevron-right"></i>
-                                        </a>
+                                        {% if not item.is_completed %}
+                                            <a href="{% url 'home:mark_appointment_attended' item.id %}" class="btn-consult-start" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #10b981; border: none;">
+                                                Attend & View Profile <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn-consult-start" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--primary-indigo);">
+                                                View Profile <i class="fas fa-search"></i>
+                                            </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% empty %}

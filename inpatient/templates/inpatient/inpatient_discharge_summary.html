@@ -8,9 +8,14 @@
             <a href="{% url 'home:patient_detail' discharge.admission.patient.pk %}" class="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-all">
                 <i class="fas fa-arrow-left"></i> Patient Profile
             </a>
-            <button onclick="window.print()" class="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2">
-                <i class="fas fa-print"></i> Generate PDF / Print
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="window.print()" class="px-6 py-3 bg-white border border-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2">
+                    <i class="fas fa-print"></i> Quick Print
+                </button>
+                <a href="{% url 'inpatient:discharge_summary_print' discharge.id %}" target="_blank" class="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2">
+                    <i class="fas fa-file-contract"></i> Print Full Official Form
+                </a>
+            </div>
         </div>
     </div>
     <!-- Printable Document -->
@@ -70,12 +75,12 @@
                             </div>
                             <div>
                                 <div class="text-[9px] font-bold text-slate-400 uppercase">Discharged</div>
-                                <div class="text-sm font-bold text-slate-900">{{ discharge.discharged_at|date:"d M Y" }}</div>
+                                <div class="text-sm font-bold text-slate-900">{{ discharge.discharge_date|date:"d M Y" }}</div>
                             </div>
                         </div>
                         <div>
                             <div class="text-[9px] font-bold text-slate-400 uppercase">Discharge Time</div>
-                            <div class="text-sm font-bold text-slate-900">{{ discharge.discharged_at|date:"H:i" }} Hours</div>
+                            <div class="text-sm font-bold text-slate-900">{{ discharge.discharge_date|date:"H:i" }} Hours</div>
                         </div>
                     </div>
                 </div>
@@ -83,29 +88,109 @@
 
             <!-- Clinical Block -->
             <div class="space-y-8 mb-10">
-                <!-- Diagnosis -->
-                <div class="border-2 border-slate-900 px-6 py-5">
-                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <i class="fas fa-stethoscope"></i> Final Clinical Diagnosis
-                    </h6>
-                    <p class="text-base font-black text-slate-900 leading-tight">{{ discharge.final_diagnosis }}</p>
+                <!-- Provisional & Final Diagnosis -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="border border-slate-200 px-6 py-5">
+                        <h6 class="text-[10px] font-black text-slate-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                            Provisional Diagnosis
+                        </h6>
+                        <p class="text-sm font-bold text-slate-600 leading-tight">{{ discharge.provisional_diagnosis|default:"N/A" }}</p>
+                    </div>
+                    <div class="border-2 border-slate-900 px-6 py-5">
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <i class="fas fa-stethoscope"></i> Final Clinical Diagnosis
+                        </h6>
+                        <p class="text-base font-black text-slate-900 leading-tight">{{ discharge.final_diagnosis }}</p>
+                    </div>
+                </div>
+
+                <!-- Procedures & Problems -->
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Other Problems Noted</h6>
+                        <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.other_problems|default:"None noted." }}</div>
+                    </div>
+                    <div>
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Operations/Procedures done</h6>
+                        <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.operations_procedures|default:"None recorded." }}</div>
+                    </div>
+                </div>
+
+                <!-- Presenting Complaints -->
+                <div>
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Presenting Complaints</h6>
+                    <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.presenting_complaints|default:"N/A" }}</div>
                 </div>
 
                 <!-- Summary -->
                 <div>
                     <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Clinical Course & Treatment Summary</h6>
-                    <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.discharge_summary }}</div>
+                    <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.clinical_management_summary }}</div>
                 </div>
 
-                <!-- Instructions -->
-                {% if discharge.discharge_instructions %}
-                    <div class="border border-slate-300 px-6 py-5 border-dashed">
-                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <i class="fas fa-info-circle"></i> Post-Discharge Instructions
+                <!-- Diagnostics Section -->
+                <div class="grid grid-cols-2 gap-8 pt-4">
+                    <div>
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1 flex items-center justify-between">
+                            Laboratory Investigations
+                            <span class="text-[9px] font-bold text-slate-400">{{ lab_results.count }}</span>
                         </h6>
-                        <p class="text-sm font-medium text-slate-800 leading-relaxed">{{ discharge.discharge_instructions }}</p>
+                        <div class="space-y-3">
+                            {% for lab in lab_results %}
+                                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                    <div class="text-[10px] font-bold text-slate-900 uppercase">{{ lab.service.name }}</div>
+                                    <div class="text-xs text-slate-600 mt-1 line-clamp-2">{{ lab.results }}</div>
+                                </div>
+                            {% empty %}
+                                <p class="text-[10px] italic text-slate-400">No laboratory results recorded.</p>
+                            {% endfor %}
+                        </div>
                     </div>
-                {% endif %}
+                    <div>
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1 flex items-center justify-between">
+                            Radiology/Imaging
+                            <span class="text-[9px] font-bold text-slate-400">{{ radiology_results.count }}</span>
+                        </h6>
+                        <div class="space-y-3">
+                            {% for rad in radiology_results %}
+                                <div class="bg-indigo-50/30 p-3 rounded-lg border border-indigo-100/50">
+                                    <div class="text-[10px] font-bold text-indigo-900 uppercase">{{ rad.service.name }}</div>
+                                    <div class="text-xs text-indigo-700 mt-1 line-clamp-2">{{ rad.interpretation }}</div>
+                                </div>
+                            {% empty %}
+                                <p class="text-[10px] italic text-slate-400">No imaging results recorded.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discharge Medications (Prescriptions) -->
+                <div class="pt-4">
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Discharge Medications (Take-home)</h6>
+                    <div class="space-y-4">
+                        {% for prescription in prescriptions %}
+                            {% for item in prescription.items.all %}
+                                <div class="flex justify-between items-start pb-2 border-b border-slate-100 last:border-0">
+                                    <div>
+                                        <div class="text-sm font-black text-slate-900">{{ item.medication.name }}</div>
+                                        <div class="text-[10px] font-bold text-slate-500 uppercase">{{ item.dose_count }} x {{ item.frequency }} for {{ item.number_of_days }} days</div>
+                                    </div>
+                                    {% if item.instructions %}
+                                        <div class="text-[10px] text-slate-400 italic max-w-xs text-right">{{ item.instructions }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% empty %}
+                            <p class="text-[10px] italic text-slate-400">No take-home medications recorded.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Care Plan -->
+                <div>
+                    <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Care Plan & Instructions</h6>
+                    <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.discharge_care_plan|default:"Standard follow-up instructions provided." }}</div>
+                </div>
             </div>
 
             <!-- Verification -->

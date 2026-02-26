@@ -157,8 +157,13 @@ class InpatientDischarge(models.Model):
     discharge_date = models.DateTimeField(default=timezone.now)
     
     # Clinical Summary
+    provisional_diagnosis = models.TextField(blank=True, null=True)
     final_diagnosis = models.TextField()
-    discharge_summary = models.TextField()
+    other_problems = models.TextField(blank=True, null=True)
+    operations_procedures = models.TextField(blank=True, null=True)
+    presenting_complaints = models.TextField(blank=True, null=True)
+    clinical_management_summary = models.TextField()
+    discharge_care_plan = models.TextField(blank=True, null=True)
     
     # Financial Snapshot
     total_bill_snapshot = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total bill at time of discharge")
@@ -200,6 +205,7 @@ class ClinicalNote(models.Document if False else models.Model): # Dummy check fo
     NOTE_TYPES = [
         ('Doctor', "Doctor's Note"),
         ('Nursing', 'Nursing Note'),
+        ('Progress', 'Progress Note'),
         ('Consultation', 'Consultation Note'),
         ('Operational', 'Operation Note'),
     ]

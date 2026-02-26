@@ -329,8 +329,11 @@ def search_inventory(request):
         results.append({
             'id': item.id,
             'text': f"{item.name} ({item.dispensing_unit})",
-            'category': item.category.name,
-            'stock': stock
+            'name': item.name,
+            'category': item.category.name if item.category else 'General',
+            'stock': stock,
+            'stock_quantity': stock, # Added for compatibility
+            'selling_price': str(item.selling_price) if item.selling_price else '0' # Added for compatibility
         })
     return JsonResponse({'results': results})
 

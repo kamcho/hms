@@ -119,9 +119,7 @@ const debouncedVaccItemSearch = vaccDebounce(function(query) {
     }
     
     const departmentId = document.getElementById('vacc_dispense_department_id').value;
-    const url = departmentId ? 
-        `/api/inventory/search-by-department/${departmentId}/?q=${encodeURIComponent(query)}` :
-        `/api/inventory/search/?q=${encodeURIComponent(query)}`;
+    const url = `/inventory/api/search/?q=${encodeURIComponent(query)}` + (departmentId ? `&department_id=${departmentId}` : '');
     
     fetch(url)
         .then(response => response.json())
@@ -129,10 +127,11 @@ const debouncedVaccItemSearch = vaccDebounce(function(query) {
             const resultsDiv = document.getElementById('vaccItemSearchResults');
             resultsDiv.innerHTML = '';
             
-            if (data.length === 0) {
+            const results = data.results || [];
+            if (results.length === 0) {
                 resultsDiv.innerHTML = '<div class="p-4 text-xs font-bold text-slate-400 text-center">No items found.</div>';
             } else {
-                data.forEach(item => {
+                results.forEach(item => {
                     const isOutOfStock = item.stock_quantity <= 0;
                     const itemDiv = document.createElement('div');
                     itemDiv.className = `p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`;
@@ -204,10 +203,10 @@ function submitVaccDispense() {
     if (visitId) formData.append('visit_id', visitId);
     formData.append('item_id', itemId);
     formData.append('quantity', quantity);
-    if (notes) formData.append('notes', notes);
+    if (notes) formData.append('instructions', notes);
     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
     
-    fetch('/api/inventory/dispense/', {
+    fetch('/inventory/api/dispense/', {
         method: 'POST',
         body: formData
     })

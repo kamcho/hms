@@ -19,6 +19,7 @@ urlpatterns = [
     path('admissions/<int:admission_id>/add-nutrition/', views.add_nutrition_order, name='add_nutrition'),
     path('admissions/<int:admission_id>/discharge/', views.discharge_patient, name='discharge_patient'),
     path('discharges/<int:pk>/summary/', views.discharge_summary, name='discharge_summary'),
+    path('discharges/<int:pk>/summary/print/', views.discharge_summary, {'template_name': 'inpatient/discharge_summary_printable.html'}, name='discharge_summary_print'),
     path('wards/<int:ward_id>/available-beds/', views.get_available_beds, name='get_available_beds'),
     path('admit/new/', views.admission_patient_list, name='new_admission'),
 ]

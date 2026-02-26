@@ -162,6 +162,62 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Recent Discharges -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-10">
+                    <div class="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                            <i class="fas fa-file-export text-emerald-500"></i> Recent Discharges
+                        </h2>
+                        <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-widest">Last 10 Records</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/50">
+                                    <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Patient Details</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Ward</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Discharged Date</th>
+                                    <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                {% for discharge in recent_discharges %}
+                                    <tr class="hover:bg-slate-50 transition-colors group">
+                                        <td class="px-8 py-5">
+                                            <div class="flex items-center gap-4">
+                                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-black">{{ discharge.admission.patient.first_name|first }}</div>
+                                                <div>
+                                                    <div class="text-sm font-black text-slate-900">{{ discharge.admission.patient.full_name }}</div>
+                                                    <div class="flex items-center gap-2 mt-0.5">
+                                                        <span class="text-[9px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">PID: {{ discharge.admission.patient.id_number|default:"N/A" }}</span>
+                                                        <span class="text-[9px] font-black bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">VISIT: #{{ discharge.admission.visit.id }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-5">
+                                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-emerald-100">{{ discharge.admission.bed.ward.name }}</span>
+                                        </td>
+                                        <td class="px-6 py-5 whitespace-nowrap">
+                                            <div class="text-[11px] font-black text-slate-900">{{ discharge.discharge_date|date:"d M Y" }}</div>
+                                            <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase">{{ discharge.discharge_date|date:"H:i" }} Hours</div>
+                                        </td>
+                                        <td class="px-8 py-5 whitespace-nowrap text-right">
+                                            <a href="{% url 'inpatient:discharge_summary' discharge.id %}" class="inline-flex items-center px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm">
+                                                <i class="fas fa-file-contract text-[10px] mr-2"></i> View Summary
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="px-8 py-10 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">No recent discharges found.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             <!-- Sidebar / Ward Stats -->
             <div class="space-y-8">
@@ -228,31 +284,29 @@
     {% block extra_js %}
         <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
         <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('occupancyChart')?.getContext('2d');
-        if (ctx) {
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [{{ occupancy_rate }}, {{ 100| subtract: occupancy_rate|default: 100
+            document.addEventListener('DOMContentLoaded', function () {
+                const ctx = document.getElementById('occupancyChart')?.getContext('2d');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            datasets: [{
+                                data: [{{ occupancy_rate }}, {{ 100|subtract:occupancy_rate|default:100 }}],
+                                backgroundColor: ['#6366f1', '#f1f5f9'],
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            cutout: '80%',
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false }
+                            }
+                        }
+                    });
                 }
-            }],
-                backgroundColor: ['#6366f1', '#f1f5f9'],
-                borderWidth: 0,
-                hoverOffset: 4
-                    }]
-    },
-        options: {
-        cutout: '80%',
-        plugins: {
-            legend: { display: false },
-            tooltip: { enabled: false }
-        }
-    }
             });
-        }
-    });
         </script>
-    {% endblock %}
+{% endblock %}
 {% endblock %}

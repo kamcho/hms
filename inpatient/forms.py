@@ -74,10 +74,19 @@ class ServiceAdmissionLinkForm(forms.ModelForm):
 class InpatientDischargeForm(forms.ModelForm):
     class Meta:
         model = InpatientDischarge
-        fields = ['final_diagnosis', 'discharge_summary']
+        fields = [
+            'provisional_diagnosis', 'final_diagnosis', 'other_problems', 
+            'operations_procedures', 'presenting_complaints', 
+            'clinical_management_summary', 'discharge_care_plan'
+        ]
         widgets = {
-            'final_diagnosis': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter final clinical diagnosis...'}),
-            'discharge_summary': forms.Textarea(attrs={'rows': 5, 'placeholder': 'Provide a summary of treatment and care...'}),
+            'provisional_diagnosis': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Provisional Diagnosis on admission...'}),
+            'final_diagnosis': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Final Discharge Diagnosis...'}),
+            'other_problems': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Other medical problems noted...'}),
+            'operations_procedures': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Operations or surgical procedures done...'}),
+            'presenting_complaints': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Chief complaints...'}),
+            'clinical_management_summary': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Brief clinical summary of management...'}),
+            'discharge_care_plan': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Care plan and follow-up instructions...'}),
         }
 
     def __init__(self, *args, **kwargs):

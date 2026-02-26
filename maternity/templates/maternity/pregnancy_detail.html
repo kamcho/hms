@@ -680,9 +680,9 @@
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
             <i class="fas fa-baby-carriage text-pink-600"></i> Labour & Delivery
         </h2>
-        {% if not delivery %}
+        {% if not delivery or not delivery.delivery_datetime %}
             <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
-                <i class="fas fa-plus"></i> Record Delivery
+                <i class="fas fa-{% if delivery %}edit{% else %}plus{% endif %}"></i> {% if delivery %}Complete Delivery Record{% else %}Record Delivery{% endif %}
             </a>
         {% endif %}
     </div>
@@ -696,7 +696,7 @@
                     </div>
                     <div>
                         <div class="text-[10px] font-black text-slate-400 border-b border-slate-200 uppercase tracking-widest mb-1 pb-1">Delivery Time</div>
-                        <div class="text-sm font-bold text-slate-900">{{ delivery.delivery_datetime|date:"d M Y, H:i" }}</div>
+                        <div class="text-sm font-bold text-slate-900">{{ delivery.delivery_datetime|date:"d M Y, H:i"|default:"Pending Delivery" }}</div>
                     </div>
                 </div>
                 <!-- Mode of Delivery -->
@@ -706,7 +706,7 @@
                     </div>
                     <div>
                         <div class="text-[10px] font-black text-slate-400 border-b border-slate-200 uppercase tracking-widest mb-1 pb-1">Mode</div>
-                        <div class="text-sm font-bold text-slate-900">{{ delivery.get_delivery_mode_display }}</div>
+                        <div class="text-sm font-bold text-slate-900">{{ delivery.get_delivery_mode_display|default:"TBD" }}</div>
                     </div>
                 </div>
                 <!-- GA at Delivery -->
@@ -716,7 +716,7 @@
                     </div>
                     <div>
                         <div class="text-[10px] font-black text-slate-400 border-b border-slate-200 uppercase tracking-widest mb-1 pb-1">Gestational Age</div>
-                        <div class="text-sm font-bold text-slate-900">{{ delivery.gestational_age_at_delivery }} Weeks</div>
+                        <div class="text-sm font-bold text-slate-900">{% if delivery.gestational_age_at_delivery %}{{ delivery.gestational_age_at_delivery }} Weeks{% else %}-{% endif %}</div>
                     </div>
                 </div>
                 <!-- Delivered By -->
@@ -726,7 +726,7 @@
                     </div>
                     <div>
                         <div class="text-[10px] font-black text-slate-400 border-b border-slate-200 uppercase tracking-widest mb-1 pb-1">Delivered By</div>
-                        <div class="text-sm font-bold text-slate-900">{{ delivery.delivery_by.get_full_name|default:delivery.delivery_by.username }}</div>
+                        <div class="text-sm font-bold text-slate-900">{% if delivery.delivery_by %}{{ delivery.delivery_by.get_full_name|default:delivery.delivery_by.username }}{% else %}Not Recorded{% endif %}</div>
                     </div>
                 </div>
             </div>

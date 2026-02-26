@@ -232,8 +232,8 @@ class LaborDelivery(models.Model):
     labor_duration = models.DurationField(null=True, blank=True, help_text="Total labor duration")
     
     # Delivery
-    delivery_datetime = models.DateTimeField()
-    delivery_mode = models.CharField(max_length=30, choices=DELIVERY_MODE_CHOICES)
+    delivery_datetime = models.DateTimeField(null=True, blank=True)
+    delivery_mode = models.CharField(max_length=30, choices=DELIVERY_MODE_CHOICES, null=True, blank=True)
     delivery_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='deliveries_conducted')
     
     # Complications

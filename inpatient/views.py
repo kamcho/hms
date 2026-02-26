@@ -12,11 +12,14 @@ from .forms import (
     InpatientDischargeForm, PatientVitalsForm, ClinicalNoteForm, 
     FluidBalanceForm, WardTransferForm, DoctorInstructionForm, NutritionOrderForm
 )
-from home.models import Patient, Visit, Departments
+from home.models import Patient, Visit, Departments, Prescription, PrescriptionItem
+from home.forms import PrescriptionItemForm
+from django.forms import inlineformset_factory
 from django.db.models import Count, Q, Sum, F
 from django.utils import timezone
 import math
 from accounts.models import Service, Invoice, InvoiceItem
+from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
 @login_required
 def dashboard(request):
@@ -36,12 +39,18 @@ def dashboard(request):
         total=Count('beds')
     )
 
+    # Recent Discharges
+    recent_discharges = InpatientDischarge.objects.select_related(
+        'admission', 'admission__patient', 'admission__bed', 'admission__bed__ward', 'admission__visit'
+    ).order_by('-discharge_date')[:10]
+
     # Attach latest vitals to each admission
     for admission in active_admissions:
         admission.latest_vitals = admission.vitals.first()
 
     return render(request, 'inpatient/dashboard.html', {
         'active_admissions': active_admissions,
+        'recent_discharges': recent_discharges,
         'total_admitted': total_admitted,
         'occupancy_rate': round(occupancy_rate, 1),
         'ward_stats': ward_stats,
@@ -504,8 +513,8 @@ def add_vitals(request, admission_id):
 
 @login_required
 def add_clinical_note(request, admission_id):
-    if request.user.role != 'Doctor':
-        messages.error(request, "Only doctors can record clinical notes.")
+    if request.user.role not in ['Doctor', 'Nurse']:
+        messages.error(request, "Only doctors and nurses can record clinical notes.")
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
@@ -816,12 +825,8 @@ def discharge_patient(request, admission_id):
     duration = now - admission.admitted_at
     days_stayed = max(1, math.ceil(duration.total_seconds() / 86400))
     
-    # Calculate Billing based on logged services (now includes daily bed charges)
-    ward_cost = admission.services.filter(
-        service__department__name='Inpatient'
-    ).aggregate(
-        total=Sum(F('service__price') * F('quantity'))
-    )['total'] or 0
+    # Calculate Billing based on stay duration and logged services
+    ward_cost = days_stayed * admission.bed.ward.base_charge_per_day
     
     med_cost = admission.medications.filter(is_dispensed=True).aggregate(
         total=Sum(F('item__selling_price') * F('quantity'))
@@ -835,15 +840,65 @@ def discharge_patient(request, admission_id):
     
     total_bill = ward_cost + med_cost + service_cost
 
+    # Create formset for take-home prescriptions
+    PrescriptionItemFormSet = inlineformset_factory(
+        Prescription,
+        PrescriptionItem,
+        form=PrescriptionItemForm,
+        extra=3,
+        can_delete=True
+    )
+
     if request.method == 'POST':
         form = InpatientDischargeForm(request.POST)
-        if form.is_valid():
+        formset = PrescriptionItemFormSet(request.POST, prefix='meds')
+        
+        if form.is_valid() and formset.is_valid():
             discharge = form.save(commit=False)
             discharge.admission = admission
             discharge.total_bill_snapshot = total_bill
             discharge.discharged_by = request.user
             discharge.save()
             
+            # Handle take-home medications if any
+            has_meds = False
+            for med_form in formset:
+                if med_form.cleaned_data and med_form.cleaned_data.get('medication') and not med_form.cleaned_data.get('DELETE'):
+                    has_meds = True
+                    break
+            
+            if has_meds:
+                # Create a new Prescription record
+                prescription = Prescription.objects.create(
+                    patient=admission.patient,
+                    visit=admission.visit,
+                    prescribed_by=request.user,
+                    diagnosis=discharge.final_diagnosis,
+                    notes=f"Take-home meds prescribed on discharge from {admission.bed.ward.name}"
+                )
+                
+                # Save associated items
+                formset.instance = prescription
+                prescription_items = formset.save()
+                
+                # Create billing for the take-home medications
+                if prescription_items:
+                    invoice = get_or_create_invoice(visit=admission.visit, user=request.user)
+                    
+                    for item in prescription_items:
+                        if item.medication.selling_price > 0:
+                            InvoiceItem.objects.create(
+                                invoice=invoice,
+                                inventory_item=item.medication,
+                                name=item.medication.name,
+                                unit_price=item.medication.selling_price,
+                                quantity=item.quantity
+                            )
+                    
+                    prescription.invoice = invoice
+                    prescription.save()
+                    invoice.update_totals()
+
             # Update admission
             admission.status = 'Discharged'
             admission.discharged_at = now
@@ -855,14 +910,38 @@ def discharge_patient(request, admission_id):
             visit.is_active = False
             visit.save()
             
-            messages.success(request, f"Patient {admission.patient.full_name} has been discharged.")
+            messages.success(request, f"Patient {admission.patient.full_name} has been discharged and take-home medications recorded.")
             return redirect('inpatient:discharge_summary', pk=discharge.pk)
     else:
-        form = InpatientDischargeForm()
+        # Pre-fill provisional diagnosis from admission
+        form = InpatientDischargeForm(initial={
+            'provisional_diagnosis': admission.provisional_diagnosis
+        })
+        formset = PrescriptionItemFormSet(prefix='meds')
+
+    # Prepare medication metadata for JS calculation (reusing logic from home/views.py)
+    from inventory.models import InventoryItem, InventoryCategory
+    import json
+    
+    pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
+    if pharma_category:
+        medications = InventoryItem.objects.filter(category=pharma_category)
+    else:
+        medications = InventoryItem.objects.all()
+
+    med_data = {}
+    for med in medications:
+        med_data[med.id] = {
+            'price': str(med.selling_price),
+            'is_dispensed_as_whole': med.is_dispensed_as_whole
+        }
+    med_json = json.dumps(med_data)
 
     return render(request, 'inpatient/discharge_patient.html', {
         'admission': admission,
         'form': form,
+        'formset': formset,
+        'med_json': med_json,
         'days_stayed': days_stayed,
         'ward_cost': ward_cost,
         'med_cost': med_cost,
@@ -877,13 +956,34 @@ def get_available_beds(request, ward_id):
     return JsonResponse({'beds': list(beds)})
 
 @login_required
-def discharge_summary(request, pk):
+def discharge_summary(request, pk, template_name='inpatient/inpatient_discharge_summary.html'):
     discharge = get_object_or_404(InpatientDischarge, pk=pk)
     admission = discharge.admission
     
-    return render(request, 'inpatient/inpatient_discharge_summary.html', {
+    # Fetch Lab results (Department: Lab)
+    lab_results = LabResult.objects.filter(
+        invoice__visit=admission.visit,
+        service__department__name='Lab'
+    ).select_related('service', 'performed_by')
+
+    # Fetch Radiology results (Department: Imaging)
+    radiology_results = LabResult.objects.filter(
+        invoice__visit=admission.visit,
+        service__department__name='Imaging'
+    ).select_related('service', 'performed_by')
+
+    # Fetch Take-home Medications (Prescription model)
+    from home.models import Prescription
+    prescriptions = Prescription.objects.filter(
+        visit=admission.visit
+    ).prefetch_related('items', 'items__medication')
+
+    return render(request, template_name, {
         'discharge': discharge,
         'admission': admission,
+        'lab_results': lab_results,
+        'radiology_results': radiology_results,
+        'prescriptions': prescriptions,
         'medications': admission.medications.filter(is_dispensed=True).select_related('item'),
         'services': admission.services.all().select_related('service'),
         'title': f'Discharge Summary: {admission.patient.full_name}'

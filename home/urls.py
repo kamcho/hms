@@ -53,4 +53,5 @@ urlpatterns = [
     path('ward-management/add-ward/', views.add_ward, name='add_ward'),
     path('ward-management/add-bed/', views.add_bed, name='add_bed'),
     path('appointments/add/', views.add_appointment, name='add_appointment'),
+    path('appointments/<int:appointment_id>/attend/', views.mark_appointment_attended, name='mark_appointment_attended'),
 ]

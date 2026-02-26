@@ -260,8 +260,8 @@
                                         </button>
                                     {% endif %}
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <div class="md:col-span-2 lg:col-span-1 space-y-2 search-container">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div class="md:col-span-2 lg:col-span-4 space-y-2 search-container">
                                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                                             Drug
                                             Name *
@@ -289,12 +289,19 @@
                                     </div>
                                     <div class="space-y-2">
                                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Days
+                                            *
+                                        </label>
+                                        {{ form.number_of_days }}
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                                             Total
                                             Quantity *
                                         </label>
                                         {{ form.quantity }}
                                     </div>
-                                    <div class="md:col-span-2 lg:col-span-3 space-y-2">
+                                    <div class="md:col-span-2 lg:col-span-4 space-y-2">
                                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                                             Specific
                                             Instructions
@@ -427,6 +434,41 @@
 
         const data = medMetadata[select.value];
         const quantityInput = entry.querySelector('input[name$="-quantity"]');
+        
+        // --- AUTO-CALCULATION LOGIC ---
+        const doseInput = entry.querySelector('input[name$="-dose_count"]');
+        const freqSelect = entry.querySelector('select[name$="-frequency"]');
+        const daysInput = entry.querySelector('input[name$="-number_of_days"]');
+        
+        const dose = parseFloat(doseInput.value) || 0;
+        const freq = freqSelect.value;
+        const days = parseInt(daysInput.value) || 0;
+
+        const freqMap = {
+            'Once Daily': 1,
+            'Twice Daily': 2,
+            'Thrice Daily': 3,
+            'Four Times Daily': 4,
+            'Every 6 Hours': 4,
+            'Every 8 Hours': 3,
+            'Every 12 Hours': 2,
+            'Every 24 Hours': 1
+        };
+
+        const isWhole = data.is_dispensed_as_whole;
+        const isAsNeeded = freq === 'As Needed';
+
+        if (!isWhole && !isAsNeeded && dose > 0 && days > 0 && freqMap[freq]) {
+            const calculatedQty = dose * freqMap[freq] * days;
+            quantityInput.value = calculatedQty;
+            quantityInput.readOnly = true;
+            quantityInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        } else {
+            quantityInput.readOnly = false;
+            quantityInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        }
+        // --- END AUTO-CALCULATION ---
+
         const quant = parseFloat(quantityInput.value) || 0;
         const hintDiv = entry.querySelector('.med-details-hint');
 
@@ -524,14 +566,36 @@
     });
 
     document.addEventListener('input', (e) => {
-        if (e.target.matches('input[name$="-quantity"]')) {
+        if (e.target.matches('input[name$="-quantity"], input[name$="-dose_count"], input[name$="-number_of_days"]')) {
             const entry = e.target.closest('.medication-entry');
             if (entry) updatePricePreview(entry);
         }
     });
 
-    // Form submission cleanup
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('select[name$="-frequency"]')) {
+            const entry = e.target.closest('.medication-entry');
+            if (entry) updatePricePreview(entry);
+        }
+    });
+
+    // Form submission cleanup and validation
     document.querySelector('form').addEventListener('submit', function (e) {
+        const medSelects = document.querySelectorAll('select[name$="-medication"]');
+        let hasMedication = false;
+        
+        medSelects.forEach(select => {
+            if (select.value && select.closest('.medication-entry').style.display !== 'none') {
+                hasMedication = true;
+            }
+        });
+
+        if (!hasMedication) {
+            e.preventDefault();
+            alert('Please select at least one medication before prescribing.');
+            return false;
+        }
+        
         // No specific cleanup needed for duration_days with the new frequency field
     });
 

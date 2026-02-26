@@ -19,7 +19,7 @@ from .forms import (
 from accounts.models import InvoiceItem, Service, Invoice
 from accounts.utils import get_or_create_invoice
 from home.models import PatientQue, Departments, Visit, Prescription, PrescriptionItem # Added Visit, Prescription, PrescriptionItem
-from home.forms import PrescriptionItemForm, Patient # Added PrescriptionItemForm
+from home.forms import PrescriptionItemForm, Patient, PatientForm # Added PrescriptionItemForm, PatientForm
 from inpatient.models import Admission, Ward, Bed
 from inpatient.forms import AdmissionForm
 
@@ -309,102 +309,116 @@ def pnc_dashboard(request):
 
 @login_required
 def visit_queue_center(request):
-    """Centralized Clinical Queue Center for ANC, PNC (Mother & Baby), and CWC"""
+    """Refined Clinical Queue Center for MCH Department with Search Capabilities"""
     today = timezone.now().date()
     search_query = request.GET.get('q', '')
 
-    # 1. Fetch all pending queues for maternity-related departments
-    maternity_queues = PatientQue.objects.filter(
-        sent_to__name__in=['ANC', 'PNC', 'CWC', 'Maternity'],
+    # Helper function to process queue items with maternity context
+    def process_maternity_queue(queue_queryset):
+        processed = []
+        for que in queue_queryset:
+            patient = que.visit.patient
+            que.category = 'Other'
+            que.arrival_type = None
+            que.linked_pregnancy = None
+            que.linked_newborn = None
+            que.is_high_risk = False
+            que.alerts = []
+
+            # Find active pregnancies
+            que.active_pregnancies = []
+            for p in Pregnancy.objects.filter(patient=patient, status='Active'):
+                que.active_pregnancies.append({
+                    'id': p.id,
+                    'edd': p.edd,
+                    'lmp': p.lmp,
+                    'gestational_age_weeks': p.gestational_age_weeks
+                })
+
+            # Determine Category logic
+            dept_name = que.sent_to.name.upper() if que.sent_to else ''
+            
+            # ANC Case
+            if dept_name in ['ANC', 'MCH'] or (dept_name == 'MATERNITY' and que.visit.visit_type == 'OUT-PATIENT' and patient.gender == 'F'):
+                que.active_pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
+                if que.active_pregnancy:
+                    que.category = 'ANC'
+                    que.linked_pregnancy = que.active_pregnancy
+                    que.alerts = que.linked_pregnancy.get_active_alerts()
+                    que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
+                else:
+                    que.category = 'ANC'
+                    que.arrival_type = 'Registration Needed'
+
+            # PNC Case
+            elif dept_name in ['PNC', 'MCH']:
+                if patient.gender == 'F' and patient.age >= 12:
+                    que.category = 'PNC (Mother)'
+                    que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').order_by('-created_at').first()
+                    if que.linked_pregnancy:
+                        que.alerts = que.linked_pregnancy.get_active_alerts()
+                        que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
+                elif patient.age <= 5:
+                    que.category = 'PNC (Baby)'
+                    que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                    if not que.linked_newborn:
+                        que.linked_newborn = Newborn.objects.filter(
+                            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                            birth_datetime__date=patient.date_of_birth
+                        ).first()
+
+            # CWC Case
+            if dept_name in ['CWC', 'MCH'] and not que.category.startswith('PNC'):
+                if patient.age <= 5:
+                    que.category = 'CWC'
+                    que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                    if not que.linked_newborn:
+                        que.linked_newborn = Newborn.objects.filter(
+                            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                            birth_datetime__date=patient.date_of_birth
+                        ).first()
+                if que.linked_newborn:
+                    que.linked_pregnancy = que.linked_newborn.delivery.pregnancy
+
+            processed.append(que)
+        return processed
+
+    # 1. Main Queue: Specifically for the MCH department (Today's Pending)
+    clinical_queue_raw = PatientQue.objects.filter(
+        sent_to__name__iexact='MCH',
         visit__visit_date__date=today,
         status='PENDING'
     ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
-
-    # 2. Process and categorize queue entries
-    processed_queue = []
     
-    for que in maternity_queues:
-        patient = que.visit.patient
-        que.category = 'Other'
-        que.arrival_type = None
-        que.linked_pregnancy = None
-        que.linked_newborn = None
-        que.is_high_risk = False
-        que.alerts = []
+    clinical_queue = process_maternity_queue(clinical_queue_raw)
 
-        # Find all active pregnancies for this patient to support modal choices
-        que.active_pregnancies = []
-        for p in Pregnancy.objects.filter(patient=patient, status='Active'):
-            que.active_pregnancies.append({
-                'id': p.id,
-                'edd': p.edd,
-                'lmp': p.lmp,
-                'gestational_age_weeks': p.gestational_age_weeks
-            })
-
-        # Determine Category and Arrival Type (Default label based on department)
-        dept_name = que.sent_to.name.upper() if que.sent_to else ''
+    # 2. Search Results: Broader search across all maternity-related departments
+    search_results = []
+    if search_query:
+        search_results_raw = PatientQue.objects.filter(
+            sent_to__name__in=['ANC', 'PNC', 'CWC', 'MCH', 'Maternity'],
+            status='PENDING'
+        ).filter(
+            Q(visit__patient__first_name__icontains=search_query) |
+            Q(visit__patient__last_name__icontains=search_query) |
+            Q(visit__patient__id_number__icontains=search_query) |
+            Q(visit__patient__id__icontains=search_query)
+        ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
         
-        # ANC Case
-        if dept_name == 'ANC' or (dept_name == 'MATERNITY' and que.visit.visit_type == 'OUT-PATIENT' and patient.gender == 'F'):
-            que.category = 'ANC'
-            # For the dashboard's initial display, we still use the 'main' pregnancy if it exists
-            que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
-            if que.linked_pregnancy:
-                que.alerts = que.linked_pregnancy.get_active_alerts()
-                que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
-            else:
-                que.arrival_type = 'Registration Needed'
+        search_results = process_maternity_queue(search_results_raw)
 
-        # PNC Case
-        elif dept_name == 'PNC':
-            if patient.gender == 'F' and patient.age >= 12:
-                que.category = 'PNC (Mother)'
-                que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').order_by('-created_at').first()
-                if que.linked_pregnancy:
-                    que.alerts = que.linked_pregnancy.get_active_alerts()
-                    que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
-            elif patient.age <= 5:
-                que.category = 'PNC (Baby)'
-                que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
-                if not que.linked_newborn:
-                    # Fuzzy match fallback
-                    que.linked_newborn = Newborn.objects.filter(
-                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
-                        birth_datetime__date=patient.date_of_birth
-                    ).first()
-
-        # CWC Case
-        elif dept_name == 'CWC':
-            que.category = 'CWC'
-            if patient.age <= 5:
-                que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
-                if not que.linked_newborn:
-                    que.linked_newborn = Newborn.objects.filter(
-                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
-                        birth_datetime__date=patient.date_of_birth
-                    ).first()
-            if que.linked_newborn:
-                que.linked_pregnancy = que.linked_newborn.delivery.pregnancy
-
-        # Filtering by search query
-        if search_query:
-            if search_query.lower() not in patient.full_name.lower() and search_query not in str(patient.id):
-                continue
-
-        processed_queue.append(que)
-
-    # 3. Stats for the Queue Center
+    # 3. Stats for the Queue Center (Based on the clinical MCH queue)
     stats = {
-        'total': len(processed_queue),
-        'anc': sum(1 for q in processed_queue if q.category == 'ANC'),
-        'pnc': sum(1 for q in processed_queue if 'PNC' in q.category),
-        'cwc': sum(1 for q in processed_queue if q.category == 'CWC'),
-        'high_risk': sum(1 for q in processed_queue if q.is_high_risk),
+        'total': len(clinical_queue),
+        'anc': sum(1 for q in clinical_queue if q.category == 'ANC'),
+        'pnc': sum(1 for q in clinical_queue if 'PNC' in q.category),
+        'cwc': sum(1 for q in clinical_queue if q.category == 'CWC'),
+        'high_risk': sum(1 for q in clinical_queue if q.is_high_risk),
     }
 
     context = {
-        'queue': processed_queue,
+        'queue': clinical_queue,
+        'search_results': search_results,
         'stats': stats,
         'search_query': search_query,
         'today': today,
@@ -1844,3 +1858,161 @@ def generate_discharge_summary(request, pregnancy_id):
         'newborns': newborns,
         'today': timezone.now()
     })
+
+@login_required
+def admit_to_maternity(request):
+    """
+    Combined view to create a new patient and register them for maternity admission
+    (Patient + Pregnancy + LaborDelivery/Admission)
+    """
+    from home.forms import PatientForm
+    from .forms import PregnancyRegistrationForm, LaborDeliveryForm
+    from accounts.models import Service, InvoiceItem
+    from accounts.utils import get_or_create_invoice
+    from home.models import Visit
+    from inpatient.models import Admission
+    if request.method == 'POST':
+        existing_patient_id = request.POST.get('existing_patient_id')
+        patient_form = PatientForm(request.POST) if not existing_patient_id else None
+        pregnancy_form = PregnancyRegistrationForm(request.POST)
+        delivery_form = LaborDeliveryForm(request.POST)
+
+        # The patient is created/selected in the view, so we don't need it in the pregnancy form validation
+        if 'patient' in pregnancy_form.fields:
+            pregnancy_form.fields['patient'].required = False
+
+        # Make delivery fields optional as this is an admission page, they will be filled later
+        for field in ['delivery_datetime', 'delivery_mode', 'mother_condition']:
+            if field in delivery_form.fields:
+                delivery_form.fields[field].required = False
+
+        # Validation logic
+        patient_valid = patient_form.is_valid() if patient_form else True
+        if patient_valid and pregnancy_form.is_valid() and delivery_form.is_valid():
+            # 1. Get or Create Patient
+            if existing_patient_id:
+                patient = get_object_or_404(Patient, id=existing_patient_id)
+            else:
+                patient = patient_form.save(commit=False)
+                patient.gender = 'F' # Ensure Female
+                patient.created_by = request.user
+                patient.save()
+
+            # 2. Create Visit
+            visit = Visit.objects.create(
+                patient=patient,
+                visit_type='IN-PATIENT',
+                visit_mode='Walk In',
+                visit_date=timezone.now(),
+                is_active=True
+            )
+
+            # 3. Handle Billing (Normal Delivery)
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            service = Service.objects.filter(name__icontains='Normal Delivery').first()
+            if service:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    service=service,
+                    name=service.name,
+                    unit_price=service.price,
+                    quantity=1
+                )
+
+            # 4. Get or Create Pregnancy
+            pregnancy = Pregnancy.objects.filter(patient=patient, status='Active').first()
+            if not pregnancy:
+                pregnancy = pregnancy_form.save(commit=False)
+                pregnancy.patient = patient
+                pregnancy.created_by = request.user
+                pregnancy.status = 'Active'
+                
+                # Backend calculation fallback if JS fails or field is missing
+                from datetime import timedelta
+                if not pregnancy.edd and pregnancy.lmp:
+                    pregnancy.edd = pregnancy.lmp + timedelta(days=280)
+                elif not pregnancy.lmp and pregnancy.edd:
+                    pregnancy.lmp = pregnancy.edd - timedelta(days=280)
+                
+                pregnancy.save()
+            else:
+                # Update existing pregnancy with new LMP/History if provided?? 
+                # For now, we prefer the existing record to maintain history consistency.
+                pass
+
+            # 5. Create LaborDelivery (Admission)
+            delivery = delivery_form.save(commit=False)
+            delivery.pregnancy = pregnancy
+            delivery.visit = visit
+            
+            # Create Admission record for IPD tracking
+            admission = Admission.objects.create(
+                patient=patient,
+                visit=visit,
+                bed=delivery_form.cleaned_data.get('bed'),
+                provisional_diagnosis="Maternity Admission / Labor",
+                status='Admitted',
+                admitted_by=request.user
+            )
+            
+            delivery.admission = admission
+            delivery.save()
+
+            # Mark bed as occupied if selected
+            bed = delivery_form.cleaned_data.get('bed')
+            if bed:
+                bed.is_occupied = True
+                bed.save()
+
+            messages.success(request, f'Patient {patient.full_name} has been admitted to maternity ward.')
+            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+        else:
+            messages.error(request, "Please correct the errors in the form sections below.")
+    else:
+        patient_form = PatientForm(initial={'gender': 'F'}) # Force female initial
+        pregnancy_form = PregnancyRegistrationForm()
+        delivery_form = LaborDeliveryForm()
+
+    context = {
+        'patient_form': patient_form,
+        'pregnancy_form': pregnancy_form,
+        'delivery_form': delivery_form,
+    }
+    return render(request, 'maternity/admit_to_maternity.html', context)
+
+
+@login_required
+def api_search_patients(request):
+    """API endpoint to search for female patients for maternity registration"""
+    query = request.GET.get('q', '')
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    patients = Patient.objects.filter(
+        Q(first_name__icontains=query) | 
+        Q(last_name__icontains=query) | 
+        Q(id_number__icontains=query),
+        gender='F'
+    ).order_by('first_name')[:10]
+    
+    results = []
+    for p in patients:
+        active_preg = Pregnancy.objects.filter(patient=p, status='Active').first()
+        results.append({
+            'id': p.id,
+            'full_name': p.full_name,
+            'id_number': p.id_number or 'N/A',
+            'phone': p.phone,
+            'dob': p.date_of_birth.strftime('%Y-%m-%d'),
+            'location': p.location,
+            'has_active_pregnancy': active_preg is not None,
+            'pregnancy_details': {
+                'gravida': active_preg.gravida,
+                'para': active_preg.para,
+                'abortion': active_preg.abortion,
+                'living': active_preg.living,
+                'lmp': active_preg.lmp.strftime('%Y-%m-%d') if active_preg.lmp else None
+            } if active_preg else None
+        })
+    
+    return JsonResponse({'results': results})

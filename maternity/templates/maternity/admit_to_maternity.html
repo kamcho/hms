@@ -1,0 +1,431 @@
+{% extends "users/dashboard_base.html" %}
+{% load static %}
+{% block title %}Admit to Maternity - HMS{% endblock title %}
+{% block content %}
+<div class="max-w-[1000px] mx-auto p-5">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <a href="{% url 'maternity:dashboard' %}" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all">
+                <i class="fas fa-chevron-left text-sm"></i>
+            </a>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Admit to Maternity</h1>
+        </div>
+        <p class="text-slate-500 font-medium ml-13">Create new patient record and register for immediate labor & delivery admission</p>
+    </div>
+
+    <form method="post" class="space-y-8" id="admissionForm">
+        {% csrf_token %}
+        <input type="hidden" name="existing_patient_id" id="id_existing_patient_id">
+        
+        <!-- Patient Selection Mode -->
+        <div class="flex gap-4 mb-6">
+            <button type="button" id="btnNewPatient" class="flex-1 py-4 rounded-2xl border-2 border-blue-600 bg-blue-50 text-blue-700 font-bold transition-all shadow-sm">
+                <i class="fas fa-user-plus mr-2"></i> New Patient
+            </button>
+            <button type="button" id="btnExistingPatient" class="flex-1 py-4 rounded-2xl border-2 border-slate-200 bg-white text-slate-500 font-bold transition-all shadow-sm hover:border-slate-300">
+                <i class="fas fa-search mr-2"></i> Existing Patient
+            </button>
+        </div>
+
+        <!-- Search Bar (Initially Hidden) -->
+        <div id="searchSection" class="hidden animate-in fade-in slide-in-from-top-4 duration-300">
+            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 mb-8">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="patientSearchInput" placeholder="Search by name or ID number..." class="w-full pl-13 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-blue-100 transition-all font-bold text-slate-700">
+                </div>
+                <div id="searchResults" class="mt-4 divide-y divide-slate-50 overflow-hidden rounded-2xl border border-slate-50 hidden">
+                    <!-- Results dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: Patient Information -->
+        <div id="patientInfoSection" class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden border-t-4 border-t-blue-500">
+            <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-black">1</span>
+                    Patient Personal Details
+                </h2>
+                <div id="selectedPatientBadge" class="hidden px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full font-black text-[11px] uppercase tracking-widest animate-pulse">
+                    Existing Patient Selected
+                </div>
+                <div id="activePregnancyBadge" class="hidden px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i> Active Pregnancy Found
+                </div>
+            </div>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6" id="patientFieldsGrid">
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">First Name</label>
+                    {{ patient_form.first_name }}
+                    {% if patient_form.first_name.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.first_name.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">Last Name</label>
+                    {{ patient_form.last_name }}
+                    {% if patient_form.last_name.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.last_name.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">ID Number (Optional)</label>
+                    {{ patient_form.id_number }}
+                    {% if patient_form.id_number.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.id_number.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">Date of Birth</label>
+                    {{ patient_form.date_of_birth }}
+                    {% if patient_form.date_of_birth.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.date_of_birth.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">Phone Number</label>
+                    {{ patient_form.phone }}
+                    {% if patient_form.phone.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.phone.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700 ml-1">Location / Address</label>
+                    {{ patient_form.location }}
+                    {% if patient_form.location.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ patient_form.location.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="hidden">
+                    {{ patient_form.gender }}
+                </div>
+            </div>
+            <!-- Patient Brief Summary (Visible when existing patient selected) -->
+            <div id="patientSummary" class="hidden p-8 bg-blue-50/30 border-t border-slate-50">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 rounded-2xl bg-white border border-blue-100 flex items-center justify-center text-3xl text-blue-500 shadow-sm">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="summaryName" class="text-2xl font-black text-slate-900">Patient Name</h3>
+                        <div class="flex gap-4 mt-2">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">ID: <span id="summaryID" class="text-slate-900">---</span></span>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">DOB: <span id="summaryDOB" class="text-slate-900">---</span></span>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Phone: <span id="summaryPhone" class="text-slate-900">---</span></span>
+                        </div>
+                    </div>
+                    <button type="button" id="btnChangePatient" class="ml-auto px-4 py-2 bg-white border border-slate-200 text-slate-500 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">Change</button>
+                </div>
+                
+                <!-- Active Pregnancy Info Box -->
+                <div id="activePregnancyInfo" class="hidden mt-6 p-6 bg-amber-50 rounded-2xl border border-amber-100 animate-in fade-in zoom-in duration-300">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex-shrink-0 flex items-center justify-center">
+                            <i class="fas fa-baby-carriage"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-amber-900">Ongoing Pregnancy Record</h4>
+                            <p class="text-xs text-amber-700 leading-relaxed font-medium mb-4">This patient already has an active pregnancy registered. We will link this admission to the existing record. Obstetric history fields below have been pre-filled.</p>
+                            <div class="grid grid-cols-4 gap-4">
+                                <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Gravida</div><div id="pregGravida" class="text-lg font-black text-amber-900">0</div></div>
+                                <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Para</div><div id="pregPara" class="text-lg font-black text-amber-900">0</div></div>
+                                <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Abort</div><div id="pregAbort" class="text-lg font-black text-amber-900">0</div></div>
+                                <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Living</div><div id="pregLiving" class="text-lg font-black text-amber-900">0</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pregnancy Details -->
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden border-t-4 border-t-indigo-500">
+            <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-black">2</span>
+                    Obstetric History (Pregnancy Details)
+                </h2>
+            </div>
+            <div class="p-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-wider text-slate-400 ml-1">Gravida</label>
+                        {{ pregnancy_form.gravida }}
+                        {% if pregnancy_form.gravida.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.gravida.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-wider text-slate-400 ml-1">Para</label>
+                        {{ pregnancy_form.para }}
+                        {% if pregnancy_form.para.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.para.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-wider text-slate-400 ml-1">Abortion</label>
+                        {{ pregnancy_form.abortion }}
+                        {% if pregnancy_form.abortion.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.abortion.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-wider text-slate-400 ml-1">Living</label>
+                        {{ pregnancy_form.living }}
+                        {% if pregnancy_form.living.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.living.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Last Menstrual Period (LMP)</label>
+                        {{ pregnancy_form.lmp }}
+                        {% if pregnancy_form.lmp.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.lmp.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Expected Delivery Date (EDD)</label>
+                        {{ pregnancy_form.edd }}
+                        {% if pregnancy_form.edd.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.edd.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Blood Group (Optional)</label>
+                        {{ pregnancy_form.blood_group }}
+                        {% if pregnancy_form.blood_group.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.blood_group.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Known Allergies</label>
+                        {{ pregnancy_form.allergies }}
+                        {% if pregnancy_form.allergies.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.allergies.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        {{ pregnancy_form.previous_cs }}
+                        <label class="text-sm font-bold text-slate-700 cursor-pointer">Previous C-Section</label>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Risk Level</label>
+                        {{ pregnancy_form.risk_level }}
+                        {% if pregnancy_form.risk_level.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ pregnancy_form.risk_level.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Admission details -->
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden border-t-4 border-t-emerald-500">
+            <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-black">3</span>
+                    Admission & Labor Details
+                </h2>
+            </div>
+            <div class="p-8 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Admission Date & Time</label>
+                        {{ delivery_form.admission_date }}
+                        {% if delivery_form.admission_date.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ delivery_form.admission_date.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">GA at Delivery (Weeks)</label>
+                        {{ delivery_form.gestational_age_at_delivery }}
+                        {% if delivery_form.gestational_age_at_delivery.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ delivery_form.gestational_age_at_delivery.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Labor Onset</label>
+                        {{ delivery_form.labor_onset }}
+                        {% if delivery_form.labor_onset.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ delivery_form.labor_onset.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Ward</label>
+                        {{ delivery_form.ward }}
+                        {% if delivery_form.ward.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ delivery_form.ward.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-700 ml-1">Bed</label>
+                        {{ delivery_form.bed }}
+                        {% if delivery_form.bed.errors %}<div class="text-red-500 text-xs mt-1 font-bold">{{ delivery_form.bed.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+                
+                <div class="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex-shrink-0 flex items-center justify-center">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-blue-900 mb-1">Automated Billing Service</h3>
+                            <p class="text-xs text-blue-700 leading-relaxed font-medium">A "Normal Delivery" service will be automatically billed to this patient upon successful admission. You can adjust this or add further services from the patient's billing tab later.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-end gap-4 pb-12">
+            <a href="{% url 'maternity:dashboard' %}" class="px-8 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all">Cancel</a>
+            <button type="submit" class="px-10 py-4 rounded-2xl bg-blue-600 text-white font-extrabold shadow-xl shadow-blue-200 hover:bg-blue-700 hover:-translate-y-1 transition-all active:translate-y-0 flex items-center gap-3">
+                <i class="fas fa-check-circle text-lg"></i>
+                Admit Patient to Ward
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elements
+        const btnNewPatient = document.getElementById('btnNewPatient');
+        const btnExistingPatient = document.getElementById('btnExistingPatient');
+        const searchSection = document.getElementById('searchSection');
+        const patientSearchInput = document.getElementById('patientSearchInput');
+        const searchResults = document.getElementById('searchResults');
+        const idExistingPatientId = document.getElementById('id_existing_patient_id');
+        
+        const patientFieldsGrid = document.getElementById('patientFieldsGrid');
+        const patientSummary = document.getElementById('patientSummary');
+        const selectedPatientBadge = document.getElementById('selectedPatientBadge');
+        const btnChangePatient = document.getElementById('btnChangePatient');
+        
+        const summaryName = document.getElementById('summaryName');
+        const summaryID = document.getElementById('summaryID');
+        const summaryDOB = document.getElementById('summaryDOB');
+        const summaryPhone = document.getElementById('summaryPhone');
+
+        // Toggle Modes
+        btnNewPatient.addEventListener('click', () => {
+             resetToNew();
+        });
+
+        btnExistingPatient.addEventListener('click', () => {
+            switchToExisting();
+        });
+
+        btnChangePatient.addEventListener('click', () => {
+             switchToExisting();
+             patientSearchInput.value = "";
+             patientSearchInput.focus();
+        });
+
+        const activePregnancyBadge = document.getElementById('activePregnancyBadge');
+        const activePregnancyInfo = document.getElementById('activePregnancyInfo');
+        const pregnancySection = document.querySelector('.border-t-indigo-500'); // Pregnancy Details Section
+        
+        const pregGravida = document.getElementById('pregGravida');
+        const pregPara = document.getElementById('pregPara');
+        const pregAbort = document.getElementById('pregAbort');
+        const pregLiving = document.getElementById('pregLiving');
+
+        function resetToNew() {
+            idExistingPatientId.value = "";
+            searchSection.classList.add('hidden');
+            patientFieldsGrid.classList.remove('hidden');
+            patientSummary.classList.add('hidden');
+            selectedPatientBadge.classList.add('hidden');
+            activePregnancyBadge.classList.add('hidden');
+            activePregnancyInfo.classList.add('hidden');
+            pregnancySection.classList.remove('opacity-50', 'pointer-events-none');
+            
+            btnNewPatient.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700');
+            btnNewPatient.classList.remove('border-slate-200', 'bg-white', 'text-slate-500');
+            
+            btnExistingPatient.classList.add('border-slate-200', 'bg-white', 'text-slate-500');
+            btnExistingPatient.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700');
+            
+            // Re-enable validation on inputs
+            Array.from(patientFieldsGrid.querySelectorAll('input, select')).forEach(el => el.required = true);
+            // Exceptions
+            document.querySelector('input[name="id_number"]').required = false;
+        }
+
+        function switchToExisting() {
+            searchSection.classList.remove('hidden');
+            patientSearchInput.focus();
+            
+            btnExistingPatient.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700');
+            btnExistingPatient.classList.remove('border-slate-200', 'bg-white', 'text-slate-500');
+            
+            btnNewPatient.classList.add('border-slate-200', 'bg-white', 'text-slate-500');
+            btnNewPatient.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700');
+        }
+
+        // Search Logic
+        let searchTimeout;
+        patientSearchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = patientSearchInput.value.trim();
+            
+            if (query.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetch(`{% url 'maternity:api_search_patients' %}?q=${query}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        searchResults.innerHTML = "";
+                        if (data.results.length > 0) {
+                            data.results.forEach(p => {
+                                const row = `
+                                    <div class="p-4 hover:bg-slate-50 cursor-pointer flex justify-between items-center group transition-colors" onclick="selectPatient(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                                        <div>
+                                            <div class="font-bold text-slate-900 group-hover:text-blue-600">${p.full_name}</div>
+                                            <div class="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-widest">ID: ${p.id_number} • DOB: ${p.dob}</div>
+                                        </div>
+                                        <i class="fas fa-chevron-right text-slate-200 group-hover:text-blue-300 transition-all"></i>
+                                    </div>
+                                `;
+                                searchResults.innerHTML += row;
+                            });
+                            searchResults.classList.remove('hidden');
+                        } else {
+                            searchResults.innerHTML = '<div class="p-8 text-center text-slate-400 italic font-medium">No matching female patients found</div>';
+                            searchResults.classList.remove('hidden');
+                        }
+                    });
+            }, 300);
+        });
+
+        // Select Patient
+        window.selectPatient = function(p) {
+            idExistingPatientId.value = p.id;
+            
+            // Update Summary
+            summaryName.innerText = p.full_name;
+            summaryID.innerText = p.id_number;
+            summaryDOB.innerText = p.dob;
+            summaryPhone.innerText = p.phone;
+            
+            // UI Transition
+            searchSection.classList.add('hidden');
+            patientFieldsGrid.classList.add('hidden');
+            patientSummary.classList.remove('hidden');
+            selectedPatientBadge.classList.remove('hidden');
+            
+            // Disable validation on hidden fields so form can submit
+            Array.from(patientFieldsGrid.querySelectorAll('input, select')).forEach(el => el.required = false);
+        };
+
+        // LMP/EDD Bidirectional Calculation
+        const lmpInput = document.getElementById('id_lmp');
+        const eddInput = document.getElementById('id_edd');
+        
+        if (lmpInput && eddInput) {
+            // EDD = LMP + 280 days
+            lmpInput.addEventListener('change', function() {
+                if (this.value) {
+                    const lmpDate = new Date(this.value);
+                    const eddDate = new Date(lmpDate);
+                    eddDate.setDate(eddDate.getDate() + 280);
+                    eddInput.value = eddDate.toISOString().split('T')[0];
+                }
+            });
+
+            // LMP = EDD - 280 days
+            eddInput.addEventListener('change', function() {
+                if (this.value) {
+                    const eddDate = new Date(this.value);
+                    const lmpDate = new Date(eddDate);
+                    lmpDate.setDate(lmpDate.getDate() - 280);
+                    lmpInput.value = lmpDate.toISOString().split('T')[0];
+                }
+            });
+            
+            // Remove readonly from EDD if we want bidirectional
+            eddInput.removeAttribute('readonly');
+        }
+    });
+
+    // Ward and Bed filtering
+    const wardSelect = document.querySelector('select[name="ward"]');
+    const bedSelect = document.querySelector('select[name="bed"]');
+    
+    if (wardSelect && bedSelect) {
+        // ... (existing filtering logic)
+    }
+</script>
+{% endblock content %}

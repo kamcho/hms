@@ -319,7 +319,7 @@ class PrescriptionItem(models.Model):
     # Numeric components for auto-calculation and record keeping
     dose_count = models.PositiveIntegerField(default=1, help_text="Units per dose (e.g., 2 tablets)")
     frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
-    
+    number_of_days = models.IntegerField(help_text="Number of days to take the medication", null=True, blank=True)
     quantity = models.IntegerField(help_text="Total units to dispense")
     instructions = models.TextField(blank=True, help_text="Special instructions for this medication")
     dispensed = models.BooleanField(default=False, help_text="Has this been dispensed by pharmacy?")
@@ -329,6 +329,26 @@ class PrescriptionItem(models.Model):
     class Meta:
         verbose_name = "Prescription Item"
         verbose_name_plural = "Prescription Items"
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate quantity based on dose, frequency and days
+        # Only if not dispensed as whole and frequency is not 'As Needed'
+        if self.medication and not self.medication.is_dispensed_as_whole and self.frequency != 'As Needed' and self.number_of_days:
+            freq_map = {
+                'Once Daily': 1,
+                'Twice Daily': 2,
+                'Thrice Daily': 3,
+                'Four Times Daily': 4,
+                'Every 6 Hours': 4,
+                'Every 8 Hours': 3,
+                'Every 12 Hours': 2,
+                'Every 24 Hours': 1
+            }
+            multiplier = freq_map.get(self.frequency)
+            if multiplier:
+                self.quantity = (self.dose_count or 0) * multiplier * self.number_of_days
+        
+        super().save(*args, **kwargs)
     
     @property
     def total_price(self):
