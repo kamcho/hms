@@ -194,7 +194,7 @@ def accountant_dashboard(request):
     return render(request, 'accounts/accountant_dashboard.html', context)
 
 @login_required
-@user_passes_test(is_billing_staff)
+@user_passes_test(lambda u: u.is_authenticated and (u.role in ['SHA Manager', 'Admin', 'Accountant'] or u.is_superuser))
 def insurance_manager(request):
     search_query = request.GET.get('search', '')
     

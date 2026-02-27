@@ -435,6 +435,11 @@ def add_consultation_note(request):
             doctor_id = request.POST.get('doctor_id')
             note_content = request.POST.get('note_content')
             note_type = request.POST.get('note_type', 'GENERAL')
+            note_type_detail = request.POST.get('note_type_detail', '').strip()
+            
+            # Append focus area to note content if provided
+            if note_type_detail:
+                note_content = f"{note_content}\n\nFocus Area: {note_type_detail}"
             
             # Get patient
             patient = get_object_or_404(Patient, pk=patient_id)
@@ -878,12 +883,12 @@ def reception_dashboard(request):
 
 @login_required
 def add_symptoms(request):
-    """Add symptoms to a visit"""
+    """Add or update symptoms for a visit (only 1 symptom entry per visit)"""
     if request.method == 'POST':
         try:
             visit_id = request.POST.get('visit_id')
             data = request.POST.get('data')
-            days = request.POST.get('days')
+            days = request.POST.get('days') or 0
             
             visit = get_object_or_404(Visit, pk=visit_id)
             
@@ -897,12 +902,13 @@ def add_symptoms(request):
 
             from .models import Symptoms
             
-                
-            Symptoms.objects.create(
+            Symptoms.objects.update_or_create(
                 visit=visit,
-                data=data,
-                days=days,
-                created_by=request.user
+                defaults={
+                    'data': data,
+                    'days': days,
+                    'created_by': request.user
+                }
             )
             return JsonResponse({'success': True})
         except Exception as e:
@@ -1375,68 +1381,63 @@ def create_prescription(request, visit_id):
                     has_meds = True
                     break
             
-            if not has_meds:
-                messages.error(request, "Please select at least one medication for this prescription.")
-            else:
-                # Save prescription
-                prescription = form.save(commit=False)
-                prescription.patient = patient
-                prescription.prescribed_by = request.user
-                prescription.visit = visit
-                    
-                # Close visit if requested
-                if request.POST.get('action') == 'prescribe_close':
-                    visit.is_active = False
-                    visit.save()
-                    messages.info(request, "Visit has been closed.")
+            # Save prescription (medications are optional)
+            prescription = form.save(commit=False)
+            prescription.patient = patient
+            prescription.prescribed_by = request.user
+            prescription.visit = visit
+            
+            # Close visit if requested
+            if request.POST.get('action') == 'prescribe_close':
+                visit.is_active = False
+                visit.save()
+                messages.info(request, "Visit has been closed.")
+            
+            prescription.save()
+            
+            # Save prescription items
+            formset.instance = prescription
+            prescription_items = formset.save()
+            
+            # Create billing for the prescription medications
+            if prescription_items:
+                # Get or Create Visit Invoice (Consolidated)
+                invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
                 
+                # Append to existing notes
+                new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
+                if invoice.notes:
+                    invoice.notes += new_notes
+                else:
+                    invoice.notes = new_notes.strip()
+                invoice.save()
+                
+                # Link invoice to prescription
+                prescription.invoice = invoice
                 prescription.save()
                 
-                # Save prescription items
-                formset.instance = prescription
-                prescription_items = formset.save()
+                for item in prescription_items:
+                    # Skip creating invoice items for free medications
+                    if item.medication.selling_price > 0:
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            inventory_item=item.medication,
+                            name=item.medication.name,
+                            unit_price=item.medication.selling_price,
+                            quantity=item.quantity
+                        )
                 
-                # Create billing for the prescription medications
-                if prescription_items:
-                    # Get or Create Visit Invoice (Consolidated)
-                    invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
-                    
-                    # Append to existing notes
-                    new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
-                    if invoice.notes:
-                        invoice.notes += new_notes
-                    else:
-                        invoice.notes = new_notes.strip()
+                # Update invoice totals and handle free prescriptions
+                invoice.update_totals()
+                if invoice.total_amount == 0 and invoice.status != 'Paid':
+                    invoice.status = 'Paid'
                     invoice.save()
-                    
-                    # Link invoice to prescription
-                    prescription.invoice = invoice
-                    prescription.save()
-                    
-                    for item in prescription_items:
-                        # Skip creating invoice items for free medications
-                        if item.medication.selling_price > 0:
-                            InvoiceItem.objects.create(
-                                invoice=invoice,
-                                inventory_item=item.medication,
-                                name=item.medication.name,
-                                unit_price=item.medication.selling_price,
-                                quantity=item.quantity
-                            )
-                    
-                    # Update invoice totals and handle free prescriptions
-                    invoice.update_totals()
-                    if invoice.total_amount == 0 and invoice.status != 'Paid':
-                        invoice.status = 'Paid'
-                        invoice.save()
 
-                    messages.success(request, f'Prescription processed successfully for {patient.full_name}')
-                    return redirect('home:prescription_detail', prescription_id=prescription.id)
-                else:
-                    # This case should theoretically not be hit due to has_meds check, 
-                    # but kept for robustness.
-                    messages.success(request, f'Prescription created successfully (no items) for {patient.full_name}')
-                    return redirect('home:prescription_detail', prescription_id=prescription.id)
+                messages.success(request, f'Prescription processed successfully for {patient.full_name}')
+                return redirect('home:prescription_detail', prescription_id=prescription.id)
+            else:
+                messages.success(request, f'Prescription created successfully for {patient.full_name}')
+                return redirect('home:prescription_detail', prescription_id=prescription.id)
     else:
         form = PrescriptionForm()
         formset = PrescriptionItemFormSet(prefix='items')
