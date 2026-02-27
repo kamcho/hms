@@ -1256,8 +1256,11 @@ def admit_patient_visit(request):
             should_bill = False
             
             if is_maternity:
-                # ANC / PNC / CWC: Always Bill
-                should_bill = True
+                # ANC / PNC: Always Bill. CWC: Free
+                if "CWC" in service_name_upper or "CHILD WELFARE" in service_name_upper or "VACCIN" in service_name_upper or "IMMUNIZA" in service_name_upper:
+                    should_bill = False
+                else:
+                    should_bill = True
             else:
                 # OPD: Check if billed for consultation this year
                 current_year = timezone.now().year

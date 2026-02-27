@@ -69,6 +69,27 @@ class Command(BaseCommand):
                 'target_diseases': 'Vitamin A Deficiency',
                 'route': 'Oral'
             },
+            {
+                'name': 'Tetanus Toxoid',
+                'abbreviation': 'TT',
+                'description': 'Prevents Tetanus',
+                'target_diseases': 'Tetanus',
+                'route': 'Intramuscular'
+            },
+            {
+                'name': 'Typhoid Conjugate Vaccine',
+                'abbreviation': 'TCV',
+                'description': 'Prevents Typhoid Fever',
+                'target_diseases': 'Typhoid Fever',
+                'route': 'Intramuscular'
+            },
+            {
+                'name': 'Human Papillomavirus Vaccine',
+                'abbreviation': 'HPV',
+                'description': 'Prevents cervical cancer and other HPV-related diseases',
+                'target_diseases': 'Human Papillomavirus',
+                'route': 'Intramuscular'
+            },
         ]
 
         for v_data in vaccines:

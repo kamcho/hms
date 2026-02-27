@@ -1694,23 +1694,7 @@ def administer_vaccine(request, que_id):
     # Identify context: Newborn or Just Patient
     newborn = Newborn.objects.filter(patient_profile=patient).first()
     
-    # Automated CWC Billing
-    try:
-        cwc_service = Service.objects.filter(name__iexact='CWC', is_active=True).first()
-        if cwc_service:
-            invoice = get_or_create_invoice(visit=visit, user=request.user)
-            # Check if already billed
-            if not InvoiceItem.objects.filter(invoice=invoice, service=cwc_service).exists():
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    service=cwc_service,
-                    name=cwc_service.name,
-                    unit_price=cwc_service.price,
-                    quantity=1
-                )
-                messages.info(request, f"Automated billing: {cwc_service.name} service charge added.")
-    except Exception as e:
-        print(f"Error during automated CWC billing: {e}")
+    # Automated CWC Billing - REMOVED (Vaccinations are free)
     
     if request.method == 'POST':
         if 'administer_vaccine' in request.POST:
@@ -1748,42 +1732,8 @@ def administer_vaccine(request, que_id):
                 d_item.dispensed_by = request.user
                 d_item.department = que.sent_to # CWC
                 
-                # Deduct Stock
-                stock_record = StockRecord.objects.filter(
-                    item=d_item.item,
-                    quantity__gte=d_item.quantity
-                ).order_by('expiry_date').first()
-                
-                if stock_record:
-                    stock_record.quantity -= d_item.quantity
-                    stock_record.save()
-                    
-                    # Record Adjustment
-                    StockAdjustment.objects.create(
-                        item=d_item.item,
-                        quantity=-d_item.quantity,
-                        adjustment_type='Usage',
-                        reason=f"Administered at CWC to {patient.full_name}",
-                        adjusted_by=request.user,
-                        adjusted_from=stock_record.current_location
-                    )
-                    
-                    d_item.save()
-                    
-                    # Create Invoice Item (Billable?)
-                    # Generally vaccines/syringes might be billable.
-                    invoice = get_or_create_invoice(visit=visit, user=request.user)
-                    InvoiceItem.objects.create(
-                        invoice=invoice,
-                        inventory_item=d_item.item,
-                        name=d_item.item.name,
-                        unit_price=d_item.item.selling_price,
-                        quantity=d_item.quantity
-                    )
-                    
-                    messages.success(request, f"Dispensed {d_item.item.name}")
-                else:
-                    messages.error(request, f"Insufficient stock for {d_item.item.name}")
+                d_item.save()
+                messages.success(request, f"Recorded use of {d_item.item.name}")
             return redirect('maternity:administer_vaccine', que_id=que_id)
 
         elif 'finish_visit' in request.POST:
