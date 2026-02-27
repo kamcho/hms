@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg, Prefetch, F
 from django.http import JsonResponse
 from django.utils import timezone
@@ -2205,6 +2206,7 @@ def pharmacy_dashboard(request):
 
 
 @login_required
+@transaction.atomic
 @require_http_methods(["POST"])
 def dispense_all_visit_items(request, visit_id):
     """
