@@ -1219,3 +1219,24 @@ def set_visit_sha(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_visit_invoices(request, visit_id):
+    """Superuser-only page to view and manage invoice items for a visit."""
+    from home.models import Visit
+    visit = get_object_or_404(Visit, pk=visit_id)
+    invoice = Invoice.objects.filter(visit=visit).first()
+    
+    items = []
+    if invoice:
+        items = invoice.items.all().order_by('-created_at')
+    
+    context = {
+        'visit': visit,
+        'invoice': invoice,
+        'items': items,
+        'patient': visit.patient,
+        'title': f'Manage Invoice — Visit #{visit.id}',
+    }
+    return render(request, 'accounts/manage_visit_invoices.html', context)

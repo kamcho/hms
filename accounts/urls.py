@@ -43,4 +43,7 @@ urlpatterns = [
 
     # SHA Manager
     path('api/visit/set-sha/', views.set_visit_sha, name='set_visit_sha'),
+
+    # Superuser Invoice Manager
+    path('manage-invoices/<int:visit_id>/', views.manage_visit_invoices, name='manage_visit_invoices'),
 ]

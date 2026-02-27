@@ -1,0 +1,234 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block extra_css %}
+<style>
+    .inv-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+    .inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+    .inv-header h1 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0; }
+    .inv-back { padding: 0.5rem 1.25rem; border-radius: 10px; background: #f1f5f9; color: #475569; text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; border: 1px solid #e2e8f0; }
+    .inv-back:hover { background: #e2e8f0; }
+
+    .inv-alert { padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+    .inv-alert-danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .inv-alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .inv-alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .inv-alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    .inv-summary { background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #e2e8f0; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
+    .inv-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; }
+    .inv-metric { text-align: center; }
+    .inv-metric-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.25rem; }
+    .inv-metric-value { font-size: 1.3rem; font-weight: 800; color: #1e293b; }
+    .inv-metric-value.paid { color: #16a34a; }
+    .inv-metric-value.pending { color: #ea580c; }
+    .inv-metric-value.balance { color: #dc2626; }
+
+    .inv-table-wrap { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
+    .inv-table { width: 100%; border-collapse: collapse; }
+    .inv-table thead { background: #f8fafc; }
+    .inv-table th { padding: 0.875rem 1.25rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; text-align: left; border-bottom: 2px solid #e2e8f0; }
+    .inv-table td { padding: 1rem 1.25rem; font-size: 0.9rem; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-table tr:hover { background: #f8fafc; }
+
+    .inv-badge { padding: 0.25rem 0.75rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .inv-badge-paid { background: #dcfce7; color: #166534; }
+    .inv-badge-partial { background: #fff7ed; color: #9a3412; }
+    .inv-badge-unpaid { background: #fef2f2; color: #991b1b; }
+    .inv-badge-dispensed { background: #ede9fe; color: #5b21b6; }
+
+    .inv-del-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #fecaca; background: #fff5f5; color: #ef4444; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; }
+    .inv-del-btn:hover { background: #fecaca; color: #dc2626; transform: scale(1.1); }
+    .inv-del-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    .inv-empty { text-align: center; padding: 3rem; color: #94a3b8; }
+    .inv-empty i { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="inv-container">
+    <div class="inv-header">
+        <div>
+            <h1><i class="fas fa-file-invoice-dollar"></i> {{ title }}</h1>
+            <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: #64748b;">
+                Patient: <strong>{{ patient.full_name }}</strong> &bull;
+                {{ visit.get_visit_type_display }} &bull;
+                {{ visit.visit_date|date:"M d, Y H:i" }}
+            </p>
+        </div>
+        <a href="{% url 'home:patient_detail' patient.pk %}" class="inv-back">
+            <i class="fas fa-arrow-left"></i> Back to Patient
+        </a>
+    </div>
+
+    {% if not invoice %}
+        <div class="inv-alert inv-alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            No invoice found for this visit.
+        </div>
+    {% else %}
+        {% if invoice.status == 'Cancelled' %}
+            <div class="inv-alert inv-alert-danger">
+                <i class="fas fa-ban"></i>
+                This invoice has been cancelled.
+            </div>
+        {% endif %}
+
+        {% if invoice.paid_amount > 0 %}
+            <div class="inv-alert inv-alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>This invoice has payments recorded (KES {{ invoice.paid_amount }}). Deleting items may cause accounting inconsistencies. Proceed with extreme caution.</span>
+            </div>
+        {% endif %}
+
+        <div class="inv-summary">
+            <div class="inv-summary-grid">
+                <div class="inv-metric">
+                    <div class="inv-metric-label">Invoice #</div>
+                    <div class="inv-metric-value">INV-{{ invoice.id }}</div>
+                </div>
+                <div class="inv-metric">
+                    <div class="inv-metric-label">Status</div>
+                    <div class="inv-metric-value {% if invoice.status == 'Paid' %}paid{% else %}pending{% endif %}">{{ invoice.status }}</div>
+                </div>
+                <div class="inv-metric">
+                    <div class="inv-metric-label">Total</div>
+                    <div class="inv-metric-value">KES {{ invoice.total_amount }}</div>
+                </div>
+                <div class="inv-metric">
+                    <div class="inv-metric-label">Paid</div>
+                    <div class="inv-metric-value paid">KES {{ invoice.paid_amount }}</div>
+                </div>
+                <div class="inv-metric">
+                    <div class="inv-metric-label">Balance</div>
+                    <div class="inv-metric-value balance">KES {{ invoice.balance }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if items %}
+            <div class="inv-table-wrap">
+                <table class="inv-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item Name</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Amount</th>
+                            <th>Paid</th>
+                            <th>Status</th>
+                            <th style="text-align: center;">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr id="item-row-{{ item.id }}">
+                            <td style="font-weight: 700; color: #94a3b8;">{{ forloop.counter }}</td>
+                            <td style="font-weight: 700;">{{ item.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.unit_price }}</td>
+                            <td style="font-weight: 700;">{{ item.amount }}</td>
+                            <td>{{ item.paid_amount }}</td>
+                            <td>
+                                {% if item.is_settled %}
+                                    <span class="inv-badge inv-badge-paid">Paid</span>
+                                {% elif item.paid_amount > 0 %}
+                                    <span class="inv-badge inv-badge-partial">Partial</span>
+                                {% else %}
+                                    <span class="inv-badge inv-badge-unpaid">Unpaid</span>
+                                {% endif %}
+                                {% if item.is_dispensed %}
+                                    <span class="inv-badge inv-badge-dispensed">Dispensed</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="inv-del-btn" onclick="deleteItem({{ item.id }}, '{{ item.name|escapejs }}')" title="Delete this item">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="inv-empty">
+                <i class="fas fa-inbox"></i>
+                <p>This invoice has no items.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Confirmation Modal -->
+<div id="deleteConfirmModal" style="display: none; position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; border-radius: 20px; max-width: 440px; width: 100%; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: #ef4444; font-size: 1.5rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Delete Invoice Item?</h3>
+        <p id="deleteItemName" style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.9rem;">Are you sure you want to delete this item?</p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <button onclick="closeDeleteModal()" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 700; cursor: pointer; font-size: 0.85rem;">Cancel</button>
+            <button id="confirmDeleteBtn" onclick="confirmDelete()" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: none; background: #ef4444; color: white; font-weight: 700; cursor: pointer; font-size: 0.85rem;">Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let pendingDeleteId = null;
+
+function deleteItem(itemId, itemName) {
+    pendingDeleteId = itemId;
+    document.getElementById('deleteItemName').textContent = 'Delete "' + itemName + '" from this invoice? This action cannot be undone.';
+    const modal = document.getElementById('deleteConfirmModal');
+    modal.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+    pendingDeleteId = null;
+}
+
+function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+
+    fetch("{% url 'accounts:delete_invoice_item' item_id=0 %}".replace('/0/', '/' + pendingDeleteId + '/'), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.getElementById('item-row-' + pendingDeleteId);
+            if (row) row.remove();
+            closeDeleteModal();
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Could not delete item.'));
+            btn.disabled = false;
+            btn.textContent = 'Delete';
+        }
+    })
+    .catch(() => {
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+    });
+}
+
+window.addEventListener('click', function(e) {
+    if (e.target === document.getElementById('deleteConfirmModal')) closeDeleteModal();
+});
+</script>
+{% endblock %}

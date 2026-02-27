@@ -576,3 +576,43 @@ class ImmunizationRecord(models.Model):
 
     def __str__(self):
         return f"{self.vaccine.abbreviation} Dose {self.dose_number}"
+
+
+class VaccineInventory(models.Model):
+    """Tracks vaccine batches received from the government"""
+    vaccine = models.ForeignKey(Vaccine, on_delete=models.CASCADE, related_name='inventory')
+    batch_number = models.CharField(max_length=100)
+    expiry_date = models.DateField()
+    quantity_received = models.PositiveIntegerField()
+    quantity_remaining = models.PositiveIntegerField()
+    received_at = models.DateTimeField(default=timezone.now)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'Vaccine Inventory'
+        verbose_name_plural = 'Vaccine Inventories'
+        ordering = ['expiry_date']
+
+    def __str__(self):
+        return f"{self.vaccine.abbreviation} - Batch {self.batch_number} ({self.quantity_remaining}/{self.quantity_received})"
+
+
+class VaccineInventoryAdjustment(models.Model):
+    """Tracks adjustments (usage, loss, etc.) to vaccine inventory"""
+    ADJUSTMENT_TYPES = [
+        ('Usage', 'Usage'),
+        ('Damage', 'Damage'),
+        ('Expiry', 'Expiry'),
+        ('Correction', 'Correction'),
+        ('Addition', 'Addition (Return)'),
+    ]
+    
+    inventory_item = models.ForeignKey(VaccineInventory, on_delete=models.CASCADE, related_name='adjustments')
+    adjustment_type = models.CharField(max_length=20, choices=ADJUSTMENT_TYPES)
+    quantity = models.IntegerField(help_text="Negative for usage/loss, positive for corrections")
+    reason = models.TextField(blank=True)
+    adjusted_at = models.DateTimeField(auto_now_add=True)
+    adjusted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.inventory_item.vaccine.abbreviation} - {self.adjustment_type} ({self.quantity})"
