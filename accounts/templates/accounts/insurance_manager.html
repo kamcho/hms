@@ -467,16 +467,21 @@
                     balances
                 </p>
             </div>
-            <form method="GET" class="flex items-center gap-3">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient, ID or invoice..." class="search-input pl-11">
-                </div>
-                <button type="submit" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">Search</button>
-                {% if search_query %}
-                    <a href="{% url 'accounts:insurance_manager' %}" class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
-                {% endif %}
-            </form>
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('shaModal').style.display='flex'" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <i class="fas fa-shield-alt"></i> Tag Patient as SHA
+                </button>
+                <form method="GET" class="flex items-center gap-3">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient, ID or invoice..." class="search-input pl-11">
+                    </div>
+                    <button type="submit" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">Search</button>
+                    {% if search_query %}
+                        <a href="{% url 'accounts:insurance_manager' %}" class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
+                    {% endif %}
+                </form>
+            </div>
         </div>
         <div class="space-y-12">
             <!-- OPD Section -->
@@ -680,6 +685,30 @@
                     </div>
                 </div>
             </section>
+        </div>
+    </div>
+    <!-- SHA Patient Search Modal -->
+    <div id="shaModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 560px;">
+            <div class="modal-header">
+                <div class="flex justify-between items-start" style="width:100%;">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-900 mb-1"><i class="fas fa-shield-alt text-blue-600"></i> Tag Patient as SHA</h3>
+                        <p class="text-slate-500 text-xs font-bold">Search for a patient and mark their active visit as SHA</p>
+                    </div>
+                    <button onclick="document.getElementById('shaModal').style.display='none'" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="relative mb-4">
+                    <i class="fas fa-search absolute left-4 top-1/2" style="transform:translateY(-50%); color:#94a3b8;"></i>
+                    <input type="text" id="shaPatientSearch" placeholder="Type patient name..." oninput="searchShaPatients(this.value)" style="width:100%; padding:0.875rem 1rem 0.875rem 2.75rem; border:1px solid #e2e8f0; border-radius:16px; font-size:0.9rem; font-weight:600; outline:none;">
+                </div>
+                <div id="shaSearchResults" style="max-height:260px; overflow-y:auto;"></div>
+                <div id="shaFeedback" style="display:none; margin-top:1rem; padding:1rem; border-radius:16px; font-weight:700; text-align:center;"></div>
+            </div>
         </div>
     </div>
     <!-- Claim Processing Modal -->
@@ -999,10 +1028,79 @@
 
     // Close on outside click
     window.onclick = function (event) {
-        const modal = document.getElementById('claimModal');
-        if (event.target == modal) {
+        const claimModal = document.getElementById('claimModal');
+        const shaModal = document.getElementById('shaModal');
+        if (event.target == claimModal) {
             closeModal();
         }
+        if (event.target == shaModal) {
+            shaModal.style.display = 'none';
+        }
+    }
+
+    // --- SHA Patient Search ---
+    let shaSearchTimeout = null;
+    function searchShaPatients(query) {
+        clearTimeout(shaSearchTimeout);
+        const resultsDiv = document.getElementById('shaSearchResults');
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '<p style="color:#94a3b8; text-align:center; font-weight:600; padding:2rem 0;">Type at least 2 characters...</p>';
+            return;
+        }
+        shaSearchTimeout = setTimeout(() => {
+            resultsDiv.innerHTML = '<div style="text-align:center; padding:2rem 0;"><i class="fas fa-spinner fa-spin text-slate-400"></i></div>';
+            fetch(`/api/patient-search/?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.results || data.results.length === 0) {
+                        resultsDiv.innerHTML = '<p style="color:#94a3b8; text-align:center; font-weight:600; padding:2rem 0;">No patients found.</p>';
+                        return;
+                    }
+                    resultsDiv.innerHTML = data.results.map(p => `
+                        <div onclick="tagPatientSha(${p.id}, '${p.name.replace(/'/g, "\\'")}')"
+                             style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-radius:16px; cursor:pointer; transition:background 0.2s; border:1px solid transparent; margin-bottom:4px;"
+                             onmouseover="this.style.background='#f1f5f9';this.style.borderColor='#e2e8f0'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+                            <div>
+                                <div style="font-weight:800; color:#0f172a;">${p.name}</div>
+                                <div style="font-size:0.7rem; color:#94a3b8; font-weight:600;">ID: ${p.id_number || 'N/A'} &bull; ${p.phone || ''}</div>
+                            </div>
+                            <i class="fas fa-arrow-right text-slate-300"></i>
+                        </div>
+                    `).join('');
+                })
+                .catch(() => {
+                    resultsDiv.innerHTML = '<p style="color:#ef4444; text-align:center; font-weight:600;">Search failed.</p>';
+                });
+        }, 350);
+    }
+
+    function tagPatientSha(patientId, patientName) {
+        const feedback = document.getElementById('shaFeedback');
+        feedback.style.display = 'none';
+        fetch('{% url "accounts:set_visit_sha" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: `patient_id=${patientId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            feedback.style.display = 'block';
+            if (data.success) {
+                feedback.style.background = '#f0fdf4';
+                feedback.style.color = '#16a34a';
+                feedback.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+            } else {
+                feedback.style.background = '#fff1f2';
+                feedback.style.color = '#e11d48';
+                feedback.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.error;
+            }
+        })
+        .catch(() => {
+            feedback.style.display = 'block';
+            feedback.style.background = '#fff1f2';
+            feedback.style.color = '#e11d48';
+            feedback.innerHTML = 'Network error';
+        });
     }
     </script>
 {% endblock %}

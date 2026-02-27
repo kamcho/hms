@@ -34,6 +34,7 @@ urlpatterns = [
     # Prescription URLs
     path('prescription/create/<int:visit_id>/', views.create_prescription, name='create_prescription'),
     path('prescription/<int:prescription_id>/', views.prescription_detail, name='prescription_detail'),
+    path('prescription/<int:prescription_id>/edit/', views.edit_prescription, name='edit_prescription'),
     path('prescription/patient/<int:patient_id>/', views.prescription_list, name='prescription_list'),
     
     # Pharmacy URLs

@@ -1,8 +1,50 @@
-{% extends 'users/dashboard_base.html' %}
+{% extends "users/dashboard_base.html" %}
 {% load static %}
-{% block title %}{{ title }} - HMS Clinical Exit{% endblock %}
+{% block extra_css %}
+    <style>
+    .discharge-container textarea,
+    .discharge-container input[type="text"],
+    .discharge-container input[type="number"],
+    .discharge-container select,
+    .discharge-container .form-control {
+        width: 100% !important;
+        background: #ffffff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #1e293b !important;
+        transition: all 0.2s ease-in-out !important;
+        outline: none !important;
+    }
+
+    .discharge-container select {
+        appearance: none !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+        background-position: right 1rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 1.5em 1.5em !important;
+        padding-right: 2.5rem !important;
+    }
+
+    .discharge-container textarea {
+        min-height: 100px !important;
+    }
+
+    .discharge-container textarea:focus,
+    .discharge-container input:focus,
+    .discharge-container select:focus,
+    .discharge-container .form-control:focus,
+    .discharge-container .med-search-input:focus {
+        background: #fff !important;
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    </style>
+{% endblock extra_css %}
 {% block content %}
-    <div class="px-8 py-10 max-w-[1400px] mx-auto">
+    <div class="px-8 py-10 max-w-[1400px] mx-auto discharge-container">
         <!-- Header Area -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
             <div>
@@ -31,8 +73,7 @@
                         <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
                             <i class="fas fa-file-invoice-dollar text-indigo-500"></i> Provisionary Billing Summary
                         </h2>
-                        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-widest">Pre-Discharge
-                        Audit</span>
+                        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-widest">Pre-Discharge Audit</span>
                     </div>
                     <div class="p-0">
                         <table class="w-full text-left border-collapse">
@@ -49,12 +90,19 @@
                                     <td class="px-10 py-6">
                                         <div class="text-sm font-black text-slate-900">Ward Accommodation</div>
                                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                            {{ admission.bed.ward.name }} ({{ admission.bed.ward.ward_type }})
+                                            {% if admission.bed %}
+                                                {{ admission.bed.ward.name }} ({{ admission.bed.ward.ward_type }})
+                                            {% else %}
+                                                No Bed Assigned
+                                            {% endif %}
                                         </div>
                                     </td>
                                     <td class="px-8 py-6 text-center">
                                         <span class="px-3 py-1 bg-slate-100 text-slate-600 text-[11px] font-black rounded-lg">
-                                            {{ days_stayed }} Day{{ days_stayed|pluralize }} @ ${{ admission.bed.ward.base_charge_per_day }}/day
+                                            {{ days_stayed }} Day{{ days_stayed|pluralize }} 
+                                            {% if admission.bed %}
+                                                @ ${{ admission.bed.ward.base_charge_per_day }}/day
+                                            {% endif %}
                                         </span>
                                     </td>
                                     <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ ward_cost }}</td>
@@ -66,8 +114,7 @@
                                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensed during admission</div>
                                     </td>
                                     <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Standard
-                                        Hospital Catalog</span>
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Standard Hospital Catalog</span>
                                     </td>
                                     <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ med_cost }}</td>
                                 </tr>
@@ -78,8 +125,7 @@
                                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Oxygen, Procedures, Nursing Care</div>
                                     </td>
                                     <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Variable
-                                        / Point of service</span>
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Variable / Point of service</span>
                                     </td>
                                     <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ service_cost }}</td>
                                 </tr>
@@ -87,8 +133,7 @@
                             <tfoot>
                                 <tr class="bg-indigo-600 text-white">
                                     <td colspan="2" class="px-10 py-6 text-sm font-black uppercase tracking-widest">
-                                        Total
-                                        Estimated Liability
+                                        Total Estimated Liability
                                     </td>
                                     <td class="px-10 py-6 text-right text-3xl font-black">${{ total_bill }}</td>
                                 </tr>
@@ -101,10 +146,7 @@
                     <div class="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full -mr-24 -mt-24 blur-3xl opacity-50"></div>
                     <div class="px-10 py-6 bg-emerald-50/50 border-b border-emerald-100 flex items-center gap-3">
                         <i class="fas fa-clipboard-check text-emerald-600"></i>
-                        <h2 class="text-sm font-black text-emerald-900 uppercase tracking-widest font-black">
-                            Physician
-                            Authorization
-                        </h2>
+                        <h2 class="text-sm font-black text-emerald-900 uppercase tracking-widest font-black">Physician Authorization</h2>
                     </div>
                     <form method="post" class="p-10 space-y-8 relative z-10">
                         {% csrf_token %}
@@ -226,10 +268,8 @@
                             <div>
                                 <div class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Authorization Warning</div>
                                 <p class="text-[11px] font-bold text-amber-900 leading-relaxed uppercase tracking-tight">
-                                    By
-                                    confirming this discharge, you certify the patient is clinically fit for release. This
-                                    action will release Bed {{ admission.bed.bed_number }} and finalize the admission
-                                    folder.
+                                    By confirming this discharge, you certify the patient is clinically fit for release. 
+                                    {% if admission.bed %}This action will release Bed {{ admission.bed.bed_number }} and finalize the admission folder.{% else %}This action will finalize the admission folder.{% endif %}
                                 </p>
                             </div>
                         </div>
@@ -250,33 +290,27 @@
                     </h3>
                     <div class="space-y-8">
                         <div>
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                                Time of
-                                Admission
-                            </div>
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time of Admission</div>
                             <div class="text-lg font-black text-white">{{ admission.admitted_at|date:"F d, Y" }}</div>
                             <div class="text-[11px] font-bold text-indigo-400 mt-1 uppercase tracking-widest">
-                                {{
-                                admission.admitted_at|time:"H:i" }} HRS
+                                {{ admission.admitted_at|time:"H:i" }} HRS
                             </div>
                         </div>
                         <div class="pt-8 border-t border-white/5">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                Entrance
-                                Diagnosis
-                            </div>
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Entrance Diagnosis</div>
                             <div class="p-4 bg-white/5 rounded-2xl border border-white/10 text-sm font-medium text-slate-100 leading-relaxed italic">"{{ admission.provisional_diagnosis }}"</div>
                         </div>
                         <div class="pt-8 border-t border-white/5">
                             <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                Ward
-                                Assignment
+                                Ward Assignment
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-black text-slate-100 uppercase tracking-widest">{{
-                                admission.bed.ward.name }}</span>
-                                <span class="px-2 py-1 bg-indigo-500 text-white text-[9px] font-black rounded-lg uppercase tracking-wider">UNIT
-                                {{ admission.bed.bed_number }}</span>
+                                <span class="text-xs font-black text-slate-100 uppercase tracking-widest">
+                                    {% if admission.bed %}{{ admission.bed.ward.name }}{% else %}N/A{% endif %}
+                                </span>
+                                <span class="px-2 py-1 bg-indigo-500 text-white text-[9px] font-black rounded-lg uppercase tracking-wider">
+                                    {% if admission.bed %}UNIT {{ admission.bed.bed_number }}{% else %}No Bed{% endif %}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -302,32 +336,6 @@
             </div>
         </div>
     </div>
-    <style>
-    textarea,
-    input {
-        width: 100% !important;
-        background: #f8fafc !important;
-        border: 2px solid #f1f5f9 !important;
-        border-radius: 20px !important;
-        padding: 14px 18px !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        color: #1e293b !important;
-        transition: all 0.3s !important;
-    }
-
-    textarea {
-        min-height: 100px !important;
-    }
-
-    textarea:focus,
-    input:focus {
-        background: #fff !important;
-        border-color: #10b981 !important;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
-        outline: none !important;
-    }
-    </style>
     <script>
     const medMetadata = {{ med_json|safe }};
 
@@ -581,4 +589,4 @@
         }
     }
     </script>
-{% endblock %}
+{% endblock content %}

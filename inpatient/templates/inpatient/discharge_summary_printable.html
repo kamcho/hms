@@ -111,7 +111,7 @@
                 <div class="flex">
                     <div class="w-1/2">
                         <span class="label">Ward:</span>
-                        <span class="dotted-underline min-w-[100px] ml-1">{{ admission.bed.ward.name }}</span>
+                        <span class="dotted-underline min-w-[100px] ml-1">{% if admission.bed %}{{ admission.bed.ward.name }}{% else %}N/A{% endif %}</span>
                     </div>
                     <div class="w-1/2">
                         <span class="label">Dept:</span>

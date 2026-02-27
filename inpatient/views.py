@@ -5,7 +5,8 @@ from django.http import JsonResponse
 from .models import (
     Admission, Ward, Bed, InpatientDischarge, MedicationChart, 
     ServiceAdmissionLink, PatientVitals, ClinicalNote, 
-    FluidBalance, WardTransfer, DoctorInstruction, NutritionOrder
+    FluidBalance, WardTransfer, DoctorInstruction, NutritionOrder,
+    GatePass
 )
 from .forms import (
     AdmissionForm, MedicationChartForm, ServiceAdmissionLinkForm, 
@@ -21,6 +22,7 @@ import math
 from accounts.models import Service, Invoice, InvoiceItem
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
+from .utils import check_billing_clearance
 @login_required
 def dashboard(request):
     # Analytics
@@ -80,12 +82,11 @@ def admit_patient(request, patient_id):
     is_already_admitted = Admission.objects.filter(patient=patient, status='Admitted').exists()
     print(f"DEBUG: Is already admitted = {is_already_admitted}")
     
-    # For Extend to IPD functionality, allow admission even if already admitted
-    # This will close the current admission and create a new one
-    if is_already_admitted and not invoice_id:
-        print(f"DEBUG: Patient already admitted without invoice_id, redirecting...")
-        messages.warning(request, f"{patient.full_name} is already admitted.")
-        return redirect('home:patient_detail', pk=patient.pk)
+    # For the transition logic, we'll allow the admission but show a warning in the template
+    existing_admission = None
+    if is_already_admitted:
+        existing_admission = Admission.objects.filter(patient=patient, status='Admitted').order_by('-admitted_at').first()
+        print(f"DEBUG: Patient already admitted, will show warning. Admission ID: {existing_admission.id}")
     
     print(f"DEBUG: Continuing with admission process...")
     
@@ -106,22 +107,6 @@ def admit_patient(request, patient_id):
             admission.patient = patient
             admission.admitted_by = request.user
             
-            # For Extend to IPD: Close existing admission if exists
-            if is_already_admitted:
-                print(f"DEBUG: Closing existing admission for Extend to IPD")
-                existing_admission = Admission.objects.get(patient=patient, status='Admitted')
-                existing_admission.status = 'Discharged'
-                existing_admission.discharged_at = timezone.now()
-                existing_admission.discharged_by = request.user
-                existing_admission.save()
-                
-                # Release the bed
-                if existing_admission.bed:
-                    existing_admission.bed.is_occupied = False
-                    existing_admission.bed.save()
-                
-                messages.info(request, f"Previous admission closed. Extending to new IPD admission.")
-            
             # Deactivate any existing active visits (e.g., from OPD or Maternity)
             Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
             
@@ -133,50 +118,20 @@ def admit_patient(request, patient_id):
             )
             admission.visit = visit
             
-            # Handle invoice mirroring if previous_invoice exists
-            if previous_invoice:
-                # Create new invoice for the new visit
-                from accounts.utils import get_or_create_invoice
-                new_invoice = get_or_create_invoice(visit=visit, user=request.user)
+            # Handle transitions/extensions (close old admissions, transfer charges)
+            if is_already_admitted or previous_invoice:
+                from .utils import handle_admission_transition
+                # Extract invoice from existing admission if not provided
+                source_invoice = previous_invoice
+                if not source_invoice and existing_admission:
+                    source_invoice = getattr(existing_admission.visit, 'invoice', None)
                 
-                # Copy only Normal Delivery items from previous invoice to new invoice
-                for item in previous_invoice.items.all():
-                    print(f"DEBUG: Checking item - Service: {item.service}, Name: {item.name}, Amount: {item.amount}")
-                    
-                    # Only copy Normal Delivery service items
-                    if item.service and item.service.name == 'Normal Delivery':
-                        InvoiceItem.objects.create(
-                            invoice=new_invoice,
-                            service=item.service,
-                            inventory_item=item.inventory_item,
-                            name=item.name,
-                            quantity=item.quantity,
-                            unit_price=item.unit_price,
-                            amount=item.amount,
-                            paid_amount=item.paid_amount,
-                            created_by=request.user
-                        )
-                        print(f"DEBUG: Copied Normal Delivery item: {item.name} (Amount: {item.amount})")
-                    else:
-                        print(f"DEBUG: Skipped non-Normal Delivery item: {item.name}")
+                handle_admission_transition(patient, visit, request.user, source_invoice)
                 
-                # Set all unpaid items in previous invoice to paid (only if not already paid)
-                unpaid_items = previous_invoice.items.filter(
-                    Q(paid_amount__lt=F('amount')) | Q(paid_amount=0)
-                )
-                if unpaid_items.exists():
-                    # Mark items as fully paid by setting paid_amount = amount
-                    unpaid_items.update(paid_amount=F('amount'))
-                    print(f"DEBUG: Marked {unpaid_items.count()} unpaid items as paid in previous invoice")
-                    
-                    # Update invoice status to Canceled since it was transferred to IPD
-                    previous_invoice.status = 'Canceled'
-                    previous_invoice.save()
-                    print(f"DEBUG: Updated invoice #{previous_invoice.id} status to: {previous_invoice.status}")
-                else:
-                    print(f"DEBUG: All items already paid in previous invoice")
-                
-                messages.success(request, f"Extended to IPD successfully. Unpaid items from Invoice #{previous_invoice.id} have been transferred to new visit.")
+                if is_already_admitted:
+                    messages.info(request, f"Previous admission closed and stay extended.")
+                elif previous_invoice:
+                    messages.success(request, f"Extended to IPD successfully. Unpaid items have been transferred.")
             
             admission.save()
             messages.success(request, f"Patient {patient.full_name} admitted successfully.")
@@ -187,8 +142,10 @@ def admit_patient(request, patient_id):
     return render(request, 'inpatient/admit_patient.html', {
         'form': form,
         'patient': patient,
+        'previous_invoice': previous_invoice,
+        'is_already_admitted': is_already_admitted,
+        'existing_admission': existing_admission,
         'title': f'Admit Patient: {patient.full_name}',
-        'previous_invoice': previous_invoice
     })
 
 @login_required
@@ -826,7 +783,10 @@ def discharge_patient(request, admission_id):
     days_stayed = max(1, math.ceil(duration.total_seconds() / 86400))
     
     # Calculate Billing based on stay duration and logged services
-    ward_cost = days_stayed * admission.bed.ward.base_charge_per_day
+    if admission.bed:
+        ward_cost = days_stayed * admission.bed.ward.base_charge_per_day
+    else:
+        ward_cost = 0
     
     med_cost = admission.medications.filter(is_dispensed=True).aggregate(
         total=Sum(F('item__selling_price') * F('quantity'))
@@ -874,7 +834,7 @@ def discharge_patient(request, admission_id):
                     visit=admission.visit,
                     prescribed_by=request.user,
                     diagnosis=discharge.final_diagnosis,
-                    notes=f"Take-home meds prescribed on discharge from {admission.bed.ward.name}"
+                    notes=f"Take-home meds prescribed on discharge from {admission.bed.ward.name}" if admission.bed else "Take-home meds prescribed on discharge"
                 )
                 
                 # Save associated items
@@ -905,10 +865,6 @@ def discharge_patient(request, admission_id):
             admission.discharged_by = request.user
             admission.save()
 
-            # Close associated visit
-            visit = admission.visit
-            visit.is_active = False
-            visit.save()
             
             messages.success(request, f"Patient {admission.patient.full_name} has been discharged and take-home medications recorded.")
             return redirect('inpatient:discharge_summary', pk=discharge.pk)
@@ -1010,3 +966,134 @@ def admission_patient_list(request):
         'patients': patients,
         'title': 'New Admission - Select Patient'
     })
+@login_required
+def generate_gatepass(request, admission_id):
+    """Generates a gatepass if the patient is discharged and all bills are cleared"""
+    if request.user.role != 'Receptionist':
+        messages.error(request, "Permission Denied: Only receptionists can issue gatepasses.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+        
+    admission = get_object_or_404(Admission, id=admission_id)
+    
+    # Check if already has a gatepass
+    if hasattr(admission, 'gate_pass'):
+        return redirect('inpatient:view_gatepass', pass_id=admission.gate_pass.id)
+    
+    # 1. Check if discharged
+    if admission.status != 'Discharged':
+        messages.error(request, "A gatepass can only be generated for discharged patients.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+    
+    # 2. Check billing clearance
+    is_cleared, balance, message = check_billing_clearance(admission)
+    
+    if not is_cleared:
+        messages.error(request, f"Billing Clearance Failed: {message}")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+    
+    # 3. Create Gatepass
+    gate_pass = GatePass.objects.create(
+        admission=admission,
+        issued_by=request.user
+    )
+    
+    messages.success(request, f"Gatepass {gate_pass.pass_number} issued successfully.")
+    return redirect('inpatient:view_gatepass', pass_id=gate_pass.id)
+
+@login_required
+def view_gatepass(request, pass_id):
+    """Renders a printable gatepass"""
+    if request.user.role != 'Receptionist':
+        messages.error(request, "Permission Denied: Only receptionists can access gatepasses.")
+        return redirect('inpatient:dashboard')
+        
+    gate_pass = get_object_or_404(GatePass.objects.select_related('admission', 'admission__patient', 'issued_by'), id=pass_id)
+    return render(request, 'inpatient/gatepass_detail.html', {
+        'gate_pass': gate_pass,
+        'admission': gate_pass.admission,
+        'patient': gate_pass.admission.patient
+    })
+
+
+@login_required
+def move_to_morgue(request, admission_id):
+    """Move a deceased inpatient to the morgue by creating an internal Deceased record."""
+    if request.user.role not in ['Doctor', 'Nurse']:
+        messages.error(request, "Only doctors and nurses can perform this action.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+
+    admission = get_object_or_404(Admission, id=admission_id)
+
+    if admission.status != 'Admitted':
+        messages.warning(request, f"Patient {admission.patient.full_name} is not currently admitted.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+
+    if request.method == 'POST':
+        cause_of_death = request.POST.get('cause_of_death', '').strip()
+        place_of_death = request.POST.get('place_of_death', '').strip()
+        date_of_death = request.POST.get('date_of_death', '')
+        time_of_death = request.POST.get('time_of_death', '')
+
+        if not cause_of_death or not date_of_death or not time_of_death:
+            messages.error(request, "Cause, date, and time of death are required.")
+            return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+
+        import datetime as dt
+        from morgue.models import Deceased
+
+        patient = admission.patient
+
+        # Map patient gender to Deceased sex choices
+        sex_map = {'M': 'MALE', 'F': 'FEMALE', 'O': 'OTHER', 'N': 'OTHER'}
+        sex = sex_map.get(patient.gender, 'OTHER')
+
+        # Auto-generate a unique tag
+        now = timezone.now()
+        tag = f"MRG-{now.strftime('%Y%m%d')}-{patient.pk}"
+
+        # Ensure tag uniqueness
+        counter = 1
+        base_tag = tag
+        while Deceased.objects.filter(tag=base_tag).exists():
+            base_tag = f"{tag}-{counter}"
+            counter += 1
+        tag = base_tag
+
+        try:
+            death_date = dt.date.fromisoformat(date_of_death)
+            death_time = dt.time.fromisoformat(time_of_death)
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date or time format.")
+            return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+
+        # Create the Deceased record
+        deceased = Deceased.objects.create(
+            deceased_type='INTERNAL',
+            surname=patient.last_name,
+            other_names=patient.first_name,
+            sex=sex,
+            id_number=patient.id_number or '',
+            id_type='NATIONAL_ID' if patient.id_number else '',
+            physical_address=patient.location or '',
+            residence=patient.location or '',
+            town='',
+            date_of_death=death_date,
+            time_of_death=death_time,
+            place_of_death=place_of_death or 'In-Hospital',
+            cause_of_death=cause_of_death,
+            tag=tag,
+            patient=patient,
+            created_by=request.user,
+        )
+
+        # Update admission status
+        admission.status = 'Deceased'
+        admission.discharged_at = now
+        admission.discharged_by = request.user
+        admission.save()
+
+        messages.success(request, f"Patient {patient.full_name} has been moved to morgue records. Deceased record created.")
+        return redirect('morgue:deceased_detail', pk=deceased.pk)
+
+    # GET requests redirect back
+    return redirect('inpatient:patient_case_folder', admission_id=admission_id)

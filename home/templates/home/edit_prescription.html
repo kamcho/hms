@@ -1,0 +1,728 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}Edit Prescription - {{ patient.full_name }} - HMS{% endblock %}
+{% block extra_css %}
+    <style>
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    :root {
+        --indigo-primary: #6366f1;
+        --indigo-dark: #4f46e5;
+        --slate-bg: #f8fafc;
+        --glass-border: rgba(226, 232, 240, 0.5);
+    }
+
+    .prescription-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    /* Premium Cards */
+    .premium-card {
+        background: white;
+        border: 1px solid var(--glass-border);
+        border-radius: 2rem;
+        padding: 2.5rem;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .premium-card:hover {
+        border-color: rgba(99, 102, 241, 0.2);
+        box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.08);
+    }
+
+    /* Inputs */
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        width: 100% !important;
+        background: #ffffff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 1rem !important;
+        padding: 1rem 1.25rem !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        outline: none !important;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        border-color: var(--indigo-primary) !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05) !important;
+    }
+
+    /* Medication Items */
+    .medication-rows-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .medication-entry {
+        background: #fdfdfd;
+        border: 2px solid #f1f5f9;
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .medication-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .med-badge {
+        background: #f1f5f9;
+        color: #64748b;
+        padding: 0.4rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    /* Buttons */
+    .btn-action {
+        padding: 1rem 2rem;
+        border-radius: 1rem;
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn-indigo {
+        background: var(--indigo-primary);
+        color: white;
+        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-indigo:hover {
+        background: var(--indigo-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-ghost {
+        background: transparent;
+        color: #64748b;
+        border: 2px solid #f1f5f9;
+    }
+
+    .btn-ghost:hover {
+        background: #f8fafc;
+        color: #1e293b;
+        border-color: #e2e8f0;
+    }
+
+    .remove-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        background: #fff1f2;
+        color: #e11d48;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .remove-btn:hover {
+        background: #ffe4e6;
+        transform: rotate(90deg);
+    }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="bg-[#f8fafc] min-h-screen">
+        <div class="prescription-container animate-fade-in">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-12">
+                <div>
+                    <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">Edit Prescription</h1>
+                    <div class="flex items-center gap-4 text-slate-500 font-bold text-sm">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-user-circle text-indigo-500"></i>
+                            {{ patient.full_name }}
+                        </span>
+                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span>{{ patient.age }} Years</span>
+                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span class="uppercase tracking-widest text-[10px]">{{ patient.get_gender_display }}</span>
+                    </div>
+                </div>
+                <a href="{% url 'home:prescription_detail' prescription.pk %}" class="btn-action btn-ghost">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Details
+                </a>
+            </div>
+
+            <!-- Invoice Summary Context -->
+            {% if prescription.invoice %}
+            <div class="premium-card bg-slate-50 border-slate-200 py-6 mb-8">
+                <div class="flex flex-wrap items-center justify-between gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-600 border border-slate-100">
+                            <i class="fas fa-file-invoice-dollar text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Status</h3>
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest 
+                                {% if prescription.invoice.status == 'Paid' %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                {{ prescription.invoice.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-3 gap-8 md:pl-8">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Paid</p>
+                            <p class="text-lg font-black text-slate-900" id="original-paid-amount">KES {{ prescription.invoice.paid_amount }}</p>
+                        </div>
+                        <div class="hidden md:block">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Invoice Total</p>
+                            <p class="text-lg font-black text-slate-600" id="original-total-amount">KES {{ prescription.invoice.total_amount }}</p>
+                        </div>
+                        <div class="border-l border-slate-200 pl-8">
+                            <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">New Estimate</p>
+                            <p id="estimated-new-total" class="text-lg font-black text-indigo-600">KES {{ prescription.invoice.total_amount }}</p>
+                            <p id="estimated-diff" class="text-[10px] font-bold text-slate-400 mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" id="prescription-form">
+                {% csrf_token %}
+                <!-- Diagnosis Section -->
+                <div class="premium-card">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <i class="fas fa-stethoscope text-lg"></i>
+                        </div>
+                        <h2 class="text-xl font-black text-slate-900">Diagnosis & Assessment</h2>
+                    </div>
+                    <div class="grid grid-cols-1 gap-8">
+                        <div class="space-y-3">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                Clinical
+                                Diagnosis *
+                            </label>
+                            {{ form.diagnosis }}
+                            {% if form.diagnosis.errors %}<p class="text-rose-500 text-xs font-bold mt-2 ml-2">{{ form.diagnosis.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                Internal
+                                Notes (Optional)
+                            </label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <!-- Medications Section -->
+                <div class="premium-card">
+                    <div class="flex items-center justify-between mb-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                <i class="fas fa-pills text-lg"></i>
+                            </div>
+                            <h2 class="text-xl font-black text-slate-900">Medications</h2>
+                        </div>
+                        <button type="button" class="btn-action btn-indigo" onclick="addMedication()">
+                            <i class="fas fa-plus"></i>
+                            Add Drug
+                        </button>
+                    </div>
+                    {{ formset.management_form }}
+                    <div id="medication-formset" class="space-y-6">
+                        {% for form in formset %}
+                            <div class="medication-entry">
+                                <div class="medication-header">
+                                    <div class="flex items-center gap-3">
+                                        <span class="med-badge">Drug #{{ forloop.counter }}</span>
+                                        {% if form.instance.pk %}
+                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest border border-indigo-100 bg-indigo-50 px-2 py-0.5 rounded">Saved Record</span>
+                                            {% if form.instance.dispensed %}
+                                                <span class="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                                                    <i class="fas fa-check-circle"></i> Dispensed
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    {% if not form.instance.dispensed %}
+                                    <button type="button" class="remove-btn" onclick="removeMedication(this)" title="Remove Drug">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    {% else %}
+                                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic" title="Dispensed items cannot be removed">
+                                        Locked <i class="fas fa-lock ml-1 opacity-50"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 {% if form.instance.dispensed %}opacity-75 pointer-events-none{% endif %}">
+                                    <div class="md:col-span-2 lg:col-span-4 space-y-2 search-container">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Drug
+                                            Name *
+                                        </label>
+                                        {{ form.medication }}
+                                        <div class="med-details-hint mt-2 ml-2 flex gap-2"></div>
+                                        <div class="whole-dispense-notice mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl flex gap-3 hidden">
+                                            <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
+                                            <p class="text-[9px] font-black text-amber-900 uppercase tracking-tight leading-tight">Note: This item is usually prescribed as a whole package.</p>
+                                        </div>
+                                        {% if form.instance.dispensed %}
+                                        <p class="text-[10px] font-bold text-amber-600 mt-2 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                            <i class="fas fa-info-circle mr-1"></i> Selection locked: Item already dispensed to patient.
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Units /
+                                            Dose *
+                                        </label>
+                                        {{ form.dose_count }}
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Frequency
+                                            *
+                                        </label>
+                                        {{ form.frequency }}
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Days
+                                            *
+                                        </label>
+                                        {{ form.number_of_days }}
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Total
+                                            Quantity *
+                                        </label>
+                                        {{ form.quantity }}
+                                    </div>
+                                    <div class="md:col-span-2 lg:col-span-4 space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                            Specific
+                                            Instructions
+                                        </label>
+                                        {{ form.instructions }}
+                                    </div>
+                                </div>
+                                <div class="hidden">{{ form.id }}{{ form.DELETE }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Global Actions -->
+                <div class="flex items-center justify-end gap-4 mt-12 pb-20">
+                    <button type="submit" class="btn-action btn-indigo">
+                        <i class="fas fa-save"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+{% block extra_js %}
+    <script>
+    const medMetadata = {{ med_metadata_json| safe }};
+
+    function initializeSearchWidget(entry) {
+        const select = entry.querySelector('select[name$="-medication"]');
+        const container = entry.querySelector('.search-container');
+
+        // Hide original select
+        select.classList.add('hidden');
+
+        // Create Search UI if not exists
+        if (!container.querySelector('.med-search-input')) {
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'med-search-input w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all';
+            searchInput.placeholder = 'Search by Name, Generic, or Class...';
+
+            const resultsDiv = document.createElement('div');
+            resultsDiv.className = 'med-search-results absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto hidden';
+
+            // Insert after label, before hidden select
+            container.insertBefore(searchInput, select);
+            container.appendChild(resultsDiv);
+
+            // Interaction Logic
+            searchInput.addEventListener('input', (e) => handleSearch(e, resultsDiv, select));
+            searchInput.addEventListener('focus', (e) => handleSearch(e, resultsDiv, select));
+
+            // Close dropdown on click outside
+            document.addEventListener('click', (e) => {
+                if (!container.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            // Pre-fill if value exists
+            if (select.value && medMetadata[select.value]) {
+                searchInput.value = medMetadata[select.value].name;
+                updateMedDetails(select);
+            }
+        }
+    }
+
+    function handleSearch(e, resultsDiv, select) {
+        const query = e.target.value.toLowerCase();
+        resultsDiv.innerHTML = '';
+        resultsDiv.classList.remove('hidden');
+
+        const matched = Object.entries(medMetadata).filter(([id, data]) => {
+            return data.name.toLowerCase().includes(query) ||
+                data.generic_name.toLowerCase().includes(query) ||
+                data.drug_class.toLowerCase().includes(query);
+        });
+
+        if (matched.length === 0) {
+            resultsDiv.innerHTML = '<div class="p-4 text-xs font-bold text-slate-400 text-center">No medications found.</div>';
+            return;
+        }
+
+        matched.slice(0, 50).forEach(([id, data]) => {
+            const isOutOfStock = data.stock_quantity <= 0;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex justify-between items-center ${isOutOfStock && data.visit_type === 'OUT-PATIENT' ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`;
+
+            itemDiv.innerHTML = `
+                <div>
+                    <div class="font-bold text-slate-700 text-sm flex items-center gap-2">
+                        ${data.name}
+                        ${data.is_dispensed_as_whole ? '<span class="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">Whole Unit</span>' : ''}
+                    </div>
+                    <div class="flex gap-2 mt-1">
+                        ${data.generic_name ? `<span class="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">${data.generic_name}</span>` : ''}
+                        ${data.drug_class ? `<span class="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${data.drug_class}</span>` : ''}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] font-black uppercase tracking-widest ${isOutOfStock ? 'text-rose-500' : 'text-emerald-500'}">
+                        ${isOutOfStock ? 'Out of Stock' : `${data.stock_quantity} Available`}
+                    </div>
+                    <div class="text-[10px] font-bold text-slate-400">KES ${data.selling_price} / ${data.dispensing_unit || 'Unit'}</div>
+                </div>
+            `;
+
+            if (!isOutOfStock || data.visit_type !== 'OUT-PATIENT') {
+                itemDiv.addEventListener('click', () => {
+                    select.value = id;
+                    e.target.value = data.name; // Set input text
+                    resultsDiv.classList.add('hidden');
+                    updateMedDetails(select); // Trigger updates
+                    // Manually fire change event for other listeners
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            }
+
+            resultsDiv.appendChild(itemDiv);
+        });
+    }
+
+    function updatePricePreview(entry) {
+        const select = entry.querySelector('select[name$="-medication"]');
+        if (!select.value) return;
+
+        const data = medMetadata[select.value];
+        const quantityInput = entry.querySelector('input[name$="-quantity"]');
+        
+        // --- AUTO-CALCULATION LOGIC ---
+        const doseInput = entry.querySelector('input[name$="-dose_count"]');
+        const freqSelect = entry.querySelector('select[name$="-frequency"]');
+        const daysInput = entry.querySelector('input[name$="-number_of_days"]');
+        
+        const dose = parseFloat(doseInput.value) || 0;
+        const freq = freqSelect.value;
+        const days = parseInt(daysInput.value) || 0;
+
+        const freqMap = {
+            'Once Daily': 1,
+            'Twice Daily': 2,
+            'Thrice Daily': 3,
+            'Four Times Daily': 4,
+            'Every 6 Hours': 4,
+            'Every 8 Hours': 3,
+            'Every 12 Hours': 2,
+            'Every 24 Hours': 1
+        };
+
+        const isWhole = data.is_dispensed_as_whole;
+        const isAsNeeded = freq === 'As Needed';
+
+        if (!isWhole && !isAsNeeded && dose > 0 && days > 0 && freqMap[freq]) {
+            const calculatedQty = dose * freqMap[freq] * days;
+            quantityInput.value = calculatedQty;
+            quantityInput.readOnly = true;
+            quantityInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        } else {
+            quantityInput.readOnly = false;
+            quantityInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        }
+        // --- END AUTO-CALCULATION ---
+
+        const quant = parseFloat(quantityInput.value) || 0;
+        const hintDiv = entry.querySelector('.med-details-hint');
+
+        // Validation: Stock Check
+        if (data && quant > data.stock_quantity) {
+            quantityInput.setCustomValidity(`Cannot prescribe more than available stock (${data.stock_quantity}).`);
+            quantityInput.reportValidity();
+            quantityInput.classList.add('border-rose-500', 'focus:border-rose-500');
+        } else {
+            quantityInput.setCustomValidity('');
+            quantityInput.classList.remove('border-rose-500', 'focus:border-rose-500');
+        }
+
+        // Remove existing price badge if any
+        const oldPrice = hintDiv.querySelector('.price-badge');
+        if (oldPrice) oldPrice.remove();
+
+        if (data && quant > 0) {
+            const price = (parseFloat(data.selling_price) * quant).toFixed(2);
+            const pBadge = document.createElement('span');
+            pBadge.className = 'price-badge px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black border border-emerald-100 flex items-center gap-1';
+            pBadge.innerHTML = `<i class="fas fa-tag opacity-50"></i> EST. KES ${price}`;
+            pBadge.dataset.price = price; // Store for global summation
+            hintDiv.appendChild(pBadge);
+        }
+        updateGlobalTotal();
+    }
+
+    function updateGlobalTotal() {
+        const estimatedTotalEl = document.getElementById('estimated-new-total');
+        const diffEl = document.getElementById('estimated-diff');
+        if (!estimatedTotalEl) return;
+
+        let newTotal = 0;
+        // Sum all price-badges
+        document.querySelectorAll('.medication-entry:not([style*="display: none"]) .price-badge').forEach(badge => {
+            newTotal += parseFloat(badge.dataset.price || 0);
+        });
+
+        const originalTotalEl = document.getElementById('original-total-amount');
+        const originalTotal = originalTotalEl ? parseFloat(originalTotalEl.textContent.replace('KES ', '')) : 0;
+        
+        const originalPaidEl = document.getElementById('original-paid-amount');
+        const originalPaid = originalPaidEl ? parseFloat(originalPaidEl.textContent.replace('KES ', '')) : 0;
+
+        estimatedTotalEl.textContent = `KES ${newTotal.toFixed(2)}`;
+
+        const diff = newTotal - originalTotal;
+        if (diff > 0) {
+            diffEl.innerHTML = `<span class="text-rose-500"><i class="fas fa-arrow-up"></i> +KES ${diff.toFixed(2)}</span> (Balance Due)`;
+        } else if (diff < 0) {
+            diffEl.innerHTML = `<span class="text-emerald-500"><i class="fas fa-arrow-down"></i> -KES ${Math.abs(diff).toFixed(2)}</span> (Credit/Refund)`;
+        } else {
+            diffEl.innerHTML = `No change in total`;
+        }
+
+        // Handle paid status impact
+        if (newTotal > originalPaid && originalPaid > 0) {
+            diffEl.innerHTML += `<br><span class="text-amber-600 font-black text-[8px] uppercase tracking-widest mt-1 block">Status will revert to 'Partial'</span>`;
+        }
+    }
+
+    function updateMedDetails(select) {
+        const entry = select.closest('.medication-entry');
+        const hintDiv = entry.querySelector('.med-details-hint');
+        const drugId = select.value;
+        const data = medMetadata[drugId];
+        const quantityInput = entry.querySelector('input[name$="-quantity"]');
+        const quantityLabel = entry.querySelector('label[for$="-quantity"]') || quantityInput.previousElementSibling; // Fallback
+
+        hintDiv.innerHTML = '';
+        if (data) {
+            // Add Generic Name Badge
+            if (data.generic_name) {
+                const gBadge = document.createElement('span');
+                gBadge.className = 'px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black border border-indigo-100';
+                gBadge.textContent = data.generic_name;
+                hintDiv.appendChild(gBadge);
+            }
+            // Add Formulation Badge
+            if (data.formulation) {
+                const fBadge = document.createElement('span');
+                fBadge.className = 'px-2 py-0.5 bg-slate-50 text-slate-600 rounded text-[9px] font-black border border-slate-100';
+                fBadge.textContent = data.formulation;
+                hintDiv.appendChild(fBadge);
+            }
+            // Add Stock Badge
+            const sBadge = document.createElement('span');
+            const isLow = data.stock_quantity < 10;
+            sBadge.className = `px-2 py-0.5 rounded text-[9px] font-black border ${isLow ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`;
+            sBadge.textContent = `${data.stock_quantity} ${data.dispensing_unit || 'Units'} in Stock`;
+            hintDiv.appendChild(sBadge);
+
+            updatePricePreview(entry);
+
+            // Toggle whole dispense notice and enforce integer steps
+            const wholeNotice = entry.querySelector('.whole-dispense-notice');
+
+            if (data.is_dispensed_as_whole) {
+                if (wholeNotice) {
+                    wholeNotice.classList.remove('hidden');
+                    wholeNotice.innerHTML = `
+                        <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
+                        <div>
+                            <p class="text-[10px] font-black text-amber-900 uppercase tracking-tight leading-tight mb-1">
+                                Whole Unit Dispensing
+                            </p>
+                            <p class="text-xs text-amber-800">
+                                This item is dispensed as a <b>whole ${data.dispensing_unit}</b>. Please enter the number of ${data.dispensing_unit}s (e.g., 1, 2), NOT tablets/ml.
+                            </p>
+                        </div>
+                     `;
+                }
+                quantityInput.step = "1";
+                quantityInput.min = "1";
+                if (quantityLabel) quantityLabel.innerHTML = `Total Quantity (${data.dispensing_unit}) *`;
+            } else {
+                if (wholeNotice) wholeNotice.classList.add('hidden');
+                quantityInput.step = "any";
+                if (quantityLabel) quantityLabel.innerHTML = `Total Quantity *`;
+            }
+        }
+    }
+
+    // Attach listeners
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('select[name$="-medication"]')) {
+            updateMedDetails(e.target);
+        }
+    });
+
+    document.addEventListener('input', (e) => {
+        if (e.target.matches('input[name$="-quantity"], input[name$="-dose_count"], input[name$="-number_of_days"]')) {
+            const entry = e.target.closest('.medication-entry');
+            if (entry) updatePricePreview(entry);
+        }
+    });
+
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('select[name$="-frequency"]')) {
+            const entry = e.target.closest('.medication-entry');
+            if (entry) updatePricePreview(entry);
+        }
+    });
+
+    // Form submission validation
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const medSelects = document.querySelectorAll('select[name$="-medication"]');
+        let hasMedication = false;
+        
+        medSelects.forEach(select => {
+            if (select.value && select.closest('.medication-entry').style.display !== 'none') {
+                hasMedication = true;
+            }
+        });
+
+        if (!hasMedication) {
+            e.preventDefault();
+            alert('Please select at least one medication.');
+            return false;
+        }
+    });
+
+    // Initial load
+    document.querySelectorAll('.medication-entry').forEach(entry => {
+        initializeSearchWidget(entry);
+    });
+
+    function addMedication() {
+        const container = document.getElementById('medication-formset');
+        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+        const currentCount = parseInt(totalForms.value);
+
+        const firstEntry = container.querySelector('.medication-entry');
+        const newEntry = firstEntry.cloneNode(true);
+
+        const newIndex = currentCount;
+        newEntry.innerHTML = newEntry.innerHTML.replace(/items-\d+-/g, `items-${newIndex}-`);
+        newEntry.querySelector('.med-badge').textContent = `Drug #${newIndex + 1}`;
+        newEntry.querySelector('.med-details-hint').innerHTML = '';
+
+        // Clear "Saved/Dispensed" badges
+        newEntry.querySelectorAll('.med-badge + span').forEach(el => el.remove());
+
+        const existingSearch = newEntry.querySelector('.med-search-input');
+        if (existingSearch) existingSearch.remove();
+        const existingResults = newEntry.querySelector('.med-search-results');
+        if (existingResults) existingResults.remove();
+        const select = newEntry.querySelector('select');
+        select.classList.remove('hidden');
+
+        newEntry.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+            el.value = '';
+            el.readOnly = false;
+            if (el.name.endsWith('-quantity')) {
+                el.type = 'number';
+                el.classList.remove('border-rose-500');
+                el.setCustomValidity('');
+            }
+            el.classList.remove('bg-slate-50', 'opacity-60', 'font-black', 'text-slate-500', 'cursor-not-allowed');
+        });
+
+        const wholeNotice = newEntry.querySelector('.whole-dispense-notice');
+        if (wholeNotice) wholeNotice.classList.add('hidden');
+
+        container.appendChild(newEntry);
+        initializeSearchWidget(newEntry);
+        totalForms.value = currentCount + 1;
+    }
+
+    function removeMedication(btn) {
+        const entry = btn.closest('.medication-entry');
+        const deleteCheckbox = entry.querySelector('input[name$="-DELETE"]');
+
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+            entry.style.display = 'none';
+        } else {
+            entry.remove();
+            const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+            totalForms.value = parseInt(totalForms.value) - 1;
+        }
+    }
+    </script>
+{% endblock %}

@@ -242,10 +242,15 @@
                 <p style="color: #64748b;">No medications prescribed.</p>
             {% endfor %}
         </div>
-        <div style="margin-top: 2rem;">
+        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
             <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Patient
             </a>
+            {% if request.user.role in 'Doctor Nurse Pharmacist Admin' or request.user.is_superuser %}
+            <a href="{% url 'home:edit_prescription' prescription.pk %}" class="btn" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: white;">
+                <i class="fas fa-edit"></i> Edit Prescription
+            </a>
+            {% endif %}
         </div>
     </div>
     <script>

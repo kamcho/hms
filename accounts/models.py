@@ -210,6 +210,29 @@ class Payment(models.Model):
         ordering = ['-payment_date']
 
 
+class PatientCredit(models.Model):
+    """
+    Tracks credit or refunds owed to a patient due to overpayment 
+    (e.g., when a prescription is edited after payment).
+    """
+    patient = models.ForeignKey('home.Patient', on_delete=models.CASCADE, related_name='credits')
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='credits_generated')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField()
+    is_redeemed = models.BooleanField(default=False, help_text="Checked if the amount has been paid back or applied to another bill")
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='credits_created')
+
+    def __str__(self):
+        return f"Credit for {self.patient.full_name} - {self.amount} ({'Redeemed' if self.is_redeemed else 'Pending'})"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Patient Credit"
+        verbose_name_plural = "Patient Credits"
+
+
 class MpesaPayment(models.Model):
     """
     Technical log of M-Pesa transactions.

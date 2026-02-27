@@ -561,7 +561,7 @@
                         <tbody>
                             {% for invoice in lab_invoices %}
                                 {% with related_result=invoice.related_results.0 %}
-                                    <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}')" style="cursor: pointer;">
+                                    <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}', '{{ invoice.invoice.visit.payment_method }}')" style="cursor: pointer;">
                                     {% endwith %}
                                     <td>
                                         <strong>{{ invoice.invoice.patient.full_name }}</strong>
@@ -577,6 +577,9 @@
                             PARTIAL</span>
                         {% else %}
                             <span class="badge-status status-pending" style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i class="fas fa-exclamation-triangle"></i> UNPAID</span>
+                        {% endif %}
+                        {% if invoice.invoice.visit.payment_method == 'SHA' %}
+                            <span class="badge-status" style="background: #dbeafe; color: #2563eb; font-size: 0.6rem; margin-left: 4px;">SHA</span>
                         {% endif %}
                         <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{ invoice.invoice.id }}</div>
                     </td>
@@ -802,8 +805,8 @@
         document.getElementById(modalId).style.display = "none";
     }
 
-    function handleInvoiceClick(invoiceItemId, status, visitType, resultId) {
-        if (visitType === 'OUT-PATIENT' && status !== 'Paid') {
+    function handleInvoiceClick(invoiceItemId, status, visitType, resultId, paymentMethod) {
+        if (visitType === 'OUT-PATIENT' && status !== 'Paid' && paymentMethod !== 'SHA') {
             const msg = "For Out-Patient visits, the invoice must be fully paid before tests can be processed.";
             showMessageModal('Payment Required', msg);
             return;

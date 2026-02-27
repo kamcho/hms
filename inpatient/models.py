@@ -322,6 +322,32 @@ class InpatientConsumable(models.Model):
         verbose_name_plural = "Inpatient Consumables"
         ordering = ['-prescribed_at']
 
+class GatePass(models.Model):
+    """Clearance pass issued after discharge and full payment"""
+    admission = models.OneToOneField(Admission, on_delete=models.CASCADE, related_name='gate_pass')
+    pass_number = models.CharField(max_length=50, unique=True)
+    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='gate_passes_issued')
+    issued_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pass_number:
+            # Generate pass number: GP-YYYYMMDD-ID
+            # Note: ID will be null before first save if we don't handle it, 
+            # so we'll use a temporary slug or just the timestamp part
+            prefix = f"GP-{timezone.now().strftime('%Y%m%d%H%M')}"
+            last_id = GatePass.objects.count() + 1
+            self.pass_number = f"{prefix}-{last_id}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"GatePass {self.pass_number} - {self.admission.patient.full_name}"
+
+    class Meta:
+        verbose_name = "Gate Pass"
+        verbose_name_plural = "Gate Passes"
+        ordering = ['-issued_at']
+
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 

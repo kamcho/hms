@@ -174,14 +174,13 @@
                             <i class="fas fa-hospital-user"></i>
                             <span>Ward Management</span>
                         </a>
-
+                    {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
                         <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}" id="inventoryMenu">
                             <i class="fas fa-boxes"></i>
                             <span>Inventory</span>
                             <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
                         </a>
-                    {% endif %}
-                    {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
                         <div class="submenu" id="inventorySubmenu">
                             <a href="{% url 'inventory:item_list' %}" 
                               

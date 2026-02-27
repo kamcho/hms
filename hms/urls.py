@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from home import views as home_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -34,6 +35,9 @@ urlpatterns = [
     # path('api-auth/', include('rest_framework.urls')),
     path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),  # Accounts app
     path('comms/', include(('comms.urls', 'comms'), namespace='comms')),  # Comms app
+
+    # Shared API
+    path('api/patient-search/', home_views.patient_search_api, name='patient_search_api'),
 ]
 
 # Serve static and media files during development

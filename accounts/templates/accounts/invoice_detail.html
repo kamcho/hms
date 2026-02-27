@@ -208,11 +208,29 @@
                 </div>
                 <div class="text-end" style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
                     <span class="badge badge-{{ invoice.status|lower }}">{{ invoice.get_status_display }}</span>
-                    {% if user.role == 'Receptionist' and invoice.status != 'Paid' %}
-                        <button class="custom-btn btn-primary" onclick="showModal('recordPaymentModal')" style="background: var(--accent-success);">
-                            <i class="fas fa-money-bill-wave" style="margin-right: 0.5rem;"></i>
-                            Record Payment
-                        </button>
+                    {% if user.role == 'Receptionist' %}
+                        {% if invoice.status == 'Paid' and invoice.visit.admissions.exists %}
+                            {% with admission=invoice.visit.admissions.first %}
+                                {% if admission.gate_pass %}
+                                    <a href="{% url 'inpatient:view_gatepass' admission.gate_pass.id %}" class="custom-btn btn-primary" style="background: var(--accent-primary);">
+                                        <i class="fas fa-id-card" style="margin-right: 0.5rem;"></i>
+                                        View Gatepass
+                                    </a>
+                                {% elif admission.status == 'Discharged' %}
+                                    <a href="{% url 'inpatient:generate_gatepass' admission.id %}" class="custom-btn btn-primary" style="background: var(--accent-primary);">
+                                        <i class="fas fa-id-card" style="margin-right: 0.5rem;"></i>
+                                        Generate Gatepass
+                                    </a>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                        
+                        {% if invoice.status != 'Paid' %}
+                            <button class="custom-btn btn-primary" onclick="showModal('recordPaymentModal')" style="background: var(--accent-success);">
+                                <i class="fas fa-money-bill-wave" style="margin-right: 0.5rem;"></i>
+                                Record Payment
+                            </button>
+                        {% endif %}
                     {% endif %}
                     <!-- {% if can_authorize %}
                 <form action="{% url 'accounts:authorize_discharge' invoice.id %}" method="POST" style="display: inline;">

@@ -40,4 +40,7 @@ urlpatterns = [
     path('services/create/', views.create_service, name='create_service'),
     path('services/<int:pk>/edit/', views.edit_service, name='edit_service'),
     path('services/<int:pk>/toggle/', views.toggle_service, name='toggle_service'),
+
+    # SHA Manager
+    path('api/visit/set-sha/', views.set_visit_sha, name='set_visit_sha'),
 ]

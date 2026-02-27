@@ -92,32 +92,32 @@
                     {% for item in search_results %}
                     <tr onclick="openActionModal(this)" 
                         class="group hover:bg-indigo-50/30 transition-all cursor-pointer"
-                        data-id="{{ item.visit.patient.id }}"
-                        data-name="{{ item.visit.patient.full_name }}"
-                        data-age="{{ item.visit.patient.age }}"
-                        data-gender="{{ item.visit.patient.gender }}"
-                        data-que-id="{{ item.id }}"
+                        data-id="{{ item.patient.id }}"
+                        data-name="{{ item.patient.full_name }}"
+                        data-age="{{ item.patient.age }}"
+                        data-gender="{{ item.patient.gender }}"
+                        data-que-id="{% if item.que %}{{ item.que.id }}{% endif %}"
                         data-category="{{ item.category }}"
                         data-newborn-id="{% if item.linked_newborn %}{{ item.linked_newborn.id }}{% endif %}"
                         data-pregnancies='[
                             {% for p in item.active_pregnancies %}
-                            {"id": "{{ p.id }}", "edd": "{{ p.edd|date:"d M Y" }}", "ga": "{{ p.gestational_age_weeks|default:0 }}"}{% if not forloop.last %},{% endif %}
+                            {"id": "{{ p.id }}", "edd": "{{ p.edd }}", "ga": "{{ p.gestational_age_weeks|default:0 }}"}{% if not forloop.last %},{% endif %}
                             {% endfor %}
                         ]'>
                         <td class="px-8 py-6">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                    {{ item.visit.patient.first_name|first }}{{ item.visit.patient.last_name|first }}
+                                    {{ item.patient.first_name|first }}{{ item.patient.last_name|first }}
                                 </div>
                                 <div>
-                                    <div class="font-black text-slate-900 text-base leading-none">{{ item.visit.patient.full_name }}</div>
-                                    <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">ID: #{{ item.visit.patient.id }} | {{ item.visit.patient.age }} yrs</div>
+                                    <div class="font-black text-slate-900 text-base leading-none">{{ item.patient.full_name }}</div>
+                                    <div class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">ID: #{{ item.patient.id }} | {{ item.patient.age }} yrs</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-8 py-6">
                             <span class="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest border border-slate-900">
-                                {{ item.sent_to.name|default:"General" }}
+                                {% if item.que %}{{ item.que.sent_to.name|default:"General" }}{% else %}Not Queued{% endif %}
                             </span>
                         </td>
                         <td class="px-8 py-6">
@@ -377,7 +377,11 @@ function openActionModal(row) {
     if (pregnancies.length > 0) {
         pregnancies.forEach(p => {
             const btn = document.createElement('a');
-            btn.href = `/maternity/anc/arrivals/${data.queId}/receive/`;
+            if (data.queId) {
+                btn.href = `/maternity/anc/arrivals/${data.queId}/receive/`;
+            } else {
+                btn.href = `/maternity/pregnancy/${p.id}/`;
+            }
             btn.className = 'flex items-center justify-between p-4 rounded-2xl bg-blue-600 text-white hover:bg-slate-900 transition-all shadow-md shadow-blue-100 group';
             btn.innerHTML = `
                 <div class="flex flex-col">
@@ -397,12 +401,33 @@ function openActionModal(row) {
     
     document.getElementById('ancNewPregnancy').href = `{% url 'maternity:register_pregnancy' %}?patient_id=${data.id}`;
     
-    // PNC Setup
-    document.getElementById('pncMotherAction').href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
-    document.getElementById('pncBabyAction').href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
+    // PNC & CWC Setup
+    const pncMother = document.getElementById('pncMotherAction');
+    const pncBaby = document.getElementById('pncBabyAction');
+    const cwcAction = document.getElementById('cwcAction');
     
-    // CWC Setup
-    document.getElementById('cwcAction').href = `/maternity/vaccination/administer/${data.queId}/`;
+    if (data.queId) {
+        pncMother.href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
+        pncBaby.href = `/maternity/pnc/arrivals/${data.queId}/receive/`;
+        cwcAction.href = `/maternity/vaccination/administer/${data.queId}/`;
+        
+        [pncMother, pncBaby, cwcAction].forEach(el => {
+            el.onclick = null;
+            el.classList.remove('opacity-50', 'cursor-not-allowed');
+        });
+    } else {
+        pncMother.href = '#';
+        pncBaby.href = '#';
+        cwcAction.href = '#';
+        
+        [pncMother, pncBaby, cwcAction].forEach(el => {
+            el.onclick = (e) => {
+                e.preventDefault();
+                alert('Patient must be queued from Reception/Triage first to start a new clinical visit.');
+            };
+            el.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+    }
     
     // Highlight relevant section based on queue category
     const sections = ['ancWorkflow', 'pncWorkflow', 'cwcWorkflow'];
@@ -413,7 +438,7 @@ function openActionModal(row) {
     const category = data.category;
     if (category === 'ANC') {
         document.getElementById('ancWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
-    } else if (category.includes('PNC')) {
+    } else if (category && category.includes('PNC')) {
         document.getElementById('pncWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');
     } else if (category === 'CWC') {
         document.getElementById('cwcWorkflow').classList.add('ring-4', 'ring-indigo-500/10', 'border-indigo-500');

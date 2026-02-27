@@ -392,20 +392,50 @@ def visit_queue_center(request):
     
     clinical_queue = process_maternity_queue(clinical_queue_raw)
 
-    # 2. Search Results: Broader search across all maternity-related departments
+    # 2. Search Results: Broader search across all patients
     search_results = []
     if search_query:
-        search_results_raw = PatientQue.objects.filter(
-            sent_to__name__in=['ANC', 'PNC', 'CWC', 'MCH', 'Maternity'],
-            status='PENDING'
-        ).filter(
-            Q(visit__patient__first_name__icontains=search_query) |
-            Q(visit__patient__last_name__icontains=search_query) |
-            Q(visit__patient__id_number__icontains=search_query) |
-            Q(visit__patient__id__icontains=search_query)
-        ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
-        
-        search_results = process_maternity_queue(search_results_raw)
+        from home.models import Patient
+        patients = Patient.objects.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id_number__icontains=search_query) |
+            Q(id__icontains=search_query)
+        ).order_by('-created_at')[:20]
+
+        for patient in patients:
+            # Check if patient is currently in any maternity queues
+            active_que = PatientQue.objects.filter(
+                visit__patient=patient,
+                status='PENDING',
+                visit__visit_date__date=today,
+                sent_to__name__in=['ANC', 'PNC', 'CWC', 'MCH', 'Maternity']
+            ).order_by('-created_at').first()
+
+            # Find active pregnancies
+            active_pregnancies = []
+            for p in Pregnancy.objects.filter(patient=patient, status='Active'):
+                active_pregnancies.append({
+                    'id': p.id,
+                    'edd': p.edd.strftime("%d %b %Y") if p.edd else '',
+                    'gestational_age_weeks': p.gestational_age_weeks
+                })
+
+            # Check for linked newborn
+            linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+            if not linked_newborn and patient.age <= 5:
+                linked_newborn = Newborn.objects.filter(
+                    delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                    birth_datetime__date=patient.date_of_birth
+                ).first()
+
+            search_results.append({
+                'patient': patient,
+                'que': active_que,
+                'category': 'Search Result',
+                'active_pregnancies': active_pregnancies,
+                'linked_newborn': linked_newborn,
+            })
 
     # 3. Stats for the Queue Center (Based on the clinical MCH queue)
     stats = {
@@ -968,7 +998,7 @@ def pregnancy_detail(request, pregnancy_id):
     current_ipd_admission = Admission.objects.filter(
         patient=pregnancy.patient, 
         status='Admitted'
-    ).first()
+    ).order_by('-admitted_at').first()
     
     context = {
         'pregnancy': pregnancy,
@@ -1138,6 +1168,14 @@ def record_delivery(request, pregnancy_id):
                 
                 # Create admission if ward is selected
                 if selected_ward:
+                    # Deactivate any other active visits for this patient
+                    from home.models import Visit
+                    Visit.objects.filter(patient=pregnancy.patient, is_active=True).exclude(id=visit.id).update(is_active=False)
+                    
+                    # Close any other active admissions using transition utility
+                    from inpatient.utils import handle_admission_transition
+                    handle_admission_transition(pregnancy.patient, visit, request.user)
+                    
                     admission = Admission.objects.create(
                         patient=pregnancy.patient,
                         visit=visit,
@@ -1898,7 +1936,10 @@ def admit_to_maternity(request):
                 patient.created_by = request.user
                 patient.save()
 
-            # 2. Create Visit
+            # 2. Handle Visit and Admission Transitions
+            # Deactivate any existing active visits to maintain data integrity
+            Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
+            
             visit = Visit.objects.create(
                 patient=patient,
                 visit_type='IN-PATIENT',
@@ -1906,6 +1947,10 @@ def admit_to_maternity(request):
                 visit_date=timezone.now(),
                 is_active=True
             )
+            
+            # Close any existing admissions (e.g. if transferred from General to Maternity)
+            from inpatient.utils import handle_admission_transition
+            handle_admission_transition(patient, visit, request.user)
 
             # 3. Handle Billing (Normal Delivery)
             invoice = get_or_create_invoice(visit=visit, user=request.user)
@@ -1977,6 +2022,7 @@ def admit_to_maternity(request):
         'patient_form': patient_form,
         'pregnancy_form': pregnancy_form,
         'delivery_form': delivery_form,
+        'current_ipd_admission': Admission.objects.filter(patient=patient, status='Admitted').first() if patient else None,
     }
     return render(request, 'maternity/admit_to_maternity.html', context)
 
@@ -1998,6 +2044,8 @@ def api_search_patients(request):
     results = []
     for p in patients:
         active_preg = Pregnancy.objects.filter(patient=p, status='Active').first()
+        from inpatient.models import Admission
+        active_adm = Admission.objects.filter(patient=p, status='Admitted').first()
         results.append({
             'id': p.id,
             'full_name': p.full_name,
@@ -2006,6 +2054,8 @@ def api_search_patients(request):
             'dob': p.date_of_birth.strftime('%Y-%m-%d'),
             'location': p.location,
             'has_active_pregnancy': active_preg is not None,
+            'has_active_admission': active_adm is not None,
+            'active_ward': active_adm.bed.ward.name if active_adm and active_adm.bed else None,
             'pregnancy_details': {
                 'gravida': active_preg.gravida,
                 'para': active_preg.para,

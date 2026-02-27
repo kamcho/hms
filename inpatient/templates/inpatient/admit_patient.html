@@ -1,6 +1,6 @@
-{% extends 'users/dashboard_base.html' %}
+{% extends "users/dashboard_base.html" %}
 {% load static %}
-{% block title %}{{ title }} - HMS Admissions{% endblock %}
+{% block title %}{{ title }} - HMS Admissions{% endblock title %}
 {% block content %}
     <style>
     :root {
@@ -260,24 +260,57 @@
                 <!-- Admission Control Center -->
                 <div class="lg:col-span-8">
                     <div class="glass-card p-8 md:p-12">
-                        <!-- Previous Invoice Alert -->
-                        {% if previous_invoice %}
-                            <div class="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                        {% if is_already_admitted %}
+                            <div class="mb-8 p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
                                 <div class="flex items-start gap-4">
-                                    <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <i class="fas fa-receipt text-amber-600"></i>
+                                    <div class="w-10 h-10 bg-rose-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-rose-500">
+                                        <i class="fas fa-exclamation-triangle"></i>
                                     </div>
                                     <div class="flex-1">
-                                        <h4 class="font-bold text-amber-900 mb-2">Extend to IPD - Invoice Transfer</h4>
-                                        <p class="text-sm text-amber-800 mb-3">This admission will extend the patient's stay and transfer unpaid items from Invoice #{{ previous_invoice.id }} to the new IPD visit.</p>
-                                        <div class="bg-white rounded-xl p-3 border border-amber-100">
+                                        <h4 class="font-bold text-rose-400 mb-2">Active Admission Detected</h4>
+                                        <p class="text-sm text-slate-300 mb-3">
+                                            This patient is currently admitted to <strong>{{ existing_admission.bed.ward.name|default:"Clinical Ward" }}</strong> (Bed {{ existing_admission.bed.bed_number }}).
+                                        </p>
+                                        <div class="bg-rose-500/5 rounded-xl p-4 border border-rose-500/10">
+                                            <h5 class="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-2">Clinical Impact:</h5>
+                                            <ul class="text-xs text-slate-400 space-y-2">
+                                                <li class="flex items-center gap-2">
+                                                    <i class="fas fa-check-circle text-[8px]"></i>
+                                                    Automatically discharge from current ward
+                                                </li>
+                                                <li class="flex items-center gap-2">
+                                                    <i class="fas fa-check-circle text-[8px]"></i>
+                                                    Release current clinical bed
+                                                </li>
+                                                <li class="flex items-center gap-2">
+                                                    <i class="fas fa-check-circle text-[8px]"></i>
+                                                    Transfer unpaid billing items to new admission
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Previous Invoice Alert -->
+                        {% if previous_invoice %}
+                            <div class="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0 text-amber-500">
+                                        <i class="fas fa-receipt"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-amber-400 mb-2">Extend to IPD - Invoice Transfer</h4>
+                                        <p class="text-sm text-slate-300 mb-3">This admission will extend the patient's stay and transfer unpaid items from Invoice #{{ previous_invoice.id }} to the new IPD visit.</p>
+                                        <div class="bg-amber-500/5 rounded-xl p-3 border border-amber-500/10">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-xs font-bold text-amber-700">Previous Invoice:</span>
-                                                <span class="text-xs font-bold text-amber-900">#{{ previous_invoice.id }}</span>
+                                                <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Previous Invoice:</span>
+                                                <span class="text-xs font-bold text-white">#{{ previous_invoice.id }}</span>
                                             </div>
                                             <div class="flex justify-between items-center mt-1">
-                                                <span class="text-xs font-bold text-amber-700">Status:</span>
-                                                <span class="text-xs font-bold text-amber-900">{{ previous_invoice.get_status_display }}</span>
+                                                <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Status:</span>
+                                                <span class="text-xs font-bold text-white">{{ previous_invoice.get_status_display }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -402,4 +435,4 @@
     updateBeds(); // Run once on load
     });
     </script>
-{% endblock %}
+{% endblock content %}

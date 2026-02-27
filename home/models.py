@@ -45,10 +45,15 @@ class Patient(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 class Visit(models.Model):
+    PAYMENT_METHOD_CHOICES = [
+        ('CASH', 'Cash'),
+        ('SHA', 'SHA'),
+    ]
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='visits')
     visit_date = models.DateTimeField(auto_now_add=True)
     visit_type = models.CharField(max_length=20, choices=[('IN-PATIENT', 'In-Patient'), ('OUT-PATIENT', 'Out-Patient')])
     visit_mode = models.CharField(max_length=20, choices=[('Appointment', 'Appointment'), ('Walk In', 'Walk In')])
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='CASH')
     is_active = models.BooleanField(default=True)
     def __str__(self):
         return f"Visit - {self.patient} ({self.visit_type})"

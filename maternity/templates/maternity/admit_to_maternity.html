@@ -54,6 +54,9 @@
                 <div id="activePregnancyBadge" class="hidden px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2">
                     <i class="fas fa-exclamation-triangle"></i> Active Pregnancy Found
                 </div>
+                <div id="activeAdmissionBadge" class="hidden px-4 py-1.5 bg-rose-100 text-rose-700 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle"></i> Active Admission Found
+                </div>
             </div>
             <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6" id="patientFieldsGrid">
                 <div class="space-y-2">
@@ -122,6 +125,24 @@
                                 <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Abort</div><div id="pregAbort" class="text-lg font-black text-amber-900">0</div></div>
                                 <div class="bg-white/50 p-3 rounded-xl"><div class="text-[10px] font-black uppercase text-amber-400">Living</div><div id="pregLiving" class="text-lg font-black text-amber-900">0</div></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Admission Info Box -->
+                <div id="activeAdmissionInfo" class="hidden mt-4 p-6 bg-rose-50 rounded-2xl border border-rose-100 animate-in fade-in zoom-in duration-300">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex-shrink-0 flex items-center justify-center">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-rose-900">Current Admission Detected</h4>
+                            <p class="text-xs text-rose-700 leading-relaxed font-medium mb-2">This patient is currently admitted to <span id="admWardName" class="font-black">General Ward</span>. Admitting them here will:</p>
+                            <ul class="text-[10px] text-rose-600 space-y-1 font-bold">
+                                <li>• Automatically DISCHARGE from previous ward</li>
+                                <li>• RELEASE current clinical bed</li>
+                                <li>• TRANSFER unpaid charges to this maternity visit</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -294,10 +315,11 @@
         const activePregnancyInfo = document.getElementById('activePregnancyInfo');
         const pregnancySection = document.querySelector('.border-t-indigo-500'); // Pregnancy Details Section
         
-        const pregGravida = document.getElementById('pregGravida');
-        const pregPara = document.getElementById('pregPara');
-        const pregAbort = document.getElementById('pregAbort');
         const pregLiving = document.getElementById('pregLiving');
+        
+        const activeAdmissionBadge = document.getElementById('activeAdmissionBadge');
+        const activeAdmissionInfo = document.getElementById('activeAdmissionInfo');
+        const admWardName = document.getElementById('admWardName');
 
         function resetToNew() {
             idExistingPatientId.value = "";
@@ -307,6 +329,8 @@
             selectedPatientBadge.classList.add('hidden');
             activePregnancyBadge.classList.add('hidden');
             activePregnancyInfo.classList.add('hidden');
+            activeAdmissionBadge.classList.add('hidden');
+            activeAdmissionInfo.classList.add('hidden');
             pregnancySection.classList.remove('opacity-50', 'pointer-events-none');
             
             btnNewPatient.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700');
@@ -388,6 +412,35 @@
             
             // Disable validation on hidden fields so form can submit
             Array.from(patientFieldsGrid.querySelectorAll('input, select')).forEach(el => el.required = false);
+            
+            // Check for Active Pregnancy
+            if (p.has_active_pregnancy) {
+                activePregnancyBadge.classList.remove('hidden');
+                activePregnancyInfo.classList.remove('hidden');
+                document.getElementById('id_gravida').value = p.pregnancy_details.gravida;
+                document.getElementById('id_para').value = p.pregnancy_details.para;
+                document.getElementById('id_abortion').value = p.pregnancy_details.abortion;
+                document.getElementById('id_living').value = p.pregnancy_details.living;
+                document.getElementById('id_lmp').value = p.pregnancy_details.lmp;
+                
+                pregGravida.innerText = p.pregnancy_details.gravida;
+                pregPara.innerText = p.pregnancy_details.para;
+                pregAbort.innerText = p.pregnancy_details.abortion;
+                pregLiving.innerText = p.pregnancy_details.living;
+            } else {
+                activePregnancyBadge.classList.add('hidden');
+                activePregnancyInfo.classList.add('hidden');
+            }
+
+            // Check for Active Admission
+            if (p.has_active_admission) {
+                activeAdmissionBadge.classList.remove('hidden');
+                activeAdmissionInfo.classList.remove('hidden');
+                admWardName.innerText = p.active_ward || "Clinical Ward";
+            } else {
+                activeAdmissionBadge.classList.add('hidden');
+                activeAdmissionInfo.classList.add('hidden');
+            }
         };
 
         // LMP/EDD Bidirectional Calculation

@@ -117,10 +117,14 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-5">
-                                            <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-indigo-100">{{ admission.bed.ward.name }}</span>
-                                            <div class="text-[11px] font-black text-slate-900 mt-1.5 ml-1 flex items-center gap-2">
-                                                <i class="fas fa-bed text-indigo-400 text-[10px]"></i> {{ admission.bed.bed_number }}
-                                            </div>
+                                            {% if admission.bed %}
+                                                <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-indigo-100">{{ admission.bed.ward.name }}</span>
+                                                <div class="text-[11px] font-black text-slate-900 mt-1.5 ml-1 flex items-center gap-2">
+                                                    <i class="fas fa-bed text-indigo-400 text-[10px]"></i> {{ admission.bed.bed_number }}
+                                                </div>
+                                            {% else %}
+                                                <span class="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-slate-100">No Bed</span>
+                                            {% endif %}
                                         </td>
                                         <td class="px-6 py-5 whitespace-nowrap">
                                             <div class="text-[11px] font-black text-slate-900">{{ admission.admitted_at|date:"d M Y" }}</div>
@@ -197,7 +201,11 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-5">
-                                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-emerald-100">{{ discharge.admission.bed.ward.name }}</span>
+                                            {% if discharge.admission.bed %}
+                                                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-emerald-100">{{ discharge.admission.bed.ward.name }}</span>
+                                            {% else %}
+                                                <span class="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-slate-100">N/A</span>
+                                            {% endif %}
                                         </td>
                                         <td class="px-6 py-5 whitespace-nowrap">
                                             <div class="text-[11px] font-black text-slate-900">{{ discharge.discharge_date|date:"d M Y" }}</div>
@@ -219,66 +227,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Sidebar / Ward Stats -->
-            <div class="space-y-8">
-                <!-- Ward Statistics -->
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
-                            <i class="fas fa-chart-pie text-xs"></i>
-                        </span>
-                        Ward Utilization
-                    </h3>
-                    <div class="space-y-6">
-                        {% for ward in ward_stats %}
-                            <div class="group">
-                                <div class="flex justify-between items-end mb-3">
-                                    <div>
-                                        <div class="text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{{ ward.name }}</div>
-                                        <div class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{{ ward.occupied }} Units Occupied</div>
-                                    </div>
-                                    <div class="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{% widthratio ward.occupied ward.total 100 %}%</div>
-                                </div>
-                                <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
-                                    <div class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out shadow-lg" style="width: {% widthratio ward.occupied ward.total 100 %}%;"></div>
-                                </div>
-                            </div>
-                        {% empty %}
-                            <div class="flex flex-col items-center justify-center py-6 text-center">
-                                <i class="fas fa-exclamation-circle text-slate-100 text-3xl mb-4"></i>
-                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                                    No ward statistical
-                                    data
-                                </p>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <!-- Management Tools -->
-                <div class="bg-slate-900 rounded-3xl shadow-2xl p-8 text-white relative overflow-hidden ring-1 ring-white/10">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-8 text-indigo-400 flex items-center gap-2">
-                        <i class="fas fa-tools"></i> Administrative Tools
-                    </h3>
-                    <div class="space-y-4">
-                        <button class="w-full flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
-                            <div class="flex items-center gap-3">
-                                <i class="fas fa-bed text-indigo-400"></i>
-                                <span class="text-[11px] font-black uppercase tracking-widest">Bed Manager</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-[10px] text-white/30 group-hover:translate-x-1 transition-transform"></i>
-                        </button>
-                        <button class="w-full flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
-                            <div class="flex items-center gap-3">
-                                <i class="fas fa-file-export text-indigo-400"></i>
-                                <span class="text-[11px] font-black uppercase tracking-widest">Census Report</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-[10px] text-white/30 group-hover:translate-x-1 transition-transform"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+        
         </div>
     </div>
     {% block extra_js %}

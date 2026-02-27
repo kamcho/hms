@@ -378,13 +378,22 @@
                                         <span class="badge {% if group.invoice_status == 'Paid' %}badge-success{% else %}badge-warning{% endif %}">
                                             {{ group.invoice_status }}
                                         </span>
-                                        <button class="dispense-all-btn btn btn-success"
-                                                style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
-                                                data-visit-id="{{ group.visit.id }}"
-                                                data-patient="{{ group.patient.full_name }}"
-                                                {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
-                                            Dispense All
-                                        </button>
+                                        <div class="flex items-center gap-2">
+                                            {% if group.prescription_id %}
+                                            <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
+                                               style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #6366f1; color: #6366f1; text-decoration: none;"
+                                               title="Edit Prescription">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button class="dispense-all-btn btn btn-success"
+                                                    style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
+                                                    data-visit-id="{{ group.visit.id }}"
+                                                    data-patient="{{ group.patient.full_name }}"
+                                                    {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
+                                                Dispense All
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 

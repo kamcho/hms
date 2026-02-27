@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from users.models import User
+from home.models import Patient
 
 class Morgue(models.Model):
     name = models.CharField(max_length=100)
@@ -52,13 +53,13 @@ class Deceased(models.Model):
     other_names = models.CharField(max_length=200)
     sex = models.CharField(max_length=10, choices=SEX_CHOICES)
     scheme = models.CharField(max_length=20, choices=SCHEME_CHOICES, default='CASH_PAYERS')
-    id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES)
-    id_number = models.CharField(max_length=50, unique=True)
+    id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES, blank=True, default='')
+    id_number = models.CharField(max_length=50, blank=True, default='')
     
     # Physical Address
-    physical_address = models.TextField()
-    residence = models.CharField(max_length=100)
-    town = models.CharField(max_length=100)
+    physical_address = models.TextField(blank=True, default='')
+    residence = models.CharField(max_length=100, blank=True, default='')
+    town = models.CharField(max_length=100, blank=True, default='')
     nationality = models.CharField(max_length=100, default='Kenyan')
     
     # Death Details
@@ -70,8 +71,11 @@ class Deceased(models.Model):
     # Storage Details
     storage_area = models.ForeignKey(Morgue, on_delete=models.SET_NULL, null=True, blank=True)
     storage_chamber = models.ForeignKey(Chamber, on_delete=models.SET_NULL, null=True, blank=True)
-    expected_removal_date = models.DateField()
-    tag = models.CharField(max_length=50, unique=True, help_text="Unique identification tag for the deceased")
+    expected_removal_date = models.DateField(null=True, blank=True)
+    tag = models.CharField(max_length=50, unique=True, blank=True, null=True, help_text="Unique identification tag for the deceased")
+    
+    # Link to hospital patient (for internal deceased)
+    patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True, blank=True, related_name='deceased_records')
     
     # System Fields
     created_at = models.DateTimeField(auto_now_add=True)

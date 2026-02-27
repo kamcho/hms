@@ -1,268 +1,177 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}{{ admission.patient.full_name }} - Clinical Case Folder{% endblock %}
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    .case-folder-root, .case-folder-root * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+</style>
+{% endblock %}
 {% block content %}
-    <div class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div class="px-8 py-6 max-w-[1600px] mx-auto case-folder-root">
         <!-- Breadcrumbs/Back Navigation -->
         <div class="mb-8">
-            <a href="{% url 'inpatient:dashboard' %}" class="inline-flex items-center text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors">
+            <a href="{% url 'inpatient:dashboard' %}" class="inline-flex items-center text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Inpatient Dashboard
             </a>
         </div>
-        <!-- Unified Clinical Dashboard Header (clean white theme) -->
-        <div class="bg-white rounded-[32px] shadow-2xl shadow-indigo-500/10 border border-slate-100 p-8 mb-8 relative overflow-hidden group">
-            <!-- Subtle background accent -->
-            <div class="absolute top-0 right-0 w-[480px] h-[480px] bg-gradient-to-br from-indigo-50 to-slate-50 rounded-full -mr-24 -mt-24 blur-3xl opacity-60 pointer-events-none"></div>
-
+        <!-- Patient Identity Card -->
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/30 border border-slate-100 p-6 mb-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-indigo-50 to-slate-50 rounded-full -mr-20 -mt-20 blur-3xl opacity-50 pointer-events-none"></div>
             <div class="relative z-10">
-                <div class="flex flex-col xl:flex-row gap-10">
-                    <!-- Column 1: Identity & Demographics -->
-                    <div class="xl:w-1/3 flex flex-col gap-6 pr-6 xl:border-r border-slate-100">
-                        <!-- Patient identity -->
-                        <div class="flex items-start gap-5">
-                            <div class="relative shrink-0">
-                                <div class="w-20 h-20 rounded-[28px] bg-slate-900 flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-slate-200">
-                                    {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
-                                </div>
-                                <div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-emerald-500 border-4 border-white flex items-center justify-center text-white text-[9px] font-black shadow-lg">
-                                    <i class="fas fa-check"></i>
-                                </div>
+                <div class="flex flex-col lg:flex-row lg:items-start gap-6">
+                    <!-- Left: Identity -->
+                    <div class="flex items-start gap-4 flex-1 min-w-0">
+                        <div class="relative shrink-0">
+                            <div class="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                                {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
                             </div>
-                            <div>
-                                <h1 class="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">{{ admission.patient.full_name }}</h1>
-                                <div class="flex flex-wrap items-center gap-2 mb-1">
-                                    <span class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-lg uppercase tracking-wider">
-                                        ADM-{{ admission.id }}
-                                    </span>
-                                    <span class="px-2.5 py-1 bg-slate-900 text-white text-[9px] font-black rounded-lg uppercase tracking-wider">
-                                        #PAT-{{ admission.patient.id|stringformat:"05d" }}
-                                    </span>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 font-semibold">
-                                    <span class="inline-flex items-center gap-1">
-                                        <i class="fas fa-user-circle text-slate-400"></i>
-                                        {{ admission.patient.age }} yrs • {{ admission.patient.get_gender_display }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1">
-                                        <i class="fas fa-clock text-slate-400"></i>
-                                        Admitted {{ admission.admitted_at|date:"M d, Y H:i" }}
-                                    </span>
-                                </div>
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-emerald-500 border-2 border-white flex items-center justify-center text-white text-[7px]">
+                                <i class="fas fa-check"></i>
                             </div>
                         </div>
-
-                        <div class="space-y-4">
-                            <!-- Location & Admission context -->
-                            <div class="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 hover:border-indigo-200 transition-colors">
-                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-between">
-                                    <span>Current Ward / Bed</span>
-                                    <i class="fas fa-bed text-indigo-500"></i>
-                                </div>
-                                <div class="text-sm font-black text-slate-900 leading-tight">
-                                    {% if admission.bed %}
-                                        {{ admission.bed.ward.name }} <span class="mx-1 opacity-20">•</span> Bed {{ admission.bed.bed_number }}
-                                    {% else %}
-                                        Not currently assigned to a bed
-                                    {% endif %}
-                                </div>
+                        <div class="min-w-0">
+                            <h1 class="text-xl font-bold text-slate-900 tracking-tight leading-tight mb-1.5">{{ admission.patient.full_name }}</h1>
+                            <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-semibold rounded-md uppercase tracking-wider">ADM-{{ admission.id }}</span>
+                                <span class="px-2 py-0.5 bg-slate-800 text-white text-[9px] font-semibold rounded-md uppercase tracking-wider">#PAT-{{ admission.patient.id|stringformat:"05d" }}</span>
+                                <span class="px-2 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-semibold rounded-md uppercase tracking-wider border border-rose-100">{{ admission.patient.blood_group|default:"BG: UNK" }}</span>
                             </div>
-
-                            <!-- Demographics quick grid -->
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="bg-white rounded-xl p-3 border border-slate-100 flex flex-col gap-1 shadow-sm">
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Age / Gender</span>
-                                    <span class="text-[11px] font-black text-slate-700 uppercase">
-                                        {{ admission.patient.age }}Y
-                                        <span class="text-slate-300 mx-0.5">/</span>
-                                        {{ admission.patient.get_gender_display }}
-                                    </span>
-                                </div>
-                                <div class="bg-white rounded-xl p-3 border border-slate-100 flex flex-col gap-1 shadow-sm">
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Blood Group</span>
-                                    <span class="text-[11px] font-black text-rose-600 uppercase">
-                                        {{ admission.patient.blood_group|default:"Unknown" }}
-                                    </span>
-                                </div>
-                                <div class="bg-white rounded-xl p-3 border border-slate-100 flex flex-col gap-1 shadow-sm col-span-2">
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Contact & Location</span>
-                                    <div class="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-600">
-                                        <span class="inline-flex items-center gap-1">
-                                            <i class="fas fa-phone-alt text-slate-400"></i>
-                                            {{ admission.patient.phone|default:"No phone on file" }}
-                                        </span>
-                                        <span class="inline-flex items-center gap-1">
-                                            <i class="fas fa-map-marker-alt text-slate-400"></i>
-                                            {{ admission.patient.location|default:"Location not set" }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Provisional diagnosis -->
-                            <div class="bg-indigo-900 rounded-2xl p-4 text-white relative overflow-hidden group/diag">
-                                <div class="absolute inset-0 bg-gradient-to-r from-indigo-900 to-indigo-800 opacity-90"></div>
-                                <div class="relative z-10">
-                                    <div class="text-[8px] font-black text-indigo-300 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                        <i class="fas fa-stethoscope"></i> Provisional DX
-                                    </div>
-                                    <div class="text-[11px] font-bold leading-tight line-clamp-2">
-                                        {{ admission.provisional_diagnosis|default:"Pending Assessment" }}
-                                    </div>
-                                </div>
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                                <span class="inline-flex items-center gap-1.5"><i class="fas fa-user text-slate-400 text-[9px]"></i> {{ admission.patient.age }}Y &middot; {{ admission.patient.get_gender_display }}</span>
+                                <span class="inline-flex items-center gap-1.5"><i class="fas fa-calendar text-slate-400 text-[9px]"></i> Adm: {{ admission.admitted_at|date:"M d, H:i" }}</span>
+                                <span class="inline-flex items-center gap-1.5"><i class="fas fa-phone text-slate-400 text-[9px]"></i> {{ admission.patient.phone|default:"No phone" }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Column 2: Live Vitals Snapshot -->
-                    <div class="xl:w-[40%] flex flex-col">
-                        <div class="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest">Clinical Vitals Snapshot</h3>
-                                {% if latest_vitals %}
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
-                                        Last recorded {{ latest_vitals.recorded_at|timesince }} ago
-                                    </p>
-                                {% else %}
-                                    <p class="text-[9px] font-bold text-amber-500 uppercase mt-1">
-                                        No vitals have been recorded for this admission yet
-                                    </p>
-                                {% endif %}
+                    <!-- Center: Key Info -->
+                    <div class="flex flex-wrap lg:flex-nowrap items-start gap-3">
+                        <div class="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 min-w-[120px]">
+                            <div class="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Ward / Bed</div>
+                            <div class="text-sm font-bold text-slate-900 leading-tight">
+                                {% if admission.bed %}{{ admission.bed.ward.name }} &middot; Bed {{ admission.bed.bed_number }}{% else %}Unassigned{% endif %}
                             </div>
-                            {% if admission.status != 'Discharged' %}
-                                <button onclick="showModal('vitalsModal')" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-lg shadow-slate-200">
-                                    <i class="fas fa-plus-circle text-emerald-400"></i> Log Vitals
-                                </button>
-                            {% endif %}
                         </div>
-
-                        <div class="grid grid-cols-2 gap-5 flex-1">
-                            <!-- Pulse Rate Card -->
-                            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group/vital hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center text-lg">
-                                        <i class="fas fa-heartbeat animate-pulse"></i>
-                                    </div>
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pulse Rate</span>
-                                </div>
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-4xl font-black text-slate-900 tracking-tighter">{{ latest_vitals.pulse_rate|default:"--" }}</span>
-                                    <span class="text-xs font-bold text-slate-400 uppercase">bpm</span>
-                                </div>
-                                <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-rose-500 w-[70%]" style="width: {% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }}%{% else %}0%{% endif %}; max-width: 100%;"></div>
-                                </div>
-                            </div>
-
-                            <!-- BP Card -->
-                            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group/vital hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-lg">
-                                        <i class="fas fa-gauge-high"></i>
-                                    </div>
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Sys/Dia BP</span>
-                                </div>
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-4xl font-black text-slate-900 tracking-tighter">{{ latest_vitals.systolic_bp|default:"-" }}/{{ latest_vitals.diastolic_bp|default:"-" }}</span>
-                                    <span class="text-xs font-bold text-slate-400 uppercase">mmHg</span>
-                                </div>
-                                <div class="mt-4 text-[9px] font-bold {% if latest_vitals.systolic_bp > 140 %}text-rose-500{% else %}text-emerald-500{% endif %} flex items-center gap-1">
-                                    <i class="fas fa-circle text-[6px]"></i> {% if latest_vitals.systolic_bp > 140 %}Elevated Reading{% else %}Stable Pressure{% endif %}
-                                </div>
-                            </div>
-
-                            <!-- SpO2 Card -->
-                            <div class="bg-emerald-50/50 rounded-3xl p-6 border border-emerald-100 shadow-sm relative overflow-hidden group/vital hover:shadow-xl hover:shadow-emerald-500/5 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div class="w-10 h-10 rounded-xl bg-white text-emerald-500 flex items-center justify-center text-lg shadow-sm">
-                                        <i class="fas fa-wind"></i>
-                                    </div>
-                                    <span class="text-[8px] font-black text-emerald-900/40 uppercase tracking-widest">Oxygen Content</span>
-                                </div>
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-4xl font-black text-emerald-900 tracking-tighter">{{ latest_vitals.spo2|default:"--" }}</span>
-                                    <span class="text-xs font-bold text-emerald-500 uppercase">% SpO2</span>
-                                </div>
-                                <div class="mt-4 h-1 w-full bg-emerald-200 rounded-full overflow-hidden">
-                                    <div class="h-full bg-emerald-600" style="width: {{ latest_vitals.spo2|default:0 }}%;"></div>
-                                </div>
-                            </div>
-
-                            <!-- Temperature Card -->
-                            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group/vital hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg">
-                                        <i class="fas fa-thermometer-half"></i>
-                                    </div>
-                                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Temperature</span>
-                                </div>
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-4xl font-black text-slate-900 tracking-tighter">{{ latest_vitals.temperature|default:"--" }}</span>
-                                    <span class="text-xs font-bold text-amber-500 uppercase">°C Core</span>
-                                </div>
-                                <div class="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-                                    <span>Norm: 36.5 - 37.5</span>
-                                    <i class="fas fa-sync animate-spin-slow"></i>
-                                </div>
-                            </div>
+                        <div class="bg-indigo-900 rounded-xl px-4 py-3 text-white min-w-[160px] max-w-[280px]">
+                            <div class="text-[8px] font-semibold text-indigo-300 uppercase tracking-widest mb-0.5 flex items-center gap-1"><i class="fas fa-stethoscope text-[7px]"></i> Provisional DX</div>
+                            <div class="text-[11px] font-medium leading-tight line-clamp-2">{{ admission.provisional_diagnosis|default:"Pending Assessment" }}</div>
                         </div>
                     </div>
 
-                    <!-- Column 3: Visual Audit & Actions (30%) -->
-                    <div class="xl:w-[30%] flex flex-col gap-6 pl-6 xl:border-l border-slate-100">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Trends</h3>
-                            <button class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-sm">
-                                <i class="fas fa-expand-alt text-[10px]"></i>
+                    <!-- Right: Actions -->
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        {% if admission.status != 'Discharged' %}
+                            <button onclick="showModal('transferModal')" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5">
+                                <i class="fas fa-bed text-[8px]"></i> Transfer
                             </button>
-                        </div>
-
-                        <!-- Chart Area -->
-                        <div class="flex-1 min-h-[140px] bg-slate-900 rounded-[32px] p-4 relative overflow-hidden shadow-2xl shadow-indigo-500/10 flex flex-col items-center justify-center">
-                            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-                            <div id="vitalsChartContainer" class="w-full h-full relative" style="opacity: 0.9; display: none;">
-                                <canvas id="vitalsChart"></canvas>
-                            </div>
-                            <!-- Empty State Placeholder -->
-                            <div id="vitalsEmptyState" class="relative z-10 flex flex-col items-center justify-center text-center p-4">
-                                <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-500 mb-3">
-                                    <i class="fas fa-chart-line text-sm"></i>
+                            <a href="{% url 'home:refer_patient' admission.visit.id %}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:border-purple-500 hover:text-purple-600 transition-all flex items-center gap-1.5">
+                                <i class="fas fa-hospital text-[8px]"></i> Refer
+                            </a>
+                            <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="px-3 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md" {% if not invoice_is_paid %}title="Note: Invoice is still pending payment"{% endif %}>
+                                <i class="fas fa-sign-out-alt text-[8px]"></i> Discharge
+                                {% if not invoice_is_paid %}<span class="ml-1 text-[7px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full">Unpaid</span>{% endif %}
+                            </a>
+                            <button onclick="showModal('morgueModal')" class="px-3 py-2 bg-rose-700 text-white rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:bg-rose-800 transition-all flex items-center gap-1.5 shadow-md">
+                                <i class="fas fa-skull-crossbones text-[8px]"></i> Move to Morgue
+                            </button>
+                        {% else %}
+                            <div class="flex items-center gap-2">
+                                <div class="px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl text-[9px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fas fa-check-circle text-[8px]"></i> Case Closed
                                 </div>
-                                <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">
-                                    Trending data will appear here<br>after vitals are recorded
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Main Primary Actions -->
-                        <div class="grid grid-cols-2 gap-3 mt-auto">
-                            {% if admission.status != 'Discharged' %}
-                                <button onclick="showModal('transferModal')" class="px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 shadow-sm">
-                                    <i class="fas fa-bed"></i> Transfer
-                                </button>
-                                <a href="{% url 'home:refer_patient' admission.visit.id %}" class="px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:border-purple-600 hover:text-purple-600 transition-all flex items-center justify-center gap-2 shadow-sm">
-                                    <i class="fas fa-hospital"></i> Refer
+                                <a href="{% url 'inpatient:discharge_summary' admission.discharge_record.id %}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5">
+                                    <i class="fas fa-file-medical text-[8px]"></i> Discharge Summary
                                 </a>
-                                <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="col-span-2 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-2 transform active:scale-95" {% if not invoice_is_paid %}title="Note: Invoice is still pending payment"{% endif %}>
-                                    <i class="fas fa-sign-out-alt"></i> Proceed to Clinical Discharge
-                                    {% if not invoice_is_paid %}<span class="ml-2 text-[8px] bg-amber-500 text-white px-2 py-0.5 rounded-full">Pending Payment</span>{% endif %}
-                                </a>
-                            {% else %}
-                                <div class="col-span-2 flex flex-col gap-2">
-                                    <div class="py-4 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                                        <i class="fas fa-check-circle"></i> Case Permanently Closed
-                                    </div>
-                                    {% if admission.discharge_record %}
-                                        <a href="{% url 'inpatient:discharge_summary' admission.discharge_record.id %}" class="py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 shadow-sm">
-                                            <i class="fas fa-file-medical"></i> View Discharge Summary
+                                {% if user.role == 'Receptionist' %}
+                                    {% if admission.gate_pass %}
+                                        <a href="{% url 'inpatient:view_gatepass' admission.gate_pass.id %}" class="px-3 py-2 bg-emerald-600 text-white rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center gap-1.5">
+                                            <i class="fas fa-id-card text-[8px]"></i> View Gatepass
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'inpatient:generate_gatepass' admission.id %}" class="px-3 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-semibold uppercase tracking-wider hover:bg-indigo-600 transition-all flex items-center gap-1.5">
+                                            <i class="fas fa-id-card text-[8px]"></i> Generate Gatepass
                                         </a>
                                     {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Live Vitals Snapshot -->
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/30 border border-slate-100 p-6 mb-6">
+            <div class="flex justify-between items-center mb-5">
+                <div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-widest">Clinical Vitals Snapshot</h3>
+                    {% if latest_vitals %}
+                        <p class="text-[10px] text-slate-400 mt-0.5">Last recorded {{ latest_vitals.recorded_at|timesince }} ago</p>
+                    {% else %}
+                        <p class="text-[10px] text-amber-500 mt-0.5">No vitals recorded yet</p>
+                    {% endif %}
+                </div>
+                {% if admission.status != 'Discharged' %}
+                    <button onclick="showModal('vitalsModal')" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-md">
+                        <i class="fas fa-plus-circle text-emerald-400"></i> Log Vitals
+                    </button>
+                {% endif %}
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Pulse Rate -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-rose-200 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center text-base"><i class="fas fa-heartbeat"></i></div>
+                        <span class="text-[8px] font-semibold text-slate-400 uppercase tracking-widest">Pulse</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-3xl font-bold text-slate-900 tracking-tighter">{{ latest_vitals.pulse_rate|default:"--" }}</span>
+                        <span class="text-[10px] text-slate-400 uppercase">bpm</span>
+                    </div>
+                </div>
+                <!-- Blood Pressure -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-blue-200 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-base"><i class="fas fa-gauge-high"></i></div>
+                        <span class="text-[8px] font-semibold text-slate-400 uppercase tracking-widest">BP</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-3xl font-bold text-slate-900 tracking-tighter">{{ latest_vitals.systolic_bp|default:"-" }}/{{ latest_vitals.diastolic_bp|default:"-" }}</span>
+                        <span class="text-[10px] text-slate-400 uppercase">mmHg</span>
+                    </div>
+                    <div class="mt-2 text-[9px] font-medium {% if latest_vitals.systolic_bp > 140 %}text-rose-500{% else %}text-emerald-500{% endif %} flex items-center gap-1">
+                        <i class="fas fa-circle text-[5px]"></i> {% if latest_vitals.systolic_bp > 140 %}Elevated{% else %}Normal{% endif %}
+                    </div>
+                </div>
+                <!-- SpO2 -->
+                <div class="bg-emerald-50/60 rounded-2xl p-5 border border-emerald-100 hover:border-emerald-200 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-white text-emerald-500 flex items-center justify-center text-base shadow-sm"><i class="fas fa-wind"></i></div>
+                        <span class="text-[8px] font-semibold text-emerald-800/40 uppercase tracking-widest">SpO2</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-3xl font-bold text-emerald-900 tracking-tighter">{{ latest_vitals.spo2|default:"--" }}</span>
+                        <span class="text-[10px] text-emerald-500 uppercase">%</span>
+                    </div>
+                </div>
+                <!-- Temperature -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-amber-200 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-base"><i class="fas fa-thermometer-half"></i></div>
+                        <span class="text-[8px] font-semibold text-slate-400 uppercase tracking-widest">Temp</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-3xl font-bold text-slate-900 tracking-tighter">{{ latest_vitals.temperature|default:"--" }}</span>
+                        <span class="text-[10px] text-amber-500 uppercase">deg C</span>
+                    </div>
+                    <div class="mt-2 text-[9px] text-slate-400">Norm: 36.5 - 37.5</div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Main Content Workspace -->
         <div class="space-y-8">
@@ -272,22 +181,22 @@
                 <div class="bg-white rounded-[32px] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[850px] flex flex-col">
                     <div class="px-8 py-5 bg-slate-50 border-b border-slate-100">
                         <div class="flex items-center gap-2 p-1.5 bg-slate-200/50 rounded-[20px] w-max max-w-full overflow-x-auto no-scrollbar shadow-inner">
-                            <button onclick="showClinicalTab('notes')" id="tab-btn-notes" class="clinical-tab active px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300">
+                            <button onclick="showClinicalTab('notes')" id="tab-btn-notes" class="clinical-tab active px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300">
                                 <i class="fas fa-notes-medical mr-2 text-indigo-500"></i> Clinical Notes
                             </button>
-                            <button onclick="showClinicalTab('medications')" id="tab-btn-medications" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300">
+                            <button onclick="showClinicalTab('medications')" id="tab-btn-medications" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300">
                                 <i class="fas fa-pills mr-2 text-purple-500"></i> Treatment Chart
                             </button>
-                            <button onclick="showClinicalTab('consumables')" id="tab-btn-consumables" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300">
+                            <button onclick="showClinicalTab('consumables')" id="tab-btn-consumables" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300">
                                 <i class="fas fa-box-open mr-2 text-blue-500"></i> Billing / Consumables
                             </button>
-                            <button onclick="showClinicalTab('investigations')" id="tab-btn-investigations" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 border-none">
+                            <button onclick="showClinicalTab('investigations')" id="tab-btn-investigations" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 border-none">
                                 <i class="fas fa-microscope mr-2 text-emerald-500"></i> Diagnostics
                             </button>
-                            <button onclick="showClinicalTab('nutrition')" id="tab-btn-nutrition" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300">
+                            <button onclick="showClinicalTab('nutrition')" id="tab-btn-nutrition" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300">
                                 <i class="fas fa-utensils mr-2 text-orange-500"></i> Nutrition
                             </button>
-                            <button onclick="showClinicalTab('timeline')" id="tab-btn-timeline" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300">
+                            <button onclick="showClinicalTab('timeline')" id="tab-btn-timeline" class="clinical-tab px-6 py-2.5 rounded-[14px] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300">
                                 <i class="fas fa-history mr-2 text-slate-500"></i> Timeline
                             </button>
                         </div>
@@ -297,11 +206,11 @@
                         <div id="clinical-notes" class="clinical-pane active space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                                 <div>
-                                    <h4 class="text-xl font-black text-slate-900 tracking-tight">Progress Notes</h4>
+                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Progress Notes</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Documentation Timeline</p>
                                 </div>
                                 {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
-                                    <button onclick="showModal('noteModal')" class="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 transform active:scale-95">
+                                    <button onclick="showModal('noteModal')" class="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 transform active:scale-95">
                                         <i class="fas fa-plus-circle text-indigo-400"></i> New Entry
                                     </button>
                                 {% endif %}
@@ -326,15 +235,15 @@
                                                     {% endif %}
                                                 </div>
                                                 <div>
-                                                    <div class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-0.5">{{ note.get_note_type_display|upper }} ENTRY</div>
+                                                    <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">{{ note.get_note_type_display|upper }} ENTRY</div>
                                                     <div class="text-xs font-bold text-slate-400 tracking-tight">{{ note.created_at|date:"l, d M Y" }} <span class="mx-1 opacity-30">•</span> {{ note.created_at|date:"H:i" }}</div>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100/50">
-                                                <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-[10px] text-white font-black shadow-sm">
+                                                <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-[10px] text-white font-bold shadow-sm">
                                                     {{ note.created_by.last_name|first|upper }}
                                                 </div>
-                                                <span class="text-[11px] font-black text-slate-700 uppercase tracking-widest">
+                                                <span class="text-[11px] font-bold text-slate-700 uppercase tracking-widest">
                                                     {% if note.created_by.role == 'Doctor' %}DR.{% elif note.created_by.role == 'Nurse' %}NS.{% endif %} {{ note.created_by.last_name|upper|default:"SYSTEM" }}
                                                 </span>
                                             </div>
@@ -349,7 +258,7 @@
                                         <div class="w-24 h-24 rounded-[32px] bg-slate-50 flex items-center justify-center text-slate-200 mb-6 shadow-inner">
                                             <i class="fas fa-clipboard-list text-4xl"></i>
                                         </div>
-                                        <h5 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">Timeline is empty</h5>
+                                        <h5 class="text-sm font-bold text-slate-900 uppercase tracking-widest mb-1">Timeline is empty</h5>
                                         <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">No clinical notes recorded for this admission.</p>
                                     </div>
                                 {% endfor %}
@@ -358,9 +267,9 @@
                         <!-- Medications Tab Content -->
                         <div id="clinical-medications" class="clinical-pane space-y-6" style="display: none;">
                             <div class="flex justify-between items-center mb-8">
-                                <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Treatment Card (Active meds)</h4>
+                                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Treatment Card (Active meds)</h4>
                                 {% if user.role == 'Doctor' and admission.status != 'Discharged' %}
-                                    <button onclick="showMedicationModal()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all inline-flex items-center">
+                                    <button onclick="showMedicationModal()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all inline-flex items-center">
                                         <i class="fas fa-pills mr-2"></i> Prescribe
                                     </button>
                                 {% endif %}
@@ -369,7 +278,7 @@
                                 <div class="overflow-x-auto no-scrollbar">
                                     <table class="w-full text-left border-collapse whitespace-nowrap min-w-[1000px]">
                                         <thead>
-                                            <tr class="bg-slate-50 text-[10px] font-black text-slate-700 uppercase tracking-widest text-center border-b border-slate-200">
+                                            <tr class="bg-slate-50 text-[10px] font-bold text-slate-700 uppercase tracking-widest text-center border-b border-slate-200">
                                                 <th class="p-3 border-r border-slate-200 text-left sticky left-0 bg-slate-50 z-10 w-48">Drug Name</th>
                                                 <th class="p-3 border-r border-slate-200 w-16">Dose</th>
                                                 <th class="p-3 border-r border-slate-200 w-24">Frequency</th>
@@ -416,14 +325,14 @@
                                                             {% regroup med.administration_records.all by day_number as days_list %}
                                                             {% for day in days_list %}
                                                                 <div class="flex flex-col border-r border-slate-200 last:border-r-0">
-                                                                    <div class="bg-indigo-50/80 text-[9px] font-black text-center py-1 border-b border-slate-200 uppercase tracking-widest text-indigo-900">
+                                                                    <div class="bg-indigo-50/80 text-[9px] font-bold text-center py-1 border-b border-slate-200 uppercase tracking-widest text-indigo-900">
                                                                         DAY {{ day.grouper }}
                                                                     </div>
                                                                     <div class="flex flex-1 h-full">
                                                                         {% for record in day.list %}
                                                                             <div class="flex flex-col items-center justify-between border-r border-slate-100 last:border-r-0 p-1 min-w-[50px] transition-colors relative group/dose hover:bg-slate-100/80 h-full">
                                                                                 <!-- Dose header mimicking time 9am, 3pm etc but generic D1, D2 -->
-                                                                                <div class="text-[8px] font-black text-slate-400 mb-1 w-full text-center pb-0.5 border-b border-slate-100/50">D{{ record.dose_number }}</div>
+                                                                                <div class="text-[8px] font-bold text-slate-400 mb-1 w-full text-center pb-0.5 border-b border-slate-100/50">D{{ record.dose_number }}</div>
                                                                                 
                                                                                 <!-- Action / Status -->
                                                                                 <div class="py-1 flex flex-col items-center justify-center flex-1 w-full">
@@ -456,7 +365,7 @@
                                                     {% else %}
                                                          <div class="p-3 w-full h-full flex items-center justify-center">
                                                             {% if not med.is_administered and user.role == 'Nurse' and admission.status != 'Discharged' %}
-                                                                <a href="{% url 'inpatient:administer_medication' med.id %}" class="inline-block py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-black uppercase tracking-widest shadow-sm transition-all whitespace-nowrap">
+                                                                <a href="{% url 'inpatient:administer_medication' med.id %}" class="inline-block py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-bold uppercase tracking-widest shadow-sm transition-all whitespace-nowrap">
                                                                     <i class="fas fa-syringe mr-1"></i> Record Legacy Admin
                                                                 </a>
                                                             {% else %}
@@ -470,7 +379,7 @@
                                             <tr>
                                                 <td colspan="6" class="p-10 text-center">
                                                     <i class="fas fa-notes-medical text-4xl text-slate-200 mb-4 block"></i>
-                                                    <p class="font-black text-slate-400 uppercase tracking-widest text-sm">No Treatment Chart Available</p>
+                                                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">No Treatment Chart Available</p>
                                                 </td>
                                             </tr>
                                         {% endfor %}
@@ -504,7 +413,7 @@
                             {% else %}
                                 <div class="py-20 flex flex-col items-center justify-center text-center opacity-40">
                                     <i class="fas fa-lock text-6xl text-slate-200 mb-6"></i>
-                                    <p class="font-black text-slate-400 uppercase tracking-widest">
+                                    <p class="font-bold text-slate-400 uppercase tracking-widest">
                                         Case Folder closed for
                                         dispensing
                                     </p>
@@ -516,11 +425,11 @@
                         <div id="clinical-fluids" class="clinical-pane space-y-8 animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
-                                    <h4 class="text-xl font-black text-slate-900 tracking-tight">Intake & Output</h4>
+                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Intake & Output</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily Hydration Monitoring</p>
                                 </div>
                                 {% if admission.status != 'Discharged' %}
-                                    <button onclick="showModal('fluidModal')" class="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">
+                                    <button onclick="showModal('fluidModal')" class="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">
                                         <i class="fas fa-plus-circle text-blue-200"></i> Record Event
                                     </button>
                                 {% endif %}
@@ -535,9 +444,9 @@
                                     <div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-blue-500 shadow-sm mb-4">
                                         <i class="fas fa-plus text-lg"></i>
                                     </div>
-                                    <div class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Intake</div>
+                                    <div class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Total Intake</div>
                                     <div class="flex items-baseline gap-2 pb-2">
-                                        <span class="text-4xl font-black text-blue-900 tracking-tighter">{{ fluid_intake|default:"0" }}</span>
+                                        <span class="text-4xl font-bold text-blue-900 tracking-tighter">{{ fluid_intake|default:"0" }}</span>
                                         <span class="text-lg font-bold text-blue-400">mL</span>
                                     </div>
                                 </div>
@@ -549,17 +458,17 @@
                                     <div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-rose-500 shadow-sm mb-4">
                                         <i class="fas fa-minus text-lg"></i>
                                     </div>
-                                    <div class="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Total Output</div>
+                                    <div class="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Total Output</div>
                                     <div class="flex items-baseline gap-2 pb-2">
-                                        <span class="text-4xl font-black text-rose-900 tracking-tighter">{{ fluid_output|default:"0" }}</span>
+                                        <span class="text-4xl font-bold text-rose-900 tracking-tighter">{{ fluid_output|default:"0" }}</span>
                                         <span class="text-lg font-bold text-rose-400">mL</span>
                                     </div>
                                 </div>
 
                                 <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[32px] p-8 border border-slate-700 flex flex-col items-center justify-center col-span-1 md:col-span-2 lg:col-span-1 shadow-2xl shadow-slate-200">
-                                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Net Fluid Balance</div>
+                                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Net Fluid Balance</div>
                                     <div class="flex items-baseline gap-2">
-                                        <span class="text-4xl font-black text-white tracking-tighter">{{ fluid_intake|default:0|add:0 }}</span>
+                                        <span class="text-4xl font-bold text-white tracking-tighter">{{ fluid_intake|default:0|add:0 }}</span>
                                         <span class="text-lg font-bold text-slate-500">mL</span>
                                     </div>
                                     <div class="mt-4 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -571,25 +480,25 @@
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="bg-slate-50">
-                                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Type</th>
-                                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Description</th>
-                                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Volume</th>
-                                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Time</th>
+                                            <th class="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Type</th>
+                                            <th class="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</th>
+                                            <th class="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Volume</th>
+                                            <th class="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Time</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-50">
                                         {% for fluid in admission.fluid_balances.all|slice:":10" %}
                                             <tr class="hover:bg-slate-50 transition-colors">
                                                 <td class="px-8 py-4">
-                                                    <span class="px-2 py-0.5 {% if fluid.fluid_type == 'Intake' %}bg-blue-100 text-blue-700{% else %}bg-rose-100 text-rose-700{% endif %} text-[9px] font-black rounded-lg uppercase">{{ fluid.fluid_type }}</span>
+                                                    <span class="px-2 py-0.5 {% if fluid.fluid_type == 'Intake' %}bg-blue-100 text-blue-700{% else %}bg-rose-100 text-rose-700{% endif %} text-[9px] font-bold rounded-lg uppercase">{{ fluid.fluid_type }}</span>
                                                 </td>
                                                 <td class="px-8 py-4 text-sm font-bold text-slate-700">{{ fluid.item }}</td>
-                                                <td class="px-8 py-4 text-sm font-black text-slate-900">{{ fluid.amount_ml }} mL</td>
+                                                <td class="px-8 py-4 text-sm font-bold text-slate-900">{{ fluid.amount_ml }} mL</td>
                                                 <td class="px-8 py-4 text-right text-[10px] font-bold text-slate-400 uppercase">{{ fluid.recorded_at|date:"H:i" }}</td>
                                             </tr>
                                         {% empty %}
                                             <tr>
-                                                <td colspan="4" class="px-8 py-10 text-center text-[10px] font-black uppercase text-slate-300 tracking-widest">No hydrological records</td>
+                                                <td colspan="4" class="px-8 py-10 text-center text-[10px] font-bold uppercase text-slate-300 tracking-widest">No hydrological records</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -601,11 +510,11 @@
                         <div id="clinical-nutrition" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                                 <div>
-                                    <h4 class="text-xl font-black text-slate-900 tracking-tight">Nutrition Services</h4>
+                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Nutrition Services</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Prescribed Diet and Culinary Orders</p>
                                 </div>
                                 {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
-                                    <button onclick="showModal('nutritionModal')" class="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 shadow-xl shadow-orange-100 transition-all transform active:scale-95">
+                                    <button onclick="showModal('nutritionModal')" class="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-orange-700 shadow-xl shadow-orange-100 transition-all transform active:scale-95">
                                         <i class="fas fa-edit text-orange-200"></i> Update Prescription
                                     </button>
                                 {% endif %}
@@ -620,13 +529,13 @@
                                     </div>
 
                                     <div class="relative z-10">
-                                        <div class="text-[11px] font-black text-orange-500 uppercase tracking-[0.2em] mb-3">CURRENTLY PRESCRIBED DIET</div>
-                                        <h2 class="text-4xl font-black text-slate-900 mb-6 tracking-tight leading-none group-hover:scale-105 transition-transform">
+                                        <div class="text-[11px] font-bold text-orange-500 uppercase tracking-[0.2em] mb-3">CURRENTLY PRESCRIBED DIET</div>
+                                        <h2 class="text-4xl font-bold text-slate-900 mb-6 tracking-tight leading-none group-hover:scale-105 transition-transform">
                                             {{ current_nutrition.get_diet_type_display }}
                                         </h2>
                                         
                                         <div class="max-w-xl mx-auto bg-slate-50/80 rounded-[28px] p-8 border border-slate-100">
-                                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">SPECIFIC DIETARY INSTRUCTIONS</div>
+                                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-4">SPECIFIC DIETARY INSTRUCTIONS</div>
                                             <p class="text-base font-bold text-slate-700 leading-relaxed italic">
                                                 "{{ current_nutrition.specific_instructions|default:'No special instructions provided.' }}"
                                             </p>
@@ -635,10 +544,10 @@
                                         <div class="mt-8 flex flex-col items-center gap-4">
                                             <div class="h-px w-24 bg-slate-100"></div>
                                             <div class="flex items-center gap-3 bg-white px-5 py-2 rounded-full border border-slate-100 shadow-sm">
-                                                <div class="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[9px] text-white font-black">
+                                                <div class="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[9px] text-white font-bold">
                                                     {{ current_nutrition.prescribed_by.last_name|first|upper }}
                                                 </div>
-                                                <div class="text-[10px] font-black text-slate-500 tracking-wider">
+                                                <div class="text-[10px] font-bold text-slate-500 tracking-wider">
                                                     ORDERED BY <span class="text-slate-900">DR. {{ current_nutrition.prescribed_by.last_name|upper }}</span> <span class="mx-1 opacity-30">•</span> {{ current_nutrition.prescribed_at|date:"d M, H:i" }}
                                                 </div>
                                             </div>
@@ -647,7 +556,7 @@
                                 </div>
                             {% else %}
                                 <div class="bg-slate-50 rounded-[32px] p-12 text-center border-2 border-dashed border-slate-200">
-                                    <p class="font-black text-slate-400 uppercase tracking-widest">
+                                    <p class="font-bold text-slate-400 uppercase tracking-widest">
                                         No specific diet prescribed
                                         yet
                                     </p>
@@ -655,7 +564,7 @@
                                 </div>
                             {% endif %}
                             <div class="mt-10">
-                                <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">
+                                <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">
                                     Nutrition
                                     History
                                 </h5>
@@ -667,14 +576,14 @@
                                                     <i class="fas fa-utensils"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="text-sm font-black text-slate-900">
+                                                    <div class="text-sm font-bold text-slate-900">
                                                         {{ order.get_diet_type_display }}
                                                     </div>
                                                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{{ order.prescribed_at|date:"d M Y" }}</div>
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="text-[10px] font-black text-slate-900 uppercase tracking-wider">
+                                                <div class="text-[10px] font-bold text-slate-900 uppercase tracking-wider">
                                                     DR.
                                                     {{ order.prescribed_by.last_name|upper }}
                                                 </div>
@@ -689,7 +598,7 @@
                         <div id="clinical-procedures" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                                 <div>
-                                    <h4 class="text-xl font-black text-slate-900 tracking-tight">Clinical Procedures</h4>
+                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Clinical Procedures</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Interventions and Surgical Charges</p>
                                 </div>
                             </div>
@@ -705,7 +614,7 @@
                                             <div class="w-16 h-16 rounded-2xl bg-white flex items-center justify-center text-slate-300 mb-6 shadow-sm">
                                                 <i class="fas fa-lock text-2xl"></i>
                                             </div>
-                                            <p class="font-black text-slate-400 uppercase tracking-widest text-xs">Folder Locked</p>
+                                            <p class="font-bold text-slate-400 uppercase tracking-widest text-xs">Folder Locked</p>
                                             <p class="text-[10px] text-slate-300 font-bold uppercase mt-1">No further procedures can be recorded</p>
                                         </div>
                                     {% endif %}
@@ -714,7 +623,7 @@
                                 <div class="space-y-6">
                                     <div class="bg-indigo-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
                                         <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                                        <h5 class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-6">
+                                        <h5 class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-300 mb-6">
                                             <i class="fas fa-info-circle"></i> Billing Guide
                                         </h5>
                                         <p class="text-xs font-bold leading-relaxed text-indigo-100/80">
@@ -723,7 +632,7 @@
                                             Please verify accurate clinical selection as reversing charges requires administrative clearance.
                                         </p>
                                         <div class="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
-                                            <span class="text-[9px] font-black text-indigo-400 uppercase">Automated Billing</span>
+                                            <span class="text-[9px] font-bold text-indigo-400 uppercase">Automated Billing</span>
                                             <i class="fas fa-shield-alt text-indigo-400"></i>
                                         </div>
                                     </div>
@@ -735,7 +644,7 @@
                         <div id="clinical-investigations" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                                 <div>
-                                    <h4 class="text-xl font-black text-slate-900 tracking-tight">Diagnostics Hub</h4>
+                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Diagnostics Hub</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Laboratory and Imaging Dispatch</p>
                                 </div>
                             </div>
@@ -743,7 +652,7 @@
                             <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
                                 <!-- Request Section -->
                                 <div class="space-y-6">
-                                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">New Requisition</h5>
+                                    <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] px-4">New Requisition</h5>
                                     {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
                                         <div class="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
                                             {% include 'home/partials/next_action_widget.html' with patient_id=admission.patient.pk %}
@@ -751,7 +660,7 @@
                                     {% else %}
                                         <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[32px] p-20 text-center">
                                             <i class="fas fa-lock text-4xl text-slate-200 mb-4 block"></i>
-                                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Requisition Restricted</p>
+                                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Requisition Restricted</p>
                                         </div>
                                     {% endif %}
                                 </div>
@@ -759,8 +668,8 @@
                                 <!-- Recent Results -->
                                 <div class="space-y-6">
                                    <div class="flex items-center justify-between px-4">
-                                        <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validated Results</h5>
-                                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded uppercase">Live Feed</span>
+                                        <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Validated Results</h5>
+                                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-bold rounded uppercase">Live Feed</span>
                                    </div>
                                     <div class="bg-slate-50/50 rounded-[32px] p-2 border border-slate-100">
                                         {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
@@ -772,8 +681,8 @@
                     <!-- Activity Log Tab Content -->
                     <div id="clinical-timeline" class="clinical-pane" style="display: none;">
                         <div class="flex justify-between items-center mb-10">
-                            <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Full Clinical Activity Log</h4>
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <h4 class="text-sm font-bold text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Full Clinical Activity Log</h4>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                 Sorted by Most
                                 Recent
                             </div>
@@ -787,7 +696,7 @@
                                     </div>
                                     <div class="bg-white border border-slate-100 p-6 rounded-2xl hover:border-slate-300 transition-all group shadow-sm">
                                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3"> <!-- Added flex layout for title/time -->
-                                            <h5 class="text-xs font-black text-slate-900 uppercase tracking-widest leading-relaxed"> <!-- Added leading-relaxed -->
+                                            <h5 class="text-xs font-bold text-slate-900 uppercase tracking-widest leading-relaxed"> <!-- Added leading-relaxed -->
                                                 {{ log.title}}
                                             </h5>
                                             <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-lg shrink-0">{{ log.time|date:"H:i" }}</span> <!-- Added px-3 py-1 and shrink-0 -->
@@ -798,9 +707,9 @@
                                         <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-50"> <!-- Added flex-wrap, gap, and top border -->
                                             <div class="flex items-center gap-2">
                                                 <i class="far fa-calendar-alt text-slate-300 text-[10px]"></i> <!-- Added Calendar Icon -->
-                                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ log.time|date:"d M Y" }}</span> <!-- Removed italic -->
+                                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ log.time|date:"d M Y" }}</span> <!-- Removed italic -->
                                             </div>
-                                            <div class="text-[8px] font-black text-slate-500 uppercase tracking-widest bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"> <!-- Better styling for BY user tag -->
+                                            <div class="text-[8px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"> <!-- Better styling for BY user tag -->
                                                 <i class="fas fa-user-circle text-slate-400"></i>
                                                 {{ log.user.username|upper|default:"SYSTEM" }}
                                             </div>
@@ -810,7 +719,7 @@
                             {% empty %}
                                 <div class="py-20 flex flex-col items-center justify-center opacity-40">
                                     <i class="fas fa-history text-6xl text-slate-200 mb-6"></i>
-                                    <p class="font-black text-slate-400 uppercase tracking-widest">
+                                    <p class="font-bold text-slate-400 uppercase tracking-widest">
                                         Admission history
                                         starting...
                                     </p>
@@ -820,9 +729,53 @@
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Full Width Clinical Trends Section (Moved from Header) -->
+            <div class="w-full">
+                <div class="bg-white rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                    <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 tracking-tight">Vitals Trending & Clinical Analytics</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Multi-parameter longitudinal data visualization</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-6 px-6 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-rose-500"></div>
+                                    <span class="text-[9px] font-bold text-slate-600 uppercase">Pulse Rate</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                    <span class="text-[9px] font-bold text-slate-600 uppercase">Systolic BP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-10">
+                        <div class="bg-slate-900 rounded-[32px] p-8 relative overflow-hidden shadow-2xl shadow-indigo-500/10 min-h-[400px] flex flex-col items-center justify-center">
+                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent opacity-50"></div>
+                            
+                            <div id="vitalsChartContainer" class="w-full h-full relative" style="opacity: 0.9; display: none;">
+                                <canvas id="vitalsChart" style="max-height: 350px;"></canvas>
+                            </div>
+
+                            <!-- Empty State Placeholder -->
+                            <div id="vitalsEmptyState" class="relative z-10 flex flex-col items-center justify-center text-center p-12">
+                                <div class="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center text-slate-500 mb-6 shadow-inner">
+                                    <i class="fas fa-chart-line text-3xl"></i>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Insufficient Data for Trending</h4>
+                                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed max-w-xs mx-auto">
+                                    Please record at least two sets of vitals to generate a longitudinal progress graph.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
     </div>
 </div>
+{% endblock %}
 <!-- Modals Migration: Standard HMS Modal Styling -->
 <style>
     .modal-content {
@@ -923,7 +876,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('vitalsModal')"></div>
         <div class="relative z-10 w-full max-w-xl bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-emerald-900 uppercase tracking-widest">Record Patient Vitals</h5>
+                    <h5 class="text-sm font-bold text-emerald-900 uppercase tracking-widest">Record Patient Vitals</h5>
                     <button type="button" onclick="hideModal('vitalsModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-emerald-400 hover:text-emerald-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -936,7 +889,7 @@
                         </div>
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all active:scale-[0.98]">
                             Save Vitals
                         </button>
                     </div>
@@ -949,7 +902,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('noteModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-slate-900 uppercase tracking-widest">New Progress Note</h5>
+                    <h5 class="text-sm font-bold text-slate-900 uppercase tracking-widest">New Progress Note</h5>
                     <button type="button" onclick="hideModal('noteModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-slate-400 hover:text-slate-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -958,16 +911,16 @@
                     {% csrf_token %}
                     <div class="p-8 space-y-6">
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Note Category</label>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Note Category</label>
                             {{ note_form.note_type }}
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Clinical Narrative</label>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Clinical Narrative</label>
                             {{ note_form.content }}
                         </div>
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98]">
                             Commit to Record
                         </button>
                     </div>
@@ -983,7 +936,7 @@
         <!-- Modal panel -->
         <div class="relative z-10 w-full max-w-2xl bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-purple-900 uppercase tracking-widest flex items-center gap-3">
+                    <h5 class="text-sm font-bold text-purple-900 uppercase tracking-widest flex items-center gap-3">
                         <i class="fas fa-pills text-purple-500"></i> Prescribe Inpatient Medication
                     </h5>
                     <button type="button" onclick="hideMedicationModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-purple-400 hover:text-purple-600 transition-all shadow-sm">
@@ -996,7 +949,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <!-- Medication Search -->
                             <div class="md:col-span-2 relative">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Select Medication</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Select Medication</label>
                                 <div class="relative">
                                     <input type="text" id="med-search-input" placeholder="Search by name, generic or class..." class="form-control w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all placeholder:text-slate-300" autocomplete="off">
                                     <i class="fas fa-search absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
@@ -1013,34 +966,34 @@
 
                             <!-- Dosage Info -->
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Units Per Dose</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Units Per Dose</label>
                                 {{ med_form.dose_count }}
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Frequency</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Frequency</label>
                                 {{ med_form.frequency }}
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Duration (Days)</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Duration (Days)</label>
                                 {{ med_form.duration_days }}
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Total Quantity</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Total Quantity</label>
                                 {{ med_form.quantity }}
                                 <p class="text-[10px] text-slate-400 mt-2 font-medium">Accumulated units</p>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Instructions / Notes</label>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Instructions / Notes</label>
                                 {{ med_form.instructions }}
                                 <p class="text-[10px] text-slate-400 mt-2 font-medium">Special administration or patient-specific notes</p>
                             </div>
                         </div>
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-                        <button type="button" onclick="hideMedicationModal()" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all border border-transparent hover:border-slate-200 rounded-2xl">
+                        <button type="button" onclick="hideMedicationModal()" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all border border-transparent hover:border-slate-200 rounded-2xl">
                             Cancel
                         </button>
-                        <button type="submit" class="flex-[2] py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="flex-[2] py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98]">
                             Confirm Prescription
                         </button>
                     </div>
@@ -1053,7 +1006,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('fluidModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-blue-900 uppercase tracking-widest">Hydrological Balance Entry</h5>
+                    <h5 class="text-sm font-bold text-blue-900 uppercase tracking-widest">Hydrological Balance Entry</h5>
                     <button type="button" onclick="hideModal('fluidModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-blue-400 hover:text-blue-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -1064,7 +1017,7 @@
                         {{ fluid_form.as_p }}
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]">
                             Record Fluid
                         </button>
                     </div>
@@ -1077,7 +1030,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('instructionModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-amber-900 uppercase tracking-widest">New Clinical Instruction</h5>
+                    <h5 class="text-sm font-bold text-amber-900 uppercase tracking-widest">New Clinical Instruction</h5>
                     <button type="button" onclick="hideModal('instructionModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-amber-400 hover:text-amber-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -1088,7 +1041,7 @@
                         {{ instruction_form.as_p }}
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98]">
                             Commit Order
                         </button>
                     </div>
@@ -1101,7 +1054,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('nutritionModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-orange-900 uppercase tracking-widest">Dietary & Nutrition Order</h5>
+                    <h5 class="text-sm font-bold text-orange-900 uppercase tracking-widest">Dietary & Nutrition Order</h5>
                     <button type="button" onclick="hideModal('nutritionModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-orange-400 hover:text-orange-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -1112,7 +1065,7 @@
                         {{ nutrition_form.as_p }}
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98]">
                             Update Nutrition Plan
                         </button>
                     </div>
@@ -1124,7 +1077,7 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('transferModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                    <h5 class="text-sm font-black text-indigo-900 uppercase tracking-widest">Internal Ward Transfer</h5>
+                    <h5 class="text-sm font-bold text-indigo-900 uppercase tracking-widest">Internal Ward Transfer</h5>
                     <button type="button" onclick="hideModal('transferModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-indigo-400 hover:text-indigo-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
@@ -1135,7 +1088,7 @@
                         {{ transfer_form.as_p }}
                     </div>
                     <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98]">
+                        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98]">
                             Execute Transfer
                         </button>
                     </div>
@@ -1143,8 +1096,7 @@
             </div>
         </div>
     </div>
-{% endblock %}
-{% block extra_js %}
+
     {{ vitals_data|default:"{}"|json_script:"vitals-data" }}
     {{ medical_tests_data|default:"[]"|json_script:"services-data" }}
     <script>
@@ -1402,5 +1354,51 @@
     }
 
     </script>
-{% endblock %}
+
+    <!-- Move to Morgue Modal -->
+    <div id="morgueModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;" role="dialog" aria-modal="true">
+        <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('morgueModal')"></div>
+        <div class="relative z-10 w-full max-w-lg bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
+            <div class="px-8 py-6 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+                <h5 class="text-sm font-bold text-rose-900 uppercase tracking-widest">Move Patient to Morgue</h5>
+                <button type="button" onclick="hideModal('morgueModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-rose-400 hover:text-rose-600 transition-all shadow-sm">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST" action="{% url 'inpatient:move_to_morgue' admission.id %}">
+                {% csrf_token %}
+                <div class="px-8 py-6 space-y-5">
+                    <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 text-[11px] text-rose-700 flex items-start gap-2">
+                        <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                        <span>This action will mark the patient as <strong>Deceased</strong>, free the bed, and create a morgue record. This cannot be undone.</span>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Cause of Death <span class="text-rose-500">*</span></label>
+                        <textarea name="cause_of_death" required rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" placeholder="Enter cause of death..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Place of Death</label>
+                        <input type="text" name="place_of_death" value="In-Hospital ({{ admission.bed.ward.name|default:'Ward' }})" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Date of Death <span class="text-rose-500">*</span></label>
+                            <input type="date" name="date_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Time of Death <span class="text-rose-500">*</span></label>
+                            <input type="time" name="time_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+                <div class="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button type="button" onclick="hideModal('morgueModal')" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:border-slate-400 transition-all">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-rose-700 text-white rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:bg-rose-800 transition-all shadow-md flex items-center gap-2">
+                        <i class="fas fa-skull-crossbones text-[8px]"></i> Confirm Move to Morgue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 {% endblock %}

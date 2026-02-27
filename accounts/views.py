@@ -1196,3 +1196,26 @@ def toggle_service(request, pk):
     status_text = 'activated' if service.is_active else 'deactivated'
     messages.success(request, f"Service '{service.name}' {status_text}.")
     return redirect('accounts:service_list')
+
+
+@login_required
+@user_passes_test(is_billing_staff)
+@require_POST
+def set_visit_sha(request):
+    """Set the payment method of a patient's latest active visit to SHA."""
+    try:
+        patient_id = request.POST.get('patient_id')
+        patient = get_object_or_404(Patient, pk=patient_id)
+        visit = Visit.objects.filter(patient=patient, is_active=True).order_by('-visit_date').first()
+        if not visit:
+            return JsonResponse({'success': False, 'error': f'No active visit found for {patient.full_name}.'})
+        visit.payment_method = 'SHA'
+        visit.save()
+        return JsonResponse({
+            'success': True,
+            'message': f'{patient.full_name} (Visit #{visit.id}) updated to SHA.',
+            'visit_id': visit.id,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+

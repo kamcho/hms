@@ -132,8 +132,8 @@ def create_lab_result(request, invoice_id):
         invoice = invoice_item.invoice
         service = invoice_item.service
         
-        # Restriction: OPD invoices must be fully paid before tests
-        if invoice.visit and invoice.visit.visit_type == 'OUT-PATIENT' and invoice.status != 'Paid':
+        # Restriction: OPD invoices must be fully paid before tests (skip for SHA)
+        if invoice.visit and invoice.visit.visit_type == 'OUT-PATIENT' and invoice.visit.payment_method != 'SHA' and invoice.status != 'Paid':
             messages.error(request, "For OPD, invoice has to be fully paid before tests.")
             return redirect('lab:radiology_dashboard')
         
@@ -189,9 +189,10 @@ def lab_result_detail(request, result_id):
     
     is_read_only = request.user.role not in ['Lab Technician', 'Radiographer']
     
-    # Restriction: OPD invoices must be fully paid before tests
+    # Restriction: OPD invoices must be fully paid before tests (skip for SHA)
     # Only enforce for those who can edit/perform tests
-    if not is_read_only and lab_result.invoice and lab_result.invoice.visit and lab_result.invoice.visit.visit_type == 'OUT-PATIENT':
+    is_sha = lab_result.invoice and lab_result.invoice.visit and lab_result.invoice.visit.payment_method == 'SHA'
+    if not is_read_only and not is_sha and lab_result.invoice and lab_result.invoice.visit and lab_result.invoice.visit.visit_type == 'OUT-PATIENT':
         # Check specific item status first (Granular check)
         if lab_result.invoice_item:
             if not lab_result.invoice_item.is_settled:

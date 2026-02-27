@@ -22,4 +22,7 @@ urlpatterns = [
     path('discharges/<int:pk>/summary/print/', views.discharge_summary, {'template_name': 'inpatient/discharge_summary_printable.html'}, name='discharge_summary_print'),
     path('wards/<int:ward_id>/available-beds/', views.get_available_beds, name='get_available_beds'),
     path('admit/new/', views.admission_patient_list, name='new_admission'),
+    path('admissions/<int:admission_id>/gatepass/generate/', views.generate_gatepass, name='generate_gatepass'),
+    path('gatepasses/<int:pass_id>/view/', views.view_gatepass, name='view_gatepass'),
+    path('admissions/<int:admission_id>/move-to-morgue/', views.move_to_morgue, name='move_to_morgue'),
 ]
