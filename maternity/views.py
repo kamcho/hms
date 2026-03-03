@@ -62,9 +62,10 @@ def maternity_dashboard(request):
     ).select_related('delivery__pregnancy__patient')
     
     # Delivery Queue (Mothers delivered but not discharged)
-    maternity_arrivals = Pregnancy.objects.filter(             # Only check delivered pregnancies
-        delivery__isnull=False,             # Has delivered
-        maternity_discharge__isnull=True    # Has not been discharged
+    maternity_arrivals = Pregnancy.objects.filter(
+        delivery__isnull=False,
+        maternity_discharge__isnull=True,
+        delivery__is_external=False
     ).select_related('patient', 'delivery').order_by('-delivery__delivery_datetime')
     
     context = {
@@ -324,15 +325,39 @@ def visit_queue_center(request):
             que.linked_newborn = None
             que.is_high_risk = False
             que.alerts = []
+            
+            # Linked visit records for medical recording
+            que.anc_visit_id = None
+            que.mother_pnc_visit_id = None
+            que.baby_pnc_visit_id = None
+            que.has_cwc_records = False
+            
+            # Check for existing records for this specific hospital visit
+            if que.visit:
+                anc = AntenatalVisit.objects.filter(visit=que.visit).first()
+                if anc: que.anc_visit_id = anc.id
+                
+                m_pnc = PostnatalMotherVisit.objects.filter(visit=que.visit).first()
+                if m_pnc: que.mother_pnc_visit_id = m_pnc.id
+                
+                b_pnc = PostnatalBabyVisit.objects.filter(visit=que.visit).first()
+                if b_pnc: que.baby_pnc_visit_id = b_pnc.id
 
-            # Find active pregnancies
-            que.active_pregnancies = []
-            for p in Pregnancy.objects.filter(patient=patient, status='Active'):
-                que.active_pregnancies.append({
+                # CWC detection (Immunization or Consumables)
+                from inventory.models import DispensedItem
+                has_consumables = DispensedItem.objects.filter(visit=que.visit).exists()
+                has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered=today).exists()
+                if has_consumables or has_vaccines:
+                    que.has_cwc_records = True
+
+            # Find relevant pregnancies (Active or recently Delivered)
+            que.pregnancies = []
+            for p in Pregnancy.objects.filter(patient=patient, status__in=['Active', 'Delivered']).order_by('-created_at'):
+                que.pregnancies.append({
                     'id': p.id,
-                    'edd': p.edd,
-                    'lmp': p.lmp,
-                    'gestational_age_weeks': p.gestational_age_weeks
+                    'edd': p.edd.strftime("%d %b %Y") if p.edd else 'N/A',
+                    'status': p.status,
+                    'ga': p.gestational_age_weeks or 0
                 })
 
             # Determine Category logic
@@ -352,31 +377,33 @@ def visit_queue_center(request):
 
             # PNC Case
             elif dept_name in ['PNC', 'MCH']:
-                if patient.gender == 'F' and patient.age >= 12:
+                que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').order_by('-created_at').first()
+                que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
+                if not que.linked_newborn:
+                    que.linked_newborn = Newborn.objects.filter(
+                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                        birth_datetime__date=patient.date_of_birth
+                    ).first()
+                    
+                if que.linked_pregnancy:
                     que.category = 'PNC (Mother)'
-                    que.linked_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').order_by('-created_at').first()
-                    if que.linked_pregnancy:
-                        que.alerts = que.linked_pregnancy.get_active_alerts()
-                        que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
-                elif patient.age <= 5:
+                    que.alerts = que.linked_pregnancy.get_active_alerts()
+                    que.is_high_risk = any(a['type'] == 'danger' for a in que.alerts)
+                elif que.linked_newborn:
                     que.category = 'PNC (Baby)'
-                    que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
-                    if not que.linked_newborn:
-                        que.linked_newborn = Newborn.objects.filter(
-                            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
-                            birth_datetime__date=patient.date_of_birth
-                        ).first()
+                else:
+                    que.category = 'PNC'
 
             # CWC Case
-            if dept_name in ['CWC', 'MCH'] and not que.category.startswith('PNC'):
-                if patient.age <= 5:
-                    que.category = 'CWC'
+            if dept_name in ['CWC', 'MCH'] and not que.category.startswith('PNC') and que.category != 'ANC':
+                que.category = 'CWC'
+                if not que.linked_newborn:
                     que.linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
-                    if not que.linked_newborn:
-                        que.linked_newborn = Newborn.objects.filter(
-                            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
-                            birth_datetime__date=patient.date_of_birth
-                        ).first()
+                if not que.linked_newborn:
+                    que.linked_newborn = Newborn.objects.filter(
+                        delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+                        birth_datetime__date=patient.date_of_birth
+                    ).first()
                 if que.linked_newborn:
                     que.linked_pregnancy = que.linked_newborn.delivery.pregnancy
 
@@ -385,8 +412,9 @@ def visit_queue_center(request):
 
     # 1. Main Queue: Specifically for the MCH department (Today's Pending)
     clinical_queue_raw = PatientQue.objects.filter(
-        sent_to__name__iexact='MCH',
+        sent_to__name='MCH',  # Strictly MCH
         visit__visit_date__date=today,
+        visit__is_active=True,  # Visit not closed
         status='PENDING'
     ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
     
@@ -412,28 +440,33 @@ def visit_queue_center(request):
                 sent_to__name__in=['ANC', 'PNC', 'CWC', 'MCH', 'Maternity']
             ).order_by('-created_at').first()
 
-            # Find active pregnancies
-            active_pregnancies = []
-            for p in Pregnancy.objects.filter(patient=patient, status='Active'):
-                active_pregnancies.append({
+            # Find relevant pregnancies
+            pregnancies_list = []
+            for p in Pregnancy.objects.filter(patient=patient, status__in=['Active', 'Delivered']).order_by('-created_at'):
+                pregnancies_list.append({
                     'id': p.id,
-                    'edd': p.edd.strftime("%d %b %Y") if p.edd else '',
-                    'gestational_age_weeks': p.gestational_age_weeks
+                    'edd': p.edd.strftime("%d %b %Y") if p.edd else 'N/A',
+                    'status': p.status,
+                    'ga': p.gestational_age_weeks or 0
                 })
 
             # Check for linked newborn
             linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
-            if not linked_newborn and patient.age <= 5:
+            if not linked_newborn:
                 linked_newborn = Newborn.objects.filter(
                     delivery__pregnancy__patient__last_name__iexact=patient.last_name,
                     birth_datetime__date=patient.date_of_birth
                 ).first()
 
+            if active_que:
+                # Process the active que for this patient to get maternity context
+                active_que = process_maternity_queue([active_que])[0]
+
             search_results.append({
                 'patient': patient,
                 'que': active_que,
                 'category': 'Search Result',
-                'active_pregnancies': active_pregnancies,
+                'active_pregnancies': pregnancies_list,
                 'linked_newborn': linked_newborn,
             })
 
@@ -491,11 +524,11 @@ def register_external_delivery(request):
     from .forms import ExternalDeliveryForm
     from datetime import timedelta
     
-    patient_id = request.GET.get('patient_id')
+    patient_id = request.GET.get('patient_id') or request.GET.get('id')
     child_patient_id = request.GET.get('child_patient_id')
     
     if request.method == 'POST':
-        form = ExternalDeliveryForm(request.POST)
+        form = ExternalDeliveryForm(request.POST, patient_id=patient_id, child_patient_id=child_patient_id)
         if form.is_valid():
             data = form.cleaned_data
             
@@ -522,33 +555,8 @@ def register_external_delivery(request):
                 delivery_datetime=data['delivery_datetime'],
                 delivery_mode=data['delivery_mode'],
                 gestational_age_at_delivery=40,
-                labor_onset='Spontaneous'
-            )
-            
-            # 2b. Create Inpatient Visit and Invoice for External Delivery
-            from home.models import Visit
-            from accounts.models import Service, InvoiceItem
-            from accounts.utils import get_or_create_invoice
-            
-            visit = Visit.objects.create(
-                patient=data['patient'],
-                visit_type='IN-PATIENT',
-                visit_date=timezone.now()
-            )
-            delivery.visit = visit
-            delivery.save()
-            
-            invoice = get_or_create_invoice(visit=visit, user=request.user)
-            service, _ = Service.objects.get_or_create(
-                name='Normal Delivery',
-                defaults={'price': 10000} # Provide a default valid price
-            )
-            InvoiceItem.objects.create(
-                invoice=invoice,
-                service=service,
-                name=service.name,
-                unit_price=service.price,
-                quantity=1
+                labor_onset='Spontaneous',
+                is_external=True
             )
             
             # 3. Create Newborn record(s)
@@ -572,7 +580,7 @@ def register_external_delivery(request):
                     created_by=request.user
                 )
             
-            return redirect('maternity:pnc_dashboard')
+            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
         form = ExternalDeliveryForm(patient_id=patient_id, child_patient_id=child_patient_id)
         
@@ -624,6 +632,11 @@ def close_anc_visit(request, visit_id):
     anc_visit.is_closed = True
     anc_visit.service_received = True
     anc_visit.save()
+    
+    # Close the overall visit
+    if anc_visit.visit:
+        anc_visit.visit.is_active = False
+        anc_visit.visit.save()
     
     messages.success(request, f'ANC Visit #{anc_visit.visit_number} for {anc_visit.pregnancy.patient.full_name} has been closed.')
     
@@ -690,6 +703,9 @@ def receive_pnc_arrival(request, que_id):
                     'recorded_by': request.user
                 }
             )
+        else:
+            # NO pregnancy found - redirect to external delivery registration
+            return redirect(f"{reverse('maternity:register_external_delivery')}?patient_id={patient.id}")
     
     # Clean up queue (for mother too)
     PatientQue.objects.filter(
@@ -1006,6 +1022,7 @@ def pregnancy_detail(request, pregnancy_id):
         'delivery': delivery,
         'newborns': newborns,
         'mother_pnc': mother_pnc_visits,
+        'baby_pnc': PostnatalBabyVisit.objects.filter(newborn__in=newborns).select_related('newborn', 'recorded_by') if has_delivery else [],
         'discharge': discharge,
         'referrals': referrals,
         'available_departments': Departments.objects.all().order_by('name'),
@@ -1424,6 +1441,12 @@ def record_baby_pnc_visit(request, newborn_id):
     if request.method == 'POST':
         form = PostnatalBabyVisitForm(request.POST)
         if form.is_valid():
+            # Check for existing visit for this baby on this date
+            visit_date = form.cleaned_data.get('visit_date')
+            if PostnatalBabyVisit.objects.filter(newborn=newborn, visit_date=visit_date).exists():
+                messages.error(request, f"A PNC visit for Baby {newborn.baby_number} on {visit_date} has already been recorded.")
+                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
             visit = form.save(commit=False)
             visit.newborn = newborn
             visit.recorded_by = request.user
@@ -1439,6 +1462,12 @@ def record_baby_pnc_visit(request, newborn_id):
         # Calculate visit day
         delivery_date = newborn.birth_datetime.date()
         today = timezone.now().date()
+        
+        # Check if already visited today
+        if PostnatalBabyVisit.objects.filter(newborn=newborn, visit_date=today).exists():
+            messages.warning(request, f"A PNC visit for Baby {newborn.baby_number} has already been recorded for today ({today}).")
+            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
         visit_day = (today - delivery_date).days
         latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
         
@@ -1739,7 +1768,13 @@ def administer_vaccine(request, que_id):
         elif 'finish_visit' in request.POST:
             que.status = 'COMPLETED'
             que.save()
-            messages.success(request, "Visit marked as completed.")
+
+            # Close the overall visit
+            if que.visit:
+                que.visit.is_active = False
+                que.visit.save()
+                
+            messages.success(request, "Visit marked as completed and closed.")
             return redirect('maternity:vaccination_dashboard')
 
     # GET
@@ -1859,9 +1894,20 @@ def admit_to_maternity(request):
     from accounts.utils import get_or_create_invoice
     from home.models import Visit
     from inpatient.models import Admission
+    from home.models import Patient
+    
+    patient = None
+    if request.method == 'GET' and request.GET.get('patient_id'):
+        patient = get_object_or_404(Patient, id=request.GET.get('patient_id'))
+
     if request.method == 'POST':
         existing_patient_id = request.POST.get('existing_patient_id')
-        patient_form = PatientForm(request.POST) if not existing_patient_id else None
+        if existing_patient_id:
+            patient = get_object_or_404(Patient, id=existing_patient_id)
+            patient_form = None
+        else:
+            patient_form = PatientForm(request.POST)
+
         pregnancy_form = PregnancyRegistrationForm(request.POST)
         delivery_form = LaborDeliveryForm(request.POST)
 
@@ -1878,9 +1924,7 @@ def admit_to_maternity(request):
         patient_valid = patient_form.is_valid() if patient_form else True
         if patient_valid and pregnancy_form.is_valid() and delivery_form.is_valid():
             # 1. Get or Create Patient
-            if existing_patient_id:
-                patient = get_object_or_404(Patient, id=existing_patient_id)
-            else:
+            if not existing_patient_id:
                 patient = patient_form.save(commit=False)
                 patient.gender = 'F' # Ensure Female
                 patient.created_by = request.user

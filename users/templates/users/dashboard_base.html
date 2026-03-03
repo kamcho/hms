@@ -10,7 +10,84 @@
         <link rel="stylesheet" href="{% static 'users/css/dashboard.css' %}">
         <link rel="stylesheet" href="{% static 'users/vendor/fontawesome/css/all.min.css' %}">
         <link rel="stylesheet" href="{% static 'users/css/tailwind.css' %}">
-        {% block extra_css %}{% endblock %}
+        {% block extra_css %}
+        <style>
+            .role-selector-dropdown {
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 0;
+                width: 220px;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(15px);
+                border: 1px solid rgba(226, 232, 240, 0.8);
+                border-radius: 16px;
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+                padding: 0.75rem;
+                display: none;
+                flex-direction: column;
+                gap: 4px;
+                z-index: 1000;
+                animation: dropdownFade 0.2s ease-out;
+            }
+
+            .role-selector-dropdown.active {
+                display: flex;
+            }
+
+            @keyframes dropdownFade {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .dropdown-header {
+                font-size: 0.7rem;
+                font-weight: 800;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                padding: 0.5rem 0.75rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .role-option {
+                width: 100%;
+                text-align: left;
+                padding: 0.7rem 0.85rem;
+                border-radius: 10px;
+                background: none;
+                border: none;
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: #475569;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .role-option:hover {
+                background: rgba(59, 130, 246, 0.08);
+                color: #2563eb;
+            }
+
+            .role-option.active {
+                background: #3b82f6;
+                color: white;
+            }
+
+            .role-option.active::after {
+                content: '\f00c';
+                font-family: 'Font Awesome 6 Free';
+                font-weight: 900;
+                font-size: 0.75rem;
+            }
+
+            .user-profile-nav {
+                position: relative;
+            }
+        </style>
+        {% endblock %}
     </head>
     <body>
         <div class="dashboard-container">
@@ -316,12 +393,27 @@
                             <i class="fas fa-bell"></i>
                             <span class="notification-badge">3</span>
                         </div>
-                        <div class="user-profile-nav">
+                        <div class="user-profile-nav" id="userProfileNav">
                             <div class="user-details">
                                 <span class="user-id">{{ user.get_full_name }}</span>
                                 <span class="user-role">{{ user.get_role_display }}</span>
                             </div>
                             <div class="user-avatar-sm">{{ user.get_full_name|slice:":1"|upper }}</div>
+                            
+                            {% if user.is_superuser %}
+                            <div class="role-selector-dropdown" id="roleSelector">
+                                <div class="dropdown-header">Quick Role Switch</div>
+                                {% for role_code, role_name in user.roles %}
+                                    <form action="{% url 'users:switch_role' %}" method="POST" style="margin: 0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="role" value="{{ role_code }}">
+                                        <button type="submit" class="role-option {% if user.role == role_code %}active{% endif %}">
+                                            {{ role_name }}
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </header>
@@ -646,6 +738,26 @@
         </script>
         {% endif %}
 
+        <script>
+            // Role Selector Toggle
+            (function() {
+                const userProfileNav = document.getElementById('userProfileNav');
+                const roleSelector = document.getElementById('roleSelector');
+                
+                if (userProfileNav && roleSelector) {
+                    userProfileNav.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        roleSelector.classList.toggle('active');
+                    });
+                    
+                    document.addEventListener('click', function(e) {
+                        if (!userProfileNav.contains(e.target)) {
+                            roleSelector.classList.remove('active');
+                        }
+                    });
+                }
+            })();
+        </script>
         {% block extra_js %}{% endblock %}
     </body>
 </html>

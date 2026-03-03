@@ -12,15 +12,7 @@
                 </p>
             </div>
             <div class="flex items-center gap-3 flex-wrap">
-                <a href="{% url 'maternity:anc_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 font-semibold text-sm transition-all hover:bg-blue-100">
-                    <i class="fas fa-baby-carriage text-lg"></i> ANC Dashboard
-                </a>
-                <a href="{% url 'maternity:pnc_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-50 text-pink-600 border border-pink-100 font-semibold text-sm transition-all hover:bg-pink-100">
-                    <i class="fas fa-child text-lg"></i> PNC Dashboard
-                </a>
-                <a href="{% url 'maternity:visit_queue_center' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold text-sm transition-all hover:bg-indigo-100">
-                    <i class="fas fa-users-cog text-lg"></i> Queue Center
-                </a>
+                
                 <a href="{% url 'maternity:admit_to_maternity' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0">
                     <i class="fas fa-hospital-user text-lg"></i> Admit to Maternity
                 </a>
@@ -150,8 +142,7 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm text-slate-600 font-medium">{{ p.para_code }}</td>
                                     <td class="px-6 py-4 text-center">
-                                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">{{
-                                        p.gestational_age_weeks }}w</span>
+                                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">{{ p.gestational_age_weeks }}w</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-2">
@@ -194,8 +185,7 @@
                                 <div>
                                     <div class="font-bold text-slate-900">{{ delivery.pregnancy.patient.full_name }}</div>
                                     <div class="text-xs font-medium text-slate-400 mt-0.5">
-                                        {{ delivery.get_delivery_mode_display }} • {{ delivery.delivery_datetime|date:"d M, H:i"
-                                        }}
+                                        {{ delivery.get_delivery_mode_display }} • {{ delivery.delivery_datetime|date:"d M, H:i" }}
                                     </div>
                                 </div>
                                 <a href="{% url 'maternity:pregnancy_detail' delivery.pregnancy.id %}" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase tracking-widest transition-colors">View</a>

@@ -88,7 +88,7 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
         payment_method = form.cleaned_data.get('payment_method')
         
         # Define which services create a Visit + Queue
-        VISIT_SERVICES = {'OPD Consultation', 'ANC', 'PNC Visit (Mother)', 'PNC Visit (Baby)', 'CWC'}
+        VISIT_SERVICES = {'OPD Consultation', 'ANC', 'PNC Visit (Mother)', 'PNC Visit (Baby)', 'CWC', 'MCH'}
         creates_visit = selected_service and selected_service.name in VISIT_SERVICES
         
         if creates_visit:
@@ -96,32 +96,93 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
             visit = Visit.objects.create(
                 patient=self.object,
                 visit_type='OUT-PATIENT',
-                visit_mode='Walk In'
+                visit_mode='Walk In',
+                payment_method='SHA' if payment_method == 'Insurance' else 'CASH'
             )
             
             if selected_service and payment_method:
-                # Get or Create Visit Invoice (Consolidated)
+                # Get or Create Visit Invoice
                 invoice = get_or_create_invoice(visit=visit, user=self.request.user)
                 
-                # Handle Free Visit logic
-                unit_price = selected_service.price
-                if payment_method == 'Free Visit':
-                    unit_price = 0
+                if selected_service.name == 'OPD Consultation' and payment_method != 'Free Visit':
+                    # Custom logic for OPD Consultation selection
+                    bill_book = form.cleaned_data.get('bill_opd_book')
+                    bill_consult = form.cleaned_data.get('bill_opd_consultation')
+                    
+                    # Process OPD Book
+                    if bill_book:
+                        opd_book_service = Service.objects.filter(name__icontains='OPD Book', is_active=True).first()
+                        if opd_book_service:
+                            InvoiceItem.objects.create(
+                                invoice=invoice,
+                                service=opd_book_service,
+                                name=opd_book_service.name,
+                                unit_price=opd_book_service.price,
+                                quantity=1
+                            )
+                    
+                    # Process OPD Consultation
+                        if payment_method == 'Insurance':
+                            price = 300  # Fixed at 300 for SHA/Insurance portion
+                        else:
+                            price = 100  # Default 100 for non-insurance consultation
+                        
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            service=selected_service,
+                            name=selected_service.name,
+                            unit_price=price,
+                            quantity=1
+                        )
+                        
+                        if payment_method == 'Insurance':
+                            # Automatically record the 300 Ksh Insurance portion
+                            # Automated Insurance portion (300)
+                            Payment.objects.create(
+                                invoice=invoice,
+                                amount=300,
+                                payment_method='Insurance',
+                                notes='Automated insurance portion (SHA)',
+                                created_by=self.request.user
+                            )
+                            
+                    # Record the patient's portion (any remaining balance like the 50 book fee)
+                            patient_method = form.cleaned_data.get('patient_payment_method')
+                            remaining_to_pay = invoice.total_amount - 300
+                            if remaining_to_pay > 0 and patient_method:
+                                Payment.objects.create(
+                                    invoice=invoice,
+                                    amount=remaining_to_pay,
+                                    payment_method=patient_method,
+                                    notes='Patient portion (Book fee)',
+                                    created_by=self.request.user
+                                )
+                else:
+                    # Standard logic for other services or Free Visit
+                    # Handle Free Visit logic
+                    unit_price = selected_service.price
+                    if payment_method == 'Free Visit':
+                        unit_price = 0
+                    elif "Consultation" in selected_service.name:
+                        unit_price = 100 # Default for non-insurance if not caught by OPD specific logic
 
-                # Create InvoiceItem
-                item = InvoiceItem.objects.create(
-                    invoice=invoice,
-                    service=selected_service,
-                    name=selected_service.name,
-                    unit_price=unit_price,
-                    quantity=1
-                )
+                    # Create InvoiceItem
+                    item = InvoiceItem.objects.create(
+                        invoice=invoice,
+                        service=selected_service,
+                        name=selected_service.name,
+                        unit_price=unit_price,
+                        quantity=1
+                    )
                 
-                # Record Payment (unless it's a Free Visit)
-                if payment_method != 'Free Visit':
+                # Update invoice totals before recording payment
+                invoice.update_totals()
+
+                # Record Payment (unless it's a Free Visit or already handled for Insurance)
+                if payment_method != 'Free Visit' and payment_method != 'Insurance' and invoice.total_amount > 0:
                     Payment.objects.create(
                         invoice=invoice,
-                        amount=item.amount,
+                        amount=invoice.total_amount,
                         payment_method=payment_method,
                         created_by=self.request.user
                     )
@@ -129,7 +190,7 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
                 if payment_method == 'Free Visit':
                     messages.success(self.request, f"Patient registered with a Free Visit for {selected_service.name}.")
                 else:
-                    messages.success(self.request, f"Patient registered and {selected_service.name} billed via {payment_method}.")
+                    messages.success(self.request, f"Patient registered and billing processed via {payment_method}.")
 
             
             # --- Smart Routing ---
@@ -145,6 +206,8 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
                 dest_dept, _ = Departments.objects.get_or_create(name='PNC', defaults={'abbreviation': 'PNC'})
             elif 'CWC' in service_name_upper:
                 dest_dept, _ = Departments.objects.get_or_create(name='CWC', defaults={'abbreviation': 'CWC'})
+            elif 'MCH' in service_name_upper:
+                dest_dept, _ = Departments.objects.get_or_create(name='MCH', defaults={'abbreviation': 'MCH'})
             else:
                 # OPD Consultation → Triage
                 dest_dept, _ = Departments.objects.get_or_create(name='Triage', defaults={'abbreviation': 'TRI'})
@@ -792,8 +855,8 @@ def reception_dashboard(request):
             invoices = invoices.filter(
                 Q(patient__first_name__icontains=invoice_search) |
                 Q(patient__last_name__icontains=invoice_search) |
-                Q(deceased__first_name__icontains=invoice_search) |
-                Q(deceased__last_name__icontains=invoice_search) |
+                Q(deceased__surname__icontains=invoice_search) |
+                Q(deceased__other_names__icontains=invoice_search) |
                 Q(items__name__icontains=invoice_search) |
                 Q(id__icontains=invoice_search)
             ).distinct()
@@ -1183,145 +1246,198 @@ def create_triage_entry(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
-@login_required # Ensure login
+@login_required
+def check_active_visit(request):
+    """Check if patient has an active visit and return unpaid invoice info."""
+    patient_id = request.GET.get('patient_id')
+    if not patient_id:
+        return JsonResponse({'has_active': False})
+
+    active_visits = Visit.objects.filter(patient_id=patient_id, is_active=True)
+    if not active_visits.exists():
+        return JsonResponse({'has_active': False})
+
+    from accounts.models import Invoice
+    unpaid_total = 0
+    total_invoiced = 0
+    total_paid = 0
+    visit_details = []
+    for v in active_visits:
+        detail = {
+            'visit_id': v.pk,
+            'visit_type': v.visit_type,
+            'visit_date': v.visit_date.strftime('%d %b %Y, %H:%M'),
+            'invoice_id': None,
+            'invoice_total': 0,
+            'paid_amount': 0,
+            'balance': 0,
+        }
+        try:
+            inv = v.invoice
+            if inv:
+                detail['invoice_id'] = inv.pk
+                detail['invoice_total'] = float(inv.total_amount)
+                detail['paid_amount'] = float(inv.paid_amount)
+                detail['balance'] = float(inv.balance)
+                total_invoiced += float(inv.total_amount)
+                total_paid += float(inv.paid_amount)
+                if inv.balance > 0:
+                    unpaid_total += float(inv.balance)
+        except Exception:
+            pass
+        visit_details.append(detail)
+
+    return JsonResponse({
+        'has_active': True,
+        'active_count': active_visits.count(),
+        'total_invoiced': total_invoiced,
+        'total_paid': total_paid,
+        'unpaid_total': unpaid_total,
+        'visits': visit_details,
+    })
+
+
+@login_required
 def admit_patient_visit(request):
     """
-    Admit a patient (create a Visit) and add to a Queue (Reception -> Dest).
+    Admit a patient (create a Visit) and add to a Queue.
+    OPD Consultation → Triage (with billing)
+    MCH → MCH department (free, no triage)
     """
     if request.method == 'POST':
         try:
-            patient_id = request.POST.get('patient_id')
-            service_id = request.POST.get('service_id') or request.POST.get('consultation_id')
-            
-            patient = get_object_or_404(Patient, pk=patient_id)
-            main_service = get_object_or_404(Service, pk=service_id)
-            
-            # Create a visit for the patient
-            visit = Visit.objects.create(
-                patient=patient,
-                visit_type='OUT-PATIENT',
-                visit_mode='Walk In'
-            )
-            
-            # Create or get reception and triage departments
-            reception_dept, _ = Departments.objects.get_or_create(
-                name='Reception',
-                defaults={'abbreviation': 'REC'}
-            )
-            
-            triage_dept, _ = Departments.objects.get_or_create(
-                name='Triage',
-                defaults={'abbreviation': 'TRI'}
-            )
-
-            # Route based on Service Name (Smart Routing)
-            # Default: If service has a linked department, send there. Else fallback to Triage.
-            destination_dept = main_service.department if main_service.department else triage_dept
-            
-            service_name_upper = main_service.name.upper()
-            is_maternity = False
-            
-            # Specific Overrides - Order Matters! Check specific depts first before generic 'Consultation'
-            if "ANC" in service_name_upper:
-                anc_dept, _ = Departments.objects.get_or_create(name='ANC', defaults={'abbreviation': 'ANC'})
-                destination_dept = anc_dept
-                is_maternity = True
-            elif "PNC" in service_name_upper:
-                pnc_dept, _ = Departments.objects.get_or_create(name='PNC', defaults={'abbreviation': 'PNC'})
-                destination_dept = pnc_dept
-                is_maternity = True
-            elif "CWC" in service_name_upper or "CHILD WELFARE" in service_name_upper or "IMMUNIZA" in service_name_upper or "VACCIN" in service_name_upper or "CNC" in service_name_upper:
-                cwc_dept, _ = Departments.objects.get_or_create(name='CWC', defaults={'abbreviation': 'CWC'})
-                destination_dept = cwc_dept
-                is_maternity = True
-            elif "LAB" in service_name_upper or "LABORATORY" in service_name_upper:
-                 lab_dept, _ = Departments.objects.get_or_create(name='Lab', defaults={'abbreviation': 'LAB'})
-                 destination_dept = lab_dept
-            elif "RADIOLOGY" in service_name_upper or "IMAGING" in service_name_upper or "X-RAY" in service_name_upper or "ULTRASOUND" in service_name_upper:
-                 img_dept, _ = Departments.objects.get_or_create(name='Imaging', defaults={'abbreviation': 'IMG'})
-                 destination_dept = img_dept
-            elif "IPD" in service_name_upper or "ADMISSION" in service_name_upper:
-                 # Route IPD/Admissions to Admissions Desk/Ward
-                 adm_dept, _ = Departments.objects.get_or_create(name='Admissions', defaults={'abbreviation': 'ADM'})
-                 destination_dept = adm_dept
-            elif "OPD" in service_name_upper or "CONSULTATION" in service_name_upper:
-                # General OPD / Consultations always go to Triage first (if not matched above)
-                destination_dept = triage_dept
-            
-            # --- Billing Logic ---
             from accounts.models import Invoice, InvoiceItem
             from django.utils import timezone
             from accounts.utils import get_or_create_invoice
 
-            should_bill = False
-            
-            if is_maternity:
-                # ANC / PNC: Always Bill. CWC: Free
-                if "CWC" in service_name_upper or "CHILD WELFARE" in service_name_upper or "VACCIN" in service_name_upper or "IMMUNIZA" in service_name_upper:
-                    should_bill = False
-                else:
-                    should_bill = True
+            patient_id = request.POST.get('patient_id')
+            consultation_id = request.POST.get('consultation_id')
+            payment_method = request.POST.get('payment_method', 'Cash')
+            patient_payment_method = request.POST.get('patient_payment_method', 'Cash')
+
+            # OPD Billing Flags
+            bill_opd_book = request.POST.get('bill_opd_book') == 'true'
+            bill_opd_consult = request.POST.get('bill_opd_consultation') == 'true'
+
+            patient = get_object_or_404(Patient, pk=patient_id)
+            main_service = get_object_or_404(Service, pk=consultation_id)
+
+            # Close any previous active visits
+            Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
+
+            service_name_upper = main_service.name.upper()
+            is_mch = 'MCH' in service_name_upper
+
+            # Create visit
+            visit = Visit.objects.create(
+                patient=patient,
+                visit_type='OUT-PATIENT',
+                visit_mode='Walk In',
+                payment_method='SHA' if payment_method == 'Insurance' else 'CASH'
+            )
+
+            # Departments
+            reception_dept, _ = Departments.objects.get_or_create(
+                name='Reception', defaults={'abbreviation': 'REC'}
+            )
+
+            # --- Routing ---
+            if is_mch:
+                # MCH → MCH department directly (they have their own triage)
+                destination_dept, _ = Departments.objects.get_or_create(
+                    name='MCH', defaults={'abbreviation': 'MCH'}
+                )
+                billing_msg = " (MCH - Free Visit)"
             else:
-                # OPD: Check if billed for consultation this year
-                current_year = timezone.now().year
-                has_billed_this_year = InvoiceItem.objects.filter(
-                    invoice__patient=patient,
-                    service__name__icontains='Consultation', # Broad check for consultation services
-                    invoice__created_at__year=current_year,
-                    invoice__status__in=['Paid', 'Partial', 'Pending'] # Assuming we only care if they have a valid previous invoice
-                ).exists()
-                
-                if not has_billed_this_year:
-                    should_bill = True
-            
-            billing_msg = " (Free Visit)"
-            if should_bill:
-                # Create Invoice
-                invoice = get_or_create_invoice(visit=visit, user=request.user)
-                
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    service=main_service,
-                    name=main_service.name,
-                    unit_price=main_service.price,
-                    quantity=1
+                # OPD Consultation → Triage
+                destination_dept, _ = Departments.objects.get_or_create(
+                    name='Triage', defaults={'abbreviation': 'TRI'}
                 )
-                
-                # Automated Payment (Patient pays before admission)
-                from accounts.models import Payment
-                Payment.objects.create(
-                    invoice=invoice,
-                    amount=invoice.total_amount,
-                    payment_method='Cash',
-                    notes='Automated payment at admission',
-                    created_by=request.user
-                )
-                
-                # Final check for 0-cost services to ensure status is 'Paid'
-                invoice.refresh_from_db()
-                if invoice.total_amount == 0 and invoice.status != 'Paid':
-                    invoice.status = 'Paid'
-                    invoice.save()
-                
-                billing_msg = " (Billed & Paid)"
-            
-            # Create PatientQue from reception to destination (Triage or Direct Maternity)
-            que = PatientQue.objects.create(
+
+                # --- Billing for OPD ---
+                if payment_method == 'Free Visit':
+                    billing_msg = " (Free Revisit)"
+                else:
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+
+                    # Bill OPD Book if checked
+                    if bill_opd_book:
+                        opd_book_service = Service.objects.filter(
+                            name__icontains='OPD Book', is_active=True
+                        ).first()
+                        if opd_book_service:
+                            InvoiceItem.objects.create(
+                                invoice=invoice,
+                                service=opd_book_service,
+                                name=opd_book_service.name,
+                                unit_price=opd_book_service.price,
+                                quantity=1
+                            )
+
+                    # Bill OPD Consultation if checked
+                    if bill_opd_consult:
+                        unit_price = 300 if payment_method == 'Insurance' else 100
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            service=main_service,
+                            name=main_service.name,
+                            unit_price=unit_price,
+                            quantity=1
+                        )
+
+                    # --- Payments ---
+                    invoice.refresh_from_db()
+                    if invoice.total_amount > 0:
+                        if payment_method == 'Insurance':
+                            # Insurance covers up to 300
+                            insurance_amount = min(invoice.total_amount, 300)
+                            Payment.objects.create(
+                                invoice=invoice,
+                                amount=insurance_amount,
+                                payment_method='Insurance',
+                                notes='Automated insurance portion (SHA)',
+                                created_by=request.user
+                            )
+                            remaining = invoice.total_amount - insurance_amount
+                            if remaining > 0:
+                                Payment.objects.create(
+                                    invoice=invoice,
+                                    amount=remaining,
+                                    payment_method=patient_payment_method,
+                                    notes='Patient portion (Book/Co-pay)',
+                                    created_by=request.user
+                                )
+                        else:
+                            # Cash/M-Pesa full payment
+                            Payment.objects.create(
+                                invoice=invoice,
+                                amount=invoice.total_amount,
+                                payment_method=payment_method,
+                                notes='Automated payment at admission',
+                                created_by=request.user
+                            )
+
+                    billing_msg = " (Billed & Paid)"
+
+            # --- Queue patient ---
+            PatientQue.objects.create(
                 visit=visit,
                 qued_from=reception_dept,
                 sent_to=destination_dept,
                 created_by=request.user
             )
-            
-            
+
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': f'Patient {patient.full_name} admitted for {main_service.name}{billing_msg}.'
             })
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'success': False, 'error': str(e)})
-            
+
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
 
 
 # Prescription Views

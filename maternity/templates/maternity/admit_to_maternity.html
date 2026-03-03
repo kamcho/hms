@@ -339,10 +339,16 @@
             btnExistingPatient.classList.add('border-slate-200', 'bg-white', 'text-slate-500');
             btnExistingPatient.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700');
             
-            // Re-enable validation on inputs
-            Array.from(patientFieldsGrid.querySelectorAll('input, select')).forEach(el => el.required = true);
+            // Re-enable validation on inputs safely
+            const inputs = patientFieldsGrid.querySelectorAll('input, select');
+            if (inputs) {
+                Array.from(inputs).forEach(el => el.required = true);
+            }
             // Exceptions
-            document.querySelector('input[name="id_number"]').required = false;
+            const idInput = document.querySelector('input[name="id_number"]');
+            if (idInput) {
+                idInput.required = false;
+            }
         }
 
         function switchToExisting() {

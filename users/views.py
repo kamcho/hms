@@ -220,6 +220,28 @@ def mark_invoices_paid(request, patient_id):
     })
 
 
+@login_required
+def switch_role(request):
+    """Allow superusers to switch their active role."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    
+    if request.method == 'POST':
+        new_role = request.POST.get('role')
+        # Get role codes from the roles choices list
+        valid_roles = [r[0] for r in request.user.roles]
+        
+        if new_role in valid_roles:
+            request.user.role = new_role
+            request.user.save()
+            messages.success(request, f'Role switched to {new_role}')
+            return redirect(get_dashboard_url(request.user))
+        else:
+            messages.error(request, 'Invalid role selected.')
+            
+    return redirect(get_dashboard_url(request.user))
+
+
 def handler404(request, exception=None):
     """Custom 404 error handler."""
     response = render(request, '404.html')

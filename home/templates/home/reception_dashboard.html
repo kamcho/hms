@@ -482,7 +482,6 @@
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2) !important;
     }
 
-    /* Target all inputs and selects globally in this page to be sure */
     input,
     select,
     textarea,
@@ -492,6 +491,24 @@
         background-color: #1a202c !important;
         color: #ffffff !important;
         pointer-events: auto !important;
+    }
+
+    /* Restore native checkbox/radio appearance */
+    input[type="checkbox"],
+    input[type="radio"] {
+        -webkit-appearance: auto !important;
+        -moz-appearance: auto !important;
+        appearance: auto !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        background: transparent !important;
+        border: initial !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        width: auto !important;
+        position: static !important;
+        z-index: auto !important;
     }
 
     /* Style for select dropdowns to ensure dark theme */
@@ -955,132 +972,6 @@
                 </div>
             {% endif %}
             {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-                <!-- IPD & Morgue Section -->
-                <div class="section admission-morgue-section" style="grid-column: span 2;">
-                    <div class="tab-container">
-                        <div class="tabs-header">
-                            <button class="dashboard-tab active" onclick="switchDashboardTab(event, 'ipd-tab')">
-                                <i class="fas fa-procedures"></i> IPD Admissions
-                            </button>
-                            <button class="dashboard-tab" onclick="switchDashboardTab(event, 'morgue-tab')">
-                                <i class="fas fa-box"></i> Morgue Cases
-                            </button>
-                        </div>
-                        <div id="ipd-tab" class="tab-content active">
-                            <div class="table-responsive">
-                                <table class="premium-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Patient</th>
-                                            <th>Ward/Bed</th>
-                                            <th>Admitted At</th>
-                                            <th class="text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for admission in ipd_admissions %}
-                                            <tr>
-                                                <td>
-                                                    <div class="patient-profile-inline">
-                                                        <div class="avatar-initials" data-name="{{ admission.patient.first_name }}">
-                                                            {{ admission.patient.first_name|first }}{{ admission.patient.last_name|first }}
-                                                        </div>
-                                                        <div class="name-id">
-                                                            <span class="full-name">{{ admission.patient.full_name }}</span>
-                                                            <span class="patient-id">#PAT-{{ admission.patient.id|stringformat:"05d" }}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style="font-weight: 600; color: #10b981;">{{ admission.bed.ward.name }}</div>
-                                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                                                        Bed: {{ admission.bed.bed_number }}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="time-cell">
-                                                        <i class="far fa-calendar-alt"></i> {{ admission.admitted_at|date:"M d, Y" }}
-                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admitted_at|date:"H:i" }}</span>
-                                                    </div>
-                                                </td>
-                                                <td class="text-right">
-                                                    <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                                        <i class="fas fa-file-invoice-dollar"></i> Discharge
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        {% empty %}
-                                            <tr>
-                                                <td colspan="4" class="no-records">
-                                                    <div class="empty-state-small">
-                                                        <i class="fas fa-procedures"></i>
-                                                        <p>No active IPD admissions.</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div id="morgue-tab" class="tab-content" style="display: none;">
-                            <div class="table-responsive">
-                                <table class="premium-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Deceased</th>
-                                            <th>Tag/Number</th>
-                                            <th>Status</th>
-                                            <th class="text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for admission in morgue_admissions %}
-                                            <tr>
-                                                <td>
-                                                    <div class="patient-profile-inline">
-                                                        <div class="avatar-initials" data-name="{{ admission.deceased.first_name }}" style="background: #475569;">
-                                                            {{ admission.deceased.first_name|first }}{{ admission.deceased.last_name|first }}
-                                                        </div>
-                                                        <div class="name-id">
-                                                            <span class="full-name text-danger">{{ admission.deceased.full_name }}</span>
-                                                            <span class="patient-id">S/N: {{ admission.admission_number }}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span class="invoice-status status-unpaid">{{ admission.deceased.tag }}</span>
-                                                </td>
-                                                <td>
-                                                    <div class="time-cell">
-                                                        <i class="far fa-calendar-alt"></i> {{ admission.admission_datetime|date:"M d, Y" }}
-                                                        <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">{{ admission.admission_datetime|date:"H:i" }}</span>
-                                                    </div>
-                                                </td>
-                                                <td class="text-right">
-                                                    <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                                        <i class="fas fa-file-invoice-dollar"></i> Release
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        {% empty %}
-                                            <tr>
-                                                <td colspan="4" class="no-records">
-                                                    <div class="empty-state-small">
-                                                        <i class="fas fa-door-closed"></i>
-                                                        <p>No active morgue cases.</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
                 <div id="patientDirectory" class="section" style="grid-column: span 2;">
                     <div class="section-header">
                         <h3>
@@ -1088,7 +979,7 @@
                         </h3>
                     </div>
                     <div class="search-section">
-                        <form method="GET" class="search-form">
+                        <form id="patientSearchForm" method="GET" action="{% url 'home:reception_dashboard' %}" class="search-form">
                             <div class="search-container" style="position: relative;">
                                 <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
                                 <input type="text" name="patient_search" class="search-input" placeholder="Search by name, phone, or location..." value="{{ patient_search }}">
@@ -1097,6 +988,7 @@
                                         <i class="fas fa-times"></i> Clear
                                     </a>
                                 {% endif %}
+                                <button type="submit" style="display: none;"></button>
                             </div>
                         </form>
                     </div>
@@ -1180,120 +1072,214 @@
     </script>
 {% endblock %}
 {% block modals %}
+    <!-- Active Visit Warning Modal -->
+    <div id="activeVisitWarningModal" class="clinical-modal" style="z-index: 200000;">
+        <div class="modal-content" style="max-width: 600px; border-radius: 20px; border: 1px solid rgba(239,68,68,0.3); overflow: hidden;">
+            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.1)); border-bottom: 1px solid rgba(239,68,68,0.15); display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; flex-shrink: 0;">⚠️</div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ef4444;">Active Visit Warning</h3>
+                    <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">This patient already has an active visit</p>
+                </div>
+            </div>
+            <div style="padding: 1.5rem 2rem;">
+                <div id="activeVisitDetails" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                <div id="activeVisitUnpaidTotal" style="display: none; margin-top: 1rem; padding: 0.85rem 1rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #ef4444; font-weight: 800; font-size: 0.95rem; text-align: center;"></div>
+                <p style="margin: 1.25rem 0 0; padding: 0.85rem 1rem; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; color: #f59e0b; font-size: 0.85rem; font-weight: 600;">Creating a new visit will <strong>CLOSE</strong> all previous active visits.</p>
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button id="activeVisitCancel" style="flex: 1; padding: 0.85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: 0.2s;">Cancel</button>
+                    <button id="activeVisitProceed" style="flex: 1; padding: 0.85rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-weight: 700; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3); transition: 0.2s;">Proceed Anyway</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Patient Action Modal -->
     <div id="patientActionModal" class="clinical-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>
-                    <i class="fas fa-user-gear"></i> Patient Actions
-                </h3>
-                <span id="closePatientModal" class="close" style="cursor: pointer;">&times;</span>
+        <div class="modal-content" style="max-width: 950px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+            <!-- Premium Header -->
+            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white; box-shadow: 0 4px 15px rgba(16,185,129,0.3);"><i class="fas fa-user-gear"></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: white; letter-spacing: 0.3px;">Patient Actions</h3>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select an action for <strong id="modalPatientName" style="color: #10b981;"></strong></p>
+                    </div>
+                </div>
+                <span id="closePatientModal" class="close" style="cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.05); transition: 0.2s;">&times;</span>
             </div>
-            <div class="modal-body">
-                <p style="color: var(--text-secondary); margin-bottom: 2.5rem;">
-                    Selecting action for <strong id="modalPatientName" style="color: white; font-size: 1.2rem;"></strong>
-                </p>
-                <div class="action-card" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
-                    <h4 style="margin: 0; color: #10b981; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
-                        <i class="fas fa-hospital-user"></i> ADMIT FOR CONSULTATION
-                    </h4>
-                    <div class="form-group">
-                        <label for="admitConsultation" style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
-                            Consultation
-                            Type
-                        </label>
-                        <select id="admitConsultation" class="clinical-input" style="cursor: pointer;">
-                            <option value="">-- Select Consultation --</option>
-                            {% for service in services %}
-                                {% if "Consultation" in service.name or "PNC" in service.name or "ANC" in service.name or "CWC" in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>{% endif %}
-                            {% endfor %}
-                        </select>
+            <!-- Two-Column Body -->
+            <div style="display: grid; grid-template-columns: 1fr 1px 1fr; padding: 0;">
+                <!-- LEFT: Admit for Consultation -->
+                <div style="padding: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.75rem;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></div>
+                        <h4 style="margin: 0; color: #10b981; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Admit for Consultation</h4>
                     </div>
-                    <button id="admitVisitBtn" class="btn-primary" style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
-                        <i class="fas fa-check-circle"></i> Complete Admission
-                    </button>
-                </div>
-                <div style="display: flex; align-items: center; gap: 1.5rem; margin: 3rem 0;">
-                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-                    <span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">OR</span>
-                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-                </div>
-                <div class="action-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
-                    <h4 style="margin: 0; color: #6366f1; display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
-                        <i class="fas fa-bolt"></i> QUICK SERVICE INVOICE
-                    </h4>
-                    <div class="form-group">
-                        <label for="quickService" style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
-                            Select
-                            Service / Item
-                        </label>
-                        <select id="quickService" class="clinical-input" style="cursor: pointer;">
-                            <option value="">-- Choose a service --</option>
-                            {% regroup services by department as services_by_dept %}
-                            {% for dept in services_by_dept %}
-                                {% if "Reception" not in dept.grouper.name %}
-                                    <optgroup label="{{ dept.grouper.name }}">
-                                        {% for service in dept.list %}
-                                            {% if "Consultation" not in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2 }})</option>{% endif %}
-                                        {% endfor %}
-                                    </optgroup>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label for="admitConsultation" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Consultation Type</label>
+                            <select id="admitConsultation" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                                <option value="">-- Select Consultation --</option>
+                                {% for service in services %}
+                                    {% if service.name == "MCH" or service.name == "OPD Consultation" %}
+                                        <option value="{{ service.pk }}" data-price="{{ service.price|format_number:0 }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="admitPaymentMethod" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Payment Method</label>
+                            <select id="admitPaymentMethod" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                                <option value="">-- Select Payment Method --</option>
+                                <option value="Cash">Cash</option>
+                                <option value="M-Pesa">M-Pesa</option>
+                                <option value="Insurance">Insurance (SHA)</option>
+                                <option value="Free Visit">Free Visit (Revisit)</option>
+                            </select>
+                        </div>
+                        <!-- OPD Billing Components -->
+                        <div id="opdBillingOptions" style="display: none; background: rgba(16,185,129,0.04); padding: 1rem; border-radius: 12px; border: 1px dashed rgba(16,185,129,0.2);">
+                            <span style="display: block; font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px;">Service Components</span>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.7rem 0.85rem; border-radius: 10px;">
+                                    <input type="checkbox" id="admitBillBook" checked style="width: 18px; height: 18px; min-width: 18px; cursor: pointer; accent-color: #10b981;">
+                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Book</strong><small style="color: var(--text-secondary); font-size: 0.75rem; display: block;">Filing Fee — Ksh 50</small></span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.7rem 0.85rem; border-radius: 10px;">
+                                    <input type="checkbox" id="admitBillConsult" checked style="width: 18px; height: 18px; min-width: 18px; cursor: pointer; accent-color: #10b981;">
+                                    <span style="flex: 1;"><strong id="opdConsultationLabel" style="color: white; font-size: 0.85rem;">OPD Consultation</strong><small id="opdConsultationDesc" style="color: var(--text-secondary); font-size: 0.75rem; display: block;">Clinical Assessment</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="admitPatientPortionGroup" style="display: none;">
+                            <label for="admitPatientPaymentMethod" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Patient Portion Method</label>
+                            <select id="admitPatientPaymentMethod" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                                <option value="Cash">Cash</option>
+                                <option value="M-Pesa">M-Pesa</option>
+                            </select>
+                        </div>
+                        <button id="admitVisitBtn" type="button" class="btn-primary" style="width: 100%; justify-content: center; padding: 1.1rem; border-radius: 14px; font-weight: 800; font-size: 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 8px 25px -5px rgba(16,185,129,0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto; border: none; color: white; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+                            <i class="fas fa-check-circle"></i> Complete Admission
+                        </button>
                     </div>
-                    <button id="generateInvoiceBtn" class="btn-primary" onclick="submitQuickInvoice()" style="width: 100%; justify-content: center; padding: 1.5rem; border-radius: 18px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto;">
-                        <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
-                    </button>
+                </div>
+                <!-- Vertical Divider -->
+                <div style="background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.1) 80%, transparent);"></div>
+                <!-- RIGHT: Quick Service Invoice -->
+                <div style="padding: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.75rem;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #6366f1; box-shadow: 0 0 8px #6366f1;"></div>
+                        <h4 style="margin: 0; color: #6366f1; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Quick Service Invoice</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label for="quickService" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Select Service / Item</label>
+                            <select id="quickService" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                                <option value="">-- Choose a service --</option>
+                                {% regroup services by department as services_by_dept %}
+                                {% for dept in services_by_dept %}
+                                    {% if "Reception" not in dept.grouper.name %}
+                                        <optgroup label="{{ dept.grouper.name }}">
+                                            {% for service in dept.list %}
+                                                {% if "Consultation" not in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2 }})</option>{% endif %}
+                                            {% endfor %}
+                                        </optgroup>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="flex: 1;"></div>
+                        <button id="generateInvoiceBtn" type="button" class="btn-primary" onclick="submitQuickInvoice()" style="width: 100%; justify-content: center; padding: 1.1rem; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1rem; box-shadow: 0 8px 25px -5px rgba(99,102,241,0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto; border: none; color: white; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+                            <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <!-- Payment Processing Modal -->
     <div id="paymentModal" class="clinical-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>
-                    <i class="fas fa-credit-card"></i> Process Payment
-                </h3>
-                <span class="close-payment">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="invoice-details-premium" style="background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Patient</span>
-                        <strong id="paymentPatientName" style="color: white;"></strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Service</span>
-                        <span id="paymentServiceName" style="font-weight: 600; color: #6366f1;"></span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--reception-border);">
-                        <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 700;">AMOUNT DUE</span>
-                        <strong id="paymentAmount" style="font-size: 1.5rem; color: #10b981;"></strong>
+        <div class="modal-content" style="max-width: 550px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+            <!-- Header -->
+            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(16,185,129,0.1)); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white;"><i class="fas fa-credit-card"></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: white;">Process Payment</h3>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Split across payment methods</p>
                     </div>
                 </div>
-                <div class="payment-options">
-                    <div class="payment-methods-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <button id="mpesaPaymentBtn" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
-                            <i class="fas fa-mobile-screen-button" style="font-size: 2rem; color: #10b981; margin-bottom: 1rem; display: block;"></i>
-                            <strong style="color: white; display: block;">M-PESA</strong>
-                            <small style="color: var(--text-secondary);">Mobile Money</small>
-                        </button>
-                        <button id="cashPaymentBtn" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.3s;">
-                            <i class="fas fa-money-bill-transfer" style="font-size: 2rem; color: #6366f1; margin-bottom: 1rem; display: block;"></i>
-                            <strong style="color: white; display: block;">CASH</strong>
-                            <small style="color: var(--text-secondary);">Physical Payment</small>
-                        </button>
+                <span class="close-payment" style="cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.05);">&times;</span>
+            </div>
+            <div style="padding: 1.5rem 2rem;">
+                <!-- Invoice Summary -->
+                <div style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">Patient</span>
+                        <strong id="paymentPatientName" style="color: white; font-size: 0.9rem;"></strong>
                     </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">Service</span>
+                        <span id="paymentServiceName" style="font-weight: 600; color: #6366f1; font-size: 0.9rem;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                        <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.85rem;">AMOUNT DUE</span>
+                        <strong id="paymentAmount" style="font-size: 1.4rem; color: #10b981;"></strong>
+                    </div>
+                </div>
+
+                <!-- Split Payment Section -->
+                <div class="payment-options">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- M-Pesa -->
+                        <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15); border-radius: 14px; padding: 1rem 1.25rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <i class="fas fa-mobile-screen-button" style="font-size: 1.1rem; color: #10b981;"></i>
+                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">M-Pesa</span>
+                                </div>
+                                <button type="button" class="pay-full-btn" data-target="mpesaAmount" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.1); color: #10b981; cursor: pointer; font-weight: 600;">Full Amount</button>
+                            </div>
+                            <div style="position: relative;">
+                                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-weight: 600; font-size: 0.85rem;">Ksh</span>
+                                <input type="number" id="mpesaAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 45px; font-size: 1.1rem; font-weight: 700;">
+                            </div>
+                        </div>
+                        <!-- Cash -->
+                        <div style="background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.15); border-radius: 14px; padding: 1rem 1.25rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <i class="fas fa-money-bill-wave" style="font-size: 1.1rem; color: #6366f1;"></i>
+                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">Cash</span>
+                                </div>
+                                <button type="button" class="pay-full-btn" data-target="cashAmount" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.1); color: #6366f1; cursor: pointer; font-weight: 600;">Full Amount</button>
+                            </div>
+                            <div style="position: relative;">
+                                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-weight: 600; font-size: 0.85rem;">Ksh</span>
+                                <input type="number" id="cashAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 45px; font-size: 1.1rem; font-weight: 700;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remaining Balance -->
+                    <div id="paymentRemainingBar" style="margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; transition: 0.3s;">
+                        <span>Remaining</span>
+                        <span id="paymentRemaining"></span>
+                    </div>
+
+                    <!-- Submit -->
+                    <button id="submitSplitPayment" type="button" style="width: 100%; margin-top: 1.25rem; padding: 1rem; border-radius: 14px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 6px 20px rgba(16,185,129,0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: 0.2s;">
+                        <i class="fas fa-check-circle"></i> Confirm Payment
+                    </button>
                 </div>
                 <div class="already-paid" style="display: none; text-align: center; padding: 2rem;">
-                    <div style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                    <div style="background: rgba(16,185,129,0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
                         <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981;"></i>
                     </div>
                     <h4 style="color: #10b981; font-size: 1.5rem; margin-bottom: 0.5rem;">Payment Complete</h4>
                     <p style="color: var(--text-secondary);">This invoice has been fully paid.</p>
-                    <button onclick="window.print()" class="btn-secondary" style="margin-top: 1.5rem;">
-                        <i class="fas fa-print"></i> Print Receipt
+                    <button id="printFullInvoiceBtn" type="button" class="btn-primary" style="margin-top: 1.5rem; background: #6366f1; border: none; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+                        <i class="fas fa-print"></i> Print Full Statement
                     </button>
                 </div>
             </div>
@@ -1428,13 +1414,17 @@
         const closePaymentBtn = document.querySelector('.close-payment');
         const closeTriageBtn = document.querySelector('.close-triage');
 
-        // Payment modal elements
+        // Payment modal elements (New Split Payment)
         const paymentPatientName = document.getElementById('paymentPatientName');
         const paymentServiceName = document.getElementById('paymentServiceName');
         const paymentAmount = document.getElementById('paymentAmount');
-        // paymentStatus removed in new design
-        const mpesaPaymentBtn = document.getElementById('mpesaPaymentBtn');
-        const cashPaymentBtn = document.getElementById('cashPaymentBtn');
+        const mpesaInput = document.getElementById('mpesaAmount');
+        const cashInput = document.getElementById('cashAmount');
+        const paymentRemaining = document.getElementById('paymentRemaining');
+        const paymentRemainingBar = document.getElementById('paymentRemainingBar');
+        const submitSplitPaymentBtn = document.getElementById('submitSplitPayment');
+        const payFullBtns = document.querySelectorAll('.pay-full-btn');
+        const printFullInvoiceBtn = document.getElementById('printFullInvoiceBtn');
 
         // Triage modal elements
         const triagePatientName = document.getElementById('triagePatientName');
@@ -1541,6 +1531,11 @@
                 }
 
                 paymentModal.style.display = 'flex';
+                
+                // Reset split inputs and update balance
+                if (mpesaInput) mpesaInput.value = 0;
+                if (cashInput) cashInput.value = 0;
+                updatePaymentBalance();
             }
         });
 
@@ -1599,7 +1594,7 @@
 
         // Modal action buttons
 
-        admitVisitBtn.addEventListener('click', function () {
+        admitVisitBtn.addEventListener('click', async function () {
             if (currentPatientId) {
                 const consultationId = document.getElementById('admitConsultation').value;
 
@@ -1608,9 +1603,91 @@
                     return;
                 }
 
+                const payMethodText = document.getElementById('admitPaymentMethod').value;
+                if (!payMethodText) {
+                    showNotification('Please select a payment method.', 'error');
+                    return;
+                }
+
+                // Check for active visits first
+                try {
+                    const checkRes = await fetch(`{% url "home:check_active_visit" %}?patient_id=${currentPatientId}`);
+                    const checkData = await checkRes.json();
+
+                    if (checkData.has_active) {
+                        // Build custom modal content
+                        const detailsDiv = document.getElementById('activeVisitDetails');
+                        detailsDiv.innerHTML = '';
+
+                        checkData.visits.forEach((v, i) => {
+                            const invLabel = v.invoice_id ? `INV-${v.invoice_id}` : 'No Invoice';
+                            const balanceColor = v.balance > 0 ? '#ef4444' : '#10b981';
+                            const card = document.createElement('div');
+                            card.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem 1.25rem;';
+                            card.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">${v.visit_type}</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">${v.visit_date}</span>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem;">
+                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Invoice</div>
+                                        <div style="font-weight: 700; color: #6366f1; font-size: 0.85rem;">${invLabel}</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Total</div>
+                                        <div style="font-weight: 700; color: white; font-size: 0.85rem;">Ksh ${v.invoice_total.toLocaleString()}</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Paid</div>
+                                        <div style="font-weight: 700; color: #10b981; font-size: 0.85rem;">Ksh ${v.paid_amount.toLocaleString()}</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Balance</div>
+                                        <div style="font-weight: 700; color: ${balanceColor}; font-size: 0.85rem;">Ksh ${v.balance.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            `;
+                            detailsDiv.appendChild(card);
+                        });
+
+                        // Show unpaid total
+                        const unpaidDiv = document.getElementById('activeVisitUnpaidTotal');
+                        if (checkData.unpaid_total > 0) {
+                            unpaidDiv.textContent = `⚠️ TOTAL UNPAID BALANCE: Ksh ${checkData.unpaid_total.toLocaleString()}`;
+                            unpaidDiv.style.display = 'block';
+                        } else {
+                            unpaidDiv.style.display = 'none';
+                        }
+
+                        // Show warning modal and wait for user decision
+                        const warningModal = document.getElementById('activeVisitWarningModal');
+                        warningModal.style.display = 'flex';
+
+                        const userChoice = await new Promise(resolve => {
+                            document.getElementById('activeVisitProceed').onclick = () => { warningModal.style.display = 'none'; resolve(true); };
+                            document.getElementById('activeVisitCancel').onclick = () => { warningModal.style.display = 'none'; resolve(false); };
+                        });
+
+                        if (!userChoice) return;
+                    }
+                } catch (err) {
+                    console.error('Error checking active visits:', err);
+                }
+
+                const consultText = document.getElementById('admitConsultation').options[document.getElementById('admitConsultation').selectedIndex].text;
+                if (!confirm('Admit patient for:\n\n• ' + consultText + '\n• Payment: ' + payMethodText + '\n\nProceed?')) {
+                    return;
+                }
+
                 // Show processing notification
                 showNotification('Processing admission...', 'info');
                 admitVisitBtn.disabled = true;
+
+                const paymentMethod = document.getElementById('admitPaymentMethod').value;
+                const patientPaymentMethod = document.getElementById('admitPatientPaymentMethod').value;
+                const billOPDBook = document.getElementById('admitBillBook').checked;
+                const billOPDConsultation = document.getElementById('admitBillConsult').checked;
 
                 // Create a new visit (Free Revisit)
                 fetch('{% url "home:admit_patient_visit" %}', {
@@ -1619,7 +1696,7 @@
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: `patient_id=${currentPatientId}&consultation_id=${consultationId}`
+                    body: `patient_id=${currentPatientId}&consultation_id=${consultationId}&payment_method=${paymentMethod}&patient_payment_method=${patientPaymentMethod}&bill_opd_book=${billOPDBook}&bill_opd_consultation=${billOPDConsultation}`
                 })
                     .then(response => {
                         if (!response.ok) {
@@ -1648,17 +1725,135 @@
             }
         });
 
-        // Payment method buttons (only for receptionists)
-        if (mpesaPaymentBtn && cashPaymentBtn) {
-            mpesaPaymentBtn.addEventListener('click', function () {
-                if (currentInvoiceId) {
-                    processPayment('mpesa');
+        // Live balance calculation for split payments
+        function updatePaymentBalance() {
+            if (!currentInvoiceAmount) return;
+            
+            const mpesa = parseFloat(mpesaInput.value) || 0;
+            const cash = parseFloat(cashInput.value) || 0;
+            const total = mpesa + cash;
+            const remaining = currentInvoiceAmount - total;
+            
+            paymentRemaining.textContent = `Ksh ${Math.abs(remaining).toLocaleString()}`;
+            
+            if (remaining > 0) {
+                paymentRemainingBar.style.background = 'rgba(245, 158, 11, 0.1)';
+                paymentRemainingBar.style.color = '#f59e0b';
+                paymentRemainingBar.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+                paymentRemaining.textContent = `Ksh ${remaining.toLocaleString()} Remaining`;
+            } else if (remaining === 0) {
+                paymentRemainingBar.style.background = 'rgba(16, 185, 129, 0.1)';
+                paymentRemainingBar.style.color = '#10b981';
+                paymentRemainingBar.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                paymentRemaining.textContent = 'Fully Allocated';
+            } else {
+                paymentRemainingBar.style.background = 'rgba(239, 68, 68, 0.1)';
+                paymentRemainingBar.style.color = '#ef4444';
+                paymentRemainingBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                paymentRemaining.textContent = `Ksh ${Math.abs(remaining).toLocaleString()} Overpaid`;
+            }
+
+            // Enable/disable submit based on valid total
+            submitSplitPaymentBtn.disabled = (total <= 0 || total > currentInvoiceAmount);
+            submitSplitPaymentBtn.style.opacity = submitSplitPaymentBtn.disabled ? '0.5' : '1';
+        }
+
+        if (mpesaInput) {
+            mpesaInput.addEventListener('input', function() {
+                if (!currentInvoiceAmount) return;
+                const mpesa = parseFloat(this.value) || 0;
+                // Auto-update cash
+                if (cashInput) {
+                    cashInput.value = Math.max(0, currentInvoiceAmount - mpesa);
+                }
+                updatePaymentBalance();
+            });
+        }
+
+        if (cashInput) {
+            cashInput.addEventListener('input', function() {
+                if (!currentInvoiceAmount) return;
+                const cash = parseFloat(this.value) || 0;
+                // Auto-update mpesa
+                if (mpesaInput) {
+                    mpesaInput.value = Math.max(0, currentInvoiceAmount - cash);
+                }
+                updatePaymentBalance();
+            });
+        }
+
+        // Full amount shortcut buttons
+        payFullBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const otherId = targetId === 'mpesaAmount' ? 'cashAmount' : 'mpesaAmount';
+                const otherVal = parseFloat(document.getElementById(otherId).value) || 0;
+                
+                document.getElementById(targetId).value = Math.max(0, currentInvoiceAmount - otherVal);
+                updatePaymentBalance();
+            });
+        });
+
+        // Submit split payment
+        if (submitSplitPaymentBtn) {
+            submitSplitPaymentBtn.addEventListener('click', async function() {
+                const mpesa = parseFloat(mpesaInput.value) || 0;
+                const cash = parseFloat(cashInput.value) || 0;
+                
+                if (mpesa + cash <= 0) return;
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Payments...';
+
+                // Send all payments in a single JSON payload
+                const payload = {
+                    payments: []
+                };
+                if (mpesa > 0) payload.payments.push({ amount: mpesa, method: 'mpesa', reference: 'Mobile Split Payment' });
+                if (cash > 0) payload.payments.push({ amount: cash, method: 'cash', reference: 'Cash Split Payment' });
+
+                try {
+                    const response = await fetch(`/accounts/invoice/${currentInvoiceId}/payment/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    if (!data.success) throw new Error(data.error || 'Payment failed');
+                    
+                    showNotification('Payments processed successfully!', 'success');
+                    
+                    // Open receipts for each payment part
+                    if (data.all_payment_ids) {
+                        for (const pid of data.all_payment_ids) {
+                            window.open(`/accounts/payment/${pid}/receipt/`, `Receipt_${pid}`, 'width=400,height=600');
+                        }
+                    } else if (data.payment_id) {
+                        window.open(`/accounts/payment/${data.payment_id}/receipt/`, `Receipt_${data.payment_id}`, 'width=400,height=600');
+                    }
+                    
+                    paymentModal.style.display = 'none';
+                    setTimeout(() => window.location.reload(), 1500);
+                } catch (error) {
+                    console.error('Split payment error:', error);
+                    showNotification('One or more payments failed. Please check invoice status.', 'error');
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
                 }
             });
+        }
 
-            cashPaymentBtn.addEventListener('click', function () {
+
+
+        // Print full invoice from modal
+        if (printFullInvoiceBtn) {
+            printFullInvoiceBtn.addEventListener('click', function() {
                 if (currentInvoiceId) {
-                    processPayment('cash');
+                    window.open(`/accounts/invoice/${currentInvoiceId}/print/`, 'Statement', 'width=800,height=900');
                 }
             });
         }
@@ -1754,60 +1949,7 @@
             });
         }
 
-        function processPayment(method) {
-            // Disable buttons to prevent double click
-            if (mpesaPaymentBtn) mpesaPaymentBtn.disabled = true;
-            if (cashPaymentBtn) cashPaymentBtn.disabled = true;
 
-            // Show processing notification
-            showNotification(`Processing ${method.toUpperCase()} payment...`, 'info');
-
-            // Send payment to backend
-            const formData = new URLSearchParams();
-            formData.append('amount', currentInvoiceAmount);
-            formData.append('payment_method', method);
-            formData.append('reference', method === 'mpesa' ? 'Mobile Payment' : 'Cash Payment');
-
-            fetch(`/accounts/invoice/${currentInvoiceId}/payment/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification(`${method.toUpperCase()} payment processed successfully!`, 'success');
-                        paymentModal.style.display = 'none';
-
-                        // Check if a payment_id was returned so we can print the receipt
-                        if (data.payment_id) {
-                             // Open the receipt in a new popup window
-                             window.open('/accounts/payment/' + data.payment_id + '/receipt/', 'Receipt', 'width=400,height=600');
-                        }
-
-                        // Force a full page reload to ensure state consistency and prevent double clicks
-                        // especially for the 'Process Quick Invoice' flow which might be behind this
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500); // slightly longer delay to allow popup to open without blocking
-                    } else {
-                        showNotification('Payment processing failed: ' + (data.error || 'Unknown error'), 'error');
-                        // Re-enable buttons if payment failed
-                        if (mpesaPaymentBtn) mpesaPaymentBtn.disabled = false;
-                        if (cashPaymentBtn) cashPaymentBtn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Payment processing error:', error);
-                    showNotification('Error connecting to server. Please check your connection.', 'error');
-                    // Re-enable buttons if payment failed
-                    if (mpesaPaymentBtn) mpesaPaymentBtn.disabled = false;
-                    if (cashPaymentBtn) cashPaymentBtn.disabled = false;
-                });
-        }
 
         function showNotification(message, type) {
             // Create notification element
@@ -1824,7 +1966,7 @@
             border-radius: 8px;
             color: white;
             font-weight: 500;
-            z-index: 9999;
+            z-index: 999999;
             transform: translateX(100%);
             transition: transform 0.3s ease;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1876,12 +2018,17 @@
         window.submitQuickInvoice = function () {
             const serviceId = document.getElementById('quickService').value;
             if (!serviceId) {
-                showNotification('Please select a service first', 'error');
+                showNotification('Please select a service or item from the list before processing.', 'error');
                 return;
             }
 
             if (!currentPatientId) {
                 showNotification('Patient context lost. Please try again.', 'error');
+                return;
+            }
+
+            const serviceText = document.getElementById('quickService').options[document.getElementById('quickService').selectedIndex].text;
+            if (!confirm('Generate invoice for:\n\n• ' + serviceText + '\n\nProceed?')) {
                 return;
             }
 
@@ -1927,17 +2074,119 @@
                 });
         }
 
-        // Auto-scroll to patient directory on search
+        // Auto-scroll to patient directory on search - now handled inline above
         {% if patient_search %}
         (function() {
+            // Fallback scroll in case inline script ran before DOM was ready
             const target = document.getElementById('patientDirectory');
             if (target) {
                 setTimeout(function() {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 300);
+                }, 500);
             }
         })();
         {% endif %}
+
+        // Patient search form: redirect with #patientDirectory anchor so browser jumps to results
+        const patientSearchForm = document.getElementById('patientSearchForm');
+        if (patientSearchForm) {
+            patientSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const searchVal = this.querySelector('[name="patient_search"]').value.trim();
+                if (searchVal) {
+                    window.location.href = '{% url "home:reception_dashboard" %}?patient_search=' + encodeURIComponent(searchVal) + '#patientDirectory';
+                } else {
+                    this.submit();
+                }
+            });
+        }
+        const admitPaymentMethodSelect = document.getElementById('admitPaymentMethod');
+        const admitPatientPortionGroup = document.getElementById('admitPatientPortionGroup');
+        const admitConsultationSelect = document.getElementById('admitConsultation');
+        const opdBillingOptions = document.getElementById('opdBillingOptions');
+        const billOPDConsultation = document.getElementById('admitBillConsult');
+        const billOPDBook = document.getElementById('admitBillBook');
+        const opdConsultationLabel = document.getElementById('opdConsultationLabel');
+
+        function updateAdmitModalLogic() {
+            if (!admitConsultationSelect) return;
+
+            const selectedOption = admitConsultationSelect.options[admitConsultationSelect.selectedIndex];
+            const selectedText = selectedOption ? selectedOption.text : '';
+            const isOPD = selectedText.includes('OPD Consultation');
+            const isMCH = selectedText.includes('MCH');
+            const paymentMethod = admitPaymentMethodSelect.value;
+
+            // If MCH selected, force Free Visit and lock the dropdown
+            if (isMCH) {
+                admitPaymentMethodSelect.value = 'Free Visit';
+                admitPaymentMethodSelect.disabled = true;
+                opdBillingOptions.style.display = 'none';
+                admitPatientPortionGroup.style.display = 'none';
+                return;
+            } else {
+                admitPaymentMethodSelect.disabled = false;
+                // Reset to empty if it was forced to Free Visit by MCH
+                if (admitPaymentMethodSelect.value === 'Free Visit') {
+                    admitPaymentMethodSelect.value = '';
+                }
+            }
+
+            // Show Patient Portion if Insurance
+            if (paymentMethod === 'Insurance') {
+                admitPatientPortionGroup.style.display = 'block';
+            } else {
+                admitPatientPortionGroup.style.display = 'none';
+            }
+
+            // OPD Specific Logic
+            if (isOPD && paymentMethod !== 'Free Visit') {
+                opdBillingOptions.style.display = 'block';
+                // Reset checkboxes when payment method changes
+                if (billOPDBook) billOPDBook.checked = true;
+                if (billOPDConsultation) billOPDConsultation.checked = true;
+                if (paymentMethod === 'Insurance') {
+                    opdConsultationLabel.textContent = 'OPD Consultation (Ksh 300)';
+                } else {
+                    opdConsultationLabel.textContent = 'OPD Consultation (Ksh 100)';
+                }
+            } else {
+                opdBillingOptions.style.display = 'none';
+            }
+
+            // Handling Free Visit
+            if (paymentMethod === 'Free Visit') {
+                opdBillingOptions.style.display = 'none';
+                admitPatientPortionGroup.style.display = 'none';
+            }
+        }
+
+        if (admitPaymentMethodSelect) {
+            admitPaymentMethodSelect.addEventListener('change', updateAdmitModalLogic);
+        }
+        if (admitConsultationSelect) {
+            admitConsultationSelect.addEventListener('change', updateAdmitModalLogic);
+        }
+
+        // Prevent unchecking ALL checkboxes when not Free Visit
+        if (billOPDBook) {
+            billOPDBook.addEventListener('change', function() {
+                const paymentMethod = admitPaymentMethodSelect ? admitPaymentMethodSelect.value : '';
+                if (paymentMethod !== 'Free Visit' && !this.checked && !billOPDConsultation.checked) {
+                    this.checked = true;
+                    showNotification('At least one service must be selected.', 'error');
+                }
+            });
+        }
+        if (billOPDConsultation) {
+            billOPDConsultation.addEventListener('change', function() {
+                const paymentMethod = admitPaymentMethodSelect ? admitPaymentMethodSelect.value : '';
+                if (paymentMethod !== 'Free Visit' && !this.checked && !billOPDBook.checked) {
+                    this.checked = true;
+                    showNotification('At least one service must be selected.', 'error');
+                }
+            });
+        }
     });
     </script>
 {% endblock %}

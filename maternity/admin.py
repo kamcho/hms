@@ -77,7 +77,7 @@ class LaborDeliveryAdmin(admin.ModelAdmin):
             'fields': ('labor_onset', 'rupture_of_membranes', 'labor_duration')
         }),
         ('Delivery', {
-            'fields': ('delivery_datetime', 'delivery_mode', 'delivery_by')
+            'fields': ('delivery_datetime', 'delivery_mode', 'delivery_by','is_external')
         }),
         ('Complications', {
             'fields': ('maternal_complications', 'episiotomy', 'perineal_tear', 'estimated_blood_loss', 'blood_transfusion')

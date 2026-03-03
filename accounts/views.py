@@ -207,8 +207,8 @@ def insurance_manager(request):
         unpaid_invoices = unpaid_invoices.filter(
             Q(patient__first_name__icontains=search_query) |
             Q(patient__last_name__icontains=search_query) |
-            Q(deceased__first_name__icontains=search_query) |
-            Q(deceased__last_name__icontains=search_query) |
+            Q(deceased__surname__icontains=search_query) |
+            Q(deceased__other_names__icontains=search_query) |
             Q(id__icontains=search_query)
         )
 
@@ -400,28 +400,56 @@ def invoice_detail(request, pk):
     return render(request, 'accounts/invoice_detail.html', context)
 
 @login_required
-@user_passes_test(is_receptionist)
+@user_passes_test(is_billing_staff)
+@require_POST
 def record_payment(request, pk):
-    if request.method == 'POST':
-        invoice = get_object_or_404(Invoice, pk=pk)
-        amount = request.POST.get('amount')
-        payment_method = request.POST.get('payment_method')
-        reference = request.POST.get('reference')
+    invoice = get_object_or_404(Invoice, pk=pk)
+    payments_to_create = []
+    
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            if 'payments' in data:
+                payments_to_create = data['payments']
+            else:
+                payments_to_create = [{
+                    'amount': data.get('amount'),
+                    'method': data.get('payment_method'),
+                    'reference': data.get('reference')
+                }]
+        else:
+            payments_to_create = [{
+                'amount': request.POST.get('amount'),
+                'method': request.POST.get('payment_method'),
+                'reference': request.POST.get('reference')
+            }]
+
+        created_payments = []
+        with transaction.atomic():
+            for p_data in payments_to_create:
+                amount_val = p_data.get('amount')
+                if not amount_val or float(amount_val) <= 0:
+                    continue
+                    
+                payment = Payment.objects.create(
+                    invoice=invoice,
+                    amount=amount_val,
+                    payment_method=p_data.get('method') or p_data.get('payment_method'),
+                    transaction_reference=p_data.get('reference'),
+                    created_by=request.user
+                )
+                created_payments.append(payment)
         
-        try:
-            payment = Payment.objects.create(
-                invoice=invoice,
-                amount=amount,
-                payment_method=payment_method,
-                transaction_reference=reference,
-                created_by=request.user
-            )
-            from django.contrib import messages
-            messages.success(request, f"Payment of {amount} recorded successfully.")
-            return HttpResponse(json.dumps({'success': True, 'payment_id': payment.id}), content_type="application/json")
-        except Exception as e:
-            return HttpResponse(json.dumps({'success': False, 'error': str(e)}), content_type="application/json")
-    return HttpResponse(status=405)
+        if not created_payments:
+            return JsonResponse({'success': False, 'error': 'No valid payment amounts provided.'})
+            
+        return JsonResponse({
+            'success': True, 
+            'payment_id': created_payments[0].id,
+            'all_payment_ids': [p.id for p in created_payments]
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 @user_passes_test(is_billing_staff)
@@ -429,31 +457,24 @@ def print_receipt(request, payment_id):
     payment = get_object_or_404(Payment, id=payment_id)
     invoice = payment.invoice
     
-    # Calculate which items were paid for by THIS specific payment
-    # Payments are distributed FIFO. We need to find the specific range of paid amounts
-    # that this payment covers.
+    # Deterministic FIFO: Use payment_date AND id for ordering
+    prior_payments_filter = Q(payment_date__lt=payment.payment_date) | Q(payment_date=payment.payment_date, id__lt=payment.id)
+    prior_payments = invoice.payments.filter(prior_payments_filter).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
-    # 1. Calculate the total paid amounts for all payments BEFORE this one
-    prior_payments = invoice.payments.filter(payment_date__lt=payment.payment_date).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    
-    # The range of value this payment covers is [prior_payments, prior_payments + payment.amount]
     start_value = prior_payments
     end_value = prior_payments + payment.amount
     
     covered_items = []
     current_cumulative_item_amount = Decimal('0')
     
-    # Go through items in order of creation (same order distribute_payments uses)
     for item in invoice.items.all().order_by('created_at'):
         item_start = current_cumulative_item_amount
         item_end = current_cumulative_item_amount + item.amount
         
-        # Check if there is an intersection between the payment value range and the item's value range
         overlap_start = max(start_value, item_start)
         overlap_end = min(end_value, item_end)
         
         if overlap_start < overlap_end:
-            # This item is partially or fully covered by this payment
             amount_covered_by_this_payment = overlap_end - overlap_start
             covered_items.append({
                 'name': item.name,
@@ -464,16 +485,29 @@ def print_receipt(request, payment_id):
             })
             
         current_cumulative_item_amount = item_end
-        
         if current_cumulative_item_amount >= end_value:
-            # We've found all items covered by this payment
             break
             
+    # Sister payments (split parts)
+    sister_payments = invoice.payments.filter(
+        payment_date__gte=payment.payment_date - timedelta(seconds=2),
+        payment_date__lte=payment.payment_date + timedelta(seconds=2),
+        created_by=payment.created_by
+    ).exclude(id=payment.id)
+    
+    # Calculate grand total if there's a split
+    grand_total = payment.amount
+    if sister_payments.exists():
+        grand_total += sister_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
     context = {
         'payment': payment,
         'invoice': invoice,
         'covered_items': covered_items,
-        'hospital_name': "Hospital Management System", # You can make this dynamic if needed
+        'sister_payments': sister_payments,
+        'has_split': sister_payments.exists(),
+        'grand_total': grand_total,
+        'hospital_name': "Hospital Management System",
         'hospital_address': "123 Health Street, City",
         'hospital_phone': "+254 700 000 000",
     }
@@ -597,8 +631,10 @@ def invoice_list(request):
     search = request.GET.get('search')
     if search:
         invoices = invoices.filter(
-            Q(patient__full_name__icontains=search) |
-            Q(deceased__full_name__icontains=search) |
+            Q(patient__first_name__icontains=search) |
+            Q(patient__last_name__icontains=search) |
+            Q(deceased__surname__icontains=search) |
+            Q(deceased__other_names__icontains=search) |
             Q(id__icontains=search)
         )
     

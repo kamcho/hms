@@ -368,6 +368,18 @@ class ExternalDeliveryForm(forms.Form):
         child_patient_id = kwargs.pop('child_patient_id', None)
         super().__init__(*args, **kwargs)
         if patient_id:
-            self.fields['patient'].initial = patient_id
+            try:
+                self.fields['patient'].initial = patient_id
+                # Only disable if it's a valid ID
+                if Patient.objects.filter(id=patient_id).exists():
+                    self.fields['patient'].disabled = True
+            except (ValueError, TypeError):
+                pass
+                
         if child_patient_id:
-            self.fields['child_patient'].initial = child_patient_id
+            try:
+                self.fields['child_patient'].initial = child_patient_id
+                if Patient.objects.filter(id=child_patient_id).exists():
+                    self.fields['child_patient'].disabled = True
+            except (ValueError, TypeError):
+                pass

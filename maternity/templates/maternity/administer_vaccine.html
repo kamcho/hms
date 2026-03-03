@@ -133,8 +133,7 @@
                             <div class="p-6 hover:bg-slate-50 transition-colors">
                                 <div class="flex justify-between items-start mb-2">
                                     <span class="font-bold text-slate-900 text-sm">{{ record.vaccine.name }}</span>
-                                    <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase">{{
-                                    record.date_administered|date:"d M Y" }}</span>
+                                    <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase">{{ record.date_administered|date:"d M Y" }}</span>
                                 </div>
                                 <div class="flex gap-4 text-xs text-slate-500">
                                     <span><i class="fas fa-hashtag mr-1"></i> Dose {{ record.dose_number }}</span>

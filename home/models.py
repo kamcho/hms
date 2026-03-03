@@ -23,7 +23,7 @@ class Patient(models.Model):
     id_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     date_of_birth = models.DateField()
     age = models.PositiveIntegerField(editable=False)  # Will be calculated automatically
-    phone = models.CharField(max_length=15)
+    phone = models.CharField(max_length=15, null=True, blank=True)
     location = models.CharField(max_length=200)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -384,7 +384,10 @@
                                 <a href="{% url 'maternity:record_anc_visit' pregnancy.id %}" class="preg-action-btn bg-indigo-600 text-white hover:bg-indigo-700"><i class="fas fa-plus"></i> Record ANC Visit</a>
                             {% endif %}
                             {% if not delivery %}
-                                <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="preg-action-btn bg-rose-600 text-white hover:bg-rose-700"><i class="fas fa-baby"></i> Record Delivery</a>
+                                <!-- Trigger Button -->
+                                <button onclick="showDeliveryTypeModal()" class="preg-action-btn bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-100">
+                                    <i class="fas fa-baby"></i> Record Delivery
+                                </button>
                             {% endif %}
                             {% if delivery %}
                                 <a href="{% url 'maternity:record_mother_pnc_visit' pregnancy.id %}" class="preg-action-btn bg-emerald-600 text-white hover:bg-emerald-700"><i class="fas fa-user-nurse"></i> Record PNC Visit</a>
@@ -803,6 +806,9 @@
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <div class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest {% if baby.status == 'Alive' %}bg-emerald-100 text-emerald-700{% elif baby.status == 'Macerated Still Birth' or baby.status == 'Fresh Still Birth' %}bg-rose-100 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ baby.status_at_birth }}</div>
+                                        <a href="{% url 'maternity:record_baby_pnc_visit' baby.id %}" class="w-8 h-8 rounded bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Record PNC Visit">
+                                            <i class="fas fa-user-nurse text-xs"></i>
+                                        </a>
                                         <a href="{% url 'maternity:edit_newborn' baby.id %}" class="w-8 h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" title="Edit Baby">
                                             <i class="fas fa-edit text-xs"></i>
                                         </a>
@@ -1081,6 +1087,160 @@
                 </div>
                 <br>
                 <br>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+{% if newborns %}
+    <!-- Postnatal Care (Babies) Section -->
+    <div x-data="{ activeBabyPncTab: 'overview' }" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex flex-col xl:flex-row justify-between items-center gap-6">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fas fa-baby-carriage text-blue-600"></i> Postnatal Care (Babies)
+            </h2>
+            <div class="flex items-center gap-4 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
+                <!-- Tab Navigation -->
+                <div class="flex p-1 bg-slate-200/50 rounded-xl">
+                    <button @click="activeBabyPncTab = 'overview'" :class="activeBabyPncTab === 'overview' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap">Overview</button>
+                    {% for bnc in baby_pnc %}
+                        <button @click="activeBabyPncTab = 'baby-pnc-{{ bnc.id }}'" :class="activeBabyPncTab === 'baby-pnc-{{ bnc.id }}' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap">Baby {{ bnc.newborn.baby_number }} - Day {{ bnc.visit_day }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <!-- Overview Tab -->
+            <div x-show="activeBabyPncTab === 'overview'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                 {% if baby_pnc %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for baby in newborns %}
+                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-md group">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="font-black text-slate-800 uppercase tracking-widest text-[10px]">Baby {{ baby.baby_number }}</h4>
+                                    <a href="{% url 'maternity:record_baby_pnc_visit' baby.id %}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all">
+                                        <i class="fas fa-plus"></i> Record PNC
+                                    </a>
+                                </div>
+                                <div class="space-y-2">
+                                    {% for bnc in baby.pnc_visits.all %}
+                                        <div @click="activeBabyPncTab = 'baby-pnc-{{ bnc.id }}'" class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100 cursor-pointer hover:border-blue-200 hover:bg-blue-50/30 transition-all group/item">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full bg-blue-400"></div>
+                                                <span class="text-xs font-bold text-slate-600">Day {{ bnc.visit_day }}</span>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-slate-400">{{ bnc.visit_date|date:"d M Y" }}</span>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-center py-6 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No PNC visits yet</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                 {% else %}
+                    <div class="py-16 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl opacity-20 shadow-sm">
+                            <i class="fas fa-baby-carriage"></i>
+                        </div>
+                        <p class="font-bold tracking-tight mb-6">No postnatal visits recorded for babies yet.</p>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            {% for baby in newborns %}
+                                <a href="{% url 'maternity:record_baby_pnc_visit' baby.id %}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                                    <i class="fas fa-plus"></i> Record PNC for Baby {{ baby.baby_number }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                 {% endif %}
+            </div>
+
+            <!-- Individual Baby PNC Visit Tabs -->
+            {% for bnc in baby_pnc %}
+                <div x-show="activeBabyPncTab === 'baby-pnc-{{ bnc.id }}'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                     <!-- Visit Header -->
+                     <div class="flex items-center justify-between gap-4 mb-8 pb-8 border-b border-slate-50">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-black shadow-sm">Day {{ bnc.visit_day }}</div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-slate-900">Baby {{ bnc.newborn.baby_number }} PNC (Day {{ bnc.visit_day }})</h3>
+                                <div class="flex items-center gap-3 text-sm font-semibold text-slate-500 mt-1">
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-calendar-alt text-slate-400"></i> {{ bnc.visit_date|date:"l, d M Y" }}</span>
+                                    <span class="text-slate-300">•</span>
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-user-nurse text-slate-400"></i> {{ bnc.recorded_by.get_full_name|default:bnc.recorded_by.username }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Column 1: Vitals -->
+                        <div class="space-y-6">
+                            <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Baby Measurements</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
+                                        <span class="text-xs font-bold text-slate-500">Weight</span>
+                                        <span class="text-sm font-black text-slate-900">{{ bnc.weight }} kg</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
+                                        <span class="text-xs font-bold text-slate-500">Length</span>
+                                        <span class="text-sm font-black text-slate-900">{{ bnc.length|default:"-" }} cm</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
+                                        <span class="text-xs font-bold text-slate-500">Head Circumf.</span>
+                                        <span class="text-sm font-black text-slate-900">{{ bnc.head_circumference|default:"-" }} cm</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100">
+                                        <span class="text-xs font-bold text-slate-500">Temperature</span>
+                                        <span class="text-sm font-black text-slate-900">{{ bnc.temperature|default:"-" }}°C</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Column 2: Examination -->
+                        <div class="space-y-6">
+                            <div class="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                                <h4 class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4">Baby Examination</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center text-xs font-bold border-b border-blue-100/50 pb-2">
+                                        <span class="text-slate-500">Feeding Type</span>
+                                        <span class="text-slate-900 font-bold">{{ bnc.get_feeding_type_display|default:"Not Recorded" }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs font-bold border-b border-blue-100/50 pb-2">
+                                        <span class="text-slate-500">Feeding Well</span>
+                                        <span class="{% if bnc.feeding_well %}text-emerald-600{% else %}text-rose-600{% endif %} font-black">{% if bnc.feeding_well %}Yes{% else %}No{% endif %}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs font-bold border-b border-blue-100/50 pb-2">
+                                        <span class="text-slate-500">Umbilical Cord</span>
+                                        <span class="text-slate-900 font-bold">{{ bnc.get_umbilical_cord_display|default:"-" }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs font-bold">
+                                        <span class="text-slate-500">Jaundice</span>
+                                        <span class="{% if bnc.jaundice %}text-rose-600{% else %}text-emerald-600{% endif %} font-black">{% if bnc.jaundice %}Detected{% else %}No{% endif %}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Column 3: Notes & Plan -->
+                        <div class="space-y-6">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-2">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Clinical Findings</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <div class="text-[10px] font-bold text-slate-500 mb-1">Findings</div>
+                                        <div class="text-xs font-medium text-slate-800 bg-slate-50 p-3 rounded-xl min-h-[60px]">{{ bnc.findings|default:"No findings recorded."|linebreaksbr }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-slate-500 mb-1">Plan</div>
+                                        <div class="text-xs font-black text-blue-700 bg-blue-50 p-3 rounded-xl">{{ bnc.plan|default:"Continue standard care."|linebreaksbr }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             {% endfor %}
         </div>
     </div>
@@ -1407,6 +1567,63 @@ function showExtendToIPDModal(invoiceId) {
 function closeExtendToIPDModal(button) {
     const modal = button.closest('.fixed');
     modal.remove();
+}
+
+// Delivery Type Selection Modal
+function showDeliveryTypeModal() {
+    const modal = document.createElement('div');
+    modal.id = 'deliveryTypeModal';
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center';
+    modal.style.zIndex = '9999';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-[2rem] p-8 max-w-lg w-full mx-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200" style="background: white; border-radius: 2rem; padding: 2rem; max-width: 32rem; width: 100%; margin: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl" style="width: 4rem; height: 4rem; background: #fff1f2; color: #e11d48; border-radius: 1rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <i class="fas fa-baby"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-900 mb-1" style="font-size: 1.5rem; font-weight: 900; color: #0f172a;">Record Delivery</h3>
+                <p class="text-slate-500 font-medium" style="color: #64748b; font-weight: 500;">Please select where the delivery took place</p>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4 mb-4">
+                <!-- Internal Option -->
+                <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="group flex items-center gap-5 p-5 bg-pink-50 hover:bg-pink-100 border border-pink-100 rounded-2xl transition-all" style="text-decoration: none; display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 1rem; transition: all 0.2s;">
+                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-pink-600 shadow-sm group-hover:scale-110 transition-transform" style="width: 3.5rem; height: 3.5rem; background: white; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: #db2777; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                        <i class="fas fa-hospital-user text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-pink-900" style="font-weight: 900; color: #831843;">Internal Facility Delivery</div>
+                        <div class="text-xs font-bold text-pink-600/70" style="font-size: 0.75rem; font-weight: 700; color: rgba(219, 39, 119, 0.7);">Recorded at this hospital</div>
+                    </div>
+                    <i class="fas fa-arrow-right ml-auto text-pink-300" style="margin-left: auto; color: #f9a8d4;"></i>
+                </a>
+
+                <!-- External Option -->
+                <a href="{% url 'maternity:register_external_delivery' %}?patient_id={{ pregnancy.patient.id }}" class="group flex items-center gap-5 p-5 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all" style="text-decoration: none; display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 1rem; transition: all 0.2s;">
+                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform" style="width: 3.5rem; height: 3.5rem; background: white; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: #2563eb; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                        <i class="fas fa-home text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-blue-900" style="font-weight: 900; color: #1e3a8a;">External / Home Delivery</div>
+                        <div class="text-xs font-bold text-blue-600/70" style="font-size: 0.75rem; font-weight: 700; color: rgba(37, 99, 235, 0.7);">Delivered elsewhere / BBA</div>
+                    </div>
+                    <i class="fas fa-arrow-right ml-auto text-blue-300" style="margin-left: auto; color: #93c5fd;"></i>
+                </a>
+            </div>
+            
+            <button onclick="document.getElementById('deliveryTypeModal').remove()" class="w-full py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors" style="width: 100%; padding: 1rem 0; border: none; background: transparent; color: #94a3b8; font-weight: 700; cursor: pointer;">
+                Cancel Selection
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
 }
 
 function proceedWithExtendToIPD(invoiceId) {

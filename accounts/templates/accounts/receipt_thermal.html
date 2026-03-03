@@ -169,11 +169,35 @@
             <span>{{ payment.transaction_reference }}</span>
         </div>
         {% endif %}
+        
+        {% if has_split %}
         <div class="divider"></div>
-        <div class="total-row">
-            <span>TOTAL PAID NOW:</span>
+        <div style="font-size: 10px; color: #555; margin-bottom: 5px; font-weight: 600;">Payment Breakdown:</div>
+        <div class="info-row" style="font-size: 10px;">
+            <span>{{ payment.get_payment_method_display|default:payment.payment_method }} (This)</span>
             <span>Ksh {{ payment.amount|floatformat:2 }}</span>
         </div>
+        {% for sister in sister_payments %}
+        <div class="info-row" style="font-size: 10px;">
+            <span>{{ sister.get_payment_method_display|default:sister.payment_method }}</span>
+            <span>Ksh {{ sister.amount|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+        <div class="divider" style="border-top: 1px solid #000; border-bottom: none; margin: 3px 0;"></div>
+        {% endif %}
+
+        <div class="total-row">
+            <span>{% if has_split %}GRAND TOTAL PAID:{% else %}TOTAL PAID NOW:{% endif %}</span>
+            <span>Ksh {{ grand_total|floatformat:2 }}</span>
+        </div>
+        
+        {% if has_split %}
+        <div class="info-row" style="margin-top: 2px;">
+            <span>Amount This Receipt:</span>
+            <span>Ksh {{ payment.amount|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
         <div class="info-row" style="margin-top: 5px; color: #555;">
             <span>Invoice Balance (After):</span>
             <span>Ksh {{ invoice.balance|floatformat:2 }}</span>

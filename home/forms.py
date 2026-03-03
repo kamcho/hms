@@ -192,6 +192,28 @@ class PatientForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    patient_payment_method = forms.ChoiceField(
+        choices=[('Cash', 'Cash'), ('M-Pesa', 'M-Pesa')],
+        required=False,
+        label="Patient Portion Method",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="How the patient pays the remaining balance (e.g. for OPD Book/Co-pay)"
+    )
+
+    bill_opd_book = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="OPD Book",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    bill_opd_consultation = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="OPD Consultation",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = Patient
         fields = ['first_name', 'last_name', 'id_number', 'date_of_birth', 'phone', 'location', 'gender']

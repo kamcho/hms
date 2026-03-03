@@ -60,11 +60,9 @@
                                         <div>
                                             <div class="text-lg font-black text-slate-900">{{ que.visit.patient.full_name }}</div>
                                             <div class="flex items-center gap-2 mt-1">
-                                                <span class="text-[10px] font-black uppercase text-slate-400">Arrived {{
-                                                que.created_at|time:"H:i" }}</span>
+                                                <span class="text-[10px] font-black uppercase text-slate-400">Arrived {{ que.created_at|time:"H:i" }}</span>
                                                 <span class="text-slate-300">•</span>
-                                                <span class="text-[10px] font-bold text-slate-500">{{ que.visit.primary_service.name
-                                                }}</span>
+                                                <span class="text-[10px] font-bold text-slate-500">{{ que.visit.primary_service.name }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -111,8 +109,7 @@
                                         </div>
                                         <div>
                                             <div class="text-lg font-black text-slate-900">
-                                                Baby {{ baby.baby_number }} ({{
-                                                baby.delivery.pregnancy.patient.full_name }})
+                                                Baby {{ baby.baby_number }} ({{ baby.delivery.pregnancy.patient.full_name }})
                                             </div>
                                             <div class="flex items-center gap-2 mt-1">
                                                 <span class="text-[10px] font-black uppercase text-slate-500">Born {{
@@ -145,8 +142,7 @@
                                         </div>
                                         <div>
                                             <div class="text-lg font-black text-slate-900">
-                                                Baby {{ baby.baby_number }} ({{
-                                                baby.delivery.pregnancy.patient.full_name }})
+                                                Baby {{ baby.baby_number }} ({{ baby.delivery.pregnancy.patient.full_name }})
                                             </div>
                                             <div class="flex items-center gap-2 mt-1">
                                                 <span class="text-[10px] font-black uppercase text-slate-400">Multiple KEPI Vaccines

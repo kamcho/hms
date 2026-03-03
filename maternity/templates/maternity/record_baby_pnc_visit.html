@@ -12,11 +12,15 @@
             <div style="margin-bottom: 24px;">
                 <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0;">
                     Postnatal Visit Checklist
-                    (Baby {{ newborn.baby_number }})
+                    {% if newborn.patient_profile %}
+                        ({{ newborn.patient_profile.full_name }})
+                    {% else %}
+                        (Baby {{ newborn.baby_number }})
+                    {% endif %}
                 </h1>
                 <p style="color: #64748b; margin: 0;">
-                    {{ pregnancy.patient.full_name }} • Born {{
-                    newborn.birth_datetime|date:"d M Y H:i" }}
+                    {% if pregnancy.patient %}{{ pregnancy.patient.full_name }} (Mother) •{% endif %} 
+                    Born {{ newborn.birth_datetime|date:"d M Y H:i" }}
                 </p>
             </div>
             <form method="POST">

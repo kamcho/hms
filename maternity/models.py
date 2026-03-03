@@ -222,6 +222,9 @@ class LaborDelivery(models.Model):
     admission = models.OneToOneField(Admission, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery')
     visit = models.OneToOneField('home.Visit', on_delete=models.SET_NULL, null=True, blank=True, related_name='labor_delivery')
     
+    # Internal vs External tracking
+    is_external = models.BooleanField(default=False, help_text="Delivery occurred outside this facility")
+
     # Admission Details
     admission_date = models.DateTimeField(default=timezone.now)
     gestational_age_at_delivery = models.PositiveIntegerField(help_text="Weeks")
@@ -269,7 +272,7 @@ class LaborDelivery(models.Model):
         verbose_name_plural = 'Labor & Delivery Records'
     
     def __str__(self):
-        return f"Delivery - {self.pregnancy.patient.full_name} - {self.delivery_datetime.date()}"
+        return f"Delivery - {self.pregnancy.patient.full_name}"
 
 
 class Newborn(models.Model):
