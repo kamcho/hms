@@ -1,862 +1,467 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}{{ dashboard_title }} - HMS{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+:root {
+    --lab-bg: #0f172a;
+    --lab-card-bg: #1e293b;
+    --lab-border: rgba(148, 163, 184, 0.1);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+}
+
+body { background: var(--lab-bg); color: var(--text-primary); }
+
+.radiology-dashboard { animation: fadeIn 0.6s ease-out; padding: 2rem; max-width: 1600px; margin: 0 auto; }
+
+.lab-hero {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    padding: 2.5rem 2rem; border-radius: 24px; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+}
+.lab-hero::before { content: ''; position: absolute; top: -50%; right: -10%; width: 400px; height: 400px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(80px); }
+.lab-hero h1 { font-size: 2.25rem; font-weight: 900; color: white; margin: 0 0 0.25rem 0; position: relative; z-index: 1; display: flex; align-items: center; gap: 1rem; }
+.lab-hero p { color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0; position: relative; z-index: 1; }
+
+.analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+
+.stat-card {
+    background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 16px;
+    padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem;
+    transition: all 0.3s; position: relative; overflow: hidden;
+}
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient, linear-gradient(135deg, #6366f1, #a855f7)); }
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px -10px rgba(0,0,0,0.3); }
+.stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: rgba(255,255,255,0.05); color: white; }
+.stat-info h3 { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem; }
+.stat-info .number { font-size: 2rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
+
+/* Search Area */
+.search-bar-area { background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 16px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.search-bar-area input, .search-bar-area select {
+    padding: 0.65rem 1rem; background: rgba(255,255,255,0.05); border: 1px solid var(--lab-border);
+    border-radius: 10px; color: var(--text-primary); font-size: 0.85rem; transition: all 0.2s;
+}
+.search-bar-area input { flex: 1; min-width: 200px; padding-left: 2.5rem; }
+.search-bar-area input:focus, .search-bar-area select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+
+/* Patient-Visit Cards */
+.pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+
+.pv-card {
+    background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 20px;
+    overflow: hidden; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pv-card:hover { transform: translateY(-4px); border-color: rgba(99,102,241,0.4); box-shadow: 0 16px 48px -12px rgba(0,0,0,0.4); }
+.pv-card-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--lab-border); }
+.pv-avatar { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; color: white; flex-shrink: 0; }
+.pv-patient-info { flex: 1; min-width: 0; }
+.pv-patient-name { font-weight: 800; font-size: 1rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-patient-meta { font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.pv-badge { padding: 0.3rem 0.7rem; border-radius: 8px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.pv-badge-paid { background: rgba(16,185,129,0.15); color: #10b981; }
+.pv-badge-unpaid { background: rgba(239,68,68,0.15); color: #ef4444; }
+.pv-badge-partial { background: rgba(99,102,241,0.15); color: #818cf8; }
+.pv-badge-sha { background: rgba(59,130,246,0.15); color: #60a5fa; font-size: 0.55rem; margin-left: 4px; }
+
+.pv-card-body { padding: 1rem 1.5rem; }
+.pv-test-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(148,163,184,0.05); }
+.pv-test-row:last-child { border-bottom: none; }
+.pv-test-name { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+.pv-test-link { text-decoration: none; color: inherit; border-radius: 8px; transition: background 0.2s; }
+.pv-test-link:hover { background: rgba(99,102,241,0.1); }
+.pv-test-status { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 6px; }
+.pv-status-pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.pv-status-progress { background: rgba(99,102,241,0.15); color: #818cf8; }
+.pv-status-done { background: rgba(16,185,129,0.15); color: #10b981; }
+
+.pv-card-footer { padding: 0.75rem 1.5rem; background: rgba(255,255,255,0.02); border-top: 1px solid var(--lab-border); display: flex; justify-content: space-between; align-items: center; }
+.pv-progress-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-right: 1rem; overflow: hidden; }
+.pv-progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6366f1, #10b981); transition: width 0.4s ease; }
+.pv-progress-text { font-size: 0.65rem; font-weight: 800; color: var(--text-secondary); white-space: nowrap; }
+
+/* Section headers */
+.section-title { font-size: 1.1rem; font-weight: 900; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+.section-title i { background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* Content Cards for inventory etc */
+.content-card { background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 20px; overflow: hidden; box-shadow: 0 8px 24px -8px rgba(0,0,0,0.2); margin-bottom: 1.5rem; }
+.card-header-bar { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--lab-border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+.card-header-bar h2 { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.data-table th { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--lab-border); }
+.data-table td { padding: 0.875rem 1.5rem; border-bottom: 1px solid var(--lab-border); color: var(--text-primary); vertical-align: middle; font-size: 0.85rem; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+.btn-req { padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; transition: all 0.2s; }
+.btn-req:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139,92,246,0.3); }
+.btn-view { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+
+.empty-state { text-align: center; padding: 2.5rem; color: var(--text-secondary); }
+.empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.5; }
+
+.inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+/* --- Modal --- */
+.lab-modal-overlay { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+.lab-modal-overlay.open { display: flex; }
+.lab-modal { background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 24px; width: 95%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.6); animation: modalIn 0.25s ease-out; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.lab-modal-head { padding: 1.5rem 2rem; border-bottom: 1px solid var(--lab-border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+.lab-modal-head h3 { font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+.lab-modal-close { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--lab-border); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.lab-modal-close:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+.lab-modal-body { padding: 1.5rem 2rem; overflow-y: auto; flex: 1; }
+.lab-modal-foot { padding: 1rem 2rem; border-top: 1px solid var(--lab-border); display: flex; justify-content: flex-end; gap: 0.75rem; background: rgba(255,255,255,0.02); }
+
+/* Test items inside modal */
+.modal-test-item { background: rgba(255,255,255,0.03); border: 1px solid var(--lab-border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.2s; }
+.modal-test-item:hover { border-color: rgba(99,102,241,0.3); }
+.modal-test-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.modal-test-name { font-weight: 700; font-size: 0.9rem; }
+.modal-test-price { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; }
+.modal-test-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.modal-test-fields label { font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; display: block; }
+.modal-test-fields textarea, .modal-test-fields select {
+    width: 100%; padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--lab-border);
+    border-radius: 10px; color: var(--text-primary); font-size: 0.85rem; resize: vertical; font-family: inherit;
+}
+.modal-test-fields textarea:focus, .modal-test-fields select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.full-width { grid-column: 1 / -1; }
+
+.btn-modal-save { padding: 0.65rem 1.5rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border: none; background: linear-gradient(135deg, #6366f1, #a855f7); color: white; transition: all 0.2s; }
+.btn-modal-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+.btn-modal-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-modal-cancel { padding: 0.65rem 1.5rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border: 1px solid var(--lab-border); background: rgba(255,255,255,0.05); color: var(--text-primary); }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 768px) {
+    .pv-grid { grid-template-columns: 1fr; }
+    .inv-grid { grid-template-columns: 1fr; }
+    .modal-test-fields { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
 {% block content %}
-    <style>
-    :root {
-        --lab-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --lab-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        --lab-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        --lab-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        --lab-bg: #0f172a;
-        --lab-card-bg: #1e293b;
-        --lab-border: rgba(148, 163, 184, 0.1);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.05);
-    }
-
-    body {
-        background: var(--lab-bg);
-        color: var(--text-primary);
-    }
-
-    .radiology-dashboard {
-        animation: fadeIn 0.6s ease-out;
-        padding: 2rem;
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-
-    .lab-hero {
-        background: var(--lab-gradient-1);
-        padding: 3rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .lab-hero::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 400px;
-        height: 400px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        filter: blur(80px);
-    }
-
-    .lab-hero h1 {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: white;
-        margin: 0 0 0.5rem 0;
-        position: relative;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .lab-hero p {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1.1rem;
-        margin: 0;
-        position: relative;
-        z-index: 1;
-    }
-
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2.5rem;
-    }
-
-    .stat-card {
-        background: var(--lab-card-bg);
-        border: 1px solid var(--lab-border);
-        border-radius: 20px;
-        padding: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--gradient, var(--lab-gradient-1));
-    }
-
-    .stat-card:hover {
-        transform: translateY(-8px);
-        border-color: rgba(148, 163, 184, 0.3);
-        box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
-    }
-
-    .stat-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.75rem;
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-    }
-
-    .stat-info h3 {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-info .number {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-    }
-
-    .dashboard-main {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-    }
-
-    .content-card {
-        background: var(--lab-card-bg);
-        border: 1px solid var(--lab-border);
-        border-radius: 24px;
-        padding: 0;
-        overflow: hidden;
-        box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-header {
-        padding: 1.75rem 2rem;
-        border-bottom: 1px solid var(--lab-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    .card-header h2 {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .card-header h2 i {
-        background: var(--lab-gradient-1);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-    }
-
-    .btn-inventory-request,
-    .btn-inventory-view {
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-    }
-
-    .btn-inventory-request {
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        color: white;
-    }
-
-    .btn-inventory-request:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-    }
-
-    .btn-inventory-view {
-        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        color: white;
-    }
-
-    .btn-inventory-view:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
-    }
-
-    .search-filters {
-        position: relative;
-        margin: 1.5rem 2rem;
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .search-input {
-        flex: 1;
-        min-width: 200px;
-        padding: 1rem 1.25rem 1rem 3.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--lab-border);
-        border-radius: 16px;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        transition: all 0.3s;
-    }
-
-    .search-input:focus {
-        outline: none;
-        background: rgba(255, 255, 255, 0.08);
-        border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-    }
-
-    .filter-select {
-        padding: 0.75rem 1rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--lab-border);
-        border-radius: 16px;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        transition: all 0.3s;
-        cursor: pointer;
-    }
-
-    .filter-select:focus {
-        outline: none;
-        border-color: #6366f1;
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .data-table th {
-        padding: 1rem 2rem;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid var(--lab-border);
-    }
-
-    .data-table td {
-        padding: 1.25rem 2rem;
-        background: transparent;
-        border-bottom: 1px solid var(--lab-border);
-        color: var(--text-primary);
-        vertical-align: middle;
-    }
-
-    .data-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .data-table tr:hover td {
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .badge-status {
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-    .status-completed {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-    }
-
-    .status-in-progress {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366f1;
-    }
-
-    .status-pending {
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-    }
-
-    .priority-badge {
-        padding: 0.35rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-    }
-
-    .priority-urgent {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
-
-    .priority-high {
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-    }
-
-    .priority-normal {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366f1;
-    }
-
-    .priority-low {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-    }
-
-    .action-link {
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-primary);
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .action-link:hover {
-        background: var(--lab-gradient-1);
-        color: white;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: var(--text-secondary);
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        color: var(--text-muted);
-        margin-bottom: 1rem;
-        display: block;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Modal Styles */
-    .custom-modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(15, 23, 42, 0.8);
-        backdrop-filter: blur(8px);
-        align-items: center;
-        justify-content: center;
-    }
-
-    .modal-content {
-        background: var(--lab-card-bg);
-        border: 1px solid var(--lab-border);
-        border-radius: 24px;
-        width: 90%;
-        max-width: 500px;
-        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .modal-header {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--lab-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    .modal-body {
-        padding: 2rem;
-    }
-
-    .modal-footer {
-        padding: 1.5rem 2rem;
-        border-top: 1px solid var(--lab-border);
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    .custom-btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.3s;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
-    }
-
-    .btn-secondary {
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-primary);
-        border: 1px solid var(--lab-border);
-    }
-
-    .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
-    .btn-primary {
-        background: var(--lab-gradient-1);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
-    }
-    </style>
-    <div class="radiology-dashboard">
-        <!-- Hero Header -->
-        <div class="lab-hero">
-            <div style="position: relative; z-index: 1;">
-                <h1>
-                    <i class="fas fa-flask"></i> {{ dashboard_title }}
-                </h1>
-                <p>Diagnostic excellence through synchronized laboratory and radiology operations</p>
-            </div>
+<div class="radiology-dashboard">
+    <!-- Hero -->
+    <div class="lab-hero">
+        <div style="position: relative; z-index: 1;">
+            <h1><i class="fas fa-flask"></i> {{ dashboard_title }}</h1>
+            <p>Diagnostic operations &mdash; grouped by patient visit</p>
         </div>
-        <!-- Analytics Section -->
-        <div class="analytics-grid">
-            <div class="stat-card" style="--gradient: var(--lab-gradient-1)">
-                <div class="stat-icon">
-                    <i class="fas fa-file-invoice"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>Total Tests</h3>
-                    <div class="number">{{ total_invoices }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--lab-gradient-4)">
-                <div class="stat-icon">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>Cleared (Paid)</h3>
-                    <div class="number">{{ paid_count }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--lab-gradient-2)">
-                <div class="stat-icon">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>Unpaid</h3>
-                    <div class="number">{{ unpaid_count }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--lab-gradient-3)">
-                <div class="stat-icon">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>In Lab</h3>
-                    <div class="number">{{ in_progress_results }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="dashbard-main">
-            <div class="content-card">
-                <div class="card-header">
-                    <h2>
-                        <i class="fas fa-file-invoice"></i> Patient Service Invoices
-                    </h2>
-                </div>
-                <div class="search-filters">
-                    <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
-                    <input type="text" class="search-input" placeholder="Search patients or services..." value="{{ search_query }}">
-                    <select class="filter-select" name="service_type_filter" {% if dept_focus %}style="display:none;"{% endif %}>
-                        <option value="">All Service Types</option>
-                        {% for service_type in service_types %}
-                            <option value="{{ service_type.0 }}" {% if service_type_filter == service_type.0 %}selected{% endif %}>{{ service_type.1 }}</option>
-                        {% endfor %}
-                    </select>
-                    <select class="filter-select" name="payment_status">
-                        <option value="">All Payment Status</option>
-                        <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid / Cleared</option>
-                        <option value="Pending" {% if payment_filter == 'Pending' %}selected{% endif %}>Unpaid (Pending)</option>
-                        <option value="Partial" {% if payment_filter == 'Partial' %}selected{% endif %}>Partially Paid</option>
-                    </select>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Service</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for invoice in lab_invoices %}
-                                {% with related_result=invoice.related_results.0 %}
-                                    <tr onclick="handleInvoiceClick('{{ invoice.id }}', '{{ invoice.invoice.status }}', '{{ invoice.invoice.visit.visit_type }}', '{% if related_result %}{{ related_result.id }}{% endif %}', '{{ invoice.invoice.visit.payment_method }}')" style="cursor: pointer;">
-                                    {% endwith %}
-                                    <td>
-                                        <strong>{{ invoice.invoice.patient.full_name }}</strong>
-                                    </td>
-                                    <td>{{ invoice.service.name }}</td>
-                                    <td>${{ invoice.service.price }}</td>
-                                    <td>
-                                        {% if invoice.invoice.status == 'Paid' %}
-                                        <span class="badge-status status-completed"><i class="fas fa-check-circle"></i>
-                                    PAID</span>
-                                {% elif invoice.invoice.status == 'Partial' %}
-                                <span class="badge-status status-in-progress"><i class="fas fa-adjust"></i>
-                            PARTIAL</span>
-                        {% else %}
-                            <span class="badge-status status-pending" style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;"><i class="fas fa-exclamation-triangle"></i> UNPAID</span>
-                        {% endif %}
-                        {% if invoice.invoice.visit.payment_method == 'SHA' %}
-                            <span class="badge-status" style="background: #dbeafe; color: #2563eb; font-size: 0.6rem; margin-left: 4px;">SHA</span>
-                        {% endif %}
-                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">INV-{{ invoice.invoice.id }}</div>
-                    </td>
-                    <td>{{ invoice.created_at|date:"M d, Y" }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6" class="empty-state">
-                        <i class="fas fa-file-invoice"></i>
-                        <div>No service invoices found.</div>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-</div>
-<div class="content-card">
-    <div class="card-header">
-        <h2>
-            <i class="fas fa-flask"></i>
-            {% if user_role == 'Radiographer' %}
-                Radiology
-            {% else %}
-                Lab
-            {% endif %}
-            Results
-        </h2>
     </div>
-    <div class="search-filters">
-        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
-        <input type="text" class="search-input" placeholder="Search patients or services..." value="{{ search_query }}">
-        <select class="filter-select" name="status_filter">
-            <option value="">All Status</option>
-            {% for status in status_choices %}
-                <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>{{ status.1 }}</option>
+
+    <!-- Stats -->
+    <div class="analytics-grid">
+        <div class="stat-card" style="--gradient: linear-gradient(135deg,#6366f1,#a855f7)">
+            <div class="stat-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="stat-info"><h3>Total Tests</h3><div class="number">{{ total_invoices }}</div></div>
+        </div>
+        <div class="stat-card" style="--gradient: linear-gradient(135deg,#10b981,#059669)">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-info"><h3>Cleared (Paid)</h3><div class="number">{{ paid_count }}</div></div>
+        </div>
+        <div class="stat-card" style="--gradient: linear-gradient(135deg,#ef4444,#dc2626)">
+            <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="stat-info"><h3>Unpaid</h3><div class="number">{{ unpaid_count }}</div></div>
+        </div>
+        <div class="stat-card" style="--gradient: linear-gradient(135deg,#8b5cf6,#7c3aed)">
+            <div class="stat-icon"><i class="fas fa-spinner fa-spin"></i></div>
+            <div class="stat-info"><h3>In Lab</h3><div class="number">{{ in_progress_results }}</div></div>
+        </div>
+    </div>
+
+    <!-- Search / Filters -->
+    <form method="get" class="search-bar-area">
+        <div style="position: relative; flex: 1; min-width: 200px;">
+            <i class="fas fa-search" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+            <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient or test..." style="width: 100%;">
+        </div>
+        {% if not dept_focus %}
+        <select name="service_type">
+            <option value="">All Types</option>
+            {% for st in service_types %}
+            <option value="{{ st.0 }}" {% if service_type_filter == st.0 %}selected{% endif %}>{{ st.1 }}</option>
             {% endfor %}
         </select>
-    </div>
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>Test</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Requested</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for result in lab_results %}
-                    <tr>
-                        <td>
-                            <strong>{{ result.patient.full_name }}</strong>
-                        </td>
-                        <td>{{ result.service.name }}</td>
-                        <td>
-                            <span class="badge-status status-{{ result.status|slugify }}">{{ result.status }}</span>
-                        </td>
-                        <td>
-                            <span class="priority-badge priority-{{ result.priority|slugify }}">{{ result.priority }}</span>
-                        </td>
-                        <td>{{ result.requested_at|date:"M d, Y" }}</td>
-                        <td>
-                            <a href="{% url 'lab:lab_result_detail' result.id %}" class="action-link">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <i class="fas fa-flask"></i>
-                            <div>No lab results found.</div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-</div>
-<!-- Inventory Section -->
-<div class="dashboard-main" style="margin-top: 1.5rem;">
-    <div class="content-card">
-        <div class="card-header">
-            <h2>
-                <i class="fas fa-boxes"></i>
-                {% if user_role == 'Radiographer' %}
-                    Radiology
-                {% else %}
-                    Lab
-                {% endif %}
-                Inventory
-            </h2>
-            <div class="header-actions">
-                <a href="{% url 'inventory:create_request' %}" class="btn-inventory-request">
-                    <i class="fas fa-plus-circle"></i> Request Stock
+        {% endif %}
+        <select name="payment_status">
+            <option value="">All Payment</option>
+            <option value="Paid" {% if payment_filter == 'Paid' %}selected{% endif %}>Paid</option>
+            <option value="Pending" {% if payment_filter == 'Pending' %}selected{% endif %}>Unpaid</option>
+            <option value="Partial" {% if payment_filter == 'Partial' %}selected{% endif %}>Partial</option>
+        </select>
+        <button type="submit" class="btn-req" style="padding: 0.65rem 1.25rem;"><i class="fas fa-filter"></i> Filter</button>
+        {% if search_query or payment_filter or service_type_filter %}
+        <a href="{% url 'lab:radiology_dashboard' %}" class="btn-req btn-view" style="padding: 0.65rem 1.25rem;"><i class="fas fa-times"></i> Clear</a>
+        {% endif %}
+    </form>
+
+    <!-- Patient-Visit Cards -->
+    <div class="section-title"><i class="fas fa-users"></i> Patient Workload</div>
+    <div class="pv-grid">
+        {% for group in patient_visit_groups %}
+        <div class="pv-card" onclick='openLabModal({{ forloop.counter0 }})' data-group-idx="{{ forloop.counter0 }}">
+            <div class="pv-card-header">
+                <div class="pv-avatar">{{ group.patient.first_name|first }}</div>
+                <div class="pv-patient-info">
+                    <div class="pv-patient-name">{{ group.patient.full_name }}</div>
+                    <div class="pv-patient-meta">ID #{{ group.patient.id }} &bull; {{ group.created_at|timesince }} ago</div>
+                </div>
+                <div>
+                    {% if group.payment_status == 'Paid' %}
+                    <span class="pv-badge pv-badge-paid">Paid</span>
+                    {% elif group.payment_status == 'Partial' %}
+                    <span class="pv-badge pv-badge-partial">Partial</span>
+                    {% else %}
+                    <span class="pv-badge pv-badge-unpaid">Unpaid</span>
+                    {% endif %}
+                    {% if group.payment_method == 'SHA' %}
+                    <span class="pv-badge pv-badge-sha">SHA</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="pv-card-body">
+                {% for t in group.tests %}
+                {% if t.is_paid or group.payment_method == 'SHA' %}
+                <a href="{% if t.result_id %}/lab/result/{{ t.result_id }}/{% else %}/lab/create/{{ t.item_id }}/{% endif %}" class="pv-test-row pv-test-link" onclick="event.stopPropagation();">
+                    <span class="pv-test-name">{{ t.service_name }}</span>
+                    {% if t.status == 'Completed' %}
+                    <span class="pv-test-status pv-status-done">Done</span>
+                    {% elif t.status == 'In Progress' %}
+                    <span class="pv-test-status pv-status-progress">In Lab</span>
+                    {% else %}
+                    <span class="pv-test-status pv-status-pending">Pending</span>
+                    {% endif %}
                 </a>
+                {% else %}
+                <div class="pv-test-row">
+                    <span class="pv-test-name" style="opacity: 0.5;">{{ t.service_name }}</span>
+                    <span class="pv-test-status" style="background: rgba(239,68,68,0.1); color: #f87171; font-size: 0.55rem;"><i class="fas fa-lock" style="margin-right: 3px;"></i>Awaiting Payment</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <div class="pv-card-footer">
+                <div class="pv-progress-bar"><div class="pv-progress-fill" style="width: {% widthratio group.completed_tests group.total_tests 100 %}%"></div></div>
+                <span class="pv-progress-text">{{ group.completed_tests }}/{{ group.total_tests }} done</span>
             </div>
         </div>
-        <div style="overflow-x: auto;">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Item Name</th>
-                        <th>Batch</th>
-                        <th>Quantity</th>
-                        <th>Expiry Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stock in lab_stock %}
+        {% empty %}
+        <div style="grid-column: 1/-1;">
+            <div class="empty-state"><i class="fas fa-vials"></i><div>No pending tests found.</div></div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Inventory Section -->
+    <div class="inv-grid">
+        <div class="content-card">
+            <div class="card-header-bar">
+                <h2><i class="fas fa-boxes"></i> {% if user_role == 'Radiographer' %}Radiology{% else %}Lab{% endif %} Inventory</h2>
+                <a href="{% url 'inventory:create_request' %}" class="btn-req"><i class="fas fa-plus-circle"></i> Request</a>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead><tr><th>Item</th><th>Batch</th><th>Qty</th><th>Expiry</th></tr></thead>
+                    <tbody>
+                        {% for stock in lab_stock %}
                         <tr>
-                            <td>
-                                <strong>{{ stock.item.name }}</strong>
-                            </td>
+                            <td><strong>{{ stock.item.name }}</strong></td>
                             <td>{{ stock.batch_number }}</td>
-                            <td>
-                                {% if stock.quantity <= stock.item.reorder_level %}
-                                    <span class="badge-status status-pending">{{ stock.quantity }}</span>
-                                {% else %}
-                                    {{ stock.quantity }}
-                                {% endif %}
-                            </td>
+                            <td>{% if stock.quantity <= stock.item.reorder_level %}<span style="color:#f59e0b;font-weight:700;">{{ stock.quantity }}</span>{% else %}{{ stock.quantity }}{% endif %}</td>
                             <td>{{ stock.expiry_date|date:"M d, Y" }}</td>
                         </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="4" class="empty-state">
-                                <i class="fas fa-box-open"></i>
-                                <div>No stock in Lab location.</div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="content-card">
-        <div class="card-header">
-            <h2>
-                <i class="fas fa-clipboard-list"></i> Inventory Requests
-            </h2>
-            <div class="header-actions">
-                <a href="{% url 'inventory:request_list' %}" class="btn-inventory-view">
-                    <i class="fas fa-list"></i> View All
-                </a>
+                        {% empty %}
+                        <tr><td colspan="4" class="empty-state"><i class="fas fa-box-open"></i><div>No stock.</div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div style="overflow-x: auto;">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Status</th>
-                        <th>Requested</th>
-                        <th>Acknowledged</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for req in lab_requests %}
+        <div class="content-card">
+            <div class="card-header-bar">
+                <h2><i class="fas fa-clipboard-list"></i> Inventory Requests</h2>
+                <a href="{% url 'inventory:request_list' %}" class="btn-req btn-view"><i class="fas fa-list"></i> All</a>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody>
+                        {% for req in lab_requests %}
                         <tr>
                             <td>{{ req.item.name }}</td>
                             <td>{{ req.quantity }}</td>
                             <td>
-                                <span class="badge-status {% if req.status == 'Approved' %}status-completed{% elif req.status == 'Rejected' %}status-pending{% else %}status-in-progress{% endif %}">{{ req.status }}</span>
+                                {% if req.status == 'Approved' %}<span class="pv-badge pv-badge-paid">Approved</span>
+                                {% elif req.status == 'Rejected' %}<span class="pv-badge pv-badge-unpaid">Rejected</span>
+                                {% else %}<span class="pv-badge pv-badge-partial">{{ req.status }}</span>{% endif %}
                             </td>
                             <td>{{ req.requested_at|date:"M d" }}</td>
-                            <td>
-                                {% with req.acknowledgements.first as ack %}
-                                    {% if ack %}
-                                        <span class="text-success"><i class="fas fa-check"></i> {{ ack.received_at|date:"M d"
-                                        }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                {% endwith %}
-                            </td>
                         </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="empty-state">
-                                <i class="fas fa-clipboard"></i>
-                                <div>No inventory requests found.</div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        {% empty %}
+                        <tr><td colspan="4" class="empty-state"><i class="fas fa-clipboard"></i><div>No requests.</div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
-<!-- Message Modal -->
-<div id="messageModal" class="custom-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="messageModalTitle" style="font-size: 1.25rem; font-weight: 600;">Message</h3>
-            <button class="custom-btn btn-secondary" onclick="closeModal('messageModal')">
-                <i class="fas fa-times"></i>
-            </button>
+
+<!-- ===== MODAL ===== -->
+<div id="labModal" class="lab-modal-overlay" onclick="if(event.target===this)closeLabModal()">
+    <div class="lab-modal">
+        <div class="lab-modal-head">
+            <h3><i class="fas fa-vials" style="color:#818cf8;"></i> <span id="modalTitle">Patient Tests</span></h3>
+            <button class="lab-modal-close" onclick="closeLabModal()"><i class="fas fa-times"></i></button>
         </div>
-        <div class="modal-body">
-            <p id="messageModalContent" style="margin: 0; font-size: 1rem; color: var(--text-primary);"></p>
+        <div class="lab-modal-body" id="modalBody">
+            <!-- Filled by JS -->
         </div>
-        <div class="modal-footer">
-            <button class="custom-btn btn-primary" onclick="closeModal('messageModal')">OK</button>
+        <div class="lab-modal-foot">
+            <button class="btn-modal-cancel" onclick="closeLabModal()">Close</button>
+            <button class="btn-modal-save" id="btnSaveAll" onclick="saveAllResults()"><i class="fas fa-save"></i> Save All Results</button>
         </div>
     </div>
 </div>
-</div>
+
 <script>
-    function showMessageModal(title, message) {
-        document.getElementById('messageModalTitle').textContent = title;
-        document.getElementById('messageModalContent').textContent = message;
-        document.getElementById('messageModal').style.display = "flex";
-    }
+const GROUPS = [
+    {% for group in patient_visit_groups %}
+    {
+        patient: "{{ group.patient.full_name|escapejs }}",
+        patientId: {{ group.patient.id }},
+        visitType: "{{ group.visit_type|escapejs }}",
+        paymentStatus: "{{ group.payment_status|escapejs }}",
+        paymentMethod: "{{ group.payment_method|escapejs }}",
+        tests: [
+            {% for t in group.tests %}
+            {
+                itemId: {{ t.item_id }},
+                name: "{{ t.service_name|escapejs }}",
+                price: "{{ t.price|escapejs }}",
+                resultId: {% if t.result_id %}{{ t.result_id }}{% else %}null{% endif %},
+                status: "{{ t.status|escapejs }}",
+                results: "{{ t.results_text|escapejs }}",
+                specimen: "{{ t.specimen|escapejs }}",
+                isPaid: {% if t.is_paid %}true{% else %}false{% endif %}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = "none";
-    }
+const SPECIMENS = ['Blood','Urine','Stool','Sputum','Swab','Tissue','Other'];
+let currentGroupIdx = null;
 
-    function handleInvoiceClick(invoiceItemId, status, visitType, resultId, paymentMethod) {
-        if (visitType === 'OUT-PATIENT' && status !== 'Paid' && paymentMethod !== 'SHA') {
-            const msg = "For Out-Patient visits, the invoice must be fully paid before tests can be processed.";
-            showMessageModal('Payment Required', msg);
-            return;
-        }
+function openLabModal(idx) {
+    currentGroupIdx = idx;
+    const g = GROUPS[idx];
+    document.getElementById('modalTitle').textContent = g.patient + ' — Tests';
 
-        if (resultId) {
-            window.location.href = `/lab/result/${resultId}/`;
-        } else {
-            window.location.href = `/lab/create-result/${invoiceItemId}/`;
-        }
-    }
+    const isOPD = g.visitType === 'OUT-PATIENT';
+    const isPaid = g.paymentStatus === 'Paid';
+    const isSHA = g.paymentMethod === 'SHA';
 
-    // Close modal when clicking outside
-    window.onclick = function (event) {
-        if (event.target.classList.contains('custom-modal')) {
-            event.target.style.display = "none";
-        }
-    }
+    let html = '';
+    let hasAnyEditable = false;
 
-    // Simple form submission for filters
-    document.querySelectorAll('.search-input, .filter-select').forEach(element => {
-        element.addEventListener('change', function () {
-            const form = document.createElement('form');
-            form.method = 'GET';
-            form.action = window.location.href.split('?')[0];
+    g.tests.forEach((t, i) => {
+        const isDone = t.status === 'Completed';
+        const canEdit = t.isPaid || isSHA;
+        if (canEdit) hasAnyEditable = true;
+        const specOpts = SPECIMENS.map(s => `<option value="${s}" ${t.specimen===s?'selected':''}>${s}</option>`).join('');
+        html += `
+        <div class="modal-test-item" id="test-item-${t.itemId}" style="${!canEdit ? 'opacity:0.5;' : ''}">
+            <div class="modal-test-header">
+                <span class="modal-test-name"><i class="fas fa-vial" style="color:#818cf8;margin-right:0.5rem;"></i>${t.name}</span>
+                <span class="modal-test-price">${!canEdit ? '<i class="fas fa-lock" style="color:#f87171;margin-right:4px;"></i>Awaiting Payment' : isDone ? '<i class="fas fa-check-circle" style="color:#10b981;margin-right:4px;"></i>Done' : 'Ksh ' + t.price}</span>
+            </div>
+            <div class="modal-test-fields">
+                <div>
+                    <label>Specimen</label>
+                    <select data-item="${t.itemId}" data-field="specimen" ${!canEdit?'disabled':''}>
+                        <option value="">Select...</option>${specOpts}
+                    </select>
+                </div>
+                <div>&nbsp;</div>
+                <div class="full-width">
+                    <label>Results</label>
+                    <textarea rows="2" data-item="${t.itemId}" data-field="results" placeholder="${!canEdit ? 'Payment required...' : 'Enter results...'}" ${!canEdit?'disabled':''}>${t.results}</textarea>
+                </div>
+            </div>
+        </div>`;
+    });
 
-            document.querySelectorAll('.search-input, .filter-select').forEach(input => {
-                if (input.value) {
-                    const inputField = document.createElement('input');
-                    inputField.type = 'hidden';
-                    inputField.name = input.getAttribute('name') || (input.classList.contains('search-input') ? 'search' : '');
-                    if (inputField.name) {
-                        inputField.value = input.value;
-                        form.appendChild(inputField);
-                    }
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('btnSaveAll').disabled = !hasAnyEditable;
+    document.getElementById('labModal').classList.add('open');
+}
+
+function closeLabModal() {
+    document.getElementById('labModal').classList.remove('open');
+    currentGroupIdx = null;
+}
+
+async function saveAllResults() {
+    if (currentGroupIdx === null) return;
+    const g = GROUPS[currentGroupIdx];
+    const btn = document.getElementById('btnSaveAll');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    let allOk = true;
+    for (const t of g.tests) {
+        const resultsEl = document.querySelector(`textarea[data-item="${t.itemId}"]`);
+        const specimenEl = document.querySelector(`select[data-item="${t.itemId}"][data-field="specimen"]`);
+        const results = resultsEl ? resultsEl.value.trim() : '';
+        const specimen = specimenEl ? specimenEl.value : '';
+
+        if (!results) continue; // skip empty
+
+        const fd = new FormData();
+        fd.append('item_id', t.itemId);
+        fd.append('results', results);
+        fd.append('specimen', specimen);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        try {
+            const resp = await fetch("{% url 'lab:save_lab_result_inline' %}", { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.success) {
+                t.status = data.status;
+                t.results = results;
+                t.specimen = specimen;
+                t.resultId = data.result_id;
+                const item = document.getElementById('test-item-' + t.itemId);
+                if (item) {
+                    const priceEl = item.querySelector('.modal-test-price');
+                    if (priceEl && data.status === 'Completed') priceEl.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;margin-right:4px;"></i>Done';
                 }
-            });
-
-            document.body.appendChild(form);
-            form.submit();
-        });
-    });
-
-    // Handle enter key on search input
-    document.querySelectorAll('.search-input').forEach(input => {
-        input.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                this.dispatchEvent(new Event('change'));
+            } else {
+                allOk = false;
+                alert('Error for ' + t.name + ': ' + data.error);
             }
-        });
-    });
+        } catch(e) {
+            allOk = false;
+            alert('Network error saving ' + t.name);
+        }
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Save All Results';
+
+    if (allOk) {
+        closeLabModal();
+        window.location.reload();
+    }
+}
 </script>
 {% endblock %}

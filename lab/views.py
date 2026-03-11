@@ -28,7 +28,6 @@ def radiology_dashboard(request):
         dashboard_title = "Radiology Dashboard"
     elif request.user.is_staff:
         dashboard_title = "Diagnostics Admin Dashboard"
-        # Admin sees everything
 
     # Get search and Filter parameters
     search_query = request.GET.get('search', '')
@@ -44,7 +43,6 @@ def radiology_dashboard(request):
     from django.db.models import Prefetch
     lab_items = InvoiceItem.objects.filter(
         service__department__name__in=categories,
-        labresult__labreport__isnull=True
     ).select_related('invoice', 'invoice__patient', 'invoice__visit', 'service').prefetch_related(
         Prefetch('labresult_set', queryset=LabResult.objects.all(), to_attr='related_results')
     ).order_by('-created_at')
@@ -52,8 +50,8 @@ def radiology_dashboard(request):
     # Get lab/radiology results
     lab_results = LabResult.objects.filter(service__department__name__in=categories).select_related('patient', 'service', 'requested_by').order_by('-requested_at')
     
-    # Inventory Section - Filter by location name matching the focus
-    stock_location = 'Lab' # Default
+    # Inventory Section
+    stock_location = 'Lab'
     if user_role == 'Radiographer':
         stock_location = 'Radiology'
     
@@ -76,7 +74,7 @@ def radiology_dashboard(request):
     if status_filter:
         lab_results = lab_results.filter(status=status_filter)
     
-    if service_type_filter and not dept_focus: # Only allow manual override if not locked by role
+    if service_type_filter and not dept_focus:
         lab_items = lab_items.filter(service__department__name=service_type_filter)
         lab_results = lab_results.filter(service__department__name=service_type_filter)
     
@@ -88,11 +86,55 @@ def radiology_dashboard(request):
     paid_count = lab_items.filter(invoice__status='Paid').count()
     unpaid_count = lab_items.filter(invoice__status__in=['Pending', 'Partial', 'Draft']).count()
     in_progress_results = lab_results.filter(status='In Progress').count()
+
+    # --- GROUP by patient-visit ---
+    from collections import OrderedDict
+    grouped = OrderedDict()
+    for item in lab_items[:50]:
+        visit = item.invoice.visit if item.invoice else None
+        patient = item.invoice.patient if item.invoice else None
+        if not patient:
+            continue
+        visit_id = visit.id if visit else 0
+        key = (patient.id, visit_id)
+        if key not in grouped:
+            related = item.related_results[0] if item.related_results else None
+            grouped[key] = {
+                'patient': patient,
+                'visit': visit,
+                'invoice': item.invoice,
+                'tests': [],
+                'total_tests': 0,
+                'completed_tests': 0,
+                'payment_status': item.invoice.status if item.invoice else 'N/A',
+                'payment_method': visit.payment_method if visit else 'CASH',
+                'visit_type': visit.visit_type if visit else 'OUT-PATIENT',
+                'created_at': item.created_at,
+            }
+        # Build test info
+        related = item.related_results[0] if item.related_results else None
+        test_status = related.status if related else 'Pending'
+        grouped[key]['tests'].append({
+            'item_id': item.id,
+            'service_name': item.service.name if item.service else item.name,
+            'service_id': item.service.id if item.service else None,
+            'price': str(item.service.price) if item.service else str(item.unit_price),
+            'result_id': related.id if related else None,
+            'status': test_status,
+            'results_text': related.results if related else '',
+            'specimen': related.specimen if related else '',
+            'is_paid': (item.amount > 0 and item.is_settled) or item.invoice.status == 'Paid',
+        })
+        grouped[key]['total_tests'] += 1
+        if test_status == 'Completed':
+            grouped[key]['completed_tests'] += 1
+    
+    patient_visit_groups = list(grouped.values())
     
     context = {
         'dashboard_title': dashboard_title,
         'user_role': user_role,
-        'lab_invoices': lab_items[:20],
+        'patient_visit_groups': patient_visit_groups,
         'lab_results': lab_results[:20],
         'lab_stock': lab_stock,
         'lab_requests': lab_requests[:20],
@@ -115,6 +157,97 @@ def radiology_dashboard(request):
     }
     
     return render(request, 'lab/radiology_dashboard.html', context)
+
+
+@login_required
+def save_lab_result_inline(request):
+    """AJAX endpoint: create/update LabResult + LabReport for an InvoiceItem."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+
+    item_id = request.POST.get('item_id')
+    results_text = request.POST.get('results', '').strip()
+    specimen = request.POST.get('specimen', '').strip()
+
+    if not item_id:
+        return JsonResponse({'success': False, 'error': 'Missing item_id'})
+
+    try:
+        inv_item = InvoiceItem.objects.select_related('invoice', 'invoice__patient', 'invoice__visit', 'service').get(id=item_id)
+    except InvoiceItem.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Invoice item not found'})
+
+    patient = inv_item.invoice.patient
+    service = inv_item.service
+    invoice = inv_item.invoice
+    visit = invoice.visit if invoice else None
+
+    # Payment check for OPD (skip SHA)
+    is_sha = visit and visit.payment_method == 'SHA'
+    if not is_sha and visit and visit.visit_type == 'OUT-PATIENT' and invoice.status != 'Paid':
+        if not inv_item.is_settled:
+            return JsonResponse({'success': False, 'error': 'Test must be paid before processing (OPD).'})
+
+    # Get or create LabResult
+    lab_result = LabResult.objects.filter(invoice_item=inv_item).first()
+    if not lab_result:
+        lab_result = LabResult.objects.create(
+            patient=patient,
+            service=service,
+            invoice=invoice,
+            invoice_item=inv_item,
+            requested_by=request.user,
+            status='In Progress',
+            performed_by=request.user,
+        )
+
+    # Update fields
+    lab_result.results = results_text
+    if specimen:
+        lab_result.specimen = specimen
+    lab_result.performed_by = request.user
+
+    if results_text:
+        lab_result.status = 'Completed'
+        lab_result.completed_at = timezone.now()
+    else:
+        lab_result.status = 'In Progress'
+
+    lab_result.save()
+
+    # Create / update LabReport
+    if results_text:
+        report, _ = LabReport.objects.get_or_create(
+            lab_result=lab_result,
+            defaults={'created_by': request.user, 'report_text': results_text, 'is_final': True}
+        )
+        if not _:
+            report.report_text = results_text
+            report.is_final = True
+            report.save()
+
+        # Route patient back to consultation queue
+        if visit:
+            lab_entries = PatientQue.objects.filter(visit=visit, sent_to__name__icontains='Lab', status='PENDING')
+            return_to_dept = lab_entries.first().qued_from if lab_entries.exists() else None
+            # Only complete lab queue if ALL tests for this visit are done
+            all_items = InvoiceItem.objects.filter(invoice__visit=visit, service__department__name__in=['Lab', 'Imaging', 'Procedure Room'])
+            all_done = all(
+                LabResult.objects.filter(invoice_item=it, status='Completed').exists()
+                for it in all_items
+            )
+            if all_done:
+                lab_entries.update(status='COMPLETED')
+                if not return_to_dept:
+                    from home.models import Departments
+                    return_to_dept = Departments.objects.filter(name__icontains='Consultation').first()
+                if return_to_dept:
+                    PatientQue.objects.update_or_create(
+                        visit=visit, sent_to=return_to_dept, status='PENDING',
+                        defaults={'queue_type': 'REVIEW'}
+                    )
+
+    return JsonResponse({'success': True, 'status': lab_result.status, 'result_id': lab_result.id})
 
 @login_required
 def create_lab_result(request, invoice_id):

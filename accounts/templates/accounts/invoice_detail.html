@@ -2,6 +2,7 @@
 {% load static custom_filters %}
 {% block title %}Invoice Details - {{ invoice.id }}{% endblock %}
 {% block extra_css %}
+{{ block.super }}
     <style>
     :root {
         --dash-bg: #f4f6f9;

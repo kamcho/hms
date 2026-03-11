@@ -217,11 +217,20 @@ def insurance_manager(request):
     ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=True)  # Exclude maternity cases
     maternity_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=False)  # IPD visits with linked delivery records
 
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    from home.models import Visit
+    active_cash_visits = Visit.objects.filter(
+        is_active=True, 
+        payment_method='CASH', 
+        visit_date__gte=today_start
+    ).order_by('-visit_date')
+
     context = {
         'opd_invoices': opd_invoices,
         'ipd_invoices': ipd_invoices,
         'maternity_invoices': maternity_invoices,
         'search_query': search_query,
+        'active_cash_visits': active_cash_visits,
         'title': 'Insurance & Credit Manager'
     }
     
@@ -1251,6 +1260,27 @@ def set_visit_sha(request):
             'success': True,
             'message': f'{patient.full_name} (Visit #{visit.id}) updated to SHA.',
             'visit_id': visit.id,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@user_passes_test(is_billing_staff)
+@require_POST
+def bulk_set_visit_sha(request):
+    """Set the payment method of multiple active visits to SHA."""
+    try:
+        visit_ids = request.POST.getlist('visit_ids[]')
+        if not visit_ids:
+            return JsonResponse({'success': False, 'error': 'No visits selected.'})
+            
+        from home.models import Visit
+        visits = Visit.objects.filter(id__in=visit_ids, is_active=True)
+        updated_count = visits.update(payment_method='SHA')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully updated {updated_count} visits to SHA.',
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

@@ -30,6 +30,7 @@ urlpatterns = [
 
     path('admit-to-maternity/', views.admit_to_maternity, name='admit_to_maternity'),
     path('api/search-patients/', views.api_search_patients, name='api_search_patients'),
+    path('api/cwc-create-visit/', views.api_cwc_create_visit, name='api_cwc_create_visit'),
     path('referral/<int:referral_id>/print/', views.generate_referral_letter, name='generate_referral_letter'),
     path('pregnancy/<int:pregnancy_id>/discharge/print/', views.generate_discharge_summary, name='generate_discharge_summary'),
 ]

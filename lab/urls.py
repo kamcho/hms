@@ -8,4 +8,5 @@ urlpatterns = [
     path('results/', views.LabResultListView.as_view(), name='lab_result_list'),
     path('result/<int:result_id>/', views.lab_result_detail, name='lab_result_detail'),
     path('create/<int:invoice_id>/', views.create_lab_result, name='create_lab_result'),
+    path('api/save-result/', views.save_lab_result_inline, name='save_lab_result_inline'),
 ]

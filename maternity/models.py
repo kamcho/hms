@@ -162,6 +162,7 @@ class AntenatalVisit(models.Model):
         ('Breech', 'Breech'),
         ('Transverse', 'Transverse'),
         ('Oblique', 'Oblique'),
+        ('Palpable Mass', 'Palpable Mass'),
     ])
     fetal_movements = models.CharField(max_length=20, choices=[
         ('Active', 'Active'),

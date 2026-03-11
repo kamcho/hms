@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Pregnancy Record - {{ pregnancy.patient.full_name }} - HMS{% endblock %}
 {% block extra_css %}
+    {{ block.super }}
     <style>
     .preg-profile-sidebar {
         position: sticky;
@@ -381,7 +382,7 @@
                     <div class="p-6">
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {% if pregnancy.status == 'Active' and not delivery %}
-                                <a href="{% url 'maternity:record_anc_visit' pregnancy.id %}" class="preg-action-btn bg-indigo-600 text-white hover:bg-indigo-700"><i class="fas fa-plus"></i> Record ANC Visit</a>
+                                <!-- <a href="{% url 'maternity:record_anc_visit' pregnancy.id %}" class="preg-action-btn bg-indigo-600 text-white hover:bg-indigo-700"><i class="fas fa-plus"></i> Record ANC Visit</a> -->
                             {% endif %}
                             {% if not delivery %}
                                 <!-- Trigger Button -->

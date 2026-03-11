@@ -1,682 +1,734 @@
 {% extends 'users/dashboard_base.html' %}
 {% load custom_filters %}
-{% block title %}Patients - Hospital Management System{% endblock %}
+{% block title %}Patient Directory - HMS{% endblock %}
 {% block content %}
-    <div class="patient-list-wrapper">
-        <!-- Page Header -->
-        <div class="page-header-premium">
-            <div class="header-main">
-                <div class="header-text">
-                    <h1>Patient Directory</h1>
-                    <p>Manage and monitor patient records, visits, and details.</p>
-                </div>
-                <div class="header-actions">
-                    <a href="{% url 'home:patient_create' %}" class="btn-create-premium">
-                        <i class="fas fa-plus-circle"></i> Add New Patient
-                    </a>
-                </div>
-            </div>
-            <!-- Stats Grid -->
-            <div class="stats-grid-premium">
-                <div class="stat-card-modern">
-                    <div class="stat-icon-bg primary">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.total }}</span>
-                        <span class="stat-label">Total Patients</span>
-                    </div>
-                </div>
-                <div class="stat-card-modern">
-                    <div class="stat-icon-bg success">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.new_today }}</span>
-                        <span class="stat-label">New Today</span>
-                    </div>
-                </div>
-                <div class="stat-card-modern">
-                    <div class="stat-icon-bg warning">
-                        <i class="fas fa-mars"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.male }}</span>
-                        <span class="stat-label">Male Patients</span>
-                    </div>
-                </div>
-                <div class="stat-card-modern">
-                    <div class="stat-icon-bg info">
-                        <i class="fas fa-venus"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.female }}</span>
-                        <span class="stat-label">Female Patients</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Search & Filters -->
-        <div class="filter-section-premium">
-            <form method="GET" class="search-form-modern">
-                <div class="search-box-premium">
-                    <i class="fas fa-search"></i>
-                    <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search by name, ID number, phone or location..." class="search-input-modern">
-                    {% if request.GET.search %}
-                        <a href="{% url 'home:patient_list' %}" class="clear-search-btn" title="Clear Search">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    {% endif %}
-                    <button type="submit" class="apply-search-btn">Find Patient</button>
-                </div>
-            </form>
-        </div>
-        <!-- Patient Table View -->
-        <div class="patient-grid-container">
-            <div class="table-card-premium">
-                <div class="table-responsive">
-                    <table class="premium-table">
-                        <thead>
-                            <tr>
-                                <th>Patient Information</th>
-                                <th>Contact / Location</th>
-                                <th>Gender & Age</th>
-                                <th>Medical Status</th>
-                                <th class="text-right">Quick Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for patient_data in patients_with_last_visit %}
-                                <tr class="patient-data-row">
-                                    <td>
-                                        <div class="patient-profile-inline">
-                                            <div class="avatar-initials" data-name="{{ patient_data.patient.first_name }}">{{ patient_data.patient.first_name|first }}{{ patient_data.patient.last_name|first }}</div>
-                                            <div class="name-id">
-                                                <span class="full-name">{{ patient_data.patient.first_name }} {{ patient_data.patient.last_name }}</span>
-                                                <span class="patient-id">#PAT-{{ patient_data.patient.pk|stringformat:"05d" }}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <span class="phone"><i class="fas fa-phone-alt"></i> {{ patient_data.patient.phone }}</span>
-                                            <span class="location"><i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.location }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="demographics">
-                                            <span class="gender-badge {{ patient_data.patient.get_gender_display|lower }}">
-                                                {% if patient_data.patient.gender == 'M' %}
-                                                    <i class="fas fa-mars"></i>
-                                                {% else %}
-                                                    <i class="fas fa-venus"></i>
-                                                {% endif %}
-                                                {{ patient_data.patient.get_gender_display }}
-                                            </span>
-                                            <span class="age-text">{{ patient_data.patient.age }} Years Old</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="visit-status">
-                                            {% if patient_data.last_visit %}
-                                                <span class="visit-badge active">
-                                                    <i class="fas fa-calendar-check"></i>
-                                                    {{ patient_data.last_visit.visit_date|date:"d M, Y" }}
-                                                </span>
-                                                <span class="visit-type-label">{{ patient_data.last_visit.get_visit_type_display }}</span>
-                                            {% else %}
-                                                <span class="visit-badge none">
-                                                    <i class="fas fa-calendar-times"></i>
-                                                    Never Visited
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="text-right">
-                                        <div class="action-buttons-premium">
-                                            <a href="{% url 'home:patient_detail' patient_data.patient.pk %}" class="action-btn-p view" title="View Profile">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="empty-results">
-                                        <div class="empty-state-p">
-                                            <i class="fas fa-search"></i>
-                                            <h3>No Patients Found</h3>
-                                            <p>We couldn't find any results matching your search criteria.</p>
-                                            <a href="{% url 'home:patient_list' %}" class="btn-secondary-modern">Reset
-                                            Filters</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
     <style>
-    /* Layout Containers */
-    .patient-list-wrapper {
-        padding: 1rem;
-        max-width: 1400px;
+    :root {
+        --reception-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --reception-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        --reception-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        --reception-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --reception-bg: #0f172a;
+        --reception-card-bg: #1e293b;
+        --reception-border: rgba(148, 163, 184, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+        background: var(--reception-bg);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+    }
+
+    .container-list {
+        padding: 2rem;
+        max-width: 1600px;
         margin: 0 auto;
+        animation: fadeIn 0.6s ease-out;
     }
 
-    /* Header Redesign */
-    .page-header-premium {
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero Section */
+    .reception-hero {
+        background: var(--reception-gradient-1);
+        padding: 2.5rem 2rem;
+        border-radius: 24px;
         margin-bottom: 2rem;
-    }
-
-    .header-main {
+        position: relative;
+        overflow: hidden;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        gap: 2rem;
+        box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.4);
     }
 
-    .header-text h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0 0 0.25rem 0;
+    .hero-content h1 {
+        font-size: 2.2rem;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
-    .header-text p {
-        color: #64748b;
+    .hero-content p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
         margin: 0;
     }
 
-    .btn-create-premium {
+    .quick-action-btn {
+        padding: 0.85rem 1.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.75rem 1.5rem;
-        background: linear-gradient(135deg, var(--primary-color), #7c3aed);
-        color: white;
-        text-decoration: none;
-        border-radius: 12px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        transition: all 0.3s;
     }
 
-    .btn-create-premium:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    .quick-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-4px);
     }
 
-    /* Stats Cards */
-    .stats-grid-premium {
+    /* Stats Grid */
+    .analytics-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.5rem;
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
     }
 
-    .stat-card-modern {
-        background: white;
+    .stat-card {
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 20px;
         padding: 1.5rem;
-        border-radius: 16px;
         display: flex;
         align-items: center;
         gap: 1.25rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
     }
 
-    .stat-card-modern:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 4px;
+        background: var(--gradient, var(--reception-gradient-1));
     }
 
-    .stat-icon-bg {
-        width: 60px;
-        height: 60px;
+    .stat-icon {
+        width: 50px;
+        height: 50px;
         border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
     }
 
-    .stat-icon-bg.primary {
-        background: #eef2ff;
-        color: #4f46e5;
-    }
-
-    .stat-icon-bg.success {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .stat-icon-bg.warning {
-        background: #fffbeb;
-        color: #d97706;
-    }
-
-    .stat-icon-bg.info {
-        background: #f0f9ff;
-        color: #0284c7;
-    }
-
-    .stat-info {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .stat-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1;
+    .stat-info h3 {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
         margin-bottom: 0.25rem;
     }
 
-    .stat-label {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: 500;
+    .stat-info .number {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
     }
 
-    /* Search Box */
-    .filter-section-premium {
-        margin-bottom: 2rem;
-    }
-
-    .search-box-premium {
-        display: flex;
-        align-items: center;
-        background: white;
-        padding: 0.5rem 1rem;
-        border-radius: 14px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        gap: 1rem;
-        position: relative;
-        border: 1px solid #e2e8f0;
-    }
-
-    .search-box-premium i {
-        color: #94a3b8;
-    }
-
-    .search-input-modern {
-        flex: 1;
-        border: none;
-        padding: 0.75rem 0;
-        font-size: 1rem;
-        color: #1e293b;
-    }
-
-    .search-input-modern:focus {
-        outline: none;
-    }
-
-    .clear-search-btn {
-        color: #94a3b8;
-        text-decoration: none;
-        padding: 0.5rem;
-        transition: color 0.2s;
-    }
-
-    .clear-search-btn:hover {
-        color: #ef4444;
-    }
-
-    .apply-search-btn {
-        padding: 0.625rem 1.25rem;
-        background: #1e293b;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .apply-search-btn:hover {
-        background: #0f172a;
-    }
-
-    /* Table Design */
-    .table-card-premium {
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Section & Table */
+    .section {
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 24px;
         overflow: hidden;
+        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.3);
+    }
+
+    .section-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--reception-border);
+        background: rgba(255,255,255,0.02);
+    }
+
+    .section-header h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center; gap: 0.75rem;
+    }
+
+    .search-section {
+        padding: 1.25rem 2rem;
+        background: rgba(255,255,255,0.01);
+        border-bottom: 1px solid var(--reception-border);
+    }
+
+    .search-container { position: relative; width: 100%; }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1.25rem 1rem 3.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--reception-border);
+        border-radius: 16px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     }
 
     .premium-table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
     }
 
     .premium-table th {
-        background: #f8fafc;
-        padding: 1.25rem 1.5rem;
+        padding: 1.25rem 2rem;
         text-align: left;
         font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
-        color: #64748b;
-        border-bottom: 1px solid #e2e8f0;
+        letter-spacing: 1px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--reception-border);
     }
 
     .premium-table td {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid #f1f5f9;
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid var(--reception-border);
+        color: var(--text-primary);
+        vertical-align: middle;
     }
 
-    .patient-data-row {
-        transition: background 0.2s;
-    }
+    .patient-row { transition: all 0.2s; cursor: pointer; }
+    .patient-row:hover td { background: rgba(255, 255, 255, 0.03); }
 
-    .patient-data-row:hover {
-        background: #f8fafc;
-    }
-
-    /* Patient Info Column */
-    .patient-profile-inline {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
+    .patient-profile-inline { display: flex; align-items: center; gap: 1rem; }
 
     .avatar-initials {
-        width: 45px;
-        height: 45px;
-        background: #ddd;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: white;
-        flex-shrink: 0;
+        width: 45px; height: 45px; border-radius: 12px;
+        background: var(--reception-gradient-1);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1rem;
     }
 
-    /* Color coding avatars */
-    .avatar-initials[data-name^="A"],
-    .avatar-initials[data-name^="B"],
-    .avatar-initials[data-name^="C"] {
-        background: #4f46e5;
-    }
+    .name-id { display: flex; flex-direction: column; }
+    .full-name { font-weight: 700; color: var(--text-primary); font-size: 1rem; }
+    .patient-id { font-size: 0.75rem; color: var(--text-secondary); }
 
-    .avatar-initials[data-name^="D"],
-    .avatar-initials[data-name^="E"],
-    .avatar-initials[data-name^="F"] {
-        background: #10b981;
-    }
-
-    .avatar-initials[data-name^="G"],
-    .avatar-initials[data-name^="H"],
-    .avatar-initials[data-name^="I"] {
-        background: #f59e0b;
-    }
-
-    .avatar-initials[data-name^="J"],
-    .avatar-initials[data-name^="K"],
-    .avatar-initials[data-name^="L"] {
-        background: #ef4444;
-    }
-
-    .avatar-initials[data-name^="M"],
-    .avatar-initials[data-name^="N"],
-    .avatar-initials[data-name^="O"] {
-        background: #8b5cf6;
-    }
-
-    .avatar-initials[data-name^="P"],
-    .avatar-initials[data-name^="Q"],
-    .avatar-initials[data-name^="R"] {
-        background: #ec4899;
-    }
-
-    .avatar-initials[data-name^="S"],
-    .avatar-initials[data-name^="T"],
-    .avatar-initials[data-name^="U"] {
-        background: #06b6d4;
-    }
-
-    .avatar-initials[data-name^="V"],
-    .avatar-initials[data-name^="W"],
-    .avatar-initials[data-name^="Y"],
-    .avatar-initials[data-name^="Z"] {
-        background: #334155;
-    }
-
-    .name-id {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .full-name {
-        font-weight: 600;
-        color: #1e293b;
-        font-size: 1rem;
-    }
-
-    .patient-id {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        font-family: monospace;
-    }
-
-    /* Contact Column */
-    .contact-info {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .contact-info span {
-        font-size: 0.875rem;
-        color: #475569;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .contact-info i {
-        color: #94a3b8;
-        width: 14px;
-    }
-
-    /* Demographics Column */
-    .demographics {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .gender-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        width: fit-content;
-    }
-
-    .gender-badge.male {
-        background: #e0f2fe;
-        color: #0369a1;
-    }
-
-    .gender-badge.female {
-        background: #fdf2f8;
-        color: #be185d;
-    }
-
-    .gender-badge.other {
-        background: #f1f5f9;
-        color: #475569;
-    }
-
-    .age-text {
-        font-size: 0.875rem;
-        color: #64748b;
-    }
-
-    /* Visit Status Column */
-    .visit-status {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-    .visit-badge {
-        font-size: 0.825rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .visit-badge.active {
-        color: #16a34a;
-    }
-
-    .visit-badge.none {
-        color: #94a3b8;
-        font-style: italic;
-    }
-
-    .visit-type-label {
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
         font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
         font-weight: 700;
+        text-transform: uppercase;
+    }
+    .status-active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .status-none { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+    /* Modals */
+    .clinical-modal {
+        display: none; position: fixed; z-index: 99999;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(10px);
+        align-items: center; justify-content: center;
     }
 
-    /* Action Buttons */
-    .action-buttons-premium {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
+    .modal-content {
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        border-radius: 28px;
+        width: 90%; max-width: 850px;
+        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6);
+        max-height: 90vh; overflow-y: auto;
     }
 
-    .action-btn-p {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        transition: all 0.2s;
-        font-size: 0.9rem;
+    .modal-header {
+        padding: 1.5rem 2rem; border-bottom: 1px solid var(--reception-border);
+        display: flex; justify-content: space-between; align-items: center;
+        background: rgba(255,255,255,0.03);
     }
 
-    .action-btn-p.view {
-        background: #f0f9ff;
-        color: #0284c7;
+    .modal-body { padding: 2rem; }
+
+    .clinical-input {
+        background: #1a202c !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
+        color: white !important;
+        padding: 0.75rem 1rem !important;
+        width: 100% !important;
     }
 
-    .action-btn-p.edit {
-        background: #f0fdf4;
-        color: #16a34a;
+    .btn-primary {
+        background: var(--reception-gradient-1);
+        color: white; border: none; padding: 0.75rem 1.5rem;
+        border-radius: 12px; font-weight: 700; cursor: pointer;
     }
 
-    .action-btn-p.delete {
-        background: #fef2f2;
-        color: #dc2626;
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white; border: none; padding: 0.75rem 1.5rem;
+        border-radius: 12px; font-weight: 700; cursor: pointer;
     }
 
-    .action-btn-p:hover {
-        transform: scale(1.1);
+    /* Pagination */
+    .pagination-modern {
+        display: flex; justify-content: center; gap: 0.5rem; padding: 2rem;
     }
-
-    .action-btn-p.view:hover {
-        background: #0284c7;
-        color: white;
+    .page-link-modern {
+        padding: 0.5rem 1rem; border-radius: 10px;
+        background: var(--reception-card-bg);
+        border: 1px solid var(--reception-border);
+        color: var(--text-primary);
+        text-decoration: none; transition: 0.3s;
     }
-
-    .action-btn-p.edit:hover {
-        background: #16a34a;
-        color: white;
-    }
-
-    .action-btn-p.delete:hover {
-        background: #dc2626;
-        color: white;
-    }
-
-    /* Empty State */
-    .empty-results {
-        padding: 5rem 0 !important;
-    }
-
-    .empty-state-p {
-        text-align: center;
-        color: #64748b;
-    }
-
-    .empty-state-p i {
-        font-size: 3rem;
-        color: #e2e8f0;
-        margin-bottom: 1.5rem;
-    }
-
-    .empty-state-p h3 {
-        font-size: 1.25rem;
-        color: #1e293b;
-        margin-bottom: 0.5rem;
-    }
-
-    .btn-secondary-modern {
-        display: inline-block;
-        margin-top: 1.5rem;
-        padding: 0.625rem 1.25rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        color: #1e293b;
-        text-decoration: none;
-        font-weight: 600;
-        transition: background 0.2s;
-    }
-
-    .btn-secondary-modern:hover {
-        background: #f8fafc;
-    }
-
-    /* Utilities */
-    .text-right {
-        text-align: right;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 1024px) {
-
-        .premium-table th:nth-child(2),
-        .premium-table td:nth-child(2) {
-            display: none;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .header-main {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1.5rem;
-        }
-
-        .btn-create-premium {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .premium-table th:nth-child(4),
-        .premium-table td:nth-child(4) {
-            display: none;
-        }
-    }
+    .page-link-modern.active { background: #6366f1; border-color: #6366f1; }
+    .page-link-modern:hover:not(.active) { background: rgba(255,255,255,0.05); }
     </style>
+
+    <div class="container-list">
+        <!-- Hero Section -->
+        <div class="reception-hero">
+            <div class="hero-content">
+                <h1><i class="fas fa-users"></i> Patient Directory</h1>
+                <p>Comprehensive patient records and centralized coordination</p>
+            </div>
+            <div class="hero-actions">
+                <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
+                    <i class="fas fa-user-plus"></i> Add New Patient
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="analytics-grid">
+            <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
+                <div class="stat-icon"><i class="fas fa-users-viewfinder"></i></div>
+                <div class="stat-info">
+                    <h3>Total Patients</h3>
+                    <div class="number">{{ stats.total }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
+                <div class="stat-icon"><i class="fas fa-user-plus"></i></div>
+                <div class="stat-info">
+                    <h3>New Today</h3>
+                    <div class="number">{{ stats.new_today }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
+                <div class="stat-icon"><i class="fas fa-mars"></i></div>
+                <div class="stat-info">
+                    <h3>Male</h3>
+                    <div class="number">{{ stats.male }}</div>
+                </div>
+            </div>
+            <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
+                <div class="stat-icon"><i class="fas fa-venus"></i></div>
+                <div class="stat-info">
+                    <h3>Female</h3>
+                    <div class="number">{{ stats.female }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Directory Section -->
+        <div class="section">
+            <div class="section-header">
+                <h3><i class="fas fa-address-book"></i> Registry Records</h3>
+            </div>
+            <div class="search-section">
+                <form method="GET">
+                    <div class="search-container">
+                        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.1rem; color: var(--text-secondary); pointer-events: none;"></i>
+                        <input type="text" name="search" class="search-input" placeholder="Search name, ID, phone, or location..." value="{{ request.GET.search }}">
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Patient Information</th>
+                            <th>Contact / Location</th>
+                            <th>Medical Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in patients_with_last_visit %}
+                        <tr class="patient-row" data-patient-id="{{ item.patient.pk }}" data-patient-name="{{ item.patient.full_name }}">
+                            <td>
+                                <div class="patient-profile-inline">
+                                    <div class="avatar-initials" data-name="{{ item.patient.first_name }}">
+                                        {{ item.patient.first_name|first }}{{ item.patient.last_name|first }}
+                                    </div>
+                                    <div class="name-id">
+                                        <span class="full-name">{{ item.patient.full_name }}</span>
+                                        <span class="patient-id">#PAT-{{ item.patient.pk|stringformat:"05d" }} • {{ item.patient.age }} yrs • {{ item.patient.get_gender_display }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                    <span style="font-size: 0.85rem;"><i class="fas fa-phone-alt" style="color: #10b981; margin-right: 0.5rem; width: 14px;"></i>{{ item.patient.phone }}</span>
+                                    <span style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fas fa-map-marker-alt" style="margin-right: 0.5rem; width: 14px;"></i>{{ item.patient.location }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.last_visit %}
+                                <span class="status-badge status-active">
+                                    <i class="fas fa-clock-rotate-left" style="margin-right: 4px;"></i>
+                                    Last: {{ item.last_visit.visit_date|date:"d M Y" }}
+                                </span>
+                                <span style="display: block; font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem;">{{ item.last_visit.get_visit_type_display }}</span>
+                                {% else %}
+                                <span class="status-badge status-none">No Previous Visits</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn-secondary" style="padding: 0.5rem 0.85rem; font-size: 0.8rem;" onclick="event.stopPropagation();">
+                                        <i class="fas fa-eye"></i> View Profile
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state-p" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                                    <i class="fas fa-user-slash" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+                                    <p>No patients found matching your search.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <div class="pagination-modern">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Prev</a>
+                {% endif %}
+                
+                <span class="page-link-modern active">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Last &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Patient Action Modal -->
+    <div id="patientActionModal" class="clinical-modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user-gear"></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">Patient Actions</h3>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select an action for <strong id="modalPatientName" style="color: #10b981;"></strong></p>
+                    </div>
+                </div>
+                <span id="closePatientModal" class="close" style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1px 1fr; padding: 0;">
+                <!-- Left: Admission -->
+                <div style="padding: 2rem;">
+                    <h4 style="color: #10b981; margin-top: 0; font-weight: 800; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; margin-bottom: 1.5rem;">Admit for Consultation</h4>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Consultation Type</label>
+                            <select id="admitConsultation" class="clinical-input">
+                                <option value="">-- Select Consultation --</option>
+                                {% for service in services %}
+                                    {% if service.name == "MCH" or service.name == "OPD Consultation" %}
+                                        <option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Payment Method</label>
+                            <select id="admitPaymentMethod" class="clinical-input">
+                                <option value="">-- Select Payment Method --</option>
+                                <option value="Cash">Cash</option>
+                                <option value="M-Pesa">M-Pesa</option>
+                                <option value="Insurance">Insurance (SHA)</option>
+                                <option value="Free Visit">Free Visit (Revisit)</option>
+                            </select>
+                        </div>
+
+                        <div id="opdBillingOptions" style="display: none; background: rgba(16,185,129,0.04); padding: 1rem; border-radius: 12px; border: 1px dashed rgba(16,185,129,0.2);">
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <input type="checkbox" id="admitBillBook" checked style="width: 18px; height: 18px; accent-color: #10b981;">
+                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Book</strong><small style="color: var(--text-secondary); font-size: 0.7rem; display: block;">Filing Fee — Ksh 50</small></span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <input type="checkbox" id="admitBillConsult" checked style="width: 18px; height: 18px; accent-color: #10b981;">
+                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Consultation</strong><small style="color: var(--text-secondary); font-size: 0.7rem; display: block;">Clinical Assessment</small></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="admitVisitBtn" type="button" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; background: linear-gradient(135deg, #10b981, #059669);">
+                            Complete Admission
+                        </button>
+                    </div>
+                </div>
+                <!-- Vertical Divider -->
+                <div style="background: rgba(255,255,255,0.05);"></div>
+                <!-- Right: Quick Invoice -->
+                <div style="padding: 2rem;">
+                    <h4 style="color: #6366f1; margin-top: 0; font-weight: 800; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; margin-bottom: 1.5rem;">Quick Service Invoice</h4>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Select Service / Item</label>
+                            <select id="quickService" class="clinical-input">
+                                <option value="">-- Choose a service --</option>
+                                {% regroup services by department as services_by_dept %}
+                                {% for dept in services_by_dept %}
+                                    <optgroup label="{{ dept.grouper.name }}">
+                                        {% for service in dept.list %}
+                                            {% if "Consultation" not in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2 }})</option>{% endif %}
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="flex: 1;"></div>
+                        <button id="generateInvoiceBtn" type="button" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                            Process Quick Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Visit Warning -->
+    <div id="activeVisitWarningModal" class="clinical-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="padding: 1.5rem 2rem; border-bottom: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; gap: 1rem;">
+                <div style="font-size: 1.5rem;">⚠️</div>
+                <div>
+                    <h3 style="margin: 0; color: #ef4444; font-size: 1.1rem; font-weight: 800;">Active Visit Warning</h3>
+                    <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">This patient already has an active visit</p>
+                </div>
+            </div>
+            <div style="padding: 2rem;">
+                <div id="activeVisitDetails" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;"></div>
+                <div id="activeVisitUnpaidTotal" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 12px; color: #ef4444; font-weight: 800; text-align: center; margin-bottom: 1.5rem;"></div>
+                <p style="margin: 0; color: #f59e0b; font-size: 0.85rem; font-weight: 600; text-align: center;">Starting a new visit will automatically CLOSE existing active visits.</p>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button id="activeVisitCancel" class="btn-secondary" style="flex: 1;">Cancel</button>
+                    <button id="activeVisitProceed" class="btn-primary" style="flex: 1; background: #ef4444;">Proceed Anyway</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock modals %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const patientActionModal = document.getElementById('patientActionModal');
+    const warningModal = document.getElementById('activeVisitWarningModal');
+    const modalPatientName = document.getElementById('modalPatientName');
+    const admitVisitBtn = document.getElementById('admitVisitBtn');
+    const generateInvoiceBtn = document.getElementById('generateInvoiceBtn');
+    const closeBtn = document.getElementById('closePatientModal');
+    
+    let currentPatientId = null;
+
+    // Handle Payment Method change to show/hide OPD billing options
+    const admitPaymentMethod = document.getElementById('admitPaymentMethod');
+    const opdBillingOptions = document.getElementById('opdBillingOptions');
+    if (admitPaymentMethod) {
+        admitPaymentMethod.addEventListener('change', function() {
+            if (this.value === 'Cash' || this.value === 'M-Pesa') {
+                opdBillingOptions.style.display = 'block';
+            } else {
+                opdBillingOptions.style.display = 'none';
+            }
+        });
+    }
+
+    // Row click functionality
+    document.addEventListener('click', function (e) {
+        const patientRow = e.target.closest('.patient-row');
+        if (patientRow && !e.target.closest('.btn-secondary')) {
+            const patientId = patientRow.dataset.patientId;
+            const patientName = patientRow.dataset.patientName;
+
+            currentPatientId = patientId;
+            modalPatientName.textContent = patientName;
+            patientActionModal.style.display = 'flex';
+        }
+    });
+
+    closeBtn.addEventListener('click', () => {
+        patientActionModal.style.display = 'none';
+        currentPatientId = null;
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === patientActionModal) {
+            patientActionModal.style.display = 'none';
+            currentPatientId = null;
+        }
+    });
+
+    // Admission Logic
+    admitVisitBtn.addEventListener('click', async function () {
+        if (!currentPatientId) return;
+
+        const consultationId = document.getElementById('admitConsultation').value;
+        const paymentMethod = document.getElementById('admitPaymentMethod').value;
+
+        if (!consultationId || !paymentMethod) {
+            alert('Please select both consultation type and payment method.');
+            return;
+        }
+
+        // Check for active visits
+        try {
+            const checkRes = await fetch(`{% url "home:check_active_visit" %}?patient_id=${currentPatientId}`);
+            const checkData = await checkRes.json();
+
+            if (checkData.has_active) {
+                const detailsDiv = document.getElementById('activeVisitDetails');
+                detailsDiv.innerHTML = '';
+                checkData.visits.forEach(v => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem;';
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                            <span>${v.visit_type}</span>
+                            <span style="color: var(--text-secondary);">${v.visit_date}</span>
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.85rem;">Balance: <strong>Ksh ${v.balance.toLocaleString()}</strong></div>
+                    `;
+                    detailsDiv.appendChild(card);
+                });
+
+                const unpaidDiv = document.getElementById('activeVisitUnpaidTotal');
+                if (checkData.unpaid_total > 0) {
+                    unpaidDiv.textContent = `⚠️ TOTAL UNPAID BALANCE: Ksh ${checkData.unpaid_total.toLocaleString()}`;
+                    unpaidDiv.style.display = 'block';
+                }
+
+                warningModal.style.display = 'flex';
+                const proceed = await new Promise(resolve => {
+                    document.getElementById('activeVisitProceed').onclick = () => { warningModal.style.display = 'none'; resolve(true); };
+                    document.getElementById('activeVisitCancel').onclick = () => { warningModal.style.display = 'none'; resolve(false); };
+                });
+                if (!proceed) return;
+            }
+        } catch (err) { console.error('Check failed', err); }
+
+        // Start Admission
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Admitting...';
+
+        const billBook = document.getElementById('admitBillBook') ? document.getElementById('admitBillBook').checked : false;
+        const billConsult = document.getElementById('admitBillConsult') ? document.getElementById('admitBillConsult').checked : false;
+
+        const response = await fetch('{% url "home:admit_patient_visit" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `patient_id=${currentPatientId}&consultation_id=${consultationId}&payment_method=${paymentMethod}&bill_opd_book=${billBook}&bill_opd_consultation=${billConsult}`
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert(data.message || 'Patient admitted!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to admit patient'));
+            this.disabled = false;
+            this.innerHTML = 'Complete Admission';
+        }
+    });
+
+    // Quick Invoice Logic
+    generateInvoiceBtn.addEventListener('click', async function() {
+        if (!currentPatientId) return;
+        const serviceId = document.getElementById('quickService').value;
+        if (!serviceId) { alert('Please select a service.'); return; }
+
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        const response = await fetch('/accounts/invoice/create-quick/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `patient_id=${currentPatientId}&service_id=${serviceId}`
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert('Invoice generated! Printing now...');
+            window.open(`/accounts/invoice/${data.invoice_id}/print/`, 'Invoice', 'width=800,height=900');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to create invoice'));
+            this.disabled = false;
+            this.innerHTML = 'Process Quick Invoice';
+        }
+    });
+});
+
+// Helper for CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}

@@ -69,6 +69,11 @@ class PatientListView(LoginRequiredMixin, ListView):
             })
         
         context['patients_with_last_visit'] = patients_with_last_visit
+
+        # Add services for the quick action modals (Consultation and Quick Invoice)
+        context['services'] = Service.objects.filter(is_active=True).select_related('department').order_by('department__name', 'name')
+        context['user_role'] = self.request.user.role
+        
         return context
 
 class PatientCreateView(LoginRequiredMixin, CreateView):
@@ -568,12 +573,10 @@ def submit_next_action(request):
             # Identify the latest visit
             latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
             
-            # Block if latest visit is already closed (unless it's a walk-in dispense which we haven't fully separated yet, 
-            # but for clinical actions like routing/labs, it must be active)
-            if latest_visit and not latest_visit.is_active:
-                return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is already closed. Clinical actions cannot be performed on closed visits.'})
+            # Block if no visit or if visit is already closed
+            if not latest_visit or not latest_visit.is_active:
+                return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is not active. Clinical actions cannot be performed without an active visit.'})
 
-            # If no active visit, we allow walk-in invoicing (visit=None)
             visit = latest_visit
             
             # Process department routing
@@ -798,28 +801,12 @@ def reception_dashboard(request):
     # Get search query for invoices (only for receptionists)
     invoice_search = request.GET.get('invoice_search', '')
     
-    # Get search query for patients
-    patient_search = request.GET.get('patient_search', '')
-    
     # Get search queries for triage (only for triage nurses)
     triage_search = request.GET.get('triage_search', '')
     pending_search = request.GET.get('pending_search', '')
     
     # Get user role
     user_role = request.user.role
-    
-    # Get recent patients with search functionality (limit to 10)
-    patients = Patient.objects.all()
-    
-    if patient_search:
-        patients = patients.filter(
-            Q(first_name__icontains=patient_search) |
-            Q(last_name__icontains=patient_search) |
-            Q(phone__icontains=patient_search) |
-            Q(location__icontains=patient_search)
-        )
-    
-    patients = patients.order_by('-created_at')[:10]
     
     # Get today's visits
     today = timezone.now().date()
@@ -830,10 +817,8 @@ def reception_dashboard(request):
     
     # Initialize context with common data
     context = {
-        'patients': patients,
         'today_visits': today_visits,
         'total_patients': total_patients,
-        'patient_search': patient_search,
         'triage_search': triage_search,
         'pending_search': pending_search,
         'user_role': user_role,

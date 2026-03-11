@@ -1,8 +1,7 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static custom_filters %}
 {% block title %}{{ title }}{% endblock %}
-{% block extra_css %}
-    <style>
+{% block content %}    <style>
     :root {
         --dash-bg: #f8fafc;
         --card-bg: #ffffff;
@@ -455,8 +454,7 @@
         display: none !important;
     }
 </style>
-{% endblock %}
-{% block content %}
+
     <div class="insurance-container">
         <!-- Header -->
         <div class="flex justify-between items-end mb-10">
@@ -676,6 +674,71 @@
                                                     <i class="fas fa-baby-carriage"></i>
                                                 </div>
                                                 <p class="font-bold text-slate-400">No maternity invoices found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            <!-- Active Cash Visits Section -->
+            <section>
+                <div class="glass-card other-theme">
+                    <div class="section-header !bg-amber-50/30">
+                        <div class="flex justify-between items-center w-full">
+                            <h2 class="section-title">
+                                <span class="theme-icon">
+                                    <i class="fas fa-coins"></i>
+                                </span>
+                                Active Cash Visits (Today)
+                                <span class="badge-count !bg-amber-500 !shadow-amber-200">{{ active_cash_visits.count }}</span>
+                            </h2>
+                            <button onclick="bulkTagSha()" class="bg-amber-500 text-white px-4 py-2 rounded-xl font-bold text-xs hover:bg-amber-600 transition-colors flex items-center gap-2 opacity-50 cursor-not-allowed" id="bulkShaBtn" disabled>
+                                <i class="fas fa-shield-alt"></i> Tag Selected as SHA
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="custom-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="selectAllCash" onclick="toggleAllCashVisits(this)" style="width: 18px; height: 18px; border-radius: 4px; cursor: pointer;">
+                                    </th>
+                                    <th>Patient Details</th>
+                                    <th>Visit Date & Time</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashVisitsBody">
+                                {% for visit in active_cash_visits %}
+                                    <tr class="hover:bg-amber-50/50 transition-colors">
+                                        <td>
+                                            <input type="checkbox" value="{{ visit.id }}" class="cash-visit-checkbox" style="width: 18px; height: 18px; border-radius: 4px; cursor: pointer;" onclick="updateBulkShaBtn()">
+                                        </td>
+                                        <td>
+                                            <div class="patient-cell">
+                                                <span class="patient-name">{{ visit.patient.full_name }}</span>
+                                                <span class="invoice-id">#VISIT-{{ visit.id }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="font-bold text-slate-600">{{ visit.visit_date|date:"d M, Y H:i" }}</td>
+                                        <td class="font-bold text-slate-600">{{ visit.visit_type }}</td>
+                                        <td>
+                                            <span class="balance-tag bg-amber-100 text-amber-700 font-black px-2 py-1 rounded">ACTIVE</span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="empty-state">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </div>
+                                                <p class="font-bold text-slate-400">No active cash visits for today</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -1100,6 +1163,68 @@
             feedback.style.background = '#fff1f2';
             feedback.style.color = '#e11d48';
             feedback.innerHTML = 'Network error';
+        });
+    }
+
+    // --- Bulk SHA Tagging ---
+    function toggleAllCashVisits(source) {
+        const checkboxes = document.querySelectorAll('.cash-visit-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+        });
+        updateBulkShaBtn();
+    }
+
+    function updateBulkShaBtn() {
+        const checkboxes = document.querySelectorAll('.cash-visit-checkbox:checked');
+        const btn = document.getElementById('bulkShaBtn');
+        if (checkboxes.length > 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = `<i class="fas fa-shield-alt"></i> Tag ${checkboxes.length} Selected as SHA`;
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = `<i class="fas fa-shield-alt"></i> Tag Selected as SHA`;
+        }
+    }
+
+    function bulkTagSha() {
+        const checkboxes = document.querySelectorAll('.cash-visit-checkbox:checked');
+        if (checkboxes.length === 0) return;
+
+        const btn = document.getElementById('bulkShaBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        const visitIds = Array.from(checkboxes).map(cb => cb.value);
+        const params = new URLSearchParams();
+        visitIds.forEach(id => params.append('visit_ids[]', id));
+
+        fetch('{% url "accounts:bulk_set_visit_sha" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to update visits.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Network error during bulk update.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         });
     }
     </script>

@@ -698,7 +698,7 @@ def receive_pnc_arrival(request, que_id):
                 visit=que.visit,
                 visit_date=timezone.now().date(),
                 defaults={
-                    'visit_day': (timezone.now().date() - delivery.delivery_datetime.date()).days,
+                    'visit_day': (timezone.now().date() - (delivery.delivery_datetime or delivery.admission_date or timezone.now()).date()).days,
                     'service_received': False,
                     'recorded_by': request.user
                 }
@@ -1083,9 +1083,28 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
             anc_visit.recorded_by = request.user
             anc_visit.service_received = True  # Mark as seen by doctor
             
-            # Link to active hospital visit if not already set
+            # Link to active hospital visit or create one
             if not anc_visit.visit:
                 latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
+                
+                if not latest_hosp_visit:
+                    latest_hosp_visit = Visit.objects.create(
+                        patient=pregnancy.patient,
+                        visit_type='OUT-PATIENT',
+                        visit_mode='Walk In',
+                        payment_method='CASH',
+                        is_active=True
+                    )
+                    
+                    # Also create a completed queue entry for department volume tracking
+                    dept = Departments.objects.filter(name__in=['ANC', 'MCH', 'Maternity']).first()
+                    PatientQue.objects.create(
+                        visit=latest_hosp_visit,
+                        sent_to=dept,
+                        created_by=request.user,
+                        status='COMPLETED'
+                    )
+                
                 anc_visit.visit = latest_hosp_visit
                 
             anc_visit.save()
@@ -1401,16 +1420,35 @@ def record_mother_pnc_visit(request, pregnancy_id):
             visit.delivery = delivery
             visit.recorded_by = request.user
             
-            # Link to active hospital visit if not already set
+            # Link to active hospital visit or create one
             if not visit.visit:
                 latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
+                
+                if not latest_hosp_visit:
+                    latest_hosp_visit = Visit.objects.create(
+                        patient=pregnancy.patient,
+                        visit_type='OUT-PATIENT',
+                        visit_mode='Walk In',
+                        payment_method='CASH',
+                        is_active=True
+                    )
+                    
+                    dept = Departments.objects.filter(name__in=['PNC', 'MCH', 'Maternity']).first()
+                    PatientQue.objects.create(
+                        visit=latest_hosp_visit,
+                        sent_to=dept,
+                        created_by=request.user,
+                        status='COMPLETED'
+                    )
+                
                 visit.visit = latest_hosp_visit
                 
             visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
         # Calculate visit day
-        delivery_date = delivery.delivery_datetime.date()
+        delivery_dt = delivery.delivery_datetime or delivery.admission_date or timezone.now()
+        delivery_date = delivery_dt.date()
         today = timezone.now().date()
         visit_day = (today - delivery_date).days
         latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
@@ -1451,9 +1489,27 @@ def record_baby_pnc_visit(request, newborn_id):
             visit.newborn = newborn
             visit.recorded_by = request.user
             
-            # Link to active hospital visit if not already set
-            if not visit.visit:
+            # Link to active hospital visit or create one
+            if not visit.visit and newborn.patient_profile:
                 latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
+                
+                if not latest_hosp_visit:
+                    latest_hosp_visit = Visit.objects.create(
+                        patient=newborn.patient_profile,
+                        visit_type='OUT-PATIENT',
+                        visit_mode='Walk In',
+                        payment_method='CASH',
+                        is_active=True
+                    )
+                    
+                    dept = Departments.objects.filter(name__in=['PNC', 'MCH', 'CWC']).first()
+                    PatientQue.objects.create(
+                        visit=latest_hosp_visit,
+                        sent_to=dept,
+                        created_by=request.user,
+                        status='COMPLETED'
+                    )
+                
                 visit.visit = latest_hosp_visit
                 
             visit.save()
@@ -2060,3 +2116,53 @@ def api_search_patients(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required
+def api_cwc_create_visit(request):
+    """API endpoint to create a visit and route a patient to CWC department"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    patient_id = request.POST.get('patient_id')
+    if not patient_id:
+        return JsonResponse({'success': False, 'error': 'Patient ID is required'})
+    
+    try:
+        patient = get_object_or_404(Patient, id=patient_id)
+        
+        # 1. Create Visit
+        visit = Visit.objects.create(
+            patient=patient,
+            visit_type='OUT-PATIENT',
+            visit_mode='Walk In',
+            payment_method='CASH',
+            is_active=True
+        )
+        
+        # 2. Get CWC Department
+        cwc_dept, _ = Departments.objects.get_or_create(
+            name='CWC', 
+            defaults={'abbreviation': 'CWC'}
+        )
+        
+        # 3. Get Room/Source Dept (using current user's location or fallback)
+        source_dept = Departments.objects.filter(name='Reception').first()
+        
+        # 4. Create Queue Entry
+        que = PatientQue.objects.create(
+            visit=visit,
+            qued_from=source_dept,
+            sent_to=cwc_dept,
+            created_by=request.user,
+            status='PENDING'
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Visit created for {patient.full_name} and routed to CWC.',
+            'que_id': que.id
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

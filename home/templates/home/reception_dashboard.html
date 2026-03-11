@@ -971,86 +971,6 @@
                     </div>
                 </div>
             {% endif %}
-            {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-                <div id="patientDirectory" class="section" style="grid-column: span 2;">
-                    <div class="section-header">
-                        <h3>
-                            <i class="fas fa-users-cog"></i> Recent Patient Directory
-                        </h3>
-                    </div>
-                    <div class="search-section">
-                        <form id="patientSearchForm" method="GET" action="{% url 'home:reception_dashboard' %}" class="search-form">
-                            <div class="search-container" style="position: relative;">
-                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                                <input type="text" name="patient_search" class="search-input" placeholder="Search by name, phone, or location..." value="{{ patient_search }}">
-                                {% if patient_search %}
-                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                                        <i class="fas fa-times"></i> Clear
-                                    </a>
-                                {% endif %}
-                                <button type="submit" style="display: none;"></button>
-                            </div>
-                        </form>
-                    </div>
-                    {% if patient_search %}
-                        <div class="search-results-info">
-                            Found <strong>{{ patients|length }}</strong> patient(s) matching "<strong>{{ patient_search }}</strong>"
-                        </div>
-                    {% endif %}
-                    <div class="table-responsive">
-                        <table class="premium-table">
-                            <thead>
-                                <tr>
-                                    <th>Patient</th>
-                                    <th>Age/Gender</th>
-                                    <th>Contact</th>
-                                    <th>Location</th>
-                                </tr>
-                            </thead>
-                            <tbody id="patientTableBody">
-                                {% for patient in patients %}
-                                    <tr class="patient-row" data-patient-id="{{ patient.pk }}" data-patient-name="{{ patient.full_name }}">
-                                        <td>
-                                            <div class="patient-profile-inline">
-                                                <div class="avatar-initials" data-name="{{ patient.first_name }}">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
-                                                <div class="name-id">
-                                                    <span class="full-name">{{ patient.full_name }}</span>
-                                                    <span class="patient-id">#PAT-{{ patient.pk|stringformat:"05d" }}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                                <span style="font-weight: 600;">{{ patient.age }} yrs</span>
-                                                <span class="invoice-status status-partial" style="font-size: 0.65rem;">{{ patient.get_gender_display }}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style="font-size: 0.85rem; color: var(--text-primary);">
-                                                <i class="fas fa-phone-alt" style="font-size: 0.75rem; color: #10b981; margin-right: 0.5rem;"></i>{{ patient.phone }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                <i class="fas fa-map-marker-alt" style="font-size: 0.75rem; margin-right: 0.5rem;"></i>{{ patient.location }}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="no-records">
-                                            <div class="empty-state-small">
-                                                <i class="fas fa-user-slash"></i>
-                                                <p>No patients found.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            {% endif %}
         </div>
     </div>
     <script>
@@ -2074,32 +1994,15 @@
                 });
         }
 
-        // Auto-scroll to patient directory on search - now handled inline above
-        {% if patient_search %}
+        // Auto-scroll to triage on search
+        {% if triage_search or pending_search %}
         (function() {
-            // Fallback scroll in case inline script ran before DOM was ready
-            const target = document.getElementById('patientDirectory');
+            const target = document.getElementById('nurseQueue');
             if (target) {
-                setTimeout(function() {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 500);
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         })();
         {% endif %}
-
-        // Patient search form: redirect with #patientDirectory anchor so browser jumps to results
-        const patientSearchForm = document.getElementById('patientSearchForm');
-        if (patientSearchForm) {
-            patientSearchForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const searchVal = this.querySelector('[name="patient_search"]').value.trim();
-                if (searchVal) {
-                    window.location.href = '{% url "home:reception_dashboard" %}?patient_search=' + encodeURIComponent(searchVal) + '#patientDirectory';
-                } else {
-                    this.submit();
-                }
-            });
-        }
         const admitPaymentMethodSelect = document.getElementById('admitPaymentMethod');
         const admitPatientPortionGroup = document.getElementById('admitPatientPortionGroup');
         const admitConsultationSelect = document.getElementById('admitConsultation');

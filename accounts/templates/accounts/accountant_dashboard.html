@@ -1,7 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static custom_filters %}
 {% block title %}Financial Dashboard{% endblock %}
-{% block extra_css %}
+
+{% block content %}
     <style>
     /* Reset & Custom Properties */
     :root {
@@ -346,8 +347,6 @@
         }
     }
     </style>
-{% endblock %}
-{% block content %}
     <div>
         <!-- Header -->
         <div class="page-header">
