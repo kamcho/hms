@@ -1,15 +1,13 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}{{ admission.patient.full_name }} - Clinical Case Folder{% endblock %}
-{% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
+{% block content %}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
     .case-folder-root, .case-folder-root * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 </style>
-{% endblock %}
-{% block content %}
+
     <div class="px-8 py-6 max-w-[1600px] mx-auto case-folder-root">
         <!-- Breadcrumbs/Back Navigation -->
         <div class="mb-8">

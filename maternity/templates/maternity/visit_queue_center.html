@@ -521,11 +521,13 @@
         </div>
     </div>
 </div>
+{% endblock content %}
 
+{% block modals %}
 <!-- Clinical Workflow Modal -->
-<div id="actionModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
-    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeActionModal()"></div>
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full relative overflow-hidden border border-slate-200 duration-200">
+<div id="actionModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 9999;">
+    <div class="fixed inset-0 bg-slate-900/60" style="z-index: 9998;" onclick="closeActionModal()"></div>
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full relative overflow-hidden border border-slate-200 duration-200" style="z-index: 9999;">
         
         <!-- Header: Patient Identity -->
         <div class="modal-profile-card">
@@ -577,7 +579,9 @@
         </div>
     </div>
 </div>
+{% endblock modals %}
 
+{% block extra_js %}
 <script>
 function openActionModal(row) {
     const data = row.dataset;
@@ -692,4 +696,5 @@ function closeActionModal() {
     document.getElementById('actionModal').classList.add('hidden');
 }
 </script>
-{% endblock content %}
+{% endblock extra_js %}
+
