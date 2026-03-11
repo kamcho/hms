@@ -30,8 +30,10 @@ def get_dashboard_url(user):
         return reverse_lazy('home:pharmacy_dashboard')
     elif role in ['Lab Technician', 'Radiographer']:
         return reverse_lazy('lab:radiology_dashboard')
-    elif role in ['Accountant', 'SHA Manager']:
+    elif role == 'Accountant':
         return reverse_lazy('accounts:accountant_dashboard')
+    elif role == 'SHA Manager':
+        return reverse_lazy('accounts:insurance_manager')
     elif role == 'Procurement Officer':
         return reverse_lazy('inventory:item_list')
     return reverse_lazy('users:dashboard')

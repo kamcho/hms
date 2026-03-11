@@ -20,7 +20,7 @@ class Patient(models.Model):
     
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    id_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    id_number = models.CharField(max_length=20, null=True, blank=True)
     date_of_birth = models.DateField()
     age = models.PositiveIntegerField(editable=False)  # Will be calculated automatically
     phone = models.CharField(max_length=15, null=True, blank=True)
@@ -30,6 +30,9 @@ class Patient(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='patients_created')
     
+    class Meta:
+        unique_together = ('id_number', 'phone')
+        
     def save(self, *args, **kwargs):
         # Calculate age based on date of birth
         today = timezone.now().date()
