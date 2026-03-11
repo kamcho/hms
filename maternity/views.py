@@ -1963,6 +1963,13 @@ def admit_to_maternity(request):
             patient_form = None
         else:
             patient_form = PatientForm(request.POST)
+            # Make fields optional for maternity admission
+            if 'consultation_type' in patient_form.fields:
+                patient_form.fields['consultation_type'].required = False
+            if 'payment_method' in patient_form.fields:
+                patient_form.fields['payment_method'].required = False
+            if 'gender' in patient_form.fields:
+                patient_form.fields['gender'].required = False
 
         pregnancy_form = PregnancyRegistrationForm(request.POST)
         delivery_form = LaborDeliveryForm(request.POST)
@@ -2062,6 +2069,14 @@ def admit_to_maternity(request):
             messages.success(request, f'Patient {patient.full_name} has been admitted to maternity ward.')
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
         else:
+            # Debugging: Print errors to console to identify which fields are failing
+            if patient_form and not patient_valid:
+                print(f"DEBUG: PatientForm Errors: {patient_form.errors}")
+            if not pregnancy_form.is_valid():
+                print(f"DEBUG: PregnancyForm Errors: {pregnancy_form.errors}")
+            if not delivery_form.is_valid():
+                print(f"DEBUG: DeliveryForm Errors: {delivery_form.errors}")
+            
             messages.error(request, "Please correct the errors in the form sections below.")
     else:
         patient_form = PatientForm(initial={'gender': 'F'}) # Force female initial

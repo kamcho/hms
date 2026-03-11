@@ -14,6 +14,51 @@
         <p class="text-slate-500 font-medium ml-13">Create new patient record and register for immediate labor & delivery admission</p>
     </div>
 
+    <!-- Error Summary -->
+    {% if messages or patient_form.errors or pregnancy_form.errors or delivery_form.errors %}
+    <div class="mb-8 space-y-4">
+        {% for message in messages %}
+        <div class="p-4 rounded-2xl {% if message.tags == 'error' %}bg-rose-50 border border-rose-100 text-rose-700{% else %}bg-blue-50 border border-blue-100 text-blue-700{% endif %} font-bold flex items-center gap-3">
+            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+
+        {% if patient_form.errors %}
+        <div class="p-5 rounded-2xl bg-rose-50 border border-rose-100">
+            <h3 class="text-rose-800 font-black text-sm uppercase tracking-wider mb-2">Patient Section Errors:</h3>
+            <ul class="text-rose-600 text-xs font-bold list-disc list-inside">
+                {% for field, errors in patient_form.errors.items %}
+                <li>{{ field|title }}: {{ errors|striptags }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if pregnancy_form.errors %}
+        <div class="p-5 rounded-2xl bg-rose-50 border border-rose-100">
+            <h3 class="text-rose-800 font-black text-sm uppercase tracking-wider mb-2">Pregnancy Section Errors:</h3>
+            <ul class="text-rose-600 text-xs font-bold list-disc list-inside">
+                {% for field, errors in pregnancy_form.errors.items %}
+                <li>{{ field|title }}: {{ errors|striptags }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if delivery_form.errors %}
+        <div class="p-5 rounded-2xl bg-rose-50 border border-rose-100">
+            <h3 class="text-rose-800 font-black text-sm uppercase tracking-wider mb-2">Admission Section Errors:</h3>
+            <ul class="text-rose-600 text-xs font-bold list-disc list-inside">
+                {% for field, errors in delivery_form.errors.items %}
+                <li>{{ field|title }}: {{ errors|striptags }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <form method="post" class="space-y-8" id="admissionForm">
         {% csrf_token %}
         <input type="hidden" name="existing_patient_id" id="id_existing_patient_id">
