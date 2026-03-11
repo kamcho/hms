@@ -1,0 +1,278 @@
+/* Accountant Dashboard Styles */
+.accountant-dashboard {
+    padding: 20px;
+}
+
+/* Date Filter Form Styles */
+.accountant-dashboard .filter-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.accountant-dashboard .filter-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 8px;
+}
+
+.accountant-dashboard .filter-card .card-body {
+    padding: 1.5rem;
+}
+
+.accountant-dashboard .form-label {
+    font-weight: 600;
+    color: #4e73df;
+    margin-bottom: 0.5rem;
+}
+
+.accountant-dashboard .form-control {
+    border: 1px solid #e3e6f0;
+    border-radius: 6px;
+    padding: 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.accountant-dashboard .form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.accountant-dashboard .btn-group .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+}
+
+.accountant-dashboard .badge.bg-info {
+    background-color: #36b9cc !important;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.accountant-dashboard .card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.accountant-dashboard .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.accountant-dashboard .card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    color: #4e73df;
+}
+
+.accountant-dashboard .card-body {
+    padding: 1.5rem;
+}
+
+/* Revenue Cards */
+.accountant-dashboard .revenue-card {
+    border-left: 4px solid;
+}
+
+.accountant-dashboard .revenue-card.primary {
+    border-left-color: #4e73df;
+}
+
+.accountant-dashboard .revenue-card.success {
+    border-left-color: #1cc88a;
+}
+
+.accountant-dashboard .revenue-card.info {
+    border-left-color: #36b9cc;
+}
+
+/* Revenue card text styling */
+.accountant-dashboard .revenue-card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.accountant-dashboard .revenue-card h5 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+}
+
+/* Table Styles */
+.accountant-dashboard .table {
+    margin-bottom: 0;
+}
+
+.accountant-dashboard .table thead th {
+    border-top: none;
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: #5a5c69;
+    background-color: #f8f9fc;
+}
+
+.accountant-dashboard .table td {
+    vertical-align: middle;
+    padding: 0.75rem;
+}
+
+.accountant-dashboard .table tbody tr:hover {
+    background-color: #f8f9fc;
+}
+
+/* Badges */
+.accountant-dashboard .badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+}
+
+/* Payment Status Cards */
+.accountant-dashboard .payment-status-card {
+    text-align: center;
+}
+
+.accountant-dashboard .payment-status-card .display-4 {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.accountant-dashboard .payment-status-card h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Service Breakdown Table */
+.accountant-dashboard .service-breakdown-table {
+    font-size: 0.9rem;
+}
+
+.accountant-dashboard .service-breakdown-table td {
+    padding: 0.5rem;
+}
+
+/* Recent Transactions Table */
+.accountant-dashboard .transactions-table {
+    font-size: 0.85rem;
+}
+
+.accountant-dashboard .transactions-table td {
+    padding: 0.75rem 0.5rem;
+}
+
+/* Chart Styles */
+.accountant-dashboard .chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.accountant-dashboard #revenueChart {
+    max-height: 300px;
+}
+
+.accountant-dashboard #serviceChart {
+    max-height: 300px;
+}
+
+.accountant-dashboard .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accountant-dashboard .btn-group-sm .btn {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.accountant-dashboard .btn-group-sm .btn.active {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+/* Export button styling */
+.accountant-dashboard .btn-success {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+.accountant-dashboard .btn-success:hover {
+    background-color: #17a673;
+    border-color: #169b6b;
+}
+
+/* Responsive chart sizing */
+@media (max-width: 768px) {
+    .accountant-dashboard .chart-container {
+        height: 250px;
+    }
+    
+    .accountant-dashboard #revenueChart,
+    .accountant-dashboard #serviceChart {
+        max-height: 250px;
+    }
+    
+    .accountant-dashboard .chart-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .accountant-dashboard .chart-header .btn-group {
+        width: 100%;
+    }
+}
+@media (max-width: 768px) {
+    .accountant-dashboard {
+        padding: 10px;
+    }
+    
+    .accountant-dashboard .card {
+        margin-bottom: 1rem;
+    }
+    
+    .accountant-dashboard .card-body {
+        padding: 1rem;
+    }
+    
+    .accountant-dashboard .revenue-card h2 {
+        font-size: 2rem;
+    }
+    
+    .accountant-dashboard .payment-status-card .display-4 {
+        font-size: 2rem;
+    }
+}
+
+/* Animation for numbers */
+.accountant-dashboard .revenue-card h2 {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
