@@ -1154,7 +1154,7 @@ def charge_procedure(request):
 @user_passes_test(is_accountant)
 def service_list(request):
     """List all services with search and filter"""
-    services = Service.objects.all().select_related('department')
+    services = Service.objects.all().select_related('department').order_by('name')
 
     search = request.GET.get('search', '')
     department_filter = request.GET.get('department', '')

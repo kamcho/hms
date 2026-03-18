@@ -52,9 +52,9 @@ body { background: var(--lab-bg); color: var(--text-primary); }
 
 .pv-card {
     background: var(--lab-card-bg); border: 1px solid var(--lab-border); border-radius: 20px;
-    overflow: hidden; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.pv-card:hover { transform: translateY(-4px); border-color: rgba(99,102,241,0.4); box-shadow: 0 16px 48px -12px rgba(0,0,0,0.4); }
+.pv-card:hover { border-color: rgba(99,102,241,0.4); box-shadow: 0 16px 48px -12px rgba(0,0,0,0.4); }
 .pv-card-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--lab-border); }
 .pv-avatar { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; color: white; flex-shrink: 0; }
 .pv-patient-info { flex: 1; min-width: 0; }
@@ -206,7 +206,7 @@ body { background: var(--lab-bg); color: var(--text-primary); }
     <div class="section-title"><i class="fas fa-users"></i> Patient Workload</div>
     <div class="pv-grid">
         {% for group in patient_visit_groups %}
-        <div class="pv-card" onclick='openLabModal({{ forloop.counter0 }})' data-group-idx="{{ forloop.counter0 }}">
+        <div class="pv-card" data-group-idx="{{ forloop.counter0 }}">
             <div class="pv-card-header">
                 <div class="pv-avatar">{{ group.patient.first_name|first }}</div>
                 <div class="pv-patient-info">

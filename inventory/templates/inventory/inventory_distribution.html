@@ -53,51 +53,106 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
-    /* Stats Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .stat-card {
-        background: white;
-        padding: 1.5rem;
+    /* Accordion Styling */
+    .accordion-section {
+        margin-bottom: 2rem;
         border-radius: 24px;
+        overflow: hidden;
         border: 1px solid var(--glass-border);
         box-shadow: var(--card-shadow);
-        position: relative;
+        background: white;
+    }
+
+    .accordion-header {
+        padding: 1.5rem 2rem;
+        background: #f8fafc;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.3s ease;
+    }
+
+    .accordion-header:hover {
+        background: #f1f5f9;
+    }
+
+    .accordion-header h2 {
+        font-size: 1.125rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .accordion-content {
+        max-height: 0;
         overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: var(--primary-gradient);
-        opacity: 0.03;
+    .accordion-content.open {
+        max-height: 1000px;
+        padding: 2rem;
     }
 
-    .stat-label {
+    /* Form Styling */
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+        display: block;
         font-size: 0.75rem;
         font-weight: 800;
         color: var(--text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.05em;
         margin-bottom: 0.5rem;
     }
 
-    .stat-value {
-        font-size: 1.75rem;
-        font-weight: 800;
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        font-weight: 600;
         color: var(--text-primary);
+        transition: all 0.3s ease;
     }
 
-    /* Distribution Table */
+    .form-control:focus {
+        border-color: #6366f1;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-save {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 14px;
+        border: none;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.6);
+    }
+
+    /* Table Design Refresh */
     .glass-container {
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
@@ -105,25 +160,13 @@
         padding: 2rem;
         box-shadow: var(--card-shadow);
         backdrop-filter: blur(12px);
-    }
-
-    .table-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         margin-bottom: 2rem;
-    }
-
-    .table-header h2 {
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: #1e293b;
     }
 
     .distribution-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 0.75rem;
+        border-spacing: 0 0.5rem;
     }
 
     .distribution-table th {
@@ -133,75 +176,64 @@
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
     }
 
-    .distribution-table tr td {
-        background: white;
-        padding: 1.25rem 1.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .distribution-table tr td:first-child {
-        border-radius: 16px 0 0 16px;
-        border-left: 1px solid var(--glass-border);
-        border-top: 1px solid var(--glass-border);
-        border-bottom: 1px solid var(--glass-border);
-    }
-
-    .distribution-table tr td:last-child {
-        border-radius: 0 16px 16px 0;
-        border-right: 1px solid var(--glass-border);
-        border-top: 1px solid var(--glass-border);
-        border-bottom: 1px solid var(--glass-border);
-    }
-
-    .distribution-table tr:hover td {
+    .distribution-table td {
         background: #f8fafc;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.05);
+        padding: 1.25rem 1.5rem;
     }
 
-    .dept-name {
-        font-weight: 700;
-        color: var(--text-primary);
-    }
+    .distribution-table tr td:first-child { border-radius: 16px 0 0 16px; }
+    .distribution-table tr td:last-child { border-radius: 0 16px 16px 0; }
 
     .qty-badge {
         background: rgba(99, 102, 241, 0.1);
         color: #6366f1;
-        padding: 0.5rem 1rem;
-        border-radius: 12px;
+        padding: 0.4rem 0.8rem;
+        border-radius: 10px;
         font-weight: 800;
-        font-size: 0.875rem;
     }
 
-    .progress-bar-container {
-        height: 8px;
-        background: #f1f5f9;
-        border-radius: 999px;
-        overflow: hidden;
-        width: 100px;
-        margin-left: auto;
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
     }
 
-    .progress-bar {
-        height: 100%;
-        background: var(--primary-gradient);
-        border-radius: 999px;
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 24px;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
     }
 </style>
 
 <div class="distribution-header">
     <div class="distribution-title">
-        <nav
-            style="display: flex; gap: 0.5rem; font-size: 0.625rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 1rem;">
+        <nav style="display: flex; gap: 0.5rem; font-size: 0.625rem; font-weight: 900; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 1rem;">
             <a href="{% url 'inventory:item_list' %}" style="text-decoration: none; color: inherit;">Inventory</a>
             <span>/</span>
-            <span style="color: #6366f1;">Distribution Details</span>
+            <span style="color: #6366f1;">Item Details</span>
         </nav>
         <h1>{{ item.name }}</h1>
-        <p style="color: var(--text-secondary); font-weight: 600;">Stock Allocation Across Facilities</p>
+        <p style="color: var(--text-secondary); font-weight: 600;">Stock Allocation & Management</p>
     </div>
     <a href="{% url 'inventory:item_list' %}" class="btn-back">
         <i class="fas fa-arrow-left"></i>
@@ -211,109 +243,297 @@
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-label">Total Inventory</div>
-        <div class="stat-value">{{ total_stock }} <span
-                style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">{{ item.dispensing_unit }}</span></div>
+        <div class="stat-label">Total Stock</div>
+        <div class="stat-value">{{ total_stock }} <small style="font-size: 0.8rem;">{{ item.dispensing_unit }}</small></div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Reporting Departments</div>
-        <div class="stat-value">{{ distribution|length }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Selling Price</div>
+        <div class="stat-label">Base Price</div>
         <div class="stat-value">KES {{ item.selling_price }}</div>
     </div>
+    <div class="stat-card">
+        <div class="stat-label">Category</div>
+        <div class="stat-value">{{ item.category.name }}</div>
+    </div>
     <div class="stat-card" style="background: var(--primary-gradient); color: white;">
-        <div class="stat-label" style="color: rgba(255,255,255,0.8);">Category</div>
-        <div class="stat-value" style="color: white;">{{ item.category.name }}</div>
+        <div class="stat-label" style="color: rgba(255,255,255,0.8);">Status</div>
+        <div class="stat-value" style="color: white; font-size: 1.25rem;">Active Inventory</div>
     </div>
 </div>
 
-<div class="glass-container">
-    <div class="table-header">
-        <h2>Departmental Breakdown</h2>
-        <div
-            style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-info-circle"></i>
-            Real-time stock levels per facility
-        </div>
+<!-- Edit Form Accordion (Defaults to Closed) -->
+<div class="accordion-section">
+    <div class="accordion-header" onclick="toggleAccordion('editFormContainer')">
+        <h2><i class="fas fa-edit"></i> Edit Item Specifications</h2>
+        <i class="fas fa-chevron-down accordion-icon" id="editFormIcon"></i>
     </div>
+    <div class="accordion-content" id="editFormContainer">
+        <form method="post" class="item-edit-form">
+            {% csrf_token %}
+            
+            <div class="edit-form-grid">
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: #6366f1; text-transform: uppercase;">Basic Information</h3>
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        {{ item_form.name }}
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        {{ item_form.category }}
+                    </div>
+                    <div class="form-group">
+                        <label>Selling Price (KES)</label>
+                        {{ item_form.selling_price }}
+                    </div>
+                    <div class="form-group">
+                        <label>Dispensing Unit</label>
+                        {{ item_form.dispensing_unit }}
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; padding-top: 1rem;">
+                        {{ item_form.is_dispensed_as_whole }}
+                        <label style="margin-bottom: 0;">Is Dispensed as Whole?</label>
+                    </div>
+                </div>
 
+                <!-- Medication Details (Conditional) -->
+                {% if med_form %}
+                <div class="form-section">
+                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: #6366f1; text-transform: uppercase;">Clinical Data</h3>
+                    <div class="form-group">
+                        <label>Generic Name</label>
+                        {{ med_form.generic_name }}
+                    </div>
+                    <div class="form-group">
+                        <label>Drug Class</label>
+                        {{ med_form.drug_class }}
+                    </div>
+                    <div class="form-group">
+                        <label>Formulation</label>
+                        {{ med_form.formulation }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Consumable Details (Conditional) -->
+                {% if con_form %}
+                <div class="form-section">
+                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: #6366f1; text-transform: uppercase;">Consumable Specs</h3>
+                    <div class="form-group">
+                        <label>Material</label>
+                        {{ con_form.material }}
+                    </div>
+                    <div class="form-group">
+                        <label>Size</label>
+                        {{ con_form.size }}
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; padding-top: 1rem;">
+                        {{ con_form.is_sterile }}
+                        <label style="margin-bottom: 0;">Is Sterile?</label>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn-back" onclick="toggleAccordion('editFormContainer')" style="background: #f1f5f9; box-shadow: none;">Cancel</button>
+                <button type="submit" class="btn-save">Update Specifications</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Distribution Breakdown -->
+<div class="glass-container">
+    <div style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: #1e293b;">Departmental Distribution</h2>
+    </div>
     <table class="distribution-table">
         <thead>
             <tr>
-                <th>Department Name</th>
+                <th>Current Location</th>
                 <th>Batches</th>
                 <th>Units Allocated</th>
-                <th style="text-align: right;">Distribution %</th>
+                <th>Allocation %</th>
+                <th style="text-align: right;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for dist in distribution %}
             <tr>
-                <td class="dept-name">{{ dist.current_location__name }}</td>
-                <td style="font-weight: 600; color: var(--text-secondary);">{{ dist.batch_count }} Batches</td>
+                <td style="font-weight: 700;">{{ dist.current_location__name }}</td>
+                <td style="color: var(--text-secondary); font-weight: 600;">{{ dist.batch_count }} Active Batches</td>
                 <td><span class="qty-badge">{{ dist.total_quantity }} {{ item.dispensing_unit }}</span></td>
                 <td>
-                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
-                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-primary);">
-                            {% widthratio dist.total_quantity total_stock 100 %}%
-                        </span>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar"
-                                style="width: {% widthratio dist.total_quantity total_stock 100 %}%"></div>
-                        </div>
-                    </div>
+                    <div style="font-weight: 800; color: #6366f1;">{% widthratio dist.total_quantity total_stock 100 %}%</div>
+                </td>
+                <td style="text-align: right;">
+                    <button type="button" 
+                            onclick="openReconcileModal('{{ dist.current_location__id }}', '{{ dist.current_location__name|escapejs }}', '{{ dist.total_quantity }}')"
+                            style="background: none; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: all 0.2s;"
+                            onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)';"
+                            onmouseout="this.style.color='#64748b'; this.style.background='transparent';">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4"
-                    style="text-align: center; padding: 4rem; color: var(--text-secondary); font-weight: 600;">
-                    No stock currently distributed for this item.
-                </td>
+                <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No stock distributed.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="glass-container" style="margin-top: 2rem;">
-    <div class="table-header">
-        <h2>Recent Movements & Adjustments</h2>
+<!-- Recent Movements -->
+<div class="glass-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 0;">Recent Activity Log</h2>
+        
+        <form method="GET" style="display: flex; gap: 0.75rem; flex-wrap: wrap; background: #f1f5f9; padding: 1rem; border-radius: 16px; align-items: flex-end;">
+            <div class="filter-group">
+                <label style="display: block; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">From Date</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div class="filter-group">
+                <label style="display: block; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">To Date</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div class="filter-group">
+                <label style="display: block; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">User</label>
+                <select name="user" class="form-control" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+                    <option value="">All Users</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if filters.user == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label style="display: block; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">Min Qty</label>
+                <input type="number" name="min_qty" value="{{ filters.min_qty }}" placeholder="-100" class="form-control" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 8px; border: 1px solid #cbd5e1; width: 80px;">
+            </div>
+            <div class="filter-group">
+                <label style="display: block; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">Max Qty</label>
+                <input type="number" name="max_qty" value="{{ filters.max_qty }}" placeholder="100" class="form-control" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 8px; border: 1px solid #cbd5e1; width: 80px;">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn-save" style="padding: 0.5rem 1rem; font-size: 0.875rem; box-shadow: none;">Filter</button>
+                <a href="{% url 'inventory:inventory_distribution' item.id %}" class="btn-back" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 14px; box-shadow: none;">Reset</a>
+            </div>
+        </form>
     </div>
     <table class="distribution-table">
         <thead>
             <tr>
-                <th>Action Date</th>
+                <th>Date & Time</th>
                 <th>Location</th>
                 <th>Qty Change</th>
-                <th>Adjustment Type</th>
-                <th>Logged By</th>
+                <th>Type</th>
+                <th>Authorized By</th>
             </tr>
         </thead>
         <tbody>
             {% for adj in recent_adjustments %}
             <tr>
-                <td style="color: var(--text-secondary); font-weight: 600;">{{ adj.adjusted_at|date:"M d, Y H:i" }}</td>
-                <td class="dept-name">{{ adj.adjusted_from.name|default:"Main Store" }}</td>
+                <td style="font-weight: 600;">{{ adj.adjusted_at|date:"M d, Y H:i" }}</td>
+                <td style="font-weight: 700;">{{ adj.adjusted_from.name|default:"Main Store" }}</td>
                 <td style="font-weight: 800; color: {% if adj.quantity > 0 %}#10b981{% else %}#ef4444{% endif %};">
                     {% if adj.quantity > 0 %}+{% endif %}{{ adj.quantity }}
                 </td>
-                <td><span
-                        style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-secondary);">{{ adj.adjustment_type }}</span></td>
-                <td style="color: var(--text-primary); font-weight: 600;">{{ adj.adjusted_by.get_full_name|default:adj.adjusted_by.username }}</td>
+                <td><span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">{{ adj.adjustment_type }}</span></td>
+                <td style="font-weight: 600;">{{ adj.adjusted_by.get_full_name|default:adj.adjusted_by.username }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5"
-                    style="text-align: center; padding: 4rem; color: var(--text-secondary); font-weight: 600;">
-                    No recent adjustments recorded for this item.
-                </td>
+                <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No recent activity.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
+<script>
+    function toggleAccordion(id) {
+        const content = document.getElementById(id);
+        const icon = document.getElementById(id.replace('Container', 'Icon'));
+        
+        content.classList.toggle('open');
+        
+        if (content.classList.contains('open')) {
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    // Apply classes to django form widgets
+    document.querySelectorAll('.item-edit-form input:not([type="checkbox"]), .item-edit-form select').forEach(el => {
+        el.classList.add('form-control');
+    });
+
+    // Reconciliation Modal Logic
+    function openReconcileModal(locationId, locationName, currentQty) {
+        document.getElementById('reconcileLocationName').textContent = locationName;
+        document.getElementById('currentSystemQty').textContent = currentQty;
+        document.getElementById('actual_count').value = currentQty;
+        
+        const form = document.getElementById('reconcileForm');
+        form.action = `{% url 'inventory:reconcile_stock' item.id 0 %}`.replace('0', locationId);
+        
+        document.getElementById('reconcileModal').style.display = 'flex';
+    }
+
+    function closeReconcileModal() {
+        document.getElementById('reconcileModal').style.display = 'none';
+    }
+
+    // Close on click outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('reconcileModal');
+        if (event.target == modal) closeReconcileModal();
+    }
+</script>
+
+<!-- Reconciliation Modal -->
+<div id="reconcileModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; width: 100%; max-width: 400px; border-radius: 24px; padding: 2rem; box-shadow: var(--card-shadow); animation: modalPop 0.3s ease-out;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: #1e293b;">Stock Reconciliation</h3>
+            <button onclick="closeReconcileModal()" style="background: none; border: none; font-size: 1.25rem; color: #64748b; cursor: pointer;">&times;</button>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 1rem; border-radius: 16px; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">Location</div>
+            <div id="reconcileLocationName" style="font-weight: 700; color: #1e293b;">-</div>
+            <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #64748b;">
+                System Record: <span id="currentSystemQty" style="font-weight: 800; color: #6366f1;">-</span> {{ item.dispensing_unit }}
+            </div>
+        </div>
+
+        <form id="reconcileForm" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Physical Count (Actual)</label>
+                <input type="number" name="actual_count" id="actual_count" class="form-control" style="font-size: 1.25rem; font-weight: 800; text-align: center;" min="0" required>
+            </div>
+            
+            <p style="font-size: 0.7rem; color: #64748b; font-style: italic; margin-top: 1rem; margin-bottom: 1.5rem;">
+                * This will create a 'Correction' adjustment to align system records with reality.
+            </p>
+
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" class="btn-back" onclick="closeReconcileModal()" style="width: 100%; justify-content: center; background: #f1f5f9; box-shadow: none;">Cancel</button>
+                <button type="submit" class="btn-save" style="width: 100%;">Update Stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    @keyframes modalPop {
+        from { opacity: 0; transform: scale(0.95) translateY(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+</style>
 {% endblock %}

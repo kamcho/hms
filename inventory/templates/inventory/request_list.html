@@ -1,6 +1,6 @@
-{% extends 'users/dashboard_base.html' %}
+{% extends "users/dashboard_base.html" %}
 {% load static %}
-{% block title %}Inventory Requests - HMS{% endblock %}
+{% block title %}Inventory Requests - HMS{% endblock title %}
 {% block content %}
     <style>
     :root {
@@ -238,11 +238,12 @@
                             <th>Status</th>
                             <th>Requested By</th>
                             <th>Requested At</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for request in requests %}
-                            <tr>
+                            <tr {% if request.status == "Pending" %}onclick="openRequestModal('{{ request.id }}', '{{ request.item.name|escapejs }}', '{{ request.quantity }}', '{{ request.location.name|escapejs }}', '{{ request.requested_by.get_full_name|default:request.requested_by.username|escapejs }}', '{{ request.requested_at|date:'M d, Y H:i'|escapejs }}', '{{ request.status }}', '{{ request.quantity }}')" style="cursor: pointer;"{% endif %}>
                                 <td class="item-name">{{ request.item.name }}</td>
                                 <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
                                 <td>
@@ -253,6 +254,15 @@
                                 </td>
                                 <td class="requested-by">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
                                 <td class="requested-at">{{ request.requested_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if request.status == 'Pending' %}
+                                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                            Review
+                                        </button>
+                                    {% else %}
+                                        <span class="status-badge status-{{ request.status|lower }}">{{ request.status }}</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -269,4 +279,99 @@
             {% endif %}
         </div>
     </div>
-{% endblock %}
+
+    <!-- Request Action Modal -->
+    <div id="requestModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 100%; max-width: 500px; border-radius: 24px; padding: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Review Request</h3>
+                <button onclick="closeRequestModal()" style="background: rgba(100, 116, 139, 0.1); border: none; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="margin-bottom: 2rem; background: #f8fafc; border-radius: 16px; padding: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Item</div>
+                        <div id="modal-item" style="font-weight: 700; color: #1e293b; font-size: 1.125rem;">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Quantity</div>
+                        <div id="modal-quantity" style="font-weight: 700; color: #1e293b; font-size: 1.125rem;">-</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Location</div>
+                        <div id="modal-location" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Requested By</div>
+                        <div id="modal-user" style="font-weight: 600; color: #1e293b;">-</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                    <label style="font-size: 0.875rem; color: #1e293b; margin-bottom: 0.75rem; display: block; font-weight: 600;">
+                        Approve Quantity to Transfer:
+                    </label>
+                    <input type="number" form="requestActionForm" name="adjusted_quantity" id="adjusted_quantity" 
+                           class="filter-input" style="width: 100%; font-weight: 700; font-size: 1.25rem; text-align: center; border: 2px solid #e2e8f0; border-radius: 12px; padding: 0.75rem;" min="1" required>
+                </div>
+            </div>
+            <form id="requestActionForm" method="post" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1rem;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="reject" style="background: white; color: #ef4444; border: 2px solid #fee2e2; padding: 1rem; border-radius: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i class="fas fa-times-circle"></i> Reject
+                </button>
+                <button type="submit" name="action" value="approve" style="background: var(--success-gradient); color: white; border: none; padding: 1rem; border-radius: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i class="fas fa-check-circle"></i> Approve & Transfer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+    @keyframes modalPop {
+        from { opacity: 0; transform: scale(0.9) translateY(20px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .filter-input {
+        transition: all 0.3s ease;
+        outline: none;
+    }
+    .filter-input:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    </style>
+
+    <script>
+    function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty) {
+        document.getElementById('modal-item').textContent = item;
+        document.getElementById('modal-quantity').textContent = quantity + ' units';
+        document.getElementById('modal-location').textContent = location;
+        document.getElementById('modal-user').textContent = user;
+        
+        const qtyInput = document.getElementById('adjusted_quantity');
+        if (qtyInput) {
+            qtyInput.value = adjustedQty;
+            qtyInput.max = adjustedQty; // Default to not approving more than requested
+        }
+
+        const form = document.getElementById('requestActionForm');
+        form.action = `/inventory/requests/${id}/update/`;
+
+        const modal = document.getElementById('requestModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeRequestModal() {
+        document.getElementById('requestModal').style.display = 'none';
+    }
+
+    // Close on click outside
+    document.getElementById('requestModal').addEventListener('click', function (e) {
+        if (e.target === this) closeRequestModal();
+    });
+    </script>
+{% endblock content %}

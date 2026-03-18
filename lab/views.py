@@ -114,6 +114,9 @@ def radiology_dashboard(request):
         # Build test info
         related = item.related_results[0] if item.related_results else None
         test_status = related.status if related else 'Pending'
+        is_paid = (item.amount > 0 and item.is_settled) or item.invoice.status == 'Paid'
+        is_sha = visit.payment_method == 'SHA' if visit else False
+
         grouped[key]['tests'].append({
             'item_id': item.id,
             'service_name': item.service.name if item.service else item.name,
@@ -123,13 +126,15 @@ def radiology_dashboard(request):
             'status': test_status,
             'results_text': related.results if related else '',
             'specimen': related.specimen if related else '',
-            'is_paid': (item.amount > 0 and item.is_settled) or item.invoice.status == 'Paid',
+            'is_paid': is_paid,
         })
         grouped[key]['total_tests'] += 1
-        if test_status == 'Completed':
+        
+        # Only count as 'Done' if it is both Completed AND visible (Paid or SHA)
+        if test_status == 'Completed' and (is_paid or is_sha):
             grouped[key]['completed_tests'] += 1
     
-    patient_visit_groups = list(grouped.values())
+    patient_visit_groups = [g for g in grouped.values() if g['total_tests'] > g['completed_tests']]
     
     context = {
         'dashboard_title': dashboard_title,
@@ -445,7 +450,7 @@ def lab_result_detail(request, result_id):
     from home.models import Departments, Visit
     from home.views import _get_normalized_history
     
-    dept_focus = 'Imaging' if request.user.role == 'Radiographer' else 'Lab'
+    dept_focus = lab_result.service.department.name
     
     # Get previously dispensed items for this visit/context
     visit = None
@@ -468,7 +473,7 @@ def lab_result_detail(request, result_id):
         'parameter_form': parameter_form,
         'title': f'Lab Result - {lab_result.patient.full_name}',
         'is_read_only': is_read_only,
-        'dispensing_departments': Departments.objects.all().order_by('name'),
+        'dispensing_departments': Departments.objects.filter(name__icontains=dept_focus).order_by('name'),
         'dispensed_items': dispensed_items,
         'visit': visit,
         'patient': lab_result.patient,

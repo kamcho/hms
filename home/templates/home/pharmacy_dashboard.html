@@ -300,15 +300,15 @@
         <!-- Hero Header -->
         <div class="pharmacy-hero">
             <h1>
-                {% if user.role == 'Pharmacist' %}
-                    OPD Pharmacy Operations
+                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
+                    Hospital Pharmacy Operations
                 {% else %}
                     IPD Medication Management
                 {% endif %}
             </h1>
             <p>
-                {% if user.role == 'Pharmacist' %}
-                    Dispensing medications and consumables for Out-Patient visits from <strong>{{ pharmacy_dept.name }}</strong>.
+                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
+                    Dispensing medications and consumables for Out-Patient and In-Patient visits from <strong>{{ pharmacy_dept.name }}</strong>.
                 {% else %}
                     Managing medication charts and consumables for In-Patient admissions from <strong>{{ pharmacy_dept.name }}</strong>.
                 {% endif %}
@@ -346,7 +346,7 @@
 
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
             <div>
-                {% if user.role == 'Pharmacist' %}
+                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
                     <!-- OPD Pending Items -->
                     <div class="section-card">
                         <div class="section-header">
@@ -448,7 +448,7 @@
                     </div>
                 {% endif %}
 
-                {% if user.role == 'Nurse' %}
+                {% if user.role == 'Nurse' or user.role == 'Pharmacist' or user.role == 'Admin' %}
                     <!-- IPD Pending Items -->
                     <div class="section-card">
                         <div class="section-header">

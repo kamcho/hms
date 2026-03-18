@@ -38,9 +38,10 @@ class AdmissionForm(forms.ModelForm):
 class MedicationChartForm(forms.ModelForm):
     class Meta:
         model = MedicationChart
-        fields = ['item', 'dose_count', 'frequency', 'duration_days', 'quantity', 'instructions']
+        fields = ['item', 'administration_type', 'dose_count', 'frequency', 'duration_days', 'quantity', 'instructions']
         widgets = {
             'item': forms.Select(attrs={'class': 'medication-select'}),
+            'administration_type': forms.Select(attrs={'class': 'form-control'}),
             'dose_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Pills/Dose', 'class': 'form-control'}),
             'frequency': forms.Select(attrs={'class': 'form-control'}),
             'duration_days': forms.NumberInput(attrs={'min': 1, 'class': 'form-control', 'placeholder': 'Days to run'}),

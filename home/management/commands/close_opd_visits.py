@@ -3,10 +3,10 @@ from django.utils import timezone
 from home.models import Visit
 
 class Command(BaseCommand):
-    help = 'Automatically closes (deactivates) all active Out-Patient (OPD) visits'
+    help = 'Automatically closes all active Out-Patient (OPD) visits at the end of the day'
 
     def handle(self, *args, **options):
-        # Filter for active OPD visits
+        # We target active OUT-PATIENT visits
         active_opd_visits = Visit.objects.filter(
             visit_type='OUT-PATIENT',
             is_active=True
@@ -15,10 +15,10 @@ class Command(BaseCommand):
         count = active_opd_visits.count()
         
         if count > 0:
-            # Update is_active to False
+            # Bulk update for efficiency
             active_opd_visits.update(is_active=False)
             self.stdout.write(
-                self.style.SUCCESS(f'Successfully closed {count} active OPD visits at {timezone.now()}')
+                self.style.SUCCESS(f'Successfully closed {count} OPD visits at {timezone.now()}')
             )
         else:
             self.stdout.write(

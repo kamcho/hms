@@ -570,36 +570,37 @@ def add_medication(request, admission_id):
             med.prescribed_by = request.user
             med.save()
             
-            # Auto-generate MAR grid
-            from .models import MedicationAdministrationRecord
-            
-            # Map frequency strings to doses per day
-            freq_map = {
-                'Once Daily': 1,
-                'Twice Daily': 2,
-                'Thrice Daily': 3,
-                'Four Times Daily': 4,
-                'Every 6 Hours': 4,
-                'Every 8 Hours': 3,
-                'Every 12 Hours': 2,
-                'Every 24 Hours': 1,
-                'As Needed': 1, # Default to 1 slot for PRN, can be expanded later
-            }
-            doses_per_day = freq_map.get(med.frequency, 1)
-            
-            mar_entries = []
-            for day in range(1, med.duration_days + 1):
-                for dose in range(1, doses_per_day + 1):
-                    mar_entries.append(
-                        MedicationAdministrationRecord(
-                            chart=med,
-                            day_number=day,
-                            dose_number=dose,
-                            status='Pending'
+            # Auto-generate MAR grid ONLY if administered in sessions
+            if med.administration_type == 'Sessions':
+                from .models import MedicationAdministrationRecord
+                
+                # Map frequency strings to doses per day
+                freq_map = {
+                    'Once Daily': 1,
+                    'Twice Daily': 2,
+                    'Thrice Daily': 3,
+                    'Four Times Daily': 4,
+                    'Every 6 Hours': 4,
+                    'Every 8 Hours': 3,
+                    'Every 12 Hours': 2,
+                    'Every 24 Hours': 1,
+                    'As Needed': 1, # Default to 1 slot for PRN, can be expanded later
+                }
+                doses_per_day = freq_map.get(med.frequency, 1)
+                
+                mar_entries = []
+                for day in range(1, med.duration_days + 1):
+                    for dose in range(1, doses_per_day + 1):
+                        mar_entries.append(
+                            MedicationAdministrationRecord(
+                                chart=med,
+                                day_number=day,
+                                dose_number=dose,
+                                status='Pending'
+                            )
                         )
-                    )
-            if mar_entries:
-                MedicationAdministrationRecord.objects.bulk_create(mar_entries)
+                if mar_entries:
+                    MedicationAdministrationRecord.objects.bulk_create(mar_entries)
 
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'message': 'Medication added successfully.'})
@@ -608,6 +609,39 @@ def add_medication(request, admission_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'errors': form.errors.as_json()})
     return redirect('inpatient:patient_case_folder', admission_id=admission.id)
+
+@login_required
+def discontinue_medication(request, medication_id):
+    if request.user.role != 'Doctor':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Only doctors can discontinue inpatient medications.'})
+        messages.error(request, "Only doctors can discontinue inpatient medications.")
+        return redirect('inpatient:dashboard')
+        
+    from .models import MedicationChart
+    medication = get_object_or_404(MedicationChart, id=medication_id)
+    admission = medication.admission
+    
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        error_msg = "Cannot modify records for a previous visit."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error_msg})
+        messages.error(request, error_msg)
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
+        
+    medication.is_active = False
+    
+    from .models import MedicationAdministrationRecord
+    MedicationAdministrationRecord.objects.filter(chart=medication, status='Pending').delete()
+    medication.save()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'{medication.item.name} discontinued.'})
+    messages.success(request, f"Medication {medication.item.name} discontinued.")
+    return redirect(f'/inpatient/admissions/{admission.id}/case-folder/?tab=medications')
 
 @login_required
 def add_service(request, admission_id):
@@ -788,6 +822,7 @@ def discharge_patient(request, admission_id):
     else:
         ward_cost = 0
     
+    # Calculate meds (based on quantity dispensed initially by pharmacy)
     med_cost = admission.medications.filter(is_dispensed=True).aggregate(
         total=Sum(F('item__selling_price') * F('quantity'))
     )['total'] or 0

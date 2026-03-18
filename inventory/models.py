@@ -8,6 +8,9 @@ class Supplier(models.Model):
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
@@ -27,6 +30,7 @@ class InventoryCategory(models.Model):
 
     class Meta:
         verbose_name_plural = "Inventory Categories"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -45,6 +49,9 @@ class InventoryItem(models.Model):
     buying_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Cost price per dispensing unit")
     reorder_level = models.IntegerField(default=10, help_text="Minimum stock level before reordering")
     is_updated = models.BooleanField(default=False, help_text="Set to True once the item has been reviewed/updated")
+
+    class Meta:
+        ordering = ['name']
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

@@ -2289,8 +2289,8 @@ def pharmacy_dashboard(request):
     }
 
     context = {
-        'opd_groups': opd_groups if request.user.role == 'Pharmacist' else [],
-        'ipd_groups': ipd_groups if request.user.role == 'Nurse' else [],
+        'opd_groups': opd_groups if request.user.role in ['Pharmacist', 'Admin'] else [],
+        'ipd_groups': ipd_groups if request.user.role in ['Nurse', 'Pharmacist', 'Admin'] else [],
         'pending_items': pending_items,
         'pending_ipd_items': pending_ipd_items,
         'dispensed_items': dispensed_items,
@@ -2334,9 +2334,9 @@ def dispense_all_visit_items(request, visit_id):
         is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
         
         # Enforce role-based strictness
-        if is_ipd and request.user.role != 'Nurse':
-            return JsonResponse({'success': False, 'error': 'Only nurses can dispense IPD medications.'})
-        if not is_ipd and request.user.role != 'Pharmacist':
+        if is_ipd and request.user.role not in ['Nurse', 'Pharmacist', 'Admin']:
+            return JsonResponse({'success': False, 'error': 'Only pharmacists and nurses can dispense IPD medications.'})
+        if not is_ipd and request.user.role not in ['Pharmacist', 'Admin']:
             return JsonResponse({'success': False, 'error': 'Only pharmacists can dispense OPD medications.'})
 
         # Determine department based on role

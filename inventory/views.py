@@ -15,7 +15,7 @@ def item_list(request):
     # Start with all items, annotate with total stock
     items = InventoryItem.objects.annotate(
         total_stock=Sum('stock_records__quantity')
-    ).select_related('category')
+    ).select_related('category').order_by('name')
     
     # Get filter parameters from GET request
     category_filter = request.GET.get('category', '')
@@ -65,18 +65,21 @@ from django.views.decorators.http import require_POST
 
 @login_required
 @require_POST
-def update_item_price(request, item_id):
+def update_item_details(request, item_id):
     item = get_object_or_404(InventoryItem, id=item_id)
     new_price = request.POST.get('new_price')
+    is_dispensed_as_whole = request.POST.get('is_dispensed_as_whole') == 'true'
+    
     try:
         new_price_val = float(new_price)
         if new_price_val < 0:
             raise ValueError("Price cannot be negative")
-        old_price = item.selling_price
+        
         item.selling_price = new_price_val
+        item.is_dispensed_as_whole = is_dispensed_as_whole
         item.is_updated = True
         item.save()
-        messages.success(request, f'Price for "{item.name}" updated successfully from KES {old_price} to KES {new_price_val}.')
+        messages.success(request, f'Item "{item.name}" updated successfully.')
     except (ValueError, TypeError):
         messages.error(request, 'Invalid selling price provided.')
     
@@ -314,7 +317,7 @@ def search_inventory(request):
     if len(query) < 2:
         return JsonResponse({'results': []})
         
-    items = InventoryItem.objects.filter(name__icontains=query).select_related('category')[:20]
+    items = InventoryItem.objects.filter(name__icontains=query).select_related('category').order_by('name')[:20]
     
     results = []
     for item in items:
@@ -388,9 +391,50 @@ def dispense_item(request):
             # Record Physical Dispensing (Inventory Stock Movement)
             # ONLY for departments other than Pharmacy/Mini Pharmacy
             # because those two are handled at pickup.
-            is_pharmacy = department and department.name in ['Pharmacy', 'Mini Pharmacy']
+            is_pharmacy = department and department.name in ['Pharmacy', 'pharmacy']
+            
             
             if not is_pharmacy:
+                # Check absolute stock before recording anything
+                if department:
+                    available_stock = StockRecord.objects.filter(
+                        item=item, 
+                        current_location=department
+                    ).aggregate(total=Sum('quantity'))['total'] or 0
+                    
+                    if available_stock < quantity:
+                        return JsonResponse({
+                            'status': 'error', 
+                            'message': f'Insufficient stock in {department.name}. Available: {available_stock}'
+                        }, status=400)
+                    
+                    # Deduct Stock immediately for non-pharmacy departments (FEFO/FIFO)
+                    remaining_to_deduct = quantity
+                    batches = StockRecord.objects.filter(
+                        item=item, 
+                        current_location=department, 
+                        quantity__gt=0
+                    ).order_by('expiry_date', 'received_date')
+                    
+                    for batch in batches:
+                        if remaining_to_deduct <= 0:
+                            break
+                        
+                        deduction = min(batch.quantity, remaining_to_deduct)
+                        batch.quantity -= deduction
+                        batch.save()
+                        remaining_to_deduct -= deduction
+
+                    # Create audit trail for immediate stock reduction (Non-Pharmacy)
+                    StockAdjustment.objects.create(
+                        item=item,
+                        quantity=-quantity,
+                        adjustment_type='Usage',
+                        reason=f'Dispensed to Patient: {patient.full_name} (Visit: {visit.id if visit else "N/A"})',
+                        adjusted_by=request.user,
+                        adjusted_from=department
+                    )
+
                 DispensedItem.objects.create(
                     item=item,
                     patient=patient,
@@ -399,13 +443,6 @@ def dispense_item(request):
                     department=department,
                     dispensed_by=request.user
                 )
-
-                # Deduct Stock immediately for non-pharmacy departments
-                if department:
-                    sr = StockRecord.objects.filter(item=item, current_location=department).first()
-                    if sr:
-                        sr.quantity -= quantity
-                        sr.save()
 
             if active_admission:
                 # IPD Flow: Marks as dispensed ONLY if not pharmacy
@@ -572,7 +609,7 @@ def add_grn_item(request, grn_id):
         form.fields['supplier'].required = False
     
     # Get items already added to this GRN
-    added_items = purchase.stock_records.all().select_related('item', 'item__category', 'current_location')
+    added_items = purchase.stock_records.all().select_related('item', 'item__category', 'current_location').order_by('item__name')
     
     # All items for the dropdown and JS profit calculator
     import json
@@ -594,9 +631,49 @@ def add_grn_item(request, grn_id):
 @login_required
 def inventory_distribution(request, item_id):
     """
-    View to show how a specific inventory item is distributed across departments.
+    View to show and edit inventory item distribution and details.
     """
     item = get_object_or_404(InventoryItem, id=item_id)
+    
+    if request.method == 'POST':
+        item_form = InventoryItemForm(request.POST, instance=item)
+        
+        # Determine which sub-form to use based on item's category or existing link
+        med_form = None
+        con_form = None
+        
+        category_name = item.category.name.lower() if item.category else ''
+        
+        if hasattr(item, 'medication'):
+            med_form = MedicationForm(request.POST, instance=item.medication)
+        elif 'pharmaceutical' in category_name or 'medicine' in category_name:
+            med_form = MedicationForm(request.POST)
+            
+        if hasattr(item, 'consumable_detail'):
+            con_form = ConsumableDetailForm(request.POST, instance=item.consumable_detail)
+        elif 'consumable' in category_name:
+            con_form = ConsumableDetailForm(request.POST)
+
+        if item_form.is_valid():
+            item_form.save()
+            
+            if med_form and med_form.is_valid():
+                medication = med_form.save(commit=False)
+                medication.item = item
+                medication.save()
+            
+            if con_form and con_form.is_valid():
+                consumable = con_form.save(commit=False)
+                consumable.item = item
+                consumable.save()
+                
+            messages.success(request, f'Item "{item.name}" updated successfully.')
+            return redirect('inventory:inventory_distribution', item_id=item.id)
+
+    # Prepare forms for GET request
+    item_form = InventoryItemForm(instance=item)
+    med_form = MedicationForm(instance=getattr(item, 'medication', None))
+    con_form = ConsumableDetailForm(instance=getattr(item, 'consumable_detail', None))
     
     # Aggregate stock by location
     distribution = StockRecord.objects.filter(
@@ -613,20 +690,125 @@ def inventory_distribution(request, item_id):
     # Get total stock across all locations
     total_stock = sum(d['total_quantity'] for d in distribution)
     
-    # Get recent adjustments for this item
-    recent_adjustments = StockAdjustment.objects.filter(
-        item=item
-    ).select_related('adjusted_by', 'adjusted_from').order_by('-adjusted_at')[:10]
+    # Get recent adjustments for this item with filters
+    adj_qs = StockAdjustment.objects.filter(item=item).select_related('adjusted_by', 'adjusted_from')
+    
+    # Get Filter Parameters
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    user_id = request.GET.get('user')
+    min_qty = request.GET.get('min_qty')
+    max_qty = request.GET.get('max_qty')
+    
+    if date_from:
+        adj_qs = adj_qs.filter(adjusted_at__date__gte=date_from)
+    if date_to:
+        adj_qs = adj_qs.filter(adjusted_at__date__lte=date_to)
+    if user_id:
+        adj_qs = adj_qs.filter(adjusted_by_id=user_id)
+    if min_qty:
+        adj_qs = adj_qs.filter(quantity__gte=min_qty)
+    if max_qty:
+        adj_qs = adj_qs.filter(quantity__lte=max_qty)
+        
+    recent_adjustments = adj_qs.order_by('-adjusted_at')[:30]
+    
+    # Get all users who have made adjustments for this item for the filter dropdown
+    active_users = StockAdjustment.objects.filter(item=item).values_list('adjusted_by', flat=True).distinct()
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.filter(id__in=active_users).order_by('first_name')
     
     context = {
         'item': item,
+        'item_form': item_form,
+        'med_form': med_form,
+        'con_form': con_form,
         'distribution': distribution,
         'total_stock': total_stock,
         'recent_adjustments': recent_adjustments,
+        'users': users,
+        'filters': {
+            'date_from': date_from,
+            'date_to': date_to,
+            'user': user_id,
+            'min_qty': min_qty,
+            'max_qty': max_qty,
+        },
         'title': f'Distribution: {item.name}'
     }
-    
     return render(request, 'inventory/inventory_distribution.html', context)
+
+@login_required
+@require_POST
+def reconcile_stock(request, item_id, location_id):
+    """
+    Adjust system stock count for an item in a specific department 
+    to match the physical/actual count.
+    """
+    item = get_object_or_404(InventoryItem, id=item_id)
+    location = get_object_or_404(Departments, id=location_id)
+    actual_count_raw = request.POST.get('actual_count', '0')
+    
+    try:
+        actual_count = int(actual_count_raw)
+        if actual_count < 0:
+            raise ValueError("Count cannot be negative.")
+        
+        # Get all active records for this item at this location
+        records = StockRecord.objects.filter(item=item, current_location=location).order_by('expiry_date', 'received_date')
+        current_total = records.aggregate(total=Sum('quantity'))['total'] or 0
+        diff = actual_count - current_total
+        
+        if diff == 0:
+            messages.info(request, f"System was already at {actual_count}. No adjustment made.")
+            return redirect('inventory:inventory_distribution', item_id=item.id)
+
+        with transaction.atomic():
+            if diff < 0:
+                # Reduce stock (Loss, etc.)
+                to_reduce = abs(diff)
+                for record in records:
+                    if record.quantity >= to_reduce:
+                        record.quantity -= to_reduce
+                        record.save()
+                        to_reduce = 0
+                        break
+                    else:
+                        to_reduce -= record.quantity
+                        record.quantity = 0
+                        record.save()
+            else:
+                # Stock addition
+                # Find the most recent record to add the surplus to, or create one if none exist
+                target_record = records.last()
+                if target_record:
+                    target_record.quantity += diff
+                    target_record.save()
+                else:
+                    StockRecord.objects.create(
+                        item=item,
+                        batch_number="RECONCILIATION",
+                        quantity=diff,
+                        current_location=location,
+                        received_date=timezone.now().date()
+                    )
+
+            # Record in adjustment log
+            StockAdjustment.objects.create(
+                item=item,
+                quantity=diff,
+                adjustment_type='Correction',
+                reason=f"Stock Reconciliation: Physical count was {actual_count}, system was {current_total}",
+                adjusted_by=request.user,
+                adjusted_from=location
+            )
+        
+        messages.success(request, f"Reconciliation successful for {location.name}. New total: {actual_count}")
+    except (ValueError, TypeError) as e:
+        messages.error(request, f"Error: {str(e)}")
+    
+    return redirect('inventory:inventory_distribution', item_id=item.id)
 
 def is_pharmacist_or_admin(user):
     return user.is_authenticated and (user.is_superuser or user.role in ['Pharmacist', 'Admin'])

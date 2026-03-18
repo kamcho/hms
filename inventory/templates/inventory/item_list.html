@@ -286,7 +286,7 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 0.75rem;">
-                                <button type="button" onclick="event.stopPropagation(); openPriceModal('{{ item.id }}', '{{ item.name|escapejs }}', '{{ item.selling_price|default:0 }}');" style="background: none; border: none; color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px; cursor: pointer;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'">
+                                <button type="button" onclick="event.stopPropagation(); openPriceModal('{{ item.id }}', '{{ item.name|escapejs }}', '{{ item.selling_price|default:0 }}', '{{ item.is_dispensed_as_whole|yesno:'true,false' }}');" style="background: none; border: none; color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px; cursor: pointer;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <a href="#" onclick="event.stopPropagation();" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
@@ -315,7 +315,7 @@
     <div id="priceModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div style="background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Update Price</h3>
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">Update Item</h3>
                 <button type="button" onclick="closePriceModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">
                     <i class="fas fa-times"></i>
                 </button>
@@ -332,12 +332,22 @@
                     </label>
                     <input type="number" name="new_price" id="new_price" class="filter-input" style="width: 100%; font-weight: 600; font-size: 1.125rem;" min="0" step="0.01" required>
                 </div>
+                <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <input type="checkbox" name="is_dispensed_as_whole_display" id="is_dispensed_as_whole_display" style="width: 20px; height: 20px; cursor: pointer;">
+                    <input type="hidden" name="is_dispensed_as_whole" id="is_dispensed_as_whole" value="false">
+                    <label for="is_dispensed_as_whole_display" style="font-size: 0.875rem; color: #1e293b; font-weight: 600; cursor: pointer;">
+                        Is Dispensed as Whole Unit?
+                    </label>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 1.5rem; font-style: italic;">
+                    (If checked, item is only sold as a whole unit, e.g., a small box)
+                </div>
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                     <button type="button" onclick="closePriceModal()" style="background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                         Cancel
                     </button>
                     <button type="submit" style="background: var(--primary-gradient); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); transition: all 0.2s;">
-                        <i class="fas fa-save"></i> Save Price
+                        <i class="fas fa-save"></i> Save Changes
                     </button>
                 </div>
             </form>
@@ -399,13 +409,24 @@
         </div>
     </div>
     <script>
-    function openPriceModal(id, item_name, current_price) {
+    function openPriceModal(id, item_name, current_price, is_dispensed_as_whole) {
         document.getElementById('price-modal-item').textContent = item_name;
         document.getElementById('new_price').value = current_price;
         
+        const checkbox = document.getElementById('is_dispensed_as_whole_display');
+        const hiddenInput = document.getElementById('is_dispensed_as_whole');
+        
+        checkbox.checked = is_dispensed_as_whole === 'true';
+        hiddenInput.value = is_dispensed_as_whole;
+
+        // Sync hidden input on change
+        checkbox.onchange = function() {
+            hiddenInput.value = this.checked ? 'true' : 'false';
+        };
+        
         // Update form action
         const form = document.getElementById('priceUpdateForm');
-        form.action = `/inventory/items/${id}/update-price/`;
+        form.action = `/inventory/items/${id}/update-details/`;
         
         const modal = document.getElementById('priceModal');
         modal.style.display = 'flex';

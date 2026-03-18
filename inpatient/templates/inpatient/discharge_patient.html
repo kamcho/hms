@@ -1,7 +1,10 @@
 {% extends "users/dashboard_base.html" %}
 {% load static %}
-{% block extra_css %}
-    <style>
+  
+{% block content %}
+
+
+  <style>
     .discharge-container textarea,
     .discharge-container input[type="text"],
     .discharge-container input[type="number"],
@@ -42,8 +45,6 @@
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
     }
     </style>
-{% endblock extra_css %}
-{% block content %}
     <div class="px-8 py-10 max-w-[1400px] mx-auto discharge-container">
         <!-- Header Area -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">

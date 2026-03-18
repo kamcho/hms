@@ -82,9 +82,15 @@ class MedicationChart(models.Model):
         ('As Needed', 'As Needed'),
     ]
 
+    ADMIN_CHOICES = [
+        ('Sessions', 'Administered in Sessions (Billed per dose)'),
+        ('Given', 'Given once to Patient (Billed fully)'),
+    ]
+
     admission = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='medications')
     item = models.ForeignKey('inventory.InventoryItem', on_delete=models.CASCADE, related_name='inpatient_medications')
     
+    administration_type = models.CharField(max_length=20, choices=ADMIN_CHOICES, default='Sessions', help_text="How is this managed?")
     dose_count = models.PositiveIntegerField(default=1, help_text="Units per dose (e.g., 2 tablets)")
     frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     quantity = models.PositiveIntegerField(default=1, help_text="Total units to dispense")
@@ -107,6 +113,8 @@ class MedicationChart(models.Model):
     administered_at = models.DateTimeField(null=True, blank=True)
     administered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_administered')
     is_administered = models.BooleanField(default=False)
+
+    is_active = models.BooleanField(default=True, help_text="Is this prescription currently active?")
 
     def __str__(self):
         return f"{self.item.name} - {self.dose_count} x {self.frequency} for {self.admission.patient.full_name}"
