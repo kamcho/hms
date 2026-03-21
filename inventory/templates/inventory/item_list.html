@@ -289,7 +289,7 @@
                                 <button type="button" onclick="event.stopPropagation(); openPriceModal('{{ item.id }}', '{{ item.name|escapejs }}', '{{ item.selling_price|default:0 }}', '{{ item.is_dispensed_as_whole|yesno:'true,false' }}');" style="background: none; border: none; color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px; cursor: pointer;" onmouseover="this.style.color='#6366f1'; this.style.background='rgba(99, 102, 241, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <a href="#" onclick="event.stopPropagation();" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
+                                <a href="#" onclick="event.stopPropagation(); openDeleteModal('{{ item.id }}', '{{ item.name|escapejs }}');" style="color: var(--text-muted); transition: all 0.3s ease; padding: 0.5rem; border-radius: 6px;" onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'"><i class="fas fa-trash"></i></a>
                             </div>
                         </td>
                     </tr>
@@ -408,6 +408,27 @@
             </form>
         </div>
     </div>
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 2.5rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: modalPop 0.3s ease-out; text-align: center;">
+            <div style="background: rgba(239, 68, 68, 0.1); color: #dc2626; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.5rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 style="font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">Confirm Delete</h3>
+            <p style="color: #64748b; margin-bottom: 2rem; line-height: 1.5;">Are you sure you want to delete <span id="delete-item-name" style="font-weight: 600; color: #1e293b;"></span>? This action cannot be undone.</p>
+            
+            <form id="deleteItemForm" method="post" style="display: flex; gap: 1rem; justify-content: center;">
+                {% csrf_token %}
+                <button type="button" onclick="closeDeleteModal()" style="background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1;">
+                    Cancel
+                </button>
+                <button type="submit" style="background: var(--danger-gradient); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4); transition: all 0.2s; flex: 1;">
+                    Delete Item
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script>
     function openPriceModal(id, item_name, current_price, is_dispensed_as_whole) {
         document.getElementById('price-modal-item').textContent = item_name;
@@ -440,6 +461,25 @@
     // Close on click outside for price modal
     document.getElementById('priceModal').addEventListener('click', function(e) {
         if(e.target === this) closePriceModal();
+    });
+
+    function openDeleteModal(id, item_name) {
+        document.getElementById('delete-item-name').textContent = item_name;
+        const form = document.getElementById('deleteItemForm');
+        form.action = `/inventory/items/${id}/delete/`;
+        
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'flex';
+        document.body.appendChild(modal);
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    // Close on click outside for delete modal
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if(e.target === this) closeDeleteModal();
     });
 
     function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty) {

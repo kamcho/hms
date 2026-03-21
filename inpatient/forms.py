@@ -38,14 +38,14 @@ class AdmissionForm(forms.ModelForm):
 class MedicationChartForm(forms.ModelForm):
     class Meta:
         model = MedicationChart
-        fields = ['item', 'administration_type', 'dose_count', 'frequency', 'duration_days', 'quantity', 'instructions']
+        fields = ['item', 'administration_type', 'dose_per_session', 'frequency', 'duration_days', 'quantity', 'instructions']
         widgets = {
             'item': forms.Select(attrs={'class': 'medication-select'}),
             'administration_type': forms.Select(attrs={'class': 'form-control'}),
-            'dose_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Pills/Dose', 'class': 'form-control'}),
+            'dose_per_session': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Units per Dose', 'class': 'form-control'}),
             'frequency': forms.Select(attrs={'class': 'form-control'}),
             'duration_days': forms.NumberInput(attrs={'min': 1, 'class': 'form-control', 'placeholder': 'Days to run'}),
-            'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'form-control', 'placeholder': 'Total Units'}),
+            'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'form-control', 'placeholder': 'Total Units (Manual Override)'}),
             'instructions': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Special instructions...', 'class': 'form-control'}),
         }
 
@@ -60,6 +60,7 @@ class MedicationChartForm(forms.ModelForm):
             self.fields['item'].queryset = InventoryItem.objects.filter(category=pharma_category).order_by('name')
         else:
             self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
+
 
 class ServiceAdmissionLinkForm(forms.ModelForm):
     class Meta:

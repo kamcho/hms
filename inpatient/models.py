@@ -104,9 +104,16 @@ class MedicationChart(models.Model):
     prescribed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='medications_prescribed')
     
     # Dispensing status
-    is_dispensed = models.BooleanField(default=False, help_text="Has this been dispensed by pharmacy?")
+    is_dispensed = models.BooleanField(default=False, help_text="Has this been dispensed in FULL by pharmacy?")
     dispensed_at = models.DateTimeField(null=True, blank=True)
     dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications_dispensed_ipd')
+    request_location = models.ForeignKey('home.Departments', on_delete=models.SET_NULL, null=True, blank=True, related_name='requested_medications')
+    
+    # Partial Dispensing Tracking
+    dose_per_session = models.PositiveIntegerField(default=1, help_text="Units per administration (e.g. 2 vials)")
+    total_quantity = models.PositiveIntegerField(default=0, help_text="Total units for the full course (calculated)")
+    quantity_dispensed = models.PositiveIntegerField(default=0, help_text="Total units already picked up from pharmacy")
+    
     instructions = models.TextField(blank=True, null=True, help_text="Specific instructions for this medication")
     
     # Administration status - Top level legacy status
@@ -317,9 +324,15 @@ class InpatientConsumable(models.Model):
     prescribed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='consumables_prescribed')
     
     # Dispensing status
-    is_dispensed = models.BooleanField(default=False)
+    is_dispensed = models.BooleanField(default=False, help_text="Has this been dispensed in FULL?")
     dispensed_at = models.DateTimeField(null=True, blank=True)
     dispensed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='consumables_dispensed')
+    request_location = models.ForeignKey('home.Departments', on_delete=models.SET_NULL, null=True, blank=True, related_name='requested_consumables')
+    
+    # Partial Dispensing Tracking
+    total_quantity = models.PositiveIntegerField(default=1)
+    quantity_dispensed = models.PositiveIntegerField(default=0)
+    
     instructions = models.TextField(blank=True, null=True, help_text="Specific instructions for this consumable")
 
     def __str__(self):

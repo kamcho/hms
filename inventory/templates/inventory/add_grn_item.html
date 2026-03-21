@@ -211,6 +211,107 @@
         background: white !important;
     }
 
+    /* Hybrid Search Select Styling */
+    .hybrid-select-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .hybrid-select-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .hybrid-select-input-wrapper i {
+        position: absolute;
+        right: 1rem;
+        color: var(--text-muted);
+        pointer-events: none;
+        transition: transform 0.3s ease;
+    }
+
+    .hybrid-select-container.active .hybrid-select-input-wrapper i {
+        transform: rotate(180deg);
+        color: #6366f1;
+    }
+
+    .hybrid-search-input {
+        width: 100%;
+        cursor: pointer !important;
+    }
+
+    .hybrid-dropdown {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hybrid-dropdown.show {
+        display: block;
+    }
+
+    .hybrid-option {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .hybrid-option:last-child {
+        border-bottom: none;
+    }
+
+    .hybrid-option:hover {
+        background: rgba(99, 102, 241, 0.05);
+        padding-left: 1.25rem;
+    }
+
+    .hybrid-option.selected {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        font-weight: 700;
+    }
+
+    .hybrid-option .option-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .hybrid-option .option-meta {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+    }
+
+    .hybrid-no-results {
+        padding: 2rem;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+
     .form-actions {
         margin-top: 1.5rem;
         display: flex;
@@ -466,13 +567,44 @@
             <form method="post" autocomplete="off" id="addStockForm">
                 {% csrf_token %}
                 <div class="form-grid">
-                    <!-- Item Selector (full width) -->
+                    <!-- Hybrid Search Select Item -->
                     <div class="form-group full-width">
-                        <label>Select Item</label>
-                        <select name="item" id="id_item" required style="width:100%; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 0.95rem; font-weight: 500; color: #1e293b; background: white;">
-                            <option value="">-- Select an item --</option>
-                            {% for inv_item in inventory_items %}<option value="{{ inv_item.id }}" data-selling-price="{{ inv_item.selling_price|default:0 }}">{{ inv_item.name }}</option>{% endfor %}
-                        </select>
+                        <label>Search & Select Item</label>
+                        <div class="hybrid-select-container" id="hybridItemSelect">
+                            <div class="hybrid-select-input-wrapper">
+                                <input type="text" 
+                                       class="form-control hybrid-search-input" 
+                                       id="itemSearchInput" 
+                                       placeholder="Type to search items..." 
+                                       autocomplete="off"
+                                       style="width: 100%; border: 2px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 600; color: #1e293b; transition: all 0.3s ease;">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="hybrid-dropdown" id="itemDropdown">
+                                <div class="hybrid-options-list" id="optionsList">
+                                    {% for inv_item in inventory_items %}
+                                        <div class="hybrid-option" 
+                                             data-value="{{ inv_item.id }}" 
+                                             data-name="{{ inv_item.name|escapejs }}" 
+                                             data-selling-price="{{ inv_item.selling_price|default:0 }}">
+                                            <span class="option-name">{{ inv_item.name }}</span>
+                                            <span class="option-meta">{{ inv_item.category.name|default:"General" }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="hybrid-no-results" id="noResults" style="display: none;">
+                                    <i class="fas fa-search" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                                    No items match your search
+                                </div>
+                            </div>
+                            <!-- Hidden actual select for form submission -->
+                            <select name="item" id="id_item" required style="display: none;">
+                                <option value="">-- Select an item --</option>
+                                {% for inv_item in inventory_items %}
+                                    <option value="{{ inv_item.id }}" data-selling-price="{{ inv_item.selling_price|default:0 }}">{{ inv_item.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="{{ form.batch_number.id_for_label }}">Batch Number</label>
@@ -655,19 +787,100 @@
         const profitMarginDisplay = document.getElementById('profitMargin');
         const suggestedPriceDisplay = document.getElementById('suggestedPrice');
 
+        // --- Hybrid Search Select Logic ---
+        const hybridContainer = document.getElementById('hybridItemSelect');
+        const searchInput = document.getElementById('itemSearchInput');
+        const dropdown = document.getElementById('itemDropdown');
+        const optionsList = document.getElementById('optionsList');
+        const options = optionsList.querySelectorAll('.hybrid-option');
+        const noResults = document.getElementById('noResults');
+        const actualSelect = document.getElementById('id_item');
+
+        // Open/Close Dropdown
+        searchInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+            hybridContainer.classList.add('active');
+            dropdown.classList.add('show');
+            // Select text for quick re-search
+            this.select();
+        });
+
+        // Search logic
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            let hasResults = false;
+
+            options.forEach(opt => {
+                const name = opt.getAttribute('data-name').toLowerCase();
+                if (name.includes(query)) {
+                    opt.style.display = 'flex';
+                    hasResults = true;
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+
+            noResults.style.display = hasResults ? 'none' : 'block';
+            dropdown.classList.add('show');
+            hybridContainer.classList.add('active');
+        });
+
+        // Select item logic
+        options.forEach(opt => {
+            opt.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const val = this.getAttribute('data-value');
+                const name = this.getAttribute('data-name');
+                const price = this.getAttribute('data-selling-price');
+
+                // Update UI
+                searchInput.value = name;
+                searchInput.style.borderColor = '#6366f1';
+                
+                // Update actual select
+                actualSelect.value = val;
+                
+                // Trigger change event manually for actualSelect
+                actualSelect.dispatchEvent(new Event('change'));
+
+                // Clean up dropdown
+                options.forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                dropdown.classList.remove('show');
+                hybridContainer.classList.remove('active');
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!hybridContainer.contains(e.target)) {
+                dropdown.classList.remove('show');
+                hybridContainer.classList.remove('active');
+            }
+        });
+
+        // --- Profit/Loss & Existing Select Logic ---
+        
         // Item prices map from the server (JSON-serialized)
         const allItemPrices = JSON.parse('{{ all_items_prices_json|escapejs }}');
 
         let currentSellingPrice = 0;
 
-    // Update selling price when item changes
-    itemSelect.addEventListener('change', function () {
-        const selectedOption = this.options[this.selectedIndex];
-        const price = selectedOption.getAttribute('data-selling-price');
-        currentSellingPrice = price ? parseFloat(price) : 0;
-        currentSellingPriceDisplay.textContent = currentSellingPrice > 0 ? `KES ${currentSellingPrice.toFixed(2)}` : '-';
-        calculateProfitLoss();
-    });
+        // Update selling price when item changes (Triggered by hybrid select or direct)
+        actualSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption || !this.value) {
+                currentSellingPrice = 0;
+                currentSellingPriceDisplay.textContent = '-';
+                calculateProfitLoss();
+                return;
+            }
+            
+            const price = selectedOption.getAttribute('data-selling-price');
+            currentSellingPrice = price ? parseFloat(price) : 0;
+            currentSellingPriceDisplay.textContent = currentSellingPrice > 0 ? `KES ${currentSellingPrice.toFixed(2)}` : '-';
+            calculateProfitLoss();
+        });
 
     // Toggle new price input
     updatePriceCheck.addEventListener('change', function () {

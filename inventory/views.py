@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from .models import InventoryItem, InventoryCategory, Supplier, StockRecord, InventoryRequest, StockAdjustment
 from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, StockRecordForm, InventoryRequestForm, MedicationForm, ConsumableDetailForm
 from home.models import Departments, Patient, Visit
 from accounts.utils import get_or_create_invoice
 
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.db import transaction
 from django.utils import timezone
 
@@ -60,8 +61,14 @@ def item_list(request):
     }
     
     return render(request, 'inventory/item_list.html', context)
-
-from django.views.decorators.http import require_POST
+@login_required
+@require_POST
+def delete_item(request, item_id):
+    item = get_object_or_404(InventoryItem, id=item_id)
+    item_name = item.name
+    item.delete()
+    messages.success(request, f'Item "{item_name}" deleted successfully.')
+    return redirect('inventory:item_list')
 
 @login_required
 @require_POST
@@ -391,7 +398,10 @@ def dispense_item(request):
             # Record Physical Dispensing (Inventory Stock Movement)
             # ONLY for departments other than Pharmacy/Mini Pharmacy
             # because those two are handled at pickup.
-            is_pharmacy = department and department.name in ['Pharmacy', 'pharmacy']
+            is_pharmacy = department and (
+                'pharmacy' in department.name.lower() or 
+                'store' in department.name.lower()
+            )
             
             
             if not is_pharmacy:
@@ -449,14 +459,28 @@ def dispense_item(request):
                 InpatientConsumable.objects.create(
                     admission=active_admission,
                     item=item,
-                    quantity=quantity,
+                    total_quantity=quantity,
+                    quantity_dispensed=quantity if not is_pharmacy else 0,
                     instructions=instructions,
                     prescribed_by=request.user,
+                    request_location=department if is_pharmacy else None,
                     is_dispensed=not is_pharmacy,
                     dispensed_at=timezone.now() if not is_pharmacy else None,
                     dispensed_by=request.user if not is_pharmacy else None
                 )
                 
+                # Explicitly Bill if NOT pharmacy
+                if not is_pharmacy:
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        inventory_item=item,
+                        name=f"{item.name} (IPD Dispense)",
+                        quantity=quantity,
+                        unit_price=item.selling_price,
+                        created_by=request.user
+                    )
+
                 status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
                 return JsonResponse({
                     'status': 'success',
@@ -908,3 +932,140 @@ def transfer_stock(request):
         form = StockTransferForm()
 
     return render(request, 'inventory/transfer_stock.html', {'form': form, 'title': 'Stock Transfer'})
+
+@login_required
+def ipd_pharmacy_dashboard(request):
+    """
+    Dashboard for pharmacists to dispense items to inpatients.
+    Shows pending partial fulfillments.
+    """
+    from inpatient.models import MedicationChart, InpatientConsumable
+    from home.models import Departments
+    from django.db.models import F
+    
+    # Identify the user's pharmacy department
+    user_dept = None
+    if request.user.role == 'Pharmacist':
+        user_dept = Departments.objects.filter(name='Pharmacy').first()
+    elif request.user.role == 'Nurse':
+        user_dept = Departments.objects.filter(name='Mini Pharmacy').first()
+    
+    # Fetch pending meds
+    pending_meds = MedicationChart.objects.filter(
+        quantity_dispensed__lt=F('total_quantity'),
+        is_active=True
+    ).select_related('admission__patient', 'admission__bed__ward', 'item', 'request_location')
+    
+    # Fetch pending consumables
+    pending_consumables = InpatientConsumable.objects.filter(
+        quantity_dispensed__lt=F('total_quantity')
+    ).select_related('admission__patient', 'item', 'request_location')
+
+    # Show all pending items
+    context = {
+        'pending_meds': pending_meds,
+        'pending_consumables': pending_consumables,
+        'title': 'IPD Pharmacy Fulfillment',
+        'all_pharmacies': Departments.objects.filter(Q(name__icontains='Pharmacy') | Q(name__icontains='Store')).order_by('name')
+    }
+    return render(request, 'inventory/ipd_pharmacy_dashboard.html', context)
+
+@login_required
+@require_POST
+def confirm_ipd_fulfillment(request):
+    """
+    Handle partial dispensing to IPD patients.
+    Deducts stock and creates an InvoiceItem.
+    """
+    from inpatient.models import MedicationChart, InpatientConsumable
+    from accounts.models import InvoiceItem
+    from accounts.utils import get_or_create_invoice
+    from home.models import Departments
+    from .models import StockRecord, StockAdjustment
+    from django.db.models import Sum
+    
+    item_type = request.POST.get('type') # 'med' or 'consumable'
+    item_id = request.POST.get('id')
+    dispense_qty_raw = request.POST.get('quantity', '0')
+    department_id = request.POST.get('department_id')
+    
+    try:
+        dispense_qty = int(dispense_qty_raw)
+        if dispense_qty <= 0:
+            messages.error(request, "Invalid quantity.")
+            return redirect('inventory:ipd_pharmacy_dashboard')
+
+        with transaction.atomic():
+            if item_type == 'med':
+                obj = get_object_or_404(MedicationChart, id=item_id)
+            else:
+                obj = get_object_or_404(InpatientConsumable, id=item_id)
+                
+            department = get_object_or_404(Departments, id=department_id)
+            admission = obj.admission
+            visit = admission.visit
+            
+            if not visit:
+                 messages.error(request, "Admissions visit not found. Billing cannot proceed.")
+                 return redirect('inventory:ipd_pharmacy_dashboard')
+
+            # 1. Check Stock
+            available_stock = StockRecord.objects.filter(
+                item=obj.item, 
+                current_location=department
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            if available_stock < dispense_qty:
+                messages.error(request, f"Insufficient stock in {department.name}. Available: {available_stock}")
+                return redirect('inventory:ipd_pharmacy_dashboard')
+                
+            # 2. Deduct Stock (FEFO)
+            remaining_to_deduct = dispense_qty
+            batches = StockRecord.objects.filter(
+                item=obj.item, 
+                current_location=department, 
+                quantity__gt=0
+            ).order_by('expiry_date', 'received_date')
+            
+            for batch in batches:
+                if remaining_to_deduct <= 0: break
+                take = min(batch.quantity, remaining_to_deduct)
+                batch.quantity -= take
+                batch.save()
+                remaining_to_deduct -= take
+                
+            # 3. Create Stock Adjustment Record
+            StockAdjustment.objects.create(
+                item=obj.item,
+                quantity=-dispense_qty,
+                adjustment_type='Usage',
+                reason=f'IPD Dispense: {admission.patient.full_name} (Admission #{admission.id})',
+                adjusted_by=request.user,
+                adjusted_from=department
+            )
+            
+            # 4. Billing (Invoice Item)
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                inventory_item=obj.item,
+                name=f"{obj.item.name} (IPD Dispense)",
+                quantity=dispense_qty,
+                unit_price=obj.item.selling_price,
+                created_by=request.user
+            )
+            
+            # 5. Update Object
+            obj.quantity_dispensed += dispense_qty
+            if obj.quantity_dispensed >= obj.total_quantity:
+                obj.is_dispensed = True
+                obj.dispensed_at = timezone.now()
+                obj.dispensed_by = request.user
+            obj.save()
+            
+            messages.success(request, f"Successfully dispensed {dispense_qty} units of {obj.item.name} to {admission.patient.full_name}.")
+            
+    except Exception as e:
+        messages.error(request, f"Dispensing failed: {str(e)}")
+        
+    return redirect('inventory:ipd_pharmacy_dashboard')

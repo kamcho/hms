@@ -22,5 +22,10 @@ urlpatterns = [
     path('items/<int:item_id>/distribution/', views.inventory_distribution, name='inventory_distribution'),
     path('items/<int:item_id>/update-details/', views.update_item_details, name='update_item_details'),
     path('items/<int:item_id>/reconcile/<int:location_id>/', views.reconcile_stock, name='reconcile_stock'),
+    path('items/<int:item_id>/delete/', views.delete_item, name='delete_item'),
     path('transfer/', views.transfer_stock, name='transfer_stock'),
+    
+    # IPD Pharmacy
+    path('ipd-pharmacy/', views.ipd_pharmacy_dashboard, name='ipd_pharmacy_dashboard'),
+    path('ipd-pharmacy/fulfill/', views.confirm_ipd_fulfillment, name='confirm_ipd_fulfillment'),
 ]

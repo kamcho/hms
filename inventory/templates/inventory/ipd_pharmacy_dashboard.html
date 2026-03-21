@@ -1,0 +1,291 @@
+{% extends "users/dashboard_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="p-6 lg:p-10 bg-slate-50 min-h-screen">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">IPD Pharmacy Fulfillment</h1>
+            <p class="text-slate-500 text-sm font-medium mt-1 uppercase tracking-widest">Dispense and bill medications for admitted patients</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Global filter removed per user request -->
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <!-- Meds Stat -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-indigo-500/5 group">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-pills text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending Meds</div>
+                <div class="text-2xl font-black text-slate-900">{{ pending_meds.count }}</div>
+            </div>
+        </div>
+
+        <!-- Consumables Stat -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-emerald-500/5 group">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-box text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Consumables</div>
+                <div class="text-2xl font-black text-slate-900">{{ pending_consumables.count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs/Tables -->
+    <div class="space-y-10">
+        
+        <!-- Medications Table -->
+        <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Pending Medication Dispenses</h2>
+                </div>
+                <span class="px-4 py-1.5 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ pending_meds.count }} Tasks</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                            <th class="px-8 py-4">Patient & Location</th>
+                            <th class="px-8 py-4">Medication Details</th>
+                            <th class="px-8 py-4">Prescription Rule</th>
+                            <th class="px-8 py-4">Dispense Progress</th>
+                            <th class="px-8 py-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for med in pending_meds %}
+                        <tr class="hover:bg-slate-50/80 transition-colors group">
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ med.admission.patient.full_name }}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1.5 uppercase">
+                                    <i class="fas fa-bed text-indigo-400"></i>
+                                    {{ med.admission.bed.ward.name }} - {{ med.admission.bed.bed_number }}
+                                </div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-indigo-600 uppercase tracking-tighter">{{ med.item.name }}</div>
+                                {% if med.instructions %}
+                                <div class="text-[9px] text-slate-400 italic mt-1 truncate max-w-[200px]" title="{{ med.instructions }}">{{ med.instructions }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-8 py-5">
+                                <span class="inline-block px-2.5 py-1 rounded-lg {% if med.administration_type == 'Sessions' %}bg-purple-50 text-purple-700{% else %}bg-amber-50 text-amber-700{% endif %} text-[9px] font-black uppercase tracking-widest mb-2">
+                                    {{ med.administration_type }}
+                                </span>
+                                <div class="text-[10px] font-bold text-slate-500 uppercase leading-none">
+                                    {{ med.dose_per_session }} units × {{ med.frequency }}
+                                </div>
+                            </td>
+                            <td class="px-8 py-5 min-w-[180px]">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ med.quantity_dispensed }} / {{ med.total_quantity }} Units</span>
+                                    {% widthratio med.quantity_dispensed med.total_quantity 100 as p_pct %}
+                                    <span class="text-[9px] font-black text-indigo-600">{{ p_pct }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-700" style="width: {{ p_pct }}%"></div>
+                                </div>
+                            </td>
+                            <td class="px-8 py-5 text-center">
+                                <button type="button" 
+                                        onclick="openDispenseModal('med', '{{ med.id }}', '{{ med.item.name|escapejs }}', {{ med.total_quantity }}, {{ med.quantity_dispensed }})"
+                                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                                    Dispense
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-8 py-20 text-center">
+                                <i class="fas fa-pills text-4xl text-slate-200 mb-4 block"></i>
+                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending medication requests</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Consumables Table -->
+        <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-8 bg-emerald-600 rounded-full"></div>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Pending Consumables</h2>
+                </div>
+                <span class="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ pending_consumables.count }} Tasks</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                            <th class="px-8 py-4">Patient</th>
+                            <th class="px-8 py-4">Item</th>
+                            <th class="px-8 py-4">Progress</th>
+                            <th class="px-8 py-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for con in pending_consumables %}
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ con.admission.patient.full_name }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ con.item.name }}</div>
+                            </td>
+                            <td class="px-8 py-5 min-w-[180px]">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ con.quantity_dispensed }} / {{ con.total_quantity }} Units</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
+                                    {% widthratio con.quantity_dispensed con.total_quantity 100 as cp_pct %}
+                                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: {{ cp_pct }}%"></div>
+                                </div>
+                            </td>
+                            <td class="px-8 py-5 text-center">
+                                <button type="button" 
+                                        onclick="openDispenseModal('consumable', '{{ con.id }}', '{{ con.item.name|escapejs }}', {{ con.total_quantity }}, {{ con.quantity_dispensed }})"
+                                        class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                                    Dispense
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-8 py-20 text-center">
+                                <i class="fas fa-box text-4xl text-slate-200 mb-4 block"></i>
+                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending consumables</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dispense Modal (Tailwind Logic) -->
+<div id="dispenseModal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 py-10 text-center">
+        <!-- Overlay -->
+        <div class="fixed inset-0 transition-opacity bg-slate-900/80 backdrop-blur-md" onclick="closeDispenseModal()"></div>
+
+        <!-- Modal Content -->
+        <div class="relative inline-block w-full max-w-lg p-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-[2.5rem]">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <i class="fas fa-hand-holding-medical"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight" id="modalItemName">Confirm Fulfillment</h3>
+                </div>
+                <button onclick="closeDispenseModal()" class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+
+            <form action="{% url 'inventory:confirm_ipd_fulfillment' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="type" id="modalItemType">
+                <input type="hidden" name="id" id="modalItemId">
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Dispense From (Location)</label>
+                        <div class="relative group">
+                            <select name="department_id" id="modalDepartmentId" class="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-xs font-black py-4 px-10 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none appearance-none uppercase" required>
+                                <option value="">Select Pickup Point</option>
+                                {% for dept in all_pharmacies %}
+                                <option value="{{ dept.id }}" {% if forloop.first %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <i class="fas fa-hospital text-xs"></i>
+                            </div>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4">
+                        <i class="fas fa-info-circle text-indigo-500 mt-1"></i>
+                        <p class="text-[11px] font-bold text-indigo-900 uppercase leading-relaxed tracking-tight">
+                            Stock deduction and patient billing will occur instantly upon confirmation.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Quantity to Dispense (Units)</label>
+                        <div class="relative group">
+                            <input type="number" name="quantity" id="dispenseQtyInput" class="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-lg font-black py-4 px-6 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none" min="1" required>
+                            <div class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase tracking-widest pointer-events-none">Units</div>
+                        </div>
+                        <div id="remainingHelp" class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl"></div>
+                    </div>
+
+                <div class="mt-8 flex gap-4">
+                    <button type="button" onclick="closeDispenseModal()" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all border-2 border-transparent hover:border-slate-100 rounded-2xl">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 active:scale-95 transition-all">
+                        Confirm & Bill
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openDispenseModal(type, id, name, total, alreadyDispensed) {
+        document.getElementById('modalItemType').value = type;
+        document.getElementById('modalItemId').value = id;
+        document.getElementById('modalItemName').innerText = name;
+        
+        const remaining = total - alreadyDispensed;
+        const input = document.getElementById('dispenseQtyInput');
+        input.value = remaining;
+        input.max = remaining;
+        
+        document.getElementById('remainingHelp').innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Required</span>
+                <span class="text-xs font-black text-slate-900">${total}</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Already Dispensed</span>
+                <span class="text-xs font-black text-emerald-600">${alreadyDispensed}</span>
+            </div>
+            <div class="border-t border-slate-200 pt-2 flex justify-between items-center">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-rose-500">Remaining to Dispense</span>
+                <span class="text-sm font-black text-rose-600">${remaining}</span>
+            </div>
+        `;
+        
+        const modal = document.getElementById('dispenseModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDispenseModal() {
+        const modal = document.getElementById('dispenseModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+</script>
+{% endblock %}

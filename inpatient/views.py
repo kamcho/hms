@@ -568,25 +568,37 @@ def add_medication(request, admission_id):
             med = form.save(commit=False)
             med.admission = admission
             med.prescribed_by = request.user
+            
+            # Auto-calculate total quantity
+            freq_map = {
+                'Once Daily': 1,
+                'Twice Daily': 2,
+                'Thrice Daily': 3,
+                'Four Times Daily': 4,
+                'Every 6 Hours': 4,
+                'Every 8 Hours': 3,
+                'Every 12 Hours': 2,
+                'Every 24 Hours': 1,
+                'As Needed': 1,
+            }
+            doses_per_day = freq_map.get(med.frequency, 1)
+            
+            if med.administration_type == 'Sessions':
+                calculated_qty = doses_per_day * med.duration_days * med.dose_per_session
+                med.total_quantity = med.quantity if med.quantity and med.quantity > 0 else calculated_qty
+            else:
+                # Given Once - use manual quantity or fall back to dose_per_session
+                med.total_quantity = med.quantity if med.quantity and med.quantity > 0 else med.dose_per_session
+
+            # Fallback for quantity field itself to avoid integrity errors if model requires it
+            if not med.quantity:
+                med.quantity = med.total_quantity
+
             med.save()
             
             # Auto-generate MAR grid ONLY if administered in sessions
             if med.administration_type == 'Sessions':
                 from .models import MedicationAdministrationRecord
-                
-                # Map frequency strings to doses per day
-                freq_map = {
-                    'Once Daily': 1,
-                    'Twice Daily': 2,
-                    'Thrice Daily': 3,
-                    'Four Times Daily': 4,
-                    'Every 6 Hours': 4,
-                    'Every 8 Hours': 3,
-                    'Every 12 Hours': 2,
-                    'Every 24 Hours': 1,
-                    'As Needed': 1, # Default to 1 slot for PRN, can be expanded later
-                }
-                doses_per_day = freq_map.get(med.frequency, 1)
                 
                 mar_entries = []
                 for day in range(1, med.duration_days + 1):

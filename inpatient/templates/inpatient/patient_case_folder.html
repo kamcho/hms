@@ -347,6 +347,19 @@
                                                 <!-- Drug Name -->
                                                 <td class="p-3 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50/90 z-10 align-middle">
                                                     <div class="font-bold text-slate-900 text-xs w-48 whitespace-normal leading-tight caps">{{ med.item.name }}</div>
+                                                    
+                                                    <!-- Dispense Progress Bar -->
+                                                    <div class="mt-2 w-32">
+                                                        <div class="flex justify-between items-center mb-0.5">
+                                                            <span class="text-[8px] font-bold text-slate-400 uppercase">Dispensed</span>
+                                                            <span class="text-[8px] font-bold text-indigo-600">{{ med.quantity_dispensed }}/{{ med.total_quantity }}</span>
+                                                        </div>
+                                                        <div class="w-full bg-slate-100 rounded-full h-1 overflow-hidden border border-slate-200/50">
+                                                            {% widthratio med.quantity_dispensed med.total_quantity 100 as d_pct %}
+                                                            <div class="bg-indigo-500 h-full rounded-full transition-all" style="width: {{ d_pct|default:"0" }}%"></div>
+                                                        </div>
+                                                    </div>
+
                                                     {% if med.instructions %}
                                                         <div class="text-[9px] text-amber-600 mt-1 flex items-start gap-1 whitespace-normal leading-tight" title="{{ med.instructions }}">
                                                             <i class="fas fa-info-circle mt-0.5"></i> <span class="line-clamp-2">{{ med.instructions }}</span>
@@ -355,7 +368,7 @@
                                                 </td>
                                                 <!-- Dose -->
                                                 <td class="p-3 border-r border-slate-200 text-center text-xs font-semibold text-slate-700 align-middle">
-                                                    {{ med.dose_count }}
+                                                    {{ med.dose_per_session }}
                                                 </td>
                                                 <!-- Frequency -->
                                                 <td class="p-3 border-r border-slate-200 text-center text-xs font-semibold text-slate-700 align-middle">
@@ -943,7 +956,7 @@
                             <!-- Dosage Info -->
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Units Per Dose</label>
-                                {{ med_form.dose_count }}
+                                {{ med_form.dose_per_session }}
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Frequency</label>
@@ -1218,7 +1231,7 @@
         }
 
         // ==================== SMART PRESCRIPTION CALCULATION ====================
-        const doseInput = document.querySelector('#{{ med_form.dose_count.id_for_label }}');
+        const doseInput = document.querySelector('#{{ med_form.dose_per_session.id_for_label }}');
         const freqInput = document.querySelector('#{{ med_form.frequency.id_for_label }}');
         const durationInput = document.querySelector('#{{ med_form.duration_days.id_for_label }}');
         const qtyInput = document.querySelector('#{{ med_form.quantity.id_for_label }}');
