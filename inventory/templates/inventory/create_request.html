@@ -1,7 +1,7 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}{{ title }} - HMS{% endblock %}
-{% block extra_css %}
+{% block content %}
     <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
@@ -282,8 +282,6 @@
         font-weight: 500;
     }
     </style>
-{% endblock %}
-{% block content %}
     <div class="form-container">
         <div class="form-card">
             <div class="form-header">

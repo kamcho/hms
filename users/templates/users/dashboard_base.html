@@ -107,6 +107,11 @@
                         <i class="fas fa-headset"></i>
                         <span>Call Center</span>
                     </a>
+                    <a href="{% url 'inventory:create_request' %}" 
+                       class="menu-item {% if request.resolver_match.url_name == 'create_request' %}active{% endif %}">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Request Stock</span>
+                    </a>
                     {% if user.role == 'Doctor' %}
                         <a href="{% url 'home:opd_dashboard' %}" 
                           
@@ -131,12 +136,6 @@
                            class="menu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
                             <i class="fas fa-procedures"></i>
                             <span>Patients</span>
-                        </a>
-                        <a href="{% url 'inventory:create_request' %}" 
-                          
-                           class="menu-item">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>New Request</span>
                         </a>
                     {% endif %}
                     {% if user.role == 'Receptionist' %}
