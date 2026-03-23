@@ -224,8 +224,12 @@ def mark_invoices_paid(request, patient_id):
 
 @login_required
 def switch_role(request):
-    """Allow superusers to switch their active role."""
-    if not request.user.is_superuser:
+    """Allow superusers and authorized staff to switch their active role."""
+    user = request.user
+    # Authorized roles for switching
+    authorized_switcher = user.is_superuser or user.role in ['Admin', 'Pharmacist', 'Receptionist']
+    
+    if not authorized_switcher:
         raise PermissionDenied
     
     if request.method == 'POST':
@@ -234,14 +238,23 @@ def switch_role(request):
         valid_roles = [r[0] for r in request.user.roles]
         
         if new_role in valid_roles:
-            request.user.role = new_role
-            request.user.save()
+            # Enforce restrictions for non-Admins/non-superusers
+            if not (user.is_superuser or user.role == 'Admin'):
+                if user.role == 'Pharmacist' and new_role not in ['Receptionist', 'Pharmacist']:
+                    messages.error(request, 'Pharmacists can only switch to Receptionist role.')
+                    return redirect(get_dashboard_url(user))
+                if user.role == 'Receptionist' and new_role not in ['Pharmacist', 'Receptionist']:
+                    messages.error(request, 'You can only switch back to Pharmacist role.')
+                    return redirect(get_dashboard_url(user))
+
+            user.role = new_role
+            user.save()
             messages.success(request, f'Role switched to {new_role}')
-            return redirect(get_dashboard_url(request.user))
+            return redirect(get_dashboard_url(user))
         else:
             messages.error(request, 'Invalid role selected.')
             
-    return redirect(get_dashboard_url(request.user))
+    return redirect(get_dashboard_url(user))
 
 
 def handler404(request, exception=None):

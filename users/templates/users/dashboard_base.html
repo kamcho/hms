@@ -403,10 +403,11 @@
                             </div>
                             <div class="user-avatar-sm">{{ user.get_full_name|slice:":1"|upper }}</div>
                             
-                            {% if user.is_superuser %}
+                            {% if user.is_superuser or user.role == 'Admin' or user.role == 'Pharmacist' or user.role == 'Receptionist' %}
                             <div class="role-selector-dropdown" id="roleSelector">
                                 <div class="dropdown-header">Quick Role Switch</div>
                                 {% for role_code, role_name in user.roles %}
+                                    {% if user.is_superuser or user.role == 'Admin' or user.role == role_code or user.role == 'Pharmacist' and role_code == 'Receptionist' or user.role == 'Receptionist' and role_code == 'Pharmacist' %}
                                     <form action="{% url 'users:switch_role' %}" method="POST" style="margin: 0;">
                                         {% csrf_token %}
                                         <input type="hidden" name="role" value="{{ role_code }}">
@@ -414,6 +415,7 @@
                                             {{ role_name }}
                                         </button>
                                     </form>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                             {% endif %}
