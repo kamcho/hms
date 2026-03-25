@@ -18,7 +18,7 @@
     }
 
     .form-container {
-        max-width: 600px;
+        max-width: 700px;
         margin: 0 auto;
         animation: fadeInUp 0.6s ease-out;
     }
@@ -84,9 +84,7 @@
         font-weight: 500 !important;
     }
 
-    .form-group input[type="text"]:focus,
-    .form-group input[type="number"]:focus,
-    .form-group input[type="date"]:focus,
+    .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
         outline: none !important;
@@ -97,111 +95,108 @@
         color: #1e293b !important;
     }
 
-    /* Custom Searchable Select Styles */
-    .searchable-select-wrapper {
+    /* Hybrid Search Select Styling */
+    .hybrid-select-container {
         position: relative;
-    }
-
-    .searchable-select-wrapper select {
-        display: none;
-    }
-
-    .searchable-input {
-        background: white !important;
-        border: 2px solid #e2e8f0 !important;
-        border-radius: 12px;
-        padding: 0.875rem 2.5rem 0.875rem 1rem !important;
-        color: #1e293b !important;
-        font-size: 1rem !important;
-        transition: all 0.3s ease;
-        font-weight: 500 !important;
         width: 100%;
-        cursor: text;
     }
 
-    .searchable-input:focus {
-        outline: none !important;
-        border-color: #6366f1 !important;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    .hybrid-select-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
     }
 
-    .searchable-input::placeholder {
-        color: #94a3b8 !important;
-        font-weight: 400 !important;
-    }
-
-    .dropdown-arrow {
+    .hybrid-select-input-wrapper i {
         position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
+        right: 1.25rem;
+        color: var(--text-muted);
         pointer-events: none;
-        color: #64748b;
         transition: transform 0.3s ease;
     }
 
-    .dropdown-arrow.open {
-        transform: translateY(-50%) rotate(180deg);
-    }
-
-    .searchable-dropdown {
-        position: absolute;
-        top: calc(100% + 0.5rem);
-        left: 0;
-        right: 0;
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        max-height: 300px;
-        overflow-y: auto;
-        z-index: 1000;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        display: none;
-    }
-
-    .searchable-dropdown.open {
-        display: block;
-        animation: dropdownSlide 0.2s ease-out;
-    }
-
-    @keyframes dropdownSlide {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .dropdown-option {
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        color: #1e293b;
-        font-size: 0.9375rem;
-    }
-
-    .dropdown-option:hover {
-        background: rgba(99, 102, 241, 0.1);
+    .hybrid-select-container.active .hybrid-select-input-wrapper i {
+        transform: rotate(180deg);
         color: #6366f1;
     }
 
-    .dropdown-option.selected {
-        background: #6366f1;
-        color: white;
+    .hybrid-search-input {
+        width: 100%;
+        cursor: text !important;
+        padding-right: 3rem !important;
     }
 
-    .dropdown-option.hidden {
+    .hybrid-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        z-index: 1000;
+        max-height: 350px;
+        overflow-y: auto;
         display: none;
+        animation: slideDown 0.2s ease-out;
     }
 
-    .no-results {
-        padding: 1.5rem;
-        text-align: center;
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hybrid-dropdown.show {
+        display: block;
+    }
+
+    .hybrid-option {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .hybrid-option:last-child {
+        border-bottom: none;
+    }
+
+    .hybrid-option:hover {
+        background: rgba(99, 102, 241, 0.05);
+        padding-left: 1.5rem;
+    }
+
+    .hybrid-option.selected {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        font-weight: 700;
+    }
+
+    .hybrid-option .option-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .hybrid-option .option-meta {
+        font-size: 0.7rem;
         color: #94a3b8;
+        background: #f1f5f9;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .hybrid-no-results {
+        padding: 2.5rem;
+        text-align: center;
+        color: var(--text-muted);
         font-size: 0.875rem;
     }
 
@@ -213,26 +208,26 @@
     }
 
     .btn {
-        padding: 0.75rem 2rem;
-        border-radius: 12px;
-        font-weight: 600;
+        padding: 0.875rem 2.25rem;
+        border-radius: 14px;
+        font-weight: 700;
         cursor: pointer;
         transition: all 0.3s ease;
         text-decoration: none;
         border: none;
+        font-size: 1rem;
     }
 
     .btn-secondary {
-        background: rgba(255, 255, 255, 0.8);
-        color: var(--text-secondary);
-        border: 2px solid var(--glass-border);
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
     }
 
     .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.9);
-        color: var(--text-primary);
+        background: #e2e8f0;
+        color: #1e293b;
         transform: translateY(-1px);
-        box-shadow: var(--card-shadow);
     }
 
     .btn-primary {
@@ -251,7 +246,6 @@
             opacity: 0;
             transform: translateY(30px);
         }
-
         to {
             opacity: 1;
             transform: translateY(0);
@@ -259,18 +253,22 @@
     }
 
     .info-box {
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 2rem;
         color: var(--text-primary);
-        font-size: 0.875rem;
+        font-size: 0.9rem;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
     }
 
     .info-box i {
         color: #6366f1;
-        margin-right: 0.5rem;
+        font-size: 1.1rem;
+        margin-top: 0.1rem;
     }
 
     .errorlist {
@@ -281,46 +279,96 @@
         font-size: 0.875rem;
         font-weight: 500;
     }
+
+    /* Custom Scrollbar */
+    .hybrid-dropdown::-webkit-scrollbar {
+        width: 8px;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 0 16px 16px 0;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
     </style>
+
     <div class="form-container">
         <div class="form-card">
             <div class="form-header">
                 <h2>{{ title }}</h2>
                 <p>Request inventory items for your department or location.</p>
             </div>
+            
             <div class="info-box">
                 <i class="fas fa-info-circle"></i>
-                Please select the item you need and specify the quantity and location where it's required.
+                <div>
+                   <strong>Guidelines:</strong> Please specify the item you need and select the correct delivery location. 
+                   Requests are reviewed by the Main Store before approval.
+                </div>
             </div>
-            <form method="post" autocomplete="off">
+
+            <form method="post" autocomplete="off" id="requestForm">
                 {% csrf_token %}
+                
+                <!-- Hybrid Search Select Item -->
                 <div class="form-group">
-                    <label for="item-search">
-                        Inventory Item <small style="color: #6366f1;">(Searchable)</small>
-                    </label>
-                    <div class="searchable-select-wrapper">
-                        {{ form.item }}
-                        <input type="text" id="item-search" class="searchable-input" placeholder="Search for an inventory item..." autocomplete="off">
-                        <i class="fas fa-chevron-down dropdown-arrow"></i>
-                        <div class="searchable-dropdown" id="item-dropdown">
-                            <!-- Options will be populated by JavaScript -->
+                    <label>Inventory Item <small style="color: #6366f1;">(Hybrid Search)</small></label>
+                    <div class="hybrid-select-container" id="hybridItemSelect">
+                        <div class="hybrid-select-input-wrapper">
+                            <input type="text" 
+                                   class="form-control hybrid-search-input" 
+                                   id="itemSearchInput" 
+                                   placeholder="Search for an inventory item..." 
+                                   autocomplete="off">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="hybrid-dropdown" id="itemDropdown">
+                            <div class="hybrid-options-list" id="optionsList">
+                                {% for item in inventory_items %}
+                                    <div class="hybrid-option" 
+                                         data-value="{{ item.id }}" 
+                                         data-name="{{ item.name|escapejs }}">
+                                        <span class="option-name">{{ item.name }}</span>
+                                        <span class="option-meta">{{ item.category.name|default:"General" }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="hybrid-no-results" id="noResults" style="display: none;">
+                                <i class="fas fa-search" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.3; margin-top: 1rem;"></i>
+                                <span class="block">No items match your search</span>
+                                <small class="text-slate-400 mt-2 block">Try searching for a generic name or category</small>
+                            </div>
+                        </div>
+                        <!-- Hidden actual select for Django Form compatibility -->
+                        <div style="display: none;">
+                            {{ form.item }}
                         </div>
                     </div>
                     {{ form.item.errors }}
                 </div>
+
                 <div class="form-group">
                     <label for="{{ form.quantity.id_for_label }}">Quantity Required</label>
                     {{ form.quantity }}
                     {{ form.quantity.errors }}
                 </div>
+
                 <div class="form-group">
                     <label for="{{ form.location.id_for_label }}">Delivery Location</label>
                     {{ form.location }}
                     {{ form.location.errors }}
+                    <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem;">Select the department where this item is needed.</small>
                 </div>
+
                 <div class="form-actions">
                     <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
                         <i class="fas fa-paper-plane"></i> Submit Request
                     </button>
                 </div>
@@ -328,149 +376,185 @@
         </div>
     </div>
 {% endblock %}
+
 {% block extra_js %}
-    <script>
-    (function () {
-        const originalSelect = document.querySelector('#{{ form.item.id_for_label }}');
-        const searchInput = document.querySelector('#item-search');
-        const dropdown = document.querySelector('#item-dropdown');
-        const dropdownArrow = document.querySelector('.dropdown-arrow');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hybrid Select Elements
+    const hybridContainer = document.getElementById('hybridItemSelect');
+    const searchInput = document.getElementById('itemSearchInput');
+    const dropdown = document.getElementById('itemDropdown');
+    const optionsList = document.getElementById('optionsList');
+    const options = optionsList.querySelectorAll('.hybrid-option');
+    const noResults = document.getElementById('noResults');
+    const actualSelect = document.querySelector('select[name="item"]');
+    const submitBtn = document.getElementById('submitBtn');
 
-        if (!originalSelect || !searchInput || !dropdown) return;
+    if (!hybridContainer || !searchInput || !actualSelect) return;
 
-        // Build options from the original select
-        const options = Array.from(originalSelect.options).filter(opt => opt.value);
-        let selectedValue = originalSelect.value;
+    // Initialize state
+    let isOpen = false;
 
-        // Populate dropdown
-        function populateDropdown(filter = '') {
-            dropdown.innerHTML = '';
-            const filterLower = filter.toLowerCase();
-            let visibleCount = 0;
-
-            options.forEach(option => {
-                if (!filter || option.text.toLowerCase().includes(filterLower)) {
-                    const div = document.createElement('div');
-                    div.className = 'dropdown-option';
-                    div.textContent = option.text;
-                    div.dataset.value = option.value;
-
-                    if (option.value === selectedValue) {
-                        div.classList.add('selected');
-                        searchInput.value = option.text;
-                    }
-
-                    div.addEventListener('click', function () {
-                        selectOption(option.value, option.text);
-                    });
-
-                    dropdown.appendChild(div);
-                    visibleCount++;
-                }
-            });
-
-            if (visibleCount === 0) {
-                const noResults = document.createElement('div');
-                noResults.className = 'no-results';
-                noResults.textContent = 'No items found. Try a different search term.';
-                dropdown.appendChild(noResults);
-            }
-        }
-
-        // Select an option
-        function selectOption(value, text) {
-            selectedValue = value;
-            originalSelect.value = value;
-            searchInput.value = text;
-            closeDropdown();
-
-            // Update selected styling
-            dropdown.querySelectorAll('.dropdown-option').forEach(opt => {
+    // Function to handle selection
+    function selectItem(value, name) {
+        actualSelect.value = value;
+        searchInput.value = name;
+        
+        // Update selection UI
+        options.forEach(opt => {
+            if (opt.dataset.value === value) {
+                opt.classList.add('selected');
+            } else {
                 opt.classList.remove('selected');
-                if (opt.dataset.value === value) {
-                    opt.classList.add('selected');
-                }
+            }
+        });
+
+        closeDropdown();
+        searchInput.style.borderColor = '#6366f1';
+        searchInput.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)';
+    }
+
+    // Toggle Dropdown
+    function openDropdown() {
+        isOpen = true;
+        dropdown.classList.add('show');
+        hybridContainer.classList.add('active');
+    }
+
+    function closeDropdown() {
+        isOpen = false;
+        dropdown.classList.remove('show');
+        hybridContainer.classList.remove('active');
+        
+        // If nothing selected but search text exists, try to match or clear
+        if (!actualSelect.value && searchInput.value) {
+            const query = searchInput.value.toLowerCase().trim();
+            let match = null;
+            options.forEach(opt => {
+                 if (opt.dataset.name.toLowerCase() === query) {
+                     match = opt;
+                 }
             });
+            if (match) {
+                selectItem(match.dataset.value, match.dataset.name);
+            } else {
+                // searchInput.value = ''; // Optional: clear if no exact match
+            }
         }
+    }
 
-        // Open dropdown
-        function openDropdown() {
-            populateDropdown(searchInput.value);
-            dropdown.classList.add('open');
-            dropdownArrow.classList.add('open');
-        }
+    searchInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!isOpen) openDropdown();
+        this.select();
+    });
 
-        // Close dropdown
-        function closeDropdown() {
-            dropdown.classList.remove('open');
-            dropdownArrow.classList.remove('open');
-        }
+    searchInput.addEventListener('focus', function() {
+        if (!isOpen) openDropdown();
+    });
 
-        // Event listeners
-        searchInput.addEventListener('focus', function () {
-            openDropdown();
-        });
+    // Search Logic
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        let hasResults = false;
 
-        searchInput.addEventListener('input', function () {
-            populateDropdown(this.value);
-            if (!dropdown.classList.contains('open')) {
-                openDropdown();
+        options.forEach(opt => {
+            const name = opt.dataset.name.toLowerCase();
+            const meta = opt.querySelector('.option-meta').textContent.toLowerCase();
+            if (name.includes(query) || meta.includes(query)) {
+                opt.style.display = 'flex';
+                hasResults = true;
+            } else {
+                opt.style.display = 'none';
             }
         });
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function (e) {
-            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-                closeDropdown();
-            }
+        noResults.style.display = hasResults ? 'none' : 'block';
+        if (!isOpen) openDropdown();
+    });
+
+    // Option Click
+    options.forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectItem(this.dataset.value, this.dataset.name);
         });
+    });
 
-        // Handle keyboard navigation
-        let currentFocus = -1;
-        searchInput.addEventListener('keydown', function (e) {
-            const options = dropdown.querySelectorAll('.dropdown-option:not(.hidden)');
+    // Close on click outside
+    document.addEventListener('click', function(e) {
+        if (!hybridContainer.contains(e.target)) {
+            closeDropdown();
+        }
+    });
 
-            if (e.key === 'ArrowDown') {
+    // Keyboard Navigation
+    searchInput.addEventListener('keydown', function(e) {
+        const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+        let currentFocus = visibleOptions.findIndex(opt => opt.classList.contains('focused'));
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isOpen) { 
+                openDropdown(); 
+                return; 
+            }
+            if (currentFocus > -1) visibleOptions[currentFocus].classList.remove('focused');
+            currentFocus = (currentFocus + 1) % visibleOptions.length;
+            visibleOptions[currentFocus].classList.add('focused');
+            visibleOptions[currentFocus].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentFocus > -1) visibleOptions[currentFocus].classList.remove('focused');
+            currentFocus = (currentFocus - 1 + visibleOptions.length) % visibleOptions.length;
+            visibleOptions[currentFocus].classList.add('focused');
+            visibleOptions[currentFocus].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            if (isOpen && currentFocus > -1) {
                 e.preventDefault();
-                currentFocus++;
-                if (currentFocus >= options.length) currentFocus = 0;
-                setActive(options);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                currentFocus--;
-                if (currentFocus < 0) currentFocus = options.length - 1;
-                setActive(options);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (currentFocus > -1 && options[currentFocus]) {
-                    options[currentFocus].click();
-                }
-            } else if (e.key === 'Escape') {
-                closeDropdown();
+                const opt = visibleOptions[currentFocus];
+                selectItem(opt.dataset.value, opt.dataset.name);
             }
-        });
-
-        function setActive(options) {
-            options.forEach((opt, idx) => {
-                opt.style.background = idx === currentFocus ? 'rgba(99, 102, 241, 0.1)' : '';
-                opt.style.color = idx === currentFocus ? '#6366f1' : '#1e293b';
-            });
-
-            if (options[currentFocus]) {
-                options[currentFocus].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            }
+        } else if (e.key === 'Escape') {
+            closeDropdown();
         }
+    });
 
-        // Initialize with selected value if exists
-        if (selectedValue) {
-            const selectedOption = options.find(opt => opt.value === selectedValue);
-            if (selectedOption) {
-                searchInput.value = selectedOption.text;
-            }
+    // Handle existing value (if editing or form error)
+    if (actualSelect.value) {
+        const selectedOpt = Array.from(options).find(opt => opt.dataset.value === actualSelect.value);
+        if (selectedOpt) {
+            searchInput.value = selectedOpt.dataset.name;
+            selectedOpt.classList.add('selected');
         }
+    }
 
-        // Initial population
-        populateDropdown();
-    })();
-    </script>
+    // Form Submission Validation
+    document.getElementById('requestForm').addEventListener('submit', function(e) {
+        if (!actualSelect.value) {
+            e.preventDefault();
+            searchInput.style.borderColor = '#ef4444';
+            searchInput.focus();
+            
+            // Show custom alert if needed
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'errorlist';
+            errorMsg.innerHTML = '<li>Please select an item from the search results.</li>';
+            if (!hybridContainer.parentElement.querySelector('.errorlist')) {
+                hybridContainer.parentElement.appendChild(errorMsg);
+            }
+        } else {
+             submitBtn.disabled = true;
+             submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
+        }
+    });
+});
+</script>
+
+<style>
+.hybrid-option.focused {
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 4px solid #6366f1;
+}
+</style>
 {% endblock %}

@@ -368,6 +368,7 @@
                     <div style="font-weight: 800; color: #6366f1;">{% widthratio dist.total_quantity total_stock 100 %}%</div>
                 </td>
                 <td style="text-align: right;">
+                    {% if user.is_superuser or user.role == "Admin" %}
                     <button type="button" 
                             onclick="openReconcileModal('{{ dist.current_location__id }}', '{{ dist.current_location__name|escapejs }}', '{{ dist.total_quantity }}')"
                             style="background: none; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: all 0.2s;"
@@ -375,6 +376,7 @@
                             onmouseout="this.style.color='#64748b'; this.style.background='transparent';">
                         <i class="fas fa-pencil-alt"></i>
                     </button>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
@@ -495,6 +497,7 @@
     }
 </script>
 
+{% if user.is_superuser or user.role == "Admin" %}
 <!-- Reconciliation Modal -->
 <div id="reconcileModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
     <div style="background: white; width: 100%; max-width: 400px; border-radius: 24px; padding: 2rem; box-shadow: var(--card-shadow); animation: modalPop 0.3s ease-out;">
@@ -529,6 +532,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <style>
     @keyframes modalPop {

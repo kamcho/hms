@@ -7,7 +7,7 @@ from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, Stock
 from home.models import Departments, Patient, Visit
 from accounts.utils import get_or_create_invoice
 
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Case, When, Value, IntegerField
 from django.db import transaction
 from django.utils import timezone
 
@@ -203,12 +203,19 @@ def create_request(request):
     
     return render(request, 'inventory/create_request.html', {
         'form': form,
-        'title': 'Create Inventory Request'
+        'title': 'Create Inventory Request',
+        'inventory_items': InventoryItem.objects.all().order_by('name')
     })
 
 @login_required
 def request_list(request):
-    requests = InventoryRequest.objects.select_related('item', 'requested_by').order_by('-requested_at')
+    requests = InventoryRequest.objects.select_related('item', 'requested_by').annotate(
+        priority=Case(
+            When(status='Pending', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+    ).order_by('priority', '-requested_at')
     return render(request, 'inventory/request_list.html', {'requests': requests})
 
 @login_required
@@ -226,7 +233,7 @@ def update_request_status(request, request_id):
                     main_store = Departments.objects.get(name='Main Store')
                 except Departments.DoesNotExist:
                     messages.error(request, 'Main Store department not found.')
-                    return redirect('inventory:item_list')
+                    return redirect('inventory:request_list')
 
                 # Check if enough stock in Main Store
                 total_stock = StockRecord.objects.filter(
@@ -236,7 +243,7 @@ def update_request_status(request, request_id):
                 
                 if total_stock < adjusted_qty:
                     messages.error(request, f'Insufficient stock in Main Store. Available: {total_stock}')
-                    return redirect('inventory:item_list')
+                    return redirect('inventory:request_list')
 
                 # Proceed with Transfer
                 remaining_qty = adjusted_qty
@@ -297,15 +304,17 @@ def update_request_status(request, request_id):
                 messages.success(request, f'Request approved. {adjusted_qty} units transferred to {inventory_request.location.name}.')
             except ValueError:
                 messages.error(request, 'Invalid quantity provided.')
-                return redirect('inventory:item_list')
+                return redirect('inventory:request_list')
         elif action == 'reject':
-            inventory_request.status = 'Rejected'
-            messages.info(request, f'Request for {inventory_request.item.name} rejected.')
+            item_name = inventory_request.item.name
+            inventory_request.delete()
+            messages.info(request, f'Request for {item_name} rejected.')
+            return redirect('inventory:request_list')
         
         inventory_request.save()
-        return redirect('inventory:item_list')
+        return redirect('inventory:request_list')
     
-    return redirect('inventory:item_list')
+    return redirect('inventory:request_list')
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -763,7 +772,11 @@ def inventory_distribution(request, item_id):
     }
     return render(request, 'inventory/inventory_distribution.html', context)
 
+def is_admin(user):
+    return user.is_authenticated and (user.role == 'Admin')
+
 @login_required
+@user_passes_test(is_admin)
 @require_POST
 def reconcile_stock(request, item_id, location_id):
     """
