@@ -512,6 +512,16 @@
                 </div>
                 <div class="modern-card-body">
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        {% if user.is_superuser or user.role == 'Admin' %}
+                            {% with current_visit=selected_visit|default:latest_visit %}
+                                {% if current_visit and current_visit.invoice %}
+                                    <a href="{% url 'accounts:invoice_detail' current_visit.invoice.id %}" class="modern-btn btn-secondary" style="width: 100%; border-color: var(--clinical-primary); color: var(--clinical-primary);">
+                                        <i class="fas fa-file-invoice-dollar"></i> View Invoice
+                                    </a>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                        
                         {% if selected_visit == latest_visit or not selected_visit %}
                             {% if user.role == 'Doctor' %}
                                 {% if active_admission %}

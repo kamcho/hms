@@ -561,9 +561,13 @@ def delete_invoice_item(request, item_id):
         else:
             return JsonResponse({'success': False, 'error': 'Only the item creator or invoice creator can delete items.'})
         
-        # Dispense Check: Only Superusers/Admins can delete dispensed items
-        if item.is_dispensed and not (request.user.is_superuser or request.user.role == 'Admin'):
-            return JsonResponse({'success': False, 'error': 'This item has already been physically dispensed. Only an Administrator can delete it to ensure stock integrity.'})
+        # Dispense Check: Nobody can delete dispensed items
+        if item.is_dispensed:
+            return JsonResponse({'success': False, 'error': 'This item has already been physically dispensed and cannot be deleted.'})
+            
+        # Services Check: Check if a lab test associated with this item is completed
+        if item.is_completed_service:
+            return JsonResponse({'success': False, 'error': 'This service has already been completed and its record cannot be deleted.'})
         
         # State Check: Unpaid only
         if item.paid_amount > 0:

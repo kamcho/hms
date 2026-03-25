@@ -162,6 +162,16 @@ class InvoiceItem(models.Model):
             quantity=self.quantity
         ).exists()
 
+    @property
+    def is_completed_service(self):
+        """
+        Checks if this item represents a service that has been completed 
+        (e.g., a lab test marked as Completed).
+        """
+        if self.service and hasattr(self, 'labresult_set') and self.labresult_set.filter(status='Completed').exists():
+            return True
+        return False
+
     def save(self, *args, **kwargs):
         # Auto-calculate amount
         self.amount = self.quantity * self.unit_price
