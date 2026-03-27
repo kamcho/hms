@@ -30,11 +30,22 @@
         <!-- Consumables Stat -->
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-emerald-500/5 group">
             <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
-                <i class="fas fa-box text-xl"></i>
+                <i class="fas fa-warehouse text-xl"></i>
             </div>
             <div>
-                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Consumables</div>
-                <div class="text-2xl font-black text-slate-900">{{ pending_consumables.count }}</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mini Pharmacy Stock</div>
+                <div class="text-2xl font-black text-slate-900">{{ mini_pharmacy_stock.count }}</div>
+            </div>
+        </div>
+
+        <!-- Stock Requests Stat -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-amber-500/5 group">
+            <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-clipboard-list text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Requests</div>
+                <div class="text-2xl font-black text-slate-900">{{ mini_pharmacy_requests.count }}</div>
             </div>
         </div>
     </div>
@@ -118,57 +129,114 @@
             </div>
         </div>
 
-        <!-- Consumables Table -->
+        <!-- Mini Pharmacy Stock Table -->
         <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
             <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
                 <div class="flex items-center gap-3">
                     <div class="w-2 h-8 bg-emerald-600 rounded-full"></div>
-                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Pending Consumables</h2>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Available Stock in Mini Pharmacy</h2>
                 </div>
-                <span class="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ pending_consumables.count }} Tasks</span>
+                <span class="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ mini_pharmacy_stock.count }} Items</span>
             </div>
             
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                            <th class="px-8 py-4">Patient</th>
-                            <th class="px-8 py-4">Item</th>
-                            <th class="px-8 py-4">Progress</th>
-                            <th class="px-8 py-4 text-center">Action</th>
+                            <th class="px-8 py-4">Item Name</th>
+                            <th class="px-8 py-4">Batch Number</th>
+                            <th class="px-8 py-4">Quantity</th>
+                            <th class="px-8 py-4">Expiry Date</th>
+                            <th class="px-8 py-4">Supplier</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
-                        {% for con in pending_consumables %}
+                        {% for stock in mini_pharmacy_stock %}
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ con.admission.patient.full_name }}</div>
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ stock.item.name }}</div>
                             </td>
                             <td class="px-8 py-5">
-                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ con.item.name }}</div>
+                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ stock.batch_number }}</div>
                             </td>
-                            <td class="px-8 py-5 min-w-[180px]">
-                                <div class="flex justify-between items-center mb-1.5">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ con.quantity_dispensed }} / {{ con.total_quantity }} Units</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
-                                    {% widthratio con.quantity_dispensed con.total_quantity 100 as cp_pct %}
-                                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: {{ cp_pct }}%"></div>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ stock.total_quantity }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-600">
+                                    {% if stock.expiry_date %}{{ stock.expiry_date|date:"d M Y" }}{% else %}N/A{% endif %}
                                 </div>
                             </td>
-                            <td class="px-8 py-5 text-center">
-                                <button type="button" 
-                                        onclick="openDispenseModal('consumable', '{{ con.id }}', '{{ con.item.name|escapejs }}', {{ con.total_quantity }}, {{ con.quantity_dispensed }}, '{% if con.instructions %}{{ con.instructions|escapejs }}{% else %}No specific dosage instructions provided.{% endif %}')"
-                                        class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
-                                    Dispense
-                                </button>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">
+                                    {{ stock.supplier.name|default:"N/A" }}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="px-8 py-20 text-center">
-                                <i class="fas fa-box text-4xl text-slate-200 mb-4 block"></i>
-                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending consumables</p>
+                            <td colspan="5" class="px-8 py-20 text-center">
+                                <i class="fas fa-warehouse text-4xl text-slate-200 mb-4 block"></i>
+                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No stock available in Mini Pharmacy</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stock Requests Table -->
+        <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-8 bg-amber-600 rounded-full"></div>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Stock Requests (Target: Mini Pharmacy)</h2>
+                </div>
+                <span class="px-4 py-1.5 bg-amber-50 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ mini_pharmacy_requests.count }} Requests</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                            <th class="px-8 py-4">Item</th>
+                            <th class="px-8 py-4">Quantity</th>
+                            <th class="px-8 py-4">Requested By</th>
+                            <th class="px-8 py-4">Requested At</th>
+                            <th class="px-8 py-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for request in mini_pharmacy_requests %}
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ request.item.name }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-amber-600 uppercase tracking-tighter">{{ request.quantity }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ request.requested_at|date:"d M Y, H:i" }}</div>
+                            </td>
+                            <td class="px-8 py-5 text-center">
+                                <span class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block
+                                    {% if request.status == 'Pending' %}bg-amber-50 text-amber-700
+                                    {% elif request.status == 'Approved' %}bg-emerald-50 text-emerald-700
+                                    {% elif request.status == 'Rejected' %}bg-red-50 text-red-700
+                                    {% endif %}">
+                                    {{ request.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-8 py-20 text-center">
+                                <i class="fas fa-clipboard-list text-4xl text-slate-200 mb-4 block"></i>
+                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending stock requests for Mini Pharmacy</p>
                             </td>
                         </tr>
                         {% endfor %}

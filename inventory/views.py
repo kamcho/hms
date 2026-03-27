@@ -198,7 +198,7 @@ def create_request(request):
             inventory_request.requested_by = request.user
             inventory_request.save()
             messages.success(request, f'Inventory request for "{inventory_request.item.name}" submitted successfully.')
-            return redirect('inventory:item_list')
+            return redirect('inventory:create_request')
     else:
         form = InventoryRequestForm()
     
@@ -997,10 +997,32 @@ def ipd_pharmacy_dashboard(request):
         quantity_dispensed__lt=F('total_quantity')
     ).select_related('admission__patient', 'item', 'request_location')
 
+    # Get Mini Pharmacy department
+    mini_pharmacy = Departments.objects.filter(name='Mini Pharmacy').first()
+    
+    # Get available stock in Mini Pharmacy
+    mini_pharmacy_stock = []
+    if mini_pharmacy:
+        mini_pharmacy_stock = StockRecord.objects.filter(
+            current_location=mini_pharmacy
+        ).select_related('item', 'supplier').annotate(
+            total_quantity=Sum('quantity')
+        ).filter(total_quantity__gt=0).order_by('item__name')
+    
+    # Get stock requests where target location is Mini Pharmacy
+    mini_pharmacy_requests = []
+    if mini_pharmacy:
+        mini_pharmacy_requests = InventoryRequest.objects.filter(
+            location=mini_pharmacy,
+            status='Pending'
+        ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+
     # Show all pending items
     context = {
         'pending_meds': pending_meds,
         'pending_consumables': pending_consumables,
+        'mini_pharmacy_stock': mini_pharmacy_stock,
+        'mini_pharmacy_requests': mini_pharmacy_requests,
         'title': 'IPD Pharmacy Fulfillment',
         'all_pharmacies': [user_dept] if user_dept else [],
         'locked_department': user_dept,
