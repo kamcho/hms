@@ -407,7 +407,7 @@
                         data-mother-pnc-id="{% if item.que %}{{ item.que.mother_pnc_visit_id|default:'' }}{% endif %}"
                         data-baby-pnc-id="{% if item.que %}{{ item.que.baby_pnc_visit_id|default:'' }}{% endif %}"
                         data-has-cwc-records="{% if item.que %}{{ item.que.has_cwc_records|yesno:'true,false' }}{% endif %}"
-                        data-pregnancies='[{% for p in item.active_pregnancies %}{"id": "{{ p.id }}", "edd": "{{ p.edd }}", "ga": "{{ p.ga|default:0 }}", "status": "{{ p.status }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                        data-pregnancies='[{% for p in item.pregnancies %}{"id": "{{ p.id }}", "edd": "{{ p.edd }}", "ga": "{{ p.ga|default:0 }}", "status": "{{ p.status }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-500 border border-slate-200">
@@ -543,13 +543,13 @@
         </div>
         
         <div class="p-6">
-            <!-- Maternity Care Workflow (Combined ANC/PNC) -->
+            <!-- Pregnancies Section -->
             <div class="mch-category-block mch-category-anc-bg">
                 <div class="workflow-section-title">
-                    <i class="fas fa-female text-emerald-500"></i> Maternity Care (ANC/PNC)
+                    <i class="fas fa-female text-emerald-600"></i> PREGNANCIES
                 </div>
                 <div id="maternityPregnancyList" class="space-y-2 mb-3">
-                    <!-- Dynamic -->
+                    <!-- Dynamic Pregnancy Links -->
                 </div>
                 
                 <div id="maternityQuickActions" class="grid grid-cols-1 gap-2">
@@ -559,18 +559,20 @@
                 </div>
             </div>
 
-            <!-- CWC Workflow (Orange Theme) -->
-            <div class="mch-category-block mch-category-cwc-bg">
+            <!-- CWC Section -->
+            <div id="cwcSection" class="mch-category-block mch-category-cwc-bg">
                 <div class="workflow-section-title">
-                    <i class="fas fa-baby-carriage text-orange-500"></i> Child Welfare (CWC)
+                    <i class="fas fa-baby text-orange-600"></i> CWC SECTION
                 </div>
-                <a id="cwcAction" href="#" class="action-tile tile-cwc">
-                    <div class="action-tile-icon"><i class="fas fa-syringe"></i></div>
-                    <div class="action-tile-text">
-                        <div class="action-tile-label">Immunization / growth</div>
-                        <div class="action-tile-sub">Child Health Monitoring</div>
-                    </div>
-                </a>
+                <div id="cwcActionList" class="space-y-2">
+                    <a id="cwcAction" href="#" class="action-tile tile-cwc">
+                        <div class="action-tile-icon"><i class="fas fa-syringe"></i></div>
+                        <div class="action-tile-text">
+                            <div class="action-tile-label">Immunization / Growth</div>
+                            <div class="action-tile-sub">Child Health Monitoring</div>
+                        </div>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -594,21 +596,20 @@ function openActionModal(row) {
     const mchPregList = document.getElementById('maternityPregnancyList');
     mchPregList.innerHTML = '';
     
+    // 1. Existing Pregnancies list
     if (pregnancies.length > 0) {
-        // Sort pregnancies by ID descending
         const sortedPregnancies = pregnancies.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-        
         sortedPregnancies.forEach(p => {
             const btn = document.createElement('a');
-            const isPnc = p.status === 'Delivered';
-            btn.className = `action-tile ${isPnc ? 'tile-pnc-mother' : 'tile-anc'}`;
+            const isActive = p.status === 'Active';
+            btn.className = `action-tile ${isActive ? 'tile-anc' : 'tile-pnc-mother'}`;
             btn.href = `/maternity/pregnancy/${p.id}/`;
             
             btn.innerHTML = `
-                <div class="action-tile-icon"><i class="fas ${isPnc ? 'fa-baby' : 'fa-female'}"></i></div>
+                <div class="action-tile-icon"><i class="fas fa-female"></i></div>
                 <div class="action-tile-text">
-                    <div class="action-tile-label">${isPnc ? 'Postnatal Care' : 'Antenatal Care'} File #${p.id}</div>
-                    <div class="action-tile-sub">Status: ${p.status} | GA: ${p.ga}w | EDD: ${p.edd}</div>
+                    <div class="action-tile-label">Pregnancy #${p.id}</div>
+                    <div class="action-tile-sub">Status: ${p.status}</div>
                 </div>
             `;
             mchPregList.appendChild(btn);
@@ -616,49 +617,48 @@ function openActionModal(row) {
     } else {
         const info = document.createElement('div');
         info.className = 'p-4 rounded-xl text-slate-500 bg-slate-50 border border-slate-100 text-[10px] font-black uppercase text-center';
-        info.textContent = 'No previous maternity files recorded.';
+        info.textContent = 'No previous pregnancies.';
         mchPregList.appendChild(info);
     }
     
+    // 2. Open New Pregnancy File button
     document.getElementById('ancNewPregnancy').href = `{% url 'maternity:register_pregnancy' %}?patient_id=${data.id}`;
     
+    // 3. CWC / Immunization Section
     const cwcAction = document.getElementById('cwcAction');
     
     if (data.queId) {
-        cwcAction.className = 'action-tile tile-cwc';
+        // If in queue, go to immunization dashboard for this visit
+        cwcAction.href = `{% url 'maternity:vaccination_dashboard' %}?q=${data.id}`;
         cwcAction.onclick = null;
         
-        // CWC State
-        cwcAction.href = `{% url 'maternity:vaccination_dashboard' %}?q=${data.id}`;
         if (data.hasCwcRecords === 'true') {
             cwcAction.innerHTML = `
                 <div class="action-tile-icon"><i class="fas fa-edit"></i></div>
                 <div class="action-tile-text">
-                    <div class="action-tile-label">Edit CWC</div>
-                    <div class="action-tile-sub">Existing Record</div>
+                    <div class="action-tile-label">Edit Immunization</div>
+                    <div class="action-tile-sub">Existing CWC Record</div>
                 </div>
             `;
         } else {
             cwcAction.innerHTML = `
                 <div class="action-tile-icon"><i class="fas fa-syringe"></i></div>
                 <div class="action-tile-text">
-                    <div class="action-tile-label">Process CWC</div>
-                    <div class="action-tile-sub">Immunizations / Growth</div>
+                    <div class="action-tile-label">Process Immunization</div>
+                    <div class="action-tile-sub">Record CWC / Growth</div>
                 </div>
             `;
         }
     } else {
-        // Patients NOT in clinical queue:
-        // CWC should allow creating a visit
+        // Patients NOT in clinical queue: allow creating a visit
         cwcAction.href = '#';
-        cwcAction.className = 'action-tile tile-cwc';
         cwcAction.onclick = (e) => { e.preventDefault(); createCwcVisit(data.id); };
         
         cwcAction.innerHTML = `
             <div class="action-tile-icon"><i class="fas fa-plus-circle"></i></div>
             <div class="action-tile-text">
-                <div class="action-tile-label">Create Visit</div>
-                <div class="action-tile-sub">Send to CWC Dept</div>
+                <div class="action-tile-label">New CWC Visit</div>
+                <div class="action-tile-sub">Send to Immunization Dept</div>
             </div>
         `;
     }

@@ -545,10 +545,10 @@ def transfer_patient(request, admission_id):
 
 @login_required
 def add_medication(request, admission_id):
-    if request.user.role != 'Doctor':
+    if request.user.role not in ['Doctor', 'Nurse']:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Only doctors can prescribe inpatient medications.'})
-        messages.error(request, "Only doctors can prescribe inpatient medications.")
+            return JsonResponse({'success': False, 'error': 'Only doctors and nurses can prescribe inpatient medications.'})
+        messages.error(request, "Only doctors and nurses can prescribe inpatient medications.")
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
@@ -624,10 +624,10 @@ def add_medication(request, admission_id):
 
 @login_required
 def discontinue_medication(request, medication_id):
-    if request.user.role != 'Doctor':
+    if request.user.role not in ['Doctor', 'Nurse']:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Only doctors can discontinue inpatient medications.'})
-        messages.error(request, "Only doctors can discontinue inpatient medications.")
+            return JsonResponse({'success': False, 'error': 'Only doctors and nurses can discontinue inpatient medications.'})
+        messages.error(request, "Only doctors and nurses can discontinue inpatient medications.")
         return redirect('inpatient:dashboard')
         
     from .models import MedicationChart
@@ -657,10 +657,10 @@ def discontinue_medication(request, medication_id):
 
 @login_required
 def add_service(request, admission_id):
-    if request.user.role != 'Doctor':
+    if request.user.role not in ['Doctor', 'Nurse']:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Only doctors can request ward services.'})
-        messages.error(request, "Only doctors can request ward services.")
+            return JsonResponse({'success': False, 'error': 'Only doctors and nurses can request ward services.'})
+        messages.error(request, "Only doctors and nurses can request ward services.")
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
@@ -747,8 +747,8 @@ def administer_medication(request, medication_id):
 
 @login_required
 def add_doctor_instruction(request, admission_id):
-    if request.user.role != 'Doctor':
-        messages.error(request, "Only doctors can record instructions.")
+    if request.user.role not in ['Doctor', 'Nurse']:
+        messages.error(request, "Only doctors and nurses can record instructions.")
         return redirect('inpatient:patient_case_folder', admission_id=admission_id)
     
     admission = get_object_or_404(Admission, id=admission_id)
@@ -791,6 +791,10 @@ def complete_instruction(request, instruction_id):
 
 @login_required
 def add_nutrition_order(request, admission_id):
+    if request.user.role not in ['Doctor', 'Nurse']:
+        messages.error(request, "Only doctors and nurses can order nutrition.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission_id)
+    
     admission = get_object_or_404(Admission, id=admission_id)
     
     # Block if not latest visit

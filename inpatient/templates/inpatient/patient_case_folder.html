@@ -320,7 +320,7 @@
                         <div id="clinical-medications" class="clinical-pane space-y-6" style="display: none;">
                             <div class="flex justify-between items-center mb-8">
                                 <h4 class="text-sm font-bold text-slate-900 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Treatment Card (Active meds)</h4>
-                                {% if user.role == 'Doctor' and admission.status != 'Discharged' %}
+                                {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
                                     <button onclick="showMedicationModal()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all inline-flex items-center">
                                         <i class="fas fa-pills mr-2"></i> Prescribe
                                     </button>
@@ -382,7 +382,7 @@
                                                 <td class="p-3 border-r border-slate-200 text-center align-middle">
                                                     <div class="text-[10px] font-bold text-slate-800">{{ med.prescribed_at|date:"d/m/y H:i" }}</div>
                                                     <div class="text-[9px] text-slate-500 uppercase mt-0.5">Dr. {{ med.prescribed_by.last_name }}</div>
-                                                    {% if med.is_active and user.role == 'Doctor' and admission.status != 'Discharged' %}
+                                                    {% if med.is_active and user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
                                                         <a href="{% url 'inpatient:discontinue_medication' med.id %}" class="inline-block mt-2 px-2 py-1 bg-rose-100 text-rose-700 rounded text-[8px] font-bold uppercase transition-all hover:bg-rose-200" onclick="return confirm('Stop this medication?');">Stop Med</a>
                                                     {% elif not med.is_active %}
                                                         <div class="inline-block mt-2 px-2 py-1 bg-slate-100 text-slate-500 rounded text-[8px] font-bold uppercase">Discontinued</div>
