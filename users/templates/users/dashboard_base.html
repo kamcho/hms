@@ -227,17 +227,17 @@
                         </a>
                     {% endif %}
                    
-                    {% if user.role == 'Pharmacist' or user.role == 'Nurse' %}
+                    {% if user.role == 'Pharmacist'  %}
                         <a href="{% url 'home:pharmacy_dashboard' %}" 
                            class="menu-item {% if request.resolver_match.url_name == 'pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-pills"></i>
                             <span>Pharmacy Dashboard</span>
                         </a>
-                        <!-- <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
+                        <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
                            class="menu-item {% if request.resolver_match.url_name == 'ipd_pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-truck-medical"></i>
                             <span>IPD Pharmacy</span>
-                        </a> -->
+                        </a>
                     {% endif %}
                     {% if user.role == 'Admin' %}
                         <a href="{% url 'home:ambulance_dashboard' %}" 
@@ -293,6 +293,11 @@
                         </div>
                     {% endif %}
                     {% if user.role == 'Nurse' or user.role == 'Admin' %}
+                    <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
+                           class="menu-item {% if request.resolver_match.url_name == 'ipd_pharmacy_dashboard' %}active{% endif %}">
+                            <i class="fas fa-truck-medical"></i>
+                            <span>Mini Pharmacy</span>
+                        </a>
                         <a href="{% url 'inpatient:dashboard' %}" 
                           
                            class="menu-item {% if request.resolver_match.namespace == 'inpatient' %}active{% endif %}">
