@@ -233,11 +233,11 @@
                             <i class="fas fa-pills"></i>
                             <span>Pharmacy Dashboard</span>
                         </a>
-                        <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
+                        <!-- <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
                            class="menu-item {% if request.resolver_match.url_name == 'ipd_pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-truck-medical"></i>
                             <span>IPD Pharmacy</span>
-                        </a>
+                        </a> -->
                     {% endif %}
                     {% if user.role == 'Admin' %}
                         <a href="{% url 'home:ambulance_dashboard' %}" 

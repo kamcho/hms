@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.contrib import messages
+from django.http import HttpResponseForbidden
 from .models import InventoryItem, InventoryCategory, Supplier, StockRecord, InventoryRequest, StockAdjustment
 from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, StockRecordForm, InventoryRequestForm, MedicationForm, ConsumableDetailForm
 from home.models import Departments, Patient, Visit
@@ -372,6 +373,7 @@ def dispense_item(request):
     department_id = request.POST.get('department_id')
     quantity_str = request.POST.get('quantity', '0')
     instructions = request.POST.get('instructions', '').strip()
+    procedure_item_id = request.POST.get('procedure_item_id')
 
     try:
         quantity = int(quantity_str)
@@ -390,6 +392,23 @@ def dispense_item(request):
 
             if not visit:
                 return JsonResponse({'status': 'error', 'message': 'Visit not identified'}, status=400)
+
+            # Optional linkage for procedure pages: block dispensing if selected procedure is already done.
+            if procedure_item_id:
+                from accounts.models import InvoiceItem
+                from home.models import ProcedureCompletion
+                procedure_item = get_object_or_404(
+                    InvoiceItem.objects.select_related('invoice__visit', 'service__department'),
+                    id=procedure_item_id,
+                    invoice__visit=visit,
+                    service__isnull=False,
+                    service__department__name='Procedure Room',
+                )
+                if ProcedureCompletion.objects.filter(invoice_item=procedure_item).exists():
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f"Cannot dispense items. Procedure '{procedure_item.name}' is already marked as done."
+                    }, status=400)
 
             # Block if visit is not active (optional, but keep for data integrity)
             if not visit.is_active:
@@ -956,7 +975,11 @@ def ipd_pharmacy_dashboard(request):
     from home.models import Departments
     from django.db.models import F
     
-    # Identify the user's pharmacy department
+    # Only Pharmacist and Nurse should access this page.
+    if request.user.role not in ['Pharmacist', 'Nurse']:
+        return HttpResponseForbidden("Access denied.")
+
+    # Identify and lock to the user's dispensing department.
     user_dept = None
     if request.user.role == 'Pharmacist':
         user_dept = Departments.objects.filter(name='Pharmacy').first()
@@ -979,7 +1002,8 @@ def ipd_pharmacy_dashboard(request):
         'pending_meds': pending_meds,
         'pending_consumables': pending_consumables,
         'title': 'IPD Pharmacy Fulfillment',
-        'all_pharmacies': Departments.objects.filter(Q(name__icontains='Pharmacy') | Q(name__icontains='Store')).order_by('name')
+        'all_pharmacies': [user_dept] if user_dept else [],
+        'locked_department': user_dept,
     }
     return render(request, 'inventory/ipd_pharmacy_dashboard.html', context)
 
@@ -1014,7 +1038,18 @@ def confirm_ipd_fulfillment(request):
             else:
                 obj = get_object_or_404(InpatientConsumable, id=item_id)
                 
-            department = get_object_or_404(Departments, id=department_id)
+            # Enforce dispensing location by logged-in role, regardless of posted dropdown value.
+            if request.user.role == 'Pharmacist':
+                department = Departments.objects.filter(name='Pharmacy').first()
+            elif request.user.role == 'Nurse':
+                department = Departments.objects.filter(name='Mini Pharmacy').first()
+            else:
+                messages.error(request, "Access denied.")
+                return redirect('inventory:ipd_pharmacy_dashboard')
+
+            if not department:
+                messages.error(request, "Assigned dispensing location was not found.")
+                return redirect('inventory:ipd_pharmacy_dashboard')
             admission = obj.admission
             visit = admission.visit
             

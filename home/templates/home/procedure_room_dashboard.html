@@ -17,13 +17,27 @@
                 </button>
             </div>
         </div>
-        <!-- Stats Overview (Optional Placeholder) -->
+        <!-- Stats Overview -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
                     <i class="fas fa-notes-medical text-6xl text-indigo-500"></i>
                 </div>
                 <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Total Requests</h3>
+                <div class="text-3xl font-black text-slate-800">{{ total_requests }}</div>
+            </div>
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <i class="fas fa-check-circle text-6xl text-emerald-500"></i>
+                </div>
+                <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Completed</h3>
+                <div class="text-3xl font-black text-slate-800">{{ total_done }}</div>
+            </div>
+            <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <i class="fas fa-layer-group text-6xl text-purple-500"></i>
+                </div>
+                <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Visits in Queue</h3>
                 <div class="text-3xl font-black text-slate-800">{{ page_obj.paginator.count }}</div>
             </div>
         </div>
@@ -40,89 +54,66 @@
                 {% endif %}
             </form>
         </div>
-        <!-- Procedures Table -->
+        <!-- Procedure Visits -->
         <div class="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-list text-indigo-500"></i> Procedure Requests
+                    <i class="fas fa-list text-indigo-500"></i> Procedure Visits
                 </h2>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                            <th class="p-4">Date Requested</th>
-                            <th class="p-4">Patient</th>
-                            <th class="p-4">Procedure</th>
-                            <th class="p-4">Price</th>
-                            <th class="p-4">Payment Status</th>
-                            <th class="p-4">Requested By</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        {% for item in page_obj %}
-                            <tr onclick="window.location.href='{% url 'home:procedure_detail' item.invoice.visit.id %}'" class="hover:bg-indigo-50/30 transition duration-150 group cursor-pointer">
-                                <td class="p-4">
-                                    <div class="flex flex-col">
-                                        <span class="text-sm font-bold text-slate-700">{{ item.created_at|date:"M d, Y"
-                                        }}</span>
-                                        <span class="text-[10px] font-bold text-slate-400 uppercase">{{
-                                        item.created_at|date:"H:i" }}</span>
-                                    </div>
-                                </td>
-                                <td class="p-4">
-                                    {% if item.invoice.patient %}
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-black text-xs border border-slate-200 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                                {{ item.invoice.patient.first_name|first }}{{
-                                                item.invoice.patient.last_name|first|default:"" }}
-                                            </div>
-                                            <div>
-                                                <div class="text-sm font-bold text-slate-800">{{ item.invoice.patient.full_name }}</div>
-                                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                                                    ID: {{
-                                                    item.invoice.patient.id_number|default:"N/A" }}
-                                                </div>
-                                            </div>
-                                        </div>
+            <div class="p-6 space-y-4">
+                {% for visit_group in page_obj %}
+                    <div class="border border-slate-100 rounded-2xl p-4 hover:border-indigo-200 transition">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-black text-slate-800">
+                                    {% if visit_group.patient %}
+                                        {{ visit_group.patient.full_name }}
                                     {% else %}
-                                        <span class="text-slate-400 italic font-medium">Unknown Patient</span>
+                                        Unknown Patient
                                     {% endif %}
-                                </td>
-                                <td class="p-4">
-                                    <span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold border border-indigo-100">{{ item.name }}</span>
-                                </td>
-                                <td class="p-4 text-slate-600 font-bold font-mono text-sm">{{ item.unit_price }}</td>
-                                <td class="p-4">
-                                    {% if item.invoice.status == 'Paid' %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Paid
-                                        </span>
-                                    {% elif item.invoice.status == 'Pending' %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-700">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-600">{{ item.invoice.status }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="p-4 text-slate-500 text-xs font-bold uppercase tracking-wide">{{ item.invoice.created_by.get_full_name|default:item.invoice.created_by.username }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="6" class="p-12 text-center">
-                                    <div class="flex flex-col items-center justify-center opacity-50">
-                                        <i class="fas fa-inbox text-4xl mb-4 text-slate-300"></i>
-                                        <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                                            No procedure
-                                            requests found
-                                        </p>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                </div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Visit #{{ visit_group.visit.id }} • {{ visit_group.requested_at|date:"M d, Y H:i" }}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                    {{ visit_group.done_count }}/{{ visit_group.total_count }} Done
+                                </span>
+                                {% if visit_group.all_settled %}
+                                    <a href="{% url 'home:procedure_detail' visit_group.visit.id %}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition">
+                                        Open Visit
+                                    </a>
+                                {% else %}
+                                    <span class="px-3 py-1.5 bg-slate-200 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
+                                        Open Visit
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <progress value="{{ visit_group.progress_percent }}" max="100" class="w-full h-2 [&::-webkit-progress-bar]:bg-slate-100 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-value]:bg-emerald-500 [&::-webkit-progress-value]:rounded-full"></progress>
+                            <div class="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ visit_group.progress_percent }}% complete</div>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            {% for proc in visit_group.procedures %}
+                                <span class="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wide {% if proc.is_done %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                    {{ proc.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="p-12 text-center">
+                        <div class="flex flex-col items-center justify-center opacity-50">
+                            <i class="fas fa-inbox text-4xl mb-4 text-slate-300"></i>
+                            <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No procedure requests found</p>
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
             <!-- Pagination -->
             {% if page_obj.paginator.num_pages > 1 %}
@@ -134,6 +125,44 @@
                     </div>
                 </div>
             {% endif %}
+        </div>
+
+        <!-- Procedure Room Stock Requests -->
+        <div class="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm mt-8">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-boxes text-indigo-500"></i> Stock Requests (Target: Procedure Room)
+                </h2>
+            </div>
+            <div class="p-6">
+                {% if procedure_room_stock_requests %}
+                    <div class="space-y-3">
+                        {% for req in procedure_room_stock_requests %}
+                            <div class="border border-slate-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div>
+                                    <div class="text-sm font-black text-slate-800">{{ req.item.name }}</div>
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Qty: {{ req.quantity }} • {{ req.requested_at|date:"M d, Y H:i" }}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                        By {{ req.requested_by.get_full_name|default:req.requested_by.username }}
+                                    </span>
+                                    <span class="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wide {% if req.status == 'Approved' %}bg-emerald-100 text-emerald-700{% elif req.status == 'Rejected' %}bg-rose-100 text-rose-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                        {{ req.status }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 opacity-60">
+                        <i class="fas fa-inbox text-3xl mb-3 text-slate-300"></i>
+                        <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No stock requests targeting Procedure Room.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 {% endblock %}

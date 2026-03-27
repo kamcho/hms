@@ -1145,7 +1145,7 @@ def charge_procedure(request):
         
         return JsonResponse({
             'status': 'success', 
-            'message': f'Successfully charged {procedure.name}'
+            'message': f'Successfully charged {service.name}'
         })
 
     except Exception as e:

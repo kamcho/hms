@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta
-from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis
+from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis, ProcedureCompletion
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
@@ -21,7 +21,7 @@ from inpatient.models import Admission
 from morgue.models import MorgueAdmission
 from .forms import EmergencyContactForm, PatientForm, ReferralForm, AppointmentForm
 from django.db.models import Q
-from inventory.models import DispensedItem
+from inventory.models import DispensedItem, InventoryRequest
 class PatientListView(LoginRequiredMixin, ListView):
     model = Patient
     template_name = 'home/patient_list.html'
@@ -2858,11 +2858,13 @@ def opd_dashboard(request):
 @login_required
 def procedure_room_dashboard(request):
     """Dashboard for Procedure Room to view requested procedures"""
-    # Procedures are InvoiceItems with a linked procedure
-    # Filter for items where procedure is not null
+    # Procedure requests are invoice items linked to Procedure Room services.
     service_items = InvoiceItem.objects.filter(
-        procedure__isnull=False
-    ).select_related('invoice', 'invoice__patient', 'procedure', 'service')
+        service__isnull=False,
+        service__department__name='Procedure Room',
+        invoice__visit__isnull=False,
+        invoice__visit__is_active=True,
+    ).select_related('invoice', 'invoice__patient', 'service', 'service__department')
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -2870,21 +2872,67 @@ def procedure_room_dashboard(request):
         service_items = service_items.filter(
             Q(invoice__patient__first_name__icontains=search_query) |
             Q(invoice__patient__last_name__icontains=search_query) |
-            Q(procedure__name__icontains=search_query) |
+            Q(service__name__icontains=search_query) |
             Q(name__icontains=search_query)
         )
     
     # Order by most recent
     service_items = service_items.order_by('-created_at')
-    
-    # Pagination
-    paginator = Paginator(service_items, 20)
+
+    completed_item_ids = set(
+        ProcedureCompletion.objects.filter(invoice_item__in=service_items).values_list('invoice_item_id', flat=True)
+    )
+
+    visits_map = {}
+    for item in service_items:
+        visit = item.invoice.visit
+        if visit.id not in visits_map:
+            visits_map[visit.id] = {
+                'visit': visit,
+                'patient': item.invoice.patient,
+                'requested_at': item.created_at,
+                'procedures': [],
+                'total_count': 0,
+                'done_count': 0,
+            }
+
+        is_done = item.id in completed_item_ids
+        visits_map[visit.id]['procedures'].append({
+            'id': item.id,
+            'name': item.name,
+            'unit_price': item.unit_price,
+            'created_at': item.created_at,
+            'is_done': is_done,
+            'is_settled': item.is_settled or item.invoice.status == 'Paid',
+        })
+        visits_map[visit.id]['total_count'] += 1
+        if is_done:
+            visits_map[visit.id]['done_count'] += 1
+
+    visit_groups = []
+    for data in visits_map.values():
+        total = data['total_count']
+        done = data['done_count']
+        data['pending_count'] = total - done
+        data['progress_percent'] = int((done / total) * 100) if total else 0
+        data['all_settled'] = all(proc['is_settled'] for proc in data['procedures']) if data['procedures'] else False
+        visit_groups.append(data)
+
+    visit_groups.sort(key=lambda x: x['requested_at'], reverse=True)
+
+    # Pagination by visit group (not individual procedure rows)
+    paginator = Paginator(visit_groups, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
+        'total_requests': service_items.count(),
+        'total_done': len(completed_item_ids),
+        'procedure_room_stock_requests': InventoryRequest.objects.filter(
+            location__name='Procedure Room'
+        ).select_related('item', 'requested_by', 'location').order_by('-requested_at')[:15],
         'title': 'Procedure Room Dashboard'
     }
     return render(request, 'home/procedure_room_dashboard.html', context)
@@ -2898,15 +2946,31 @@ def procedure_detail(request, visit_id):
     # Get all procedure items for this visit
     procedures = InvoiceItem.objects.filter(
         invoice__visit=visit,
-        procedure__isnull=False
-    ).select_related('invoice', 'service', 'procedure').order_by('created_at')
+        service__isnull=False,
+        service__department__name='Procedure Room',
+    ).select_related('invoice', 'service', 'service__department').order_by('created_at')
     
+    completion_map = {
+        completion.invoice_item_id: completion
+        for completion in ProcedureCompletion.objects.filter(invoice_item__in=procedures).select_related('completed_by')
+    }
+
+    procedure_rows = [
+        {
+            'item': item,
+            'completion': completion_map.get(item.id),
+            'is_done': item.id in completion_map,
+        }
+        for item in procedures
+    ]
+
     # Get dispensed items history for this visit
     from inventory.models import DispensedItem
     dispensed_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
         
     context = {
         'procedures': procedures,
+        'procedure_rows': procedure_rows,
         'patient': patient,
         'visit': visit,
         'dispensed_items': dispensed_items,
@@ -2914,6 +2978,34 @@ def procedure_detail(request, visit_id):
         'title': f'Procedures: {patient.full_name}'
     }
     return render(request, 'home/procedure_detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_procedure_done(request, item_id):
+    procedure_item = get_object_or_404(
+        InvoiceItem.objects.select_related('invoice__visit', 'service__department'),
+        pk=item_id,
+        service__isnull=False,
+        service__department__name='Procedure Room',
+        invoice__visit__isnull=False,
+    )
+
+    completion, created = ProcedureCompletion.objects.get_or_create(
+        invoice_item=procedure_item,
+        defaults={
+            'visit': procedure_item.invoice.visit,
+            'completed_by': request.user,
+            'notes': request.POST.get('completion_notes', '').strip(),
+        },
+    )
+
+    if created:
+        messages.success(request, f"Marked '{procedure_item.name}' as done.")
+    else:
+        messages.info(request, f"'{procedure_item.name}' was already marked as done.")
+
+    return redirect('home:procedure_detail', visit_id=procedure_item.invoice.visit.id)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)

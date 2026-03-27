@@ -381,3 +381,20 @@ class Referral(models.Model):
 
     def __str__(self):
         return f"Referral for {self.visit.patient.full_name} to {self.destination}"
+
+
+class ProcedureCompletion(models.Model):
+    """
+    Tracks completion of a billed procedure without changing InvoiceItem schema.
+    """
+    visit = models.ForeignKey('Visit', on_delete=models.CASCADE, related_name='procedure_completions')
+    invoice_item = models.OneToOneField('accounts.InvoiceItem', on_delete=models.CASCADE, related_name='procedure_completion')
+    completed_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='procedure_completions_done')
+    completed_at = models.DateTimeField(default=timezone.now)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-completed_at']
+
+    def __str__(self):
+        return f"Procedure completion for Visit #{self.visit_id} - Item #{self.invoice_item_id}"

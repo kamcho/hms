@@ -102,7 +102,21 @@
 <script>
     let searchTimeout;
 
+    function requiresProcedureSelection() {
+        return "{{ require_procedure_selection|default:'' }}" === "true";
+    }
+
+    function hasSelectedProcedure() {
+        const selectedProcedureInput = document.getElementById('selected_procedure_item_id');
+        return !!(selectedProcedureInput && selectedProcedureInput.value);
+    }
+
     function debouncedSearch(query) {
+        if (requiresProcedureSelection() && !hasSelectedProcedure()) {
+            document.getElementById('searchResults').classList.add('hidden');
+            return;
+        }
+
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             if (query.length < 2) {
@@ -221,12 +235,18 @@
     function handleDispense() {
         const btn = document.getElementById('dispenseBtn');
 
+        if (requiresProcedureSelection() && !hasSelectedProcedure()) {
+            alert('Please select a procedure first.');
+            return;
+        }
+
         // Manual data gathering since we removed the form
         const patientId = document.getElementById('dispense_patient_id')?.value;
         const visitId = document.getElementById('dispense_visit_id')?.value;
         const itemId = document.getElementById('selectedItemId').value;
         const quantity = document.getElementById('dispense_quantity').value;
         const instructions = document.getElementById('dispense_instructions').value;
+        const selectedProcedureId = document.getElementById('selected_procedure_item_id')?.value;
 
         const formData = new FormData();
         console.log("Dispensing Diagnostic:", { patientId, visitId, itemId, quantity, instructions });
@@ -236,6 +256,7 @@
         formData.append('item_id', itemId);
         formData.append('quantity', quantity);
         formData.append('instructions', instructions);
+        if (selectedProcedureId) formData.append('procedure_item_id', selectedProcedureId);
 
         // Get selected department
         const deptInput = document.querySelector('input[name="dispense_department"]:checked');
@@ -279,8 +300,9 @@
             });
     }
 
-    // Auto-select department based on time (8-5 Pharmacy, else Mini Pharmacy)
+    // Auto-select department based on preferred context, then time defaults.
     document.addEventListener('DOMContentLoaded', function() {
+        const preferredDept = "{{ preferred_department|default:''|lower|escapejs }}";
         const hour = new Date().getHours();
         const isBusinessHours = hour >= 8 && hour < 17;
         const targetDept = isBusinessHours ? 'pharmacy' : 'mini pharmacy';
@@ -290,20 +312,42 @@
         const labels = document.querySelectorAll('.department-label');
         let selected = false;
         
-        labels.forEach(label => {
-            if (label.dataset.deptName === targetDept) {
-                label.querySelector('input').checked = true;
-                selected = true;
-            }
-        });
-        
-        // Fallback to Pharmacy if target not found (or for maternity wards etc manually)
-        if (!selected) {
-             labels.forEach(label => {
-                if (label.dataset.deptName === 'pharmacy') {
+        // 1) Prefer explicitly requested department from page context.
+        if (preferredDept) {
+            labels.forEach(label => {
+                if (label.dataset.deptName === preferredDept) {
                     label.querySelector('input').checked = true;
+                    selected = true;
                 }
             });
+        }
+
+        // 2) Otherwise use time-based default.
+        if (!selected) {
+            labels.forEach(label => {
+                if (label.dataset.deptName === targetDept) {
+                    label.querySelector('input').checked = true;
+                    selected = true;
+                }
+            });
+        }
+        
+        // 3) Fallback to Pharmacy.
+        if (!selected) {
+            labels.forEach(label => {
+                if (label.dataset.deptName === 'pharmacy') {
+                    label.querySelector('input').checked = true;
+                    selected = true;
+                }
+            });
+        }
+
+        // 4) Final fallback: first available department.
+        if (!selected && labels.length > 0) {
+            const firstInput = labels[0].querySelector('input[name="dispense_department"]');
+            if (firstInput) {
+                firstInput.checked = true;
+            }
         }
     });
 

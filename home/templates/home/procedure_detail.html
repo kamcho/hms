@@ -23,12 +23,10 @@
                             <div>
                                 <div class="font-black text-slate-800 text-lg">{{ patient.full_name }}</div>
                                 <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                                    ID: {{
-                                    patient.id_number }}
+                                    ID: {{ patient.id_number }}
                                 </div>
                                 <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                                    {{
-                                    patient.get_gender_display }}, {{ patient.age }} yrs
+                                    {{ patient.get_gender_display }}, {{ patient.age }} yrs
                                 </div>
                             </div>
                         </div>
@@ -46,28 +44,46 @@
                     <h2 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                         <i class="fas fa-list text-purple-500"></i> Requested Procedures
                     </h2>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">
+                        Select a procedure first to enable dispensing
+                    </p>
                     <div class="space-y-4">
-                        {% for item in procedures %}
-                            <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-colors">
+                        {% for row in procedure_rows %}
+                            {% with item=row.item %}
+                            <div class="procedure-select-card bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer {% if row.is_done %}opacity-75{% endif %}" data-procedure-id="{{ item.id }}" data-is-done="{% if row.is_done %}true{% else %}false{% endif %}">
                                 <div class="flex justify-between items-start mb-2">
                                     <span class="font-bold text-slate-800">{{ item.name }}</span>
                                     <span class="text-sm font-black text-slate-600">{{ item.unit_price }}</span>
                                 </div>
                                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">Req. by {{ item.invoice.created_by.get_full_name|default:item.invoice.created_by.username }}</div>
-                                <div class="flex justify-between items-center border-t border-slate-200 pt-3">
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase">{{ item.created_at|date:"H:i"
-                                    }}</span>
-                                    {% if item.invoice.status == 'Paid' %}
+                                <div class="flex justify-between items-center border-t border-slate-200 pt-3 gap-2">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase">{{ item.created_at|date:"H:i" }}</span>
+                                    {% if row.is_done %}
                                         <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide flex items-center gap-1">
-                                            <i class="fas fa-check-circle"></i> Paid
+                                            <i class="fas fa-check-circle"></i> Done
                                         </span>
                                     {% else %}
-                                        <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide flex items-center gap-1">
+                                        <form method="post" action="{% url 'home:mark_procedure_done' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-wide transition">
+                                                Mark Done
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-2">
+                                    {% if item.invoice.status == 'Paid' %}
+                                        <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide inline-flex items-center gap-1">
+                                            <i class="fas fa-wallet"></i> Paid
+                                        </span>
+                                    {% else %}
+                                        <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide inline-flex items-center gap-1">
                                             <i class="fas fa-clock"></i> {{ item.invoice.status }}
                                         </span>
                                     {% endif %}
                                 </div>
                             </div>
+                            {% endwith %}
                         {% endfor %}
                     </div>
                 </div>
@@ -75,10 +91,83 @@
             <!-- Dispensing Widget -->
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
+                    <input type="hidden" id="selected_procedure_item_id" value="">
+                    <div id="procedure-selection-banner" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                        Select a procedure on the left to activate dispensing.
+                    </div>
                     <!-- Use the partial widget -->
-                    {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit %}
+                    {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Procedure Room" preferred_department="Procedure Room" require_procedure_selection="true" %}
                 </div>
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cards = Array.from(document.querySelectorAll('.procedure-select-card'));
+            const selectedProcedureInput = document.getElementById('selected_procedure_item_id');
+            const itemSearch = document.getElementById('itemSearch');
+            const dispenseBtn = document.getElementById('dispenseBtn');
+            const banner = document.getElementById('procedure-selection-banner');
+            const selectedItemDetails = document.getElementById('selectedItemDetails');
+            const selectedItemId = document.getElementById('selectedItemId');
+
+            function resetDispenseSelection() {
+                if (selectedItemId) selectedItemId.value = '';
+                if (selectedItemDetails) selectedItemDetails.classList.add('hidden');
+                if (dispenseBtn) dispenseBtn.disabled = true;
+                if (itemSearch) itemSearch.value = '';
+            }
+
+            function setDispenseActive(active) {
+                if (!itemSearch) return;
+                itemSearch.disabled = !active;
+                itemSearch.classList.toggle('opacity-50', !active);
+                itemSearch.classList.toggle('cursor-not-allowed', !active);
+                if (!active) {
+                    resetDispenseSelection();
+                }
+            }
+
+            setDispenseActive(false);
+
+            cards.forEach(card => {
+                card.addEventListener('click', function (e) {
+                    if (e.target.closest('form')) return;
+                    const isDone = this.dataset.isDone === 'true';
+
+                    if (isDone) {
+                        if (selectedProcedureInput) selectedProcedureInput.value = '';
+                        setDispenseActive(false);
+                        if (banner) {
+                            banner.className = 'mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-rose-700';
+                            banner.textContent = 'Selected procedure is already done. Dispensing is disabled.';
+                        }
+                        return;
+                    }
+
+                    cards.forEach(c => {
+                        c.classList.remove('bg-emerald-50', 'border-emerald-300', 'ring-2', 'ring-emerald-200');
+                        c.classList.add('bg-slate-50', 'border-slate-100');
+                    });
+
+                    this.classList.remove('bg-slate-50', 'border-slate-100');
+                    this.classList.add('bg-emerald-50', 'border-emerald-300', 'ring-2', 'ring-emerald-200');
+
+                    if (selectedProcedureInput) {
+                        selectedProcedureInput.value = this.dataset.procedureId || '';
+                    }
+
+                    if (banner) {
+                        banner.className = 'mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700';
+                        banner.textContent = 'Procedure selected. Dispensing is now active.';
+                    }
+
+                    setDispenseActive(true);
+                });
+            });
+        });
+    </script>
 {% endblock %}

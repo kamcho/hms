@@ -46,6 +46,7 @@ urlpatterns = [
     path('health-records/', views.health_records_view, name='health_records'),
     path('procedure-room/', views.procedure_room_dashboard, name='procedure_room_dashboard'),
     path('procedure-room/visit/<int:visit_id>/', views.procedure_detail, name='procedure_detail'),
+    path('procedure-room/item/<int:item_id>/mark-done/', views.mark_procedure_done, name='mark_procedure_done'),
     
     # Ambulance URLs
     path('ambulance/dashboard/', views.ambulance_dashboard, name='ambulance_dashboard'),
