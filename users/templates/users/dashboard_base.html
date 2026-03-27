@@ -172,6 +172,11 @@
                             <i class="fas fa-heartbeat"></i>
                             <span>Triage Dashboard</span>
                         </a>
+                        <a href="{% url 'home:procedure_room_dashboard' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'procedure_room_dashboard' %}active{% endif %}">
+                            <i class="fas fa-procedures"></i>
+                            <span>Procedure Dashboard</span>
+                        </a>
                     {% endif %}
                     {% if user.role ==  'Morgue Attendant' %}
                         <a href="{% url 'morgue:dashboard' %}" 
