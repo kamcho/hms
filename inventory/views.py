@@ -210,14 +210,19 @@ def create_request(request):
 
 @login_required
 def request_list(request):
-    requests = InventoryRequest.objects.select_related('item', 'requested_by').annotate(
-        priority=Case(
-            When(status='Pending', then=Value(1)),
-            default=Value(2),
-            output_field=IntegerField(),
-        )
-    ).order_by('priority', '-requested_at')
-    return render(request, 'inventory/request_list.html', {'requests': requests})
+    # Separate requests by status
+    pending_requests = InventoryRequest.objects.filter(
+        status='Pending'
+    ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+    
+    processed_requests = InventoryRequest.objects.filter(
+        status__in=['Approved', 'Rejected']
+    ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+    
+    return render(request, 'inventory/request_list.html', {
+        'pending_requests': pending_requests,
+        'processed_requests': processed_requests
+    })
 
 @login_required
 def update_request_status(request, request_id):
@@ -963,7 +968,33 @@ def transfer_stock(request):
     else:
         form = StockTransferForm()
 
-    return render(request, 'inventory/transfer_stock.html', {'form': form, 'title': 'Stock Transfer'})
+    # Get stock information for all items by department
+    stock_by_department = {}
+    departments = Departments.objects.all()
+    
+    for dept in departments:
+        stock_info = StockRecord.objects.filter(
+            current_location=dept,
+            quantity__gt=0
+        ).select_related('item', 'supplier').values(
+            'item_id',
+            'item__name',
+            'quantity'
+        ).annotate(
+            total_quantity=Sum('quantity')
+        ).order_by('item__name')
+        
+        stock_by_department[dept.id] = {
+            'name': dept.name,
+            'items': list(stock_info)
+        }
+
+    return render(request, 'inventory/transfer_stock.html', {
+        'form': form, 
+        'title': 'Stock Transfer',
+        'inventory_items': InventoryItem.objects.all().order_by('name'),
+        'stock_by_department': stock_by_department
+    })
 
 @login_required
 def ipd_pharmacy_dashboard(request):

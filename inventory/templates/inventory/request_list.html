@@ -227,8 +227,70 @@
                 <i class="fas fa-plus"></i> New Request
             </a>
         </div>
+        
+        <!-- Pending Requests Table -->
+        <div class="requests-table" style="margin-bottom: 2rem;">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 4px; height: 32px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 8px;"></div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">Pending Requests</h3>
+                </div>
+                <span style="background: rgba(245, 158, 11, 0.1); color: #d97706; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600;">
+                    {{ pending_requests.count }} Pending
+                </span>
+            </div>
+            {% if pending_requests %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Location</th>
+                            <th>Requested By</th>
+                            <th>Requested At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in pending_requests %}
+                            <tr onclick="openRequestModal('{{ request.id }}', '{{ request.item.name|escapejs }}', '{{ request.quantity }}', '{{ request.location.name|escapejs }}', '{{ request.requested_by.get_full_name|default:request.requested_by.username|escapejs }}', '{{ request.requested_at|date:'M d, Y H:i'|escapejs }}', '{{ request.status }}', '{{ request.quantity }}')" style="cursor: pointer;">
+                                <td class="item-name">{{ request.item.name }}</td>
+                                <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
+                                <td>
+                                    <span class="location">{{ request.location }}</span>
+                                </td>
+                                <td class="requested-by">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
+                                <td class="requested-at">{{ request.requested_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                        Review
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-clock"></i>
+                    <h3>No Pending Requests</h3>
+                    <p>All requests have been processed. Great job!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Processed Requests Table (Approved/Rejected) -->
         <div class="requests-table">
-            {% if requests %}
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 4px; height: 32px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border-radius: 8px;"></div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">Processed Requests</h3>
+                </div>
+                <span style="background: rgba(99, 102, 241, 0.1); color: #6366f1; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600;">
+                    {{ processed_requests.count }} Processed
+                </span>
+            </div>
+            {% if processed_requests %}
                 <table class="table">
                     <thead>
                         <tr>
@@ -238,12 +300,11 @@
                             <th>Status</th>
                             <th>Requested By</th>
                             <th>Requested At</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for request in requests %}
-                            <tr {% if request.status == "Pending" %}onclick="openRequestModal('{{ request.id }}', '{{ request.item.name|escapejs }}', '{{ request.quantity }}', '{{ request.location.name|escapejs }}', '{{ request.requested_by.get_full_name|default:request.requested_by.username|escapejs }}', '{{ request.requested_at|date:'M d, Y H:i'|escapejs }}', '{{ request.status }}', '{{ request.quantity }}')" style="cursor: pointer;"{% endif %}>
+                        {% for request in processed_requests %}
+                            <tr>
                                 <td class="item-name">{{ request.item.name }}</td>
                                 <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
                                 <td>
@@ -254,27 +315,15 @@
                                 </td>
                                 <td class="requested-by">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
                                 <td class="requested-at">{{ request.requested_at|date:"M d, Y H:i" }}</td>
-                                <td>
-                                    {% if request.status == 'Pending' %}
-                                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                                            Review
-                                        </button>
-                                    {% else %}
-                                        <span class="status-badge status-{{ request.status|lower }}">{{ request.status }}</span>
-                                    {% endif %}
-                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             {% else %}
                 <div class="empty-state">
-                    <i class="fas fa-clipboard-list"></i>
-                    <h3>No Inventory Requests</h3>
-                    <p>There are no inventory requests yet. Create your first request to get started.</p>
-                    <a href="{% url 'inventory:create_request' %}" class="btn btn-primary" style="margin-top: 1rem;">
-                        <i class="fas fa-plus"></i> Create First Request
-                    </a>
+                    <i class="fas fa-check-circle"></i>
+                    <h3>No Processed Requests</h3>
+                    <p>Approved and rejected requests will appear here.</p>
                 </div>
             {% endif %}
         </div>

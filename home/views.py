@@ -31,18 +31,64 @@ class PatientListView(LoginRequiredMixin, ListView):
         queryset = Patient.objects.all().order_by('-created_at')
         search_query = self.request.GET.get('search')
         if search_query:
-            # Check if search query is a number for ID lookup
-            id_filter = Q()
-            if search_query.isdigit():
-                id_filter = Q(pk=int(search_query))
-
-            queryset = queryset.filter(
-                id_filter |
-                Q(id_number__icontains=search_query) |
-                Q(first_name__icontains=search_query) |
-                Q(last_name__icontains=search_query) |
-                Q(phone__icontains=search_query)
-            ).order_by('-created_at')
+            # Split search query into individual terms
+            search_terms = search_query.strip().split()
+            
+            # Start with base queryset
+            base_queryset = Patient.objects.all()
+            
+            # Build Q objects for each search term
+            term_q_objects = []
+            for term in search_terms:
+                if term.strip():
+                    term_q = Q() | Q(id_number__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term) | Q(phone__icontains=term)
+                    
+                    # Check if term is a number for ID lookup
+                    if term.isdigit():
+                        term_q = term_q | Q(pk=int(term))
+                    
+                    term_q_objects.append(term_q)
+            
+            # Combine all term queries with AND (all terms must match somewhere)
+            combined_q = Q()
+            for term_q in term_q_objects:
+                combined_q = combined_q & term_q
+            
+            queryset = base_queryset.filter(combined_q)
+            
+            # Rank results by relevance
+            # Higher priority for exact matches in first_name or last_name
+            # Then partial matches, then other fields
+            ranked_patients = []
+            for patient in queryset:
+                relevance_score = 0
+                
+                for term in search_terms:
+                    term_lower = term.lower()
+                    
+                    # Exact match in first_name or last_name gets highest score
+                    if patient.first_name.lower() == term_lower or patient.last_name.lower() == term_lower:
+                        relevance_score += 100
+                    # Starts with gets high score
+                    elif patient.first_name.lower().startswith(term_lower) or patient.last_name.lower().startswith(term_lower):
+                        relevance_score += 50
+                    # Contains gets medium score
+                    elif term_lower in patient.first_name.lower() or term_lower in patient.last_name.lower():
+                        relevance_score += 25
+                    # ID or phone match gets lower score
+                    elif term_lower in str(patient.id_number).lower() or term_lower in str(patient.phone).lower():
+                        relevance_score += 10
+                    # PK match gets highest score
+                    elif term.isdigit() and patient.pk == int(term):
+                        relevance_score += 200
+                
+                ranked_patients.append((relevance_score, patient))
+            
+            # Sort by relevance score (descending) then by creation date
+            ranked_patients.sort(key=lambda x: (-x[0], x[1].created_at))
+            
+            # Extract just the patient objects
+            queryset = [patient for score, patient in ranked_patients]
         return queryset
     
     def get_context_data(self, **kwargs):

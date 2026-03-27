@@ -37,8 +37,51 @@
                         <!-- Item -->
                         <div>
                             <label for="{{ form.item.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.item.label }}</label>
-                            {{ form.item }}
+                            <div class="hybrid-select-container" id="hybridItemSelect">
+                                <div class="hybrid-select-input-wrapper">
+                                    <input type="text" 
+                                           class="form-control hybrid-search-input" 
+                                           id="itemSearchInput" 
+                                           placeholder="Search for an inventory item..." 
+                                           autocomplete="off">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="hybrid-dropdown" id="itemDropdown">
+                                    <div class="hybrid-options-list" id="optionsList">
+                                        {% for item in inventory_items %}
+                                            <div class="hybrid-option" 
+                                                 data-value="{{ item.id }}" 
+                                                 data-name="{{ item.name|escapejs }}">
+                                                <span class="option-name">{{ item.name }}</span>
+                                                <span class="option-meta" data-item-id="{{ item.id }}">{{ item.category.name|default:"General" }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="hybrid-no-results" id="noResults" style="display: none;">
+                                        <i class="fas fa-search" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.3; margin-top: 1rem;"></i>
+                                        <span class="block">No items match your search</span>
+                                        <small class="text-slate-400 mt-2 block">Try searching for a generic name or category</small>
+                                    </div>
+                                </div>
+                                <!-- Hidden actual select for Django Form compatibility -->
+                                <div style="display: none;">
+                                    {{ form.item }}
+                                </div>
+                            </div>
                             {% if form.item.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.item.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <!-- Available Stock Display -->
+                        <div id="stockDisplay" style="display: none;">
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-warehouse text-slate-400"></i>
+                                    <h4 class="text-sm font-bold text-slate-700">Available Stock in <span id="sourceDepartmentName">--</span></h4>
+                                </div>
+                                <div id="stockInfo" class="text-xs text-slate-600">
+                                    <!-- Stock info will be populated here -->
+                                </div>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Quantity -->
@@ -125,6 +168,128 @@
         box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
     }
 
+    /* Hybrid Search Select Styling */
+    .hybrid-select-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .hybrid-select-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .hybrid-select-input-wrapper i {
+        position: absolute;
+        right: 1.25rem;
+        color: #94a3b8;
+        pointer-events: none;
+        transition: transform 0.3s ease;
+    }
+
+    .hybrid-select-container.active .hybrid-select-input-wrapper i {
+        transform: rotate(180deg);
+        color: #6366f1;
+    }
+
+    .hybrid-search-input {
+        width: 100%;
+        cursor: text !important;
+        padding-right: 3rem !important;
+    }
+
+    .hybrid-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        z-index: 1000;
+        max-height: 350px;
+        overflow-y: auto;
+        display: none;
+        animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hybrid-dropdown.show {
+        display: block;
+    }
+
+    .hybrid-option {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .hybrid-option:last-child {
+        border-bottom: none;
+    }
+
+    .hybrid-option:hover {
+        background: rgba(99, 102, 241, 0.05);
+        padding-left: 1.5rem;
+    }
+
+    .hybrid-option.selected {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        font-weight: 700;
+    }
+
+    .hybrid-option .option-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .hybrid-option .option-meta {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .hybrid-no-results {
+        padding: 2.5rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+
+    /* Custom Scrollbar */
+    .hybrid-dropdown::-webkit-scrollbar {
+        width: 8px;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 0 16px 16px 0;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     /* Select2 Overrides */
     .select2-container--bootstrap-5 .select2-selection {
         border: none !important;
@@ -157,15 +322,250 @@
         right: 10px !important;
     }
     </style>
-    <script>
-    $(document).ready(function () {
-        if ($('.select2').length > 0) {
-            $('.select2').select2({
-                width: '100%',
-                placeholder: 'Search for an item...',
-                allowClear: true
+
+<!-- Stock Data -->
+{{ stock_by_department|json_script:"stock-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get stock data
+    const stockByDepartment = JSON.parse(document.getElementById('stock-data').textContent);
+    
+    // Hybrid Select Elements
+    const hybridContainer = document.getElementById('hybridItemSelect');
+    const searchInput = document.getElementById('itemSearchInput');
+    const dropdown = document.getElementById('itemDropdown');
+    const optionsList = document.getElementById('optionsList');
+    const options = optionsList.querySelectorAll('.hybrid-option');
+    const noResults = document.getElementById('noResults');
+    const actualSelect = document.querySelector('select[name="item"]');
+    const sourceLocationSelect = document.querySelector('select[name="source_location"]');
+    const stockDisplay = document.getElementById('stockDisplay');
+    const sourceDepartmentName = document.getElementById('sourceDepartmentName');
+    const stockInfo = document.getElementById('stockInfo');
+
+    if (!hybridContainer || !searchInput || !actualSelect) return;
+
+    // Initialize state
+    let isOpen = false;
+
+    // Function to update stock display
+    function updateStockDisplay() {
+        const selectedItemId = actualSelect.value;
+        const sourceLocationId = sourceLocationSelect.value;
+        
+        if (!selectedItemId || !sourceLocationId) {
+            stockDisplay.style.display = 'none';
+            return;
+        }
+        
+        const sourceDept = stockByDepartment[sourceLocationId];
+        if (!sourceDept) {
+            stockDisplay.style.display = 'none';
+            return;
+        }
+        
+        const itemStock = sourceDept.items.find(item => item.item_id == selectedItemId);
+        sourceDepartmentName.textContent = sourceDept.name;
+        
+        if (itemStock && itemStock.total_quantity > 0) {
+            stockInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <span class="font-semibold text-green-700">${itemStock.total_quantity} units available</span>
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+            `;
+        } else {
+            stockInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <span class="font-semibold text-red-700">No stock available</span>
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                </div>
+            `;
+        }
+        
+        stockDisplay.style.display = 'block';
+    }
+
+    // Function to handle selection
+    function selectItem(value, name) {
+        actualSelect.value = value;
+        searchInput.value = name;
+        
+        // Update selection UI
+        options.forEach(opt => {
+            if (opt.dataset.value === value) {
+                opt.classList.add('selected');
+            } else {
+                opt.classList.remove('selected');
+            }
+        });
+
+        closeDropdown();
+        searchInput.style.borderColor = '#6366f1';
+        searchInput.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)';
+        
+        // Update stock display
+        updateStockDisplay();
+    }
+
+    // Toggle Dropdown
+    function openDropdown() {
+        isOpen = true;
+        dropdown.classList.add('show');
+        hybridContainer.classList.add('active');
+    }
+
+    function closeDropdown() {
+        isOpen = false;
+        dropdown.classList.remove('show');
+        hybridContainer.classList.remove('active');
+        
+        // If nothing selected but search text exists, try to match or clear
+        if (!actualSelect.value && searchInput.value) {
+            const query = searchInput.value.toLowerCase().trim();
+            let match = null;
+            options.forEach(opt => {
+                 if (opt.dataset.name.toLowerCase() === query) {
+                     match = opt;
+                 }
             });
+            if (match) {
+                selectItem(match.dataset.value, match.dataset.name);
+            } else {
+                // searchInput.value = ''; // Optional: clear if no exact match
+            }
+        }
+    }
+
+    searchInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!isOpen) openDropdown();
+        this.select();
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (!isOpen) openDropdown();
+    });
+
+    // Search Logic
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        let hasResults = false;
+
+        options.forEach(opt => {
+            const name = opt.dataset.name.toLowerCase();
+            const meta = opt.querySelector('.option-meta').textContent.toLowerCase();
+            if (name.includes(query) || meta.includes(query)) {
+                opt.style.display = 'flex';
+                hasResults = true;
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+
+        noResults.style.display = hasResults ? 'none' : 'block';
+        if (!isOpen) openDropdown();
+    });
+
+    // Option Click
+    options.forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectItem(this.dataset.value, this.dataset.name);
+        });
+    });
+
+    // Close on click outside
+    document.addEventListener('click', function(e) {
+        if (!hybridContainer.contains(e.target)) {
+            closeDropdown();
         }
     });
-    </script>
+
+    // Keyboard Navigation
+    searchInput.addEventListener('keydown', function(e) {
+        const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+        let currentFocus = visibleOptions.findIndex(opt => opt.classList.contains('focused'));
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isOpen) { 
+                openDropdown(); 
+                return; 
+            }
+            if (currentFocus > -1) visibleOptions[currentFocus].classList.remove('focused');
+            currentFocus = (currentFocus + 1) % visibleOptions.length;
+            visibleOptions[currentFocus].classList.add('focused');
+            visibleOptions[currentFocus].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentFocus > -1) visibleOptions[currentFocus].classList.remove('focused');
+            currentFocus = (currentFocus - 1 + visibleOptions.length) % visibleOptions.length;
+            visibleOptions[currentFocus].classList.add('focused');
+            visibleOptions[currentFocus].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            if (isOpen && currentFocus > -1) {
+                e.preventDefault();
+                const opt = visibleOptions[currentFocus];
+                selectItem(opt.dataset.value, opt.dataset.name);
+            }
+        } else if (e.key === 'Escape') {
+            closeDropdown();
+        }
+    });
+
+    // Handle existing value (if editing or form error)
+    if (actualSelect.value) {
+        const selectedOpt = Array.from(options).find(opt => opt.dataset.value === actualSelect.value);
+        if (selectedOpt) {
+            searchInput.value = selectedOpt.dataset.name;
+            selectedOpt.classList.add('selected');
+        }
+    }
+
+    // Add event listener for source location changes
+    if (sourceLocationSelect) {
+        sourceLocationSelect.addEventListener('change', updateStockDisplay);
+    }
+
+    // Initialize stock display if both item and source are selected
+    updateStockDisplay();
+
+    // Form Submission Validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!actualSelect.value) {
+            e.preventDefault();
+            searchInput.style.borderColor = '#ef4444';
+            searchInput.focus();
+            
+            // Show custom alert if needed
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'errorlist';
+            errorMsg.innerHTML = '<li>Please select an item from the search results.</li>';
+            if (!hybridContainer.parentElement.querySelector('.errorlist')) {
+                hybridContainer.parentElement.appendChild(errorMsg);
+            }
+        }
+    });
+});
+
+// Keep existing Select2 for other fields if needed
+$(document).ready(function () {
+    if ($('.select2').length > 0) {
+        $('.select2').select2({
+            width: '100%',
+            placeholder: 'Search for an item...',
+            allowClear: true
+        });
+    }
+});
+</script>
+
+<style>
+.hybrid-option.focused {
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 4px solid #6366f1;
+}
+</style>
 {% endblock %}
