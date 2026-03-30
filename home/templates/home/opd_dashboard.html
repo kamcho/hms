@@ -126,8 +126,7 @@
                                             <div class="patient-avatar-mini" data-initials="{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}">{{ item.patient.first_name|first }}{{ item.patient.last_name|first }}</div>
                                             <div class="patient-details">
                                                 <span class="p-name">{{ item.patient.full_name }}</span>
-                                                <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{
-                                                item.patient.age }}Y • {{ item.patient.gender|first }}</span>
+                                                <span class="p-meta">#{{ item.patient.pk|stringformat:"05d" }} • {{ item.patient.age }}Y • {{ item.patient.gender|first }}</span>
                                             </div>
                                         </div>
                                     </td>

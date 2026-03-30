@@ -1205,8 +1205,15 @@ def stock_activity(request):
     # All items for the filter search (or use the JSON search API)
     items = InventoryItem.objects.all().order_by('name')
 
+    # Calculate Total Quantity if filtered by item
+    total_quantity = 0
+    if item_id:
+        from django.db.models import Sum
+        total_quantity = activities.aggregate(total=Sum('quantity'))['total'] or 0
+
     context = {
         'activities': activities[:200],  # Limit to 200 for performance
+        'total_quantity': total_quantity,
         'items': items,
         'selected_item_id': int(item_id) if item_id and item_id.isdigit() else None,
         'from_date': from_date,

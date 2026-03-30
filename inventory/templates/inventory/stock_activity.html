@@ -418,6 +418,18 @@
                 </tr>
                 {% endfor %}
             </tbody>
+            {% if total_quantity > 0 %}
+            <tfoot>
+                <tr style="background: #f8fafc; border-top: 2px solid #e2e8f0;">
+                    <td colspan="2" style="text-align: right; padding: 1.5rem; font-weight: 800; color: var(--text-primary); font-size: 1.1rem; text-transform: uppercase;">Total Dispensed Quantity:</td>
+                    <td colspan="4" style="padding: 1.5rem;">
+                        <span class="qty-badge" style="font-size: 1.25rem; padding: 0.5rem 1.5rem; background: var(--primary-gradient); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                            {{ total_quantity }}
+                        </span>
+                    </td>
+                </tr>
+            </tfoot>
+            {% endif %}
         </table>
     </div>
 </div>

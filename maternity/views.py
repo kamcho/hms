@@ -1113,6 +1113,92 @@ def update_pregnancy_blood_group(request, pregnancy_id):
 
 
 @login_required
+def refer_pregnancy_to_doctor(request, pregnancy_id):
+    """Refer a pregnancy patient to the OPD Doctor (Consultation Room)"""
+    pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
+    patient = pregnancy.patient
+    
+    # 1. Ensure there is an active visit
+    today = timezone.now().date()
+    visit = Visit.objects.filter(
+        patient=patient,
+        visit_date__date=today,
+        is_active=True
+    ).last()
+    
+    if not visit:
+        # Create a visit if one doesn't exist for today
+        visit = Visit.objects.create(
+            patient=patient,
+            visit_type='OUT-PATIENT',
+            visit_mode='Walk In',
+            payment_method='CASH',
+            is_active=True
+        )
+    
+    # 2. Get or create the Consultation department
+    consultation_room, created = Departments.objects.get_or_create(
+        name='Consultation Room 1',
+        defaults={'abbreviation': 'CR1'}
+    )
+    
+    # 3. Create Queue Entry
+    PatientQue.objects.create(
+        visit=visit,
+        sent_to=consultation_room,
+        created_by=request.user,
+        status='PENDING',
+        queue_type='INITIAL'
+    )
+    
+    messages.success(request, f'Patient {patient.full_name} has been referred to the OPD Doctor.')
+    return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
+
+@login_required
+def refer_pregnancy_to_doctor(request, pregnancy_id):
+    """Refer a pregnancy patient to the OPD Doctor (Consultation Room)"""
+    pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
+    patient = pregnancy.patient
+    
+    # 1. Ensure there is an active visit
+    today = timezone.now().date()
+    visit = Visit.objects.filter(
+        patient=patient,
+        visit_date__date=today,
+        is_active=True
+    ).last()
+    
+    if not visit:
+        # Create a visit if one doesn't exist for today
+        visit = Visit.objects.create(
+            patient=patient,
+            visit_type='OUT-PATIENT',
+            visit_mode='Walk In',
+            payment_method='CASH',
+            is_active=True
+        )
+    
+    # 2. Get or create the Consultation department
+    consultation_room, created = Departments.objects.get_or_create(
+        name='Consultation Room 1',
+        defaults={'abbreviation': 'CR1'}
+    )
+    
+    # 3. Create Queue Entry
+    PatientQue.objects.create(
+        visit=visit,
+        sent_to=consultation_room,
+        created_by=request.user,
+        status='PENDING',
+        queue_type='INITIAL'
+    )
+    
+    messages.success(request, f'Patient {patient.full_name} has been referred to the OPD Doctor.')
+    return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
+
+@login_required
 def record_anc_visit(request, pregnancy_id, visit_id=None):
     """Record ANC visit - handles new visits, queued visits, and updating existing visits"""
     from .forms import AntenatalVisitForm
