@@ -539,7 +539,7 @@
     function deleteInvoiceItem(itemId) {
         if (!confirm('Are you sure you want to delete this item?')) return;
 
-        const deleteUrl = `{% url 'accounts:delete_invoice_item' 0 %}`.replace('0', itemId);
+        const deleteUrl = `{% url 'accounts:delete_invoice_item' 0 %}`.replace('/0/', `/${itemId}/`);
 
         fetch(deleteUrl, {
             method: 'POST',

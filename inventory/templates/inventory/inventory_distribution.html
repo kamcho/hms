@@ -481,7 +481,7 @@
         document.getElementById('actual_count').value = currentQty;
         
         const form = document.getElementById('reconcileForm');
-        form.action = `{% url 'inventory:reconcile_stock' item.id 0 %}`.replace('0', locationId);
+        form.action = `{% url 'inventory:reconcile_stock' item.id 0 %}`.replace('/0/', `/${locationId}/`);
         
         document.getElementById('reconcileModal').style.display = 'flex';
     }
