@@ -2350,6 +2350,7 @@ def pharmacy_dashboard(request):
         'dispensed_search': dispensed_search,
         'request_search': request_search,
         'pharmacy_dept': pharmacy_dept,
+        'today_plus_30': today + timedelta(days=30),
     }
 
     return render(request, 'home/pharmacy_dashboard.html', context)

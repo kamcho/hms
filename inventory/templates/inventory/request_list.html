@@ -245,7 +245,8 @@
                         <tr>
                             <th>Item</th>
                             <th>Quantity</th>
-                            <th>Location</th>
+                            <th>From</th>
+                            <th>To (Location)</th>
                             <th>Requested By</th>
                             <th>Requested At</th>
                             <th>Actions</th>
@@ -253,9 +254,12 @@
                     </thead>
                     <tbody>
                         {% for request in pending_requests %}
-                            <tr onclick="openRequestModal('{{ request.id }}', '{{ request.item.name|escapejs }}', '{{ request.quantity }}', '{{ request.location.name|escapejs }}', '{{ request.requested_by.get_full_name|default:request.requested_by.username|escapejs }}', '{{ request.requested_at|date:'M d, Y H:i'|escapejs }}', '{{ request.status }}', '{{ request.quantity }}')" style="cursor: pointer;">
+                            <tr onclick="openRequestModal('{{ request.id }}', '{{ request.item.name|escapejs }}', '{{ request.quantity }}', '{{ request.location.name|escapejs }}', '{{ request.requested_by.get_full_name|default:request.requested_by.username|escapejs }}', '{{ request.requested_at|date:"M d, Y H:i"|escapejs }}', '{{ request.status }}', '{{ request.quantity }}', '{{ request.requested_from.name|default:"Main Store"|escapejs }}')" style="cursor: pointer;">
                                 <td class="item-name">{{ request.item.name }}</td>
                                 <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
+                                <td>
+                                    <span class="location" style="background: rgba(16, 185, 129, 0.1); color: #059669;">{{ request.requested_from|default:"Main Store" }}</span>
+                                </td>
                                 <td>
                                     <span class="location">{{ request.location }}</span>
                                 </td>
@@ -296,7 +300,8 @@
                         <tr>
                             <th>Item</th>
                             <th>Quantity</th>
-                            <th>Location</th>
+                            <th>From</th>
+                            <th>To (Location)</th>
                             <th>Status</th>
                             <th>Requested By</th>
                             <th>Requested At</th>
@@ -307,6 +312,9 @@
                             <tr>
                                 <td class="item-name">{{ request.item.name }}</td>
                                 <td class="quantity">{{ request.quantity }} {{ request.item.unit }}</td>
+                                <td>
+                                    <span class="location" style="background: rgba(16, 185, 129, 0.1); color: #059669;">{{ request.requested_from|default:"Main Store" }}</span>
+                                </td>
                                 <td>
                                     <span class="location">{{ request.location }}</span>
                                 </td>
@@ -351,13 +359,17 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                     <div>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Location</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">To (Destination)</div>
                         <div id="modal-location" style="font-weight: 600; color: #1e293b;">-</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Requested By</div>
-                        <div id="modal-user" style="font-weight: 600; color: #1e293b;">-</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">From (Source)</div>
+                        <div id="modal-source" style="font-weight: 600; color: #059669;">-</div>
                     </div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">Requested By</div>
+                    <div id="modal-user" style="font-weight: 600; color: #1e293b;">-</div>
                 </div>
                 <div style="margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
                     <label style="font-size: 0.875rem; color: #1e293b; margin-bottom: 0.75rem; display: block; font-weight: 600;">
@@ -395,11 +407,12 @@
     </style>
 
     <script>
-    function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty) {
+    function openRequestModal(id, item, quantity, location, user, date, status, adjustedQty, source) {
         document.getElementById('modal-item').textContent = item;
         document.getElementById('modal-quantity').textContent = quantity + ' units';
         document.getElementById('modal-location').textContent = location;
         document.getElementById('modal-user').textContent = user;
+        document.getElementById('modal-source').textContent = source;
         
         const qtyInput = document.getElementById('adjusted_quantity');
         if (qtyInput) {

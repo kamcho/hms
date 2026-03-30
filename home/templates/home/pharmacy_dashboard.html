@@ -348,14 +348,14 @@
             <div>
                 {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
                     <!-- OPD Pending Items -->
-                    <div class="section-card">
+                    <div class="section-card" id="opd-queue">
                         <div class="section-header">
                             <h2><i class="fas fa-prescription-bottle-alt"></i> OPD Dispensing Queue</h2>
                             <span class="badge badge-primary">{{ opd_groups|length }} Visits</span>
                         </div>
                         
                         <div class="search-box">
-                            <form method="GET">
+                            <form method="GET" action="#opd-queue">
                                 <i class="fas fa-search"></i>
                                 <input type="text" name="search" placeholder="Search patient name or medication..." value="{{ search_query }}">
                             </form>
@@ -448,7 +448,70 @@
                     </div>
                 {% endif %}
 
-              
+            
+
+                <!-- Stock Requests Section -->
+                <div class="section-card" id="stock-requests">
+                    <div class="section-header">
+                        <div class="flex items-center gap-4">
+                            <h2><i class="fas fa-clipboard-list"></i> Recent Stock Requests</h2>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="badge badge-primary">{{ inventory_requests|length }} Total</span>
+                            <a href="{% url 'inventory:request_list' %}" class="badge badge-success" style="text-decoration: none;">View All</a>
+                        </div>
+                    </div>
+                    
+                    <div class="search-box">
+                        <form method="GET" action="#stock-requests">
+                            <i class="fas fa-search"></i>
+                            <input type="text" name="request_search" placeholder="Search item or requester..." value="{{ request_search }}">
+                        </form>
+                    </div>
+
+                    <div style="padding: 0 2rem 2rem;">
+                        <table class="med-table">
+                            <thead>
+                                <tr>
+                                    <th>Inventory Item</th>
+                                    <th>Priority</th>
+                                    <th>Qty</th>
+                                    <th>Status</th>
+                                    <th>Requested At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in inventory_requests %}
+                                <tr>
+                                    <td class="font-bold">{{ req.item.name }}</td>
+                                    <td>
+                                        <span class="badge {% if req.priority == 'Urgent' %}badge-danger{% elif req.priority == 'Critical' %}badge-danger{% else %}badge-primary{% endif %}">
+                                            {{ req.priority|default:"Normal" }}
+                                        </span>
+                                    </td>
+                                    <td class="font-bold">{{ req.quantity }}</td>
+                                    <td>
+                                        <span class="badge {% if req.status == 'Pending' %}badge-warning{% elif req.status == 'Approved' %}badge-success{% else %}badge-danger{% endif %}">
+                                            {{ req.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-xs text-slate-400">{{ req.requested_at|date:"M d, H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                                        <i class="fas fa-inbox block mb-2" style="font-size: 2rem; opacity: 0.2;"></i>
+                                        <p>No active stock requests</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Available Stock Table Section -->
+               
             </div>
 
             <!-- Sidebar -->
@@ -503,7 +566,68 @@
             </div>
         </div>
     </div>
+ <div class="section-card" id="available-stock">
+                    <div class="section-header">
+                        <h2><i class="fas fa-boxes"></i> Detailed Stock Availability</h2>
+                        <div class="flex items-center gap-3">
+                            <span class="badge badge-info">{{ pharmacy_stock|length }} Items</span>
+                            <a href="{% url 'inventory:item_list' %}" class="badge badge-primary" style="text-decoration: none;">Inventory Manager</a>
+                        </div>
+                    </div>
 
+                    <div class="search-box">
+                        <form method="GET" action="#available-stock">
+                            <i class="fas fa-search"></i>
+                            <input type="text" name="stock_search" placeholder="Search stock by name or batch..." value="{{ stock_search }}">
+                        </form>
+                    </div>
+
+                    <div style="padding: 0 2rem 2rem;">
+                        <table class="med-table">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Category</th>
+                                    <th>Units</th>
+                                    <th>Status</th>
+                                    <th>Batch / Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in pharmacy_stock %}
+                                <tr>
+                                    <td class="font-bold">{{ stock.item.name }}</td>
+                                    <td>
+                                        <span class="badge badge-primary">{{ stock.item.category.name|default:"General" }}</span>
+                                    </td>
+                                    <td class="font-bold {% if stock.quantity <= stock.item.reorder_level %}text-red-400{% else %}text-emerald-400{% endif %}">
+                                        {{ stock.quantity }} {{ stock.item.dispensing_unit }}
+                                    </td>
+                                    <td>
+                                        {% if stock.quantity <= stock.item.reorder_level %}
+                                            <span class="badge badge-danger">Low Stock</span>
+                                        {% else %}
+                                            <span class="badge badge-success">Sufficient</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-xs">
+                                        <div class="text-slate-300">#{{ stock.batch_number|default:"N/A" }}</div>
+                                        <div class="{% if stock.expiry_date <= today_plus_30 %}text-red-400{% else %}text-slate-500{% endif %}">
+                                            Exp: {{ stock.expiry_date|date:"Y-m-d"|default:"Unknown" }}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                                        No stock records found for this location.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
     <!-- Instruction Modal (Fail-safe Inline Styles) -->
     <div id="instructionModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" onclick="hideInstruction()"></div>

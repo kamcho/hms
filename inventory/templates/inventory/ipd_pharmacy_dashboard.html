@@ -144,38 +144,22 @@
                     <thead>
                         <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                             <th class="px-8 py-4">Item Name</th>
-                            <th class="px-8 py-4">Batch Number</th>
-                            <th class="px-8 py-4">Quantity</th>
-                            <th class="px-8 py-4">Expiry Date</th>
-                            <th class="px-8 py-4">Supplier</th>
+                            <th class="px-8 py-4">Total Quantity</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         {% for stock in mini_pharmacy_stock %}
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ stock.item.name }}</div>
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ stock.item__name }}</div>
                             </td>
                             <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ stock.batch_number }}</div>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ stock.total_quantity }}</div>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-600">
-                                    {% if stock.expiry_date %}{{ stock.expiry_date|date:"d M Y" }}{% else %}N/A{% endif %}
-                                </div>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">
-                                    {{ stock.supplier.name|default:"N/A" }}
-                                </div>
+                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ stock.total_quantity }} {{ stock.item__dispensing_unit }}</div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="px-8 py-20 text-center">
+                            <td colspan="2" class="px-8 py-20 text-center">
                                 <i class="fas fa-warehouse text-4xl text-slate-200 mb-4 block"></i>
                                 <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No stock available in Mini Pharmacy</p>
                             </td>
@@ -202,6 +186,7 @@
                         <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                             <th class="px-8 py-4">Item</th>
                             <th class="px-8 py-4">Quantity</th>
+                            <th class="px-8 py-4">From (Source)</th>
                             <th class="px-8 py-4">Requested By</th>
                             <th class="px-8 py-4">Requested At</th>
                             <th class="px-8 py-4 text-center">Action</th>
@@ -215,6 +200,9 @@
                             </td>
                             <td class="px-8 py-5">
                                 <div class="text-xs font-black text-amber-600 uppercase tracking-tighter">{{ request.quantity }}</div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ request.requested_from.name|default:"Main Store" }}</div>
                             </td>
                             <td class="px-8 py-5">
                                 <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ request.requested_by.get_full_name|default:request.requested_by.username }}</div>

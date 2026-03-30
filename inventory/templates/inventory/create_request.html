@@ -366,6 +366,13 @@
                     <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem;">Select the department where this item is needed.</small>
                 </div>
 
+                <div class="form-group">
+                    <label for="{{ form.requested_from.id_for_label }}">Request From</label>
+                    {{ form.requested_from }}
+                    {{ form.requested_from.errors }}
+                    <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem;">Select where this stock should be removed from.</small>
+                </div>
+
                 <div class="form-actions">
                     <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary" id="submitBtn">

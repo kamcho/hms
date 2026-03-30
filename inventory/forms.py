@@ -76,18 +76,25 @@ class StockRecordForm(forms.ModelForm):
 class InventoryRequestForm(forms.ModelForm):
     class Meta:
         model = InventoryRequest
-        fields = ['item', 'quantity', 'location']
+        fields = ['item', 'quantity', 'location', 'requested_from']
         widgets = {
             'item': forms.Select(attrs={'class': 'form-select'}),
             'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'form-control'}),
             'location': forms.Select(attrs={'class': 'form-select'}),
+            'requested_from': forms.Select(attrs={'class': 'form-select'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
         self.fields['item'].empty_label = "Select an item"
-        self.fields['location'].empty_label = "Select a location"
+        self.fields['location'].empty_label = "Select a destination"
+        self.fields['requested_from'].empty_label = "Request stock from..."
+        
+        # Filter requested_from to only include Pharmacy and Main Store
+        self.fields['requested_from'].queryset = Departments.objects.filter(
+            name__in=['Pharmacy', 'Main Store']
+        ).order_by('name')
 
 class InventoryPurchaseForm(forms.ModelForm):
     invoice_number = forms.CharField(

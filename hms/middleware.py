@@ -7,7 +7,7 @@ class LicenseVerificationMiddleware:
 
     def __call__(self, request):
         # Set the deadline: 7 days from March 18 is March 25
-        deadline = datetime.date(2026, 3, 30)
+        deadline = datetime.date(2026, 4, 10)
         
         # Check if the system date is past the deadline
         if datetime.date.today() > deadline:

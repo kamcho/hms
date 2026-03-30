@@ -1,281 +1,563 @@
-{% extends 'users/dashboard_base.html' %}
+{% extends "users/dashboard_base.html" %}
 {% load static %}
-{% block title %}Procurement Dashboard | HMS{% endblock %}
+
+{% block title %}Procurement Dashboard | HMS{% endblock title %}
+
 {% block content %}
-    <div class="p-6 space-y-8 max-w-[1600px] mx-auto min-h-screen">
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-30">
-            <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <a href="{% url 'inventory:item_list' %}" class="text-indigo-600 font-bold text-xs uppercase tracking-widest hover:underline flex items-center gap-1">
-                        <i class="fas fa-arrow-left"></i> Inventory Dashboard
-                    </a>
-                </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight text-left">Procurement & Stock Intake</h1>
-                <p class="text-slate-500 font-medium mt-1 text-left">Manage incoming stock and supplier deliveries (GRN)</p>
-            </div>
-            <div>
-                <button data-open-modal="modal-purchase" class="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all flex items-center gap-3 shadow-xl shadow-slate-300 group border-b-4 border-slate-700">
-                    <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                        <i class="fas fa-truck-loading text-[10px] text-white"></i>
-                    </div>
-                    RECORD STOCK INTAKE (GRN)
-                </button>
-            </div>
-        </div>
-        <!-- Filters -->
-        <div class="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-wrap gap-4 items-center justify-between">
-            <div class="flex items-center gap-4">
-                <h3 class="font-black text-slate-900 text-sm uppercase tracking-wide">Recent GRNs</h3>
-            </div>
-            <form method="GET" class="flex items-center gap-2">
-                <div class="relative group">
-                    <i class="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                    <input type="date" name="from_date" value="{{ from_date|default:'' }}" class="bg-slate-50 border-slate-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all" placeholder="From">
-                </div>
-                <div class="relative group">
-                    <input type="date" name="to_date" value="{{ to_date|default:'' }}" class="bg-slate-50 border-slate-100 rounded-2xl px-4 py-3 text-xs font-black focus:ring-4 focus:ring-indigo-100 focus:bg-white w-40 border transition-all" placeholder="To">
-                </div>
-                <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">FILTER</button>
-                {% if from_date or to_date %}
-                    <a href="{% url 'inventory:procurement_dashboard' %}" class="px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs hover:bg-rose-100 transition-all">
-                        <i class="fas fa-times"></i>
-                    </a>
-                {% endif %}
-            </form>
-        </div>
-        <!-- GRN Table -->
-        <div class="bg-white border border-slate-100 rounded-[3rem] shadow-sm overflow-hidden min-h-[500px] relative z-20">
-            <div class="overflow-x-auto text-left">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-50 bg-slate-50/50">
-                            <th class="px-10 py-6">Date</th>
-                            <th class="px-10 py-6">Supplier Vendor</th>
-                            <th class="px-10 py-6">Linked Invoice</th>
-                            <th class="px-10 py-6 text-right">Received Value</th>
-                            <th class="px-10 py-6 text-right">Items</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50">
-                        {% for pur in purchases %}
-                            <tr class="group hover:bg-slate-50/80 transition-all text-left cursor-pointer" onclick="window.location.href='{% url 'inventory:add_grn_item' grn_id=pur.id %}'">
-                                <td class="px-10 py-7">
-                                    <span class="text-sm font-black text-slate-900">{{ pur.date|date:"M d, Y" }}</span>
-                                </td>
-                                <td class="px-10 py-7 text-left">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">{{ pur.supplier.name|slice:":1"|upper }}</div>
-                                        <span class="text-sm font-black text-slate-800 text-left">{{ pur.supplier.name }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-10 py-7 text-left">
-                                    <div class="flex flex-col text-left gap-1">
-                                        {% if pur.invoice_ref %}
-                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">#{{ pur.invoice_ref.invoice_number }}</span>
-                                        {% else %}
-                                            <span class="px-3 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black rounded-lg border border-slate-200 self-start uppercase tracking-widest">UNLINKED</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="px-10 py-7 text-right">
-                                    <span class="text-base font-black text-slate-950 tracking-tighter">KES {{ pur.total_amount|floatformat:2 }}</span>
-                                </td>
-                                <td class="px-10 py-7 text-right">
-                                    <a href="{% url 'inventory:add_grn_item' grn_id=pur.id %}" class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all inline-block">
-                                        ADD STOCK <i class="fas fa-arrow-right ml-1"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="5" class="py-32 text-center text-slate-300">
-                                    <div class="flex flex-col items-center justify-center gap-4">
-                                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                                            <i class="fas fa-truck-loading text-2xl text-slate-300"></i>
-                                        </div>
-                                        <h3 class="font-black text-slate-900 text-sm">No Procurement Logs</h3>
-                                        <p class="text-slate-400 text-xs max-w-xs text-center mb-4">
-                                            Track physical inventory
-                                            received from suppliers here.
-                                        </p>
-                                        <button data-open-modal="modal-purchase" class="px-6 py-3 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-black transition-all shadow-lg shadow-slate-200">LOG STOCK INTAKE</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <style>
-    .hms-modal-backdrop {
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+    }
+
+    .dashboard-wrapper {
+        padding: 2rem;
+        animation: fadeIn 0.5s ease-out;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2.5rem;
+    }
+
+    .header-content h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .header-content p {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: var(--card-shadow);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .icon-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+    .icon-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .icon-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+    .stat-info .label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-info .value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .content-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 32px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+
+    .card-header {
+        padding: 2rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .filter-bar {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .date-input {
+        background: #f1f5f9;
+        border: 2px solid transparent;
+        border-radius: 14px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        transition: all 0.3s;
+    }
+
+    .date-input:focus {
+        outline: none;
+        background: white;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    .btn-action {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        border-radius: 16px;
+        padding: 0.875rem 1.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        background: rgba(248, 250, 252, 0.5);
+        padding: 1.25rem 2rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .custom-table td {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        vertical-align: middle;
+    }
+
+    .custom-table tr:hover td {
+        background: rgba(79, 70, 229, 0.02);
+    }
+
+    .vendor-badge {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .vendor-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+    }
+
+    .vendor-info .name {
+        display: block;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .vendor-info .date {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .invoice-tag {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 0.4rem 0.8rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        border: 1px solid #e2e8f0;
+    }
+
+    .amount-cell {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 800;
+        color: var(--text-primary);
+        font-size: 1.1rem;
+    }
+
+    .status-badge {
+        padding: 0.4rem 1rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .status-completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+    /* Modal Styles */
+    .modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(12px);
-        z-index: 10000;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
         display: none;
         align-items: center;
         justify-content: center;
         padding: 1.5rem;
     }
 
-    .hms-modal-content {
+    .modal-container {
         background: white;
+        border-radius: 32px;
         width: 100%;
-        max-width: 550px;
-        border-radius: 3rem;
+        max-width: 600px;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        animation: hmsModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    @keyframes hmsModalIn {
-        from {
-            opacity: 0;
-            transform: scale(0.9) translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
     }
 
-    input,
-    select,
-    textarea {
+    .modal-header {
+        padding: 2rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #edf2f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-group-full { grid-column: span 2; }
+
+    .input-field {
         width: 100%;
-        padding: 1rem 1.25rem;
+        padding: 1rem;
         background: #f8fafc;
         border: 2px solid #f1f5f9;
-        border-radius: 1.25rem;
-        font-size: 0.875rem;
-        font-weight: 700;
-        color: #0f172a;
+        border-radius: 16px;
+        font-weight: 600;
         transition: all 0.2s;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
     }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
-        background: #fff;
+    .input-field:focus {
+        background: white;
         border-color: #4f46e5;
-        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
         outline: none;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
     }
 
     label {
-        display: block;
-        font-size: 10px;
-        font-weight: 900;
+        font-size: 0.75rem;
+        font-weight: 700;
         color: #64748b;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
         margin-bottom: 0.5rem;
-        text-align: left;
+        display: block;
+        letter-spacing: 0.05em;
     }
-    </style>
-{% endblock %}
-{% block modals %}
-    <!-- Add Procurement Modal (GRN) -->
-    <div id="modal-purchase" class="hms-modal-backdrop">
-        <div class="hms-modal-content max-w-lg">
-            <div class="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <div class="text-left">
-                    <h3 class="text-xl font-black text-slate-900 tracking-tight text-left">Goods Received Note</h3>
-                    <p class="text-[10px] text-emerald-600 font-extrabold uppercase tracking-widest mt-1 text-left">
-                        Physical
-                        Stock Intake
-                    </p>
-                </div>
-                <button data-close-modal class="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:scale-110 transition-all shadow-sm">
-                    <i class="fas fa-times"></i>
-                </button>
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Procurement Dashboard</h1>
+            <p>Manage inventory intake and supplier relationships</p>
+        </div>
+        <button onclick="openModal('modal-purchase')" class="btn-action">
+            <i class="fas fa-plus"></i> New Stock Intake (GRN)
+        </button>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon icon-primary">
+                <i class="fas fa-file-invoice"></i>
             </div>
-            <form action="{% url 'inventory:add_inventory_purchase' %}" method="POST" class="p-10 space-y-6">
-                {% csrf_token %}
-                <div class="grid grid-cols-2 gap-6 text-left">
-                    <div class="text-left">
-                        <label>Receipt Date</label>
+            <div class="stat-info">
+                <div class="label">Total GRNs</div>
+                <div class="value">{{ purchases.count }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-success">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-info">
+                <div class="label">Total Value</div>
+                <div class="value">KES {{ total_value|default:"0.00" }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-warning">
+                <i class="fas fa-truck"></i>
+            </div>
+            <div class="stat-info">
+                <div class="label">Suppliers</div>
+                <div class="value">{{ total_suppliers|default:"0" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-grid">
+        <div class="content-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-list-ul text-indigo-600"></i>
+                    Recent Stock Intake Logs
+                </div>
+                <form method="GET" class="filter-bar">
+                    <input type="date" name="from_date" value="{{ from_date|default:'' }}" class="date-input" placeholder="From">
+                    <input type="date" name="to_date" value="{{ to_date|default:'' }}" class="date-input" placeholder="To">
+                    <button type="submit" class="btn-action" style="padding: 0.75rem 1.25rem;">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    {% if from_date or to_date %}
+                    <a href="{% url 'inventory:procurement_dashboard' %}" class="btn-action" style="background: #fee2e2; color: #ef4444; box-shadow: none; padding: 0.75rem 1.25rem;">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Received Date</th>
+                            <th>Supplier Details</th>
+                            <th>Invoice Info</th>
+                            <th>Total Amount</th>
+                            <th>Items</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pur in purchases %}
+                        <tr onclick="window.location.href='{% url 'inventory:add_grn_item' grn_id=pur.id %}'" style="cursor: pointer;">
+                            <td class="vendor-info">
+                                <span class="name">{{ pur.date|date:"D, M d" }}</span>
+                                <span class="date">{{ pur.date|date:"Y" }}</span>
+                            </td>
+                            <td>
+                                <div class="vendor-badge">
+                                    <div class="vendor-avatar">
+                                        {{ pur.supplier.name|slice:":1"|upper }}
+                                    </div>
+                                    <div class="vendor-info">
+                                        <span class="name">{{ pur.supplier.name }}</span>
+                                        <span class="date">{{ pur.supplier.phone|default:"No phone" }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if pur.invoice_ref %}
+                                <span class="invoice-tag">#{{ pur.invoice_ref.invoice_number }}</span>
+                                {% else %}
+                                <span class="invoice-tag" style="background: #f8fafc; color: #94a3b8; border-style: dashed;">NO INVOICE</span>
+                                {% endif %}
+                            </td>
+                            <td class="amount-cell">
+                                KES {{ pur.total_amount|floatformat:2 }}
+                            </td>
+                            <td>
+                                <span class="status-badge status-completed">
+                                    {{ pur.stock_records.count }} items
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'inventory:add_grn_item' grn_id=pur.id %}" class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; display: inline-flex;">
+                                    View Details <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 5rem 2rem;">
+                                <div style="font-size: 4rem; color: #e2e8f0; margin-bottom: 1.5rem;">
+                                    <i class="fas fa-inbox"></i>
+                                </div>
+                                <h3 style="font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">No Intake Logs Found</h3>
+                                <p style="color: #64748b;">Start by recording your first stock intake from a supplier.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-purchase" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <div>
+                <h3 style="font-size: 1.5rem; font-weight: 800; color: #1e293b;">Log Stock Intake (GRN)</h3>
+                <p style="font-size: 0.875rem; color: #64748b; font-weight: 600;">Record inventory received from supplier</p>
+            </div>
+            <button onclick="closeModal('modal-purchase')" style="background: #f1f5f9; border: none; width: 44px; height: 44px; border-radius: 12px; cursor: pointer; color: #64748b; font-size: 1.25rem; transition: all 0.2s;" onmouseover="this.style.color='#ef4444'; this.style.background='#fee2e2'" onmouseout="this.style.color='#64748b'; this.style.background='#f1f5f9'">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form action="{% url 'inventory:add_inventory_purchase' %}" method="POST">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div>
+                        <label>Date of Receipt</label>
                         {{ purchase_form.date }}
                     </div>
-                    <div class="text-left">
-                        <label>Supplier Vendor</label>
+                    <div>
+                        <label>Supplier / Vendor</label>
                         {{ purchase_form.supplier }}
                     </div>
-                </div>
-                <div class="grid grid-cols-2 gap-6 text-left">
-                    <div class="text-left">
-                        <label>Total Value of Items</label>
-                        {{ purchase_form.total_amount }}
-                    </div>
-                    <div class="text-left">
+                    <div>
                         <label>Supplier Invoice #</label>
                         {{ purchase_form.invoice_number }}
                     </div>
+                    <div>
+                        <label>Total Invoice Value</label>
+                        {{ purchase_form.total_amount }}
+                    </div>
+                    <div class="form-group-full">
+                        <label>Notes / Delivery Remarks</label>
+                        {{ purchase_form.notes }}
+                    </div>
                 </div>
-                <div class="text-left">
-                    <label>Delivery Remarks / Manifest</label>
-                    {{ purchase_form.notes }}
-                </div>
-                <div class="pt-6">
-                    <button type="submit" class="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm hover:bg-black transition-all shadow-2xl border-b-4 border-slate-600 flex items-center justify-center gap-3">
-                        <i class="fas fa-save"></i> RECORD STOCK INTAKE
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div style="padding: 0 2rem 2rem;">
+                <button type="submit" class="btn-action" style="width: 100%; justify-content: center; padding: 1.25rem;">
+                    <i class="fas fa-save"></i> Save Procurement Log
+                </button>
+            </div>
+        </form>
     </div>
-{% endblock %}
-{% block extra_js %}
-    <script>
-    (function () {
-        "use strict";
-        // Safe Modal Controller
-        const ModalController = {
-            init() {
-                document.addEventListener('click', (e) => {
-                    const openTarget = e.target.closest('[data-open-modal]');
-                    const closeTarget = e.target.closest('[data-close-modal]');
-                    const backdrop = e.target.classList.contains('hms-modal-backdrop');
+</div>
 
-                    if (openTarget) {
-                        e.preventDefault();
-                        this.open(openTarget.getAttribute('data-open-modal'));
-                    } else if (closeTarget) {
-                        e.preventDefault();
-                        this.closeAll();
-                    } else if (backdrop) {
-                        this.closeAll();
-                    }
-                });
+<script>
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') this.closeAll();
-                });
-            },
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 
-            open(id) {
-                const modal = document.getElementById(id);
-                if (modal) {
-                    modal.style.setProperty('display', 'flex', 'important');
-                    document.body.style.overflow = 'hidden';
-                }
-            },
+    // Close modal on click outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
 
-            closeAll() {
-                document.querySelectorAll('.hms-modal-backdrop').forEach(m => {
-                    m.style.setProperty('display', 'none', 'important');
-                });
-                document.body.style.overflow = 'auto';
-            }
-        };
-        ModalController.init();
-    })();
-    </script>
-{% endblock %}
+    // Add CSS classes to Django form widgets
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#modal-purchase input, #modal-purchase select, #modal-purchase textarea');
+        inputs.forEach(input => {
+            input.classList.add('input-field');
+        });
+    });
+</script>
+{% endblock content %}

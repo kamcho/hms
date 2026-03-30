@@ -125,6 +125,7 @@ class StockAdjustment(models.Model):
 
 class InventoryRequest(models.Model):
     location = models.ForeignKey('home.Departments', on_delete=models.CASCADE, related_name='inventory_requests')
+    requested_from = models.ForeignKey('home.Departments', on_delete=models.SET_NULL, null=True, blank=True, related_name='inventory_source_requests')
     item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='requests')
     quantity = models.IntegerField()
     adjusted_quantity = models.IntegerField(null=True, blank=True)

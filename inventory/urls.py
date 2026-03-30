@@ -19,6 +19,7 @@ urlpatterns = [
     path('procurement/', views.procurement_dashboard, name='procurement_dashboard'),
     path('procurement/add/', views.add_inventory_purchase, name='add_inventory_purchase'),
     path('procurement/<int:grn_id>/add-items/', views.add_grn_item, name='add_grn_item'),
+    path('stock-activity/', views.stock_activity, name='stock_activity'),
     path('items/<int:item_id>/distribution/', views.inventory_distribution, name='inventory_distribution'),
     path('items/<int:item_id>/update-details/', views.update_item_details, name='update_item_details'),
     path('items/<int:item_id>/reconcile/<int:location_id>/', views.reconcile_stock, name='reconcile_stock'),

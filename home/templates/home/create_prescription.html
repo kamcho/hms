@@ -1,7 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Create Prescription - {{ patient.full_name }} - HMS{% endblock %}
-{% block extra_css %}
+
+{% block content %}
     <style>
     @keyframes fadeIn {
         from {
@@ -163,8 +164,7 @@
         transform: rotate(90deg);
     }
     </style>
-{% endblock %}
-{% block content %}
+
     <div class="bg-[#f8fafc] min-h-screen">
         <div class="prescription-container animate-fade-in">
             <!-- Header -->
@@ -187,6 +187,23 @@
                     Back to Profile
                 </a>
             </div>
+
+                <!-- Dispense Consumables Section -->
+                <div class="premium-card">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
+                            <i class="fas fa-box-open text-lg"></i>
+                        </div>
+                        <h2 class="text-xl font-black text-slate-900">Dispense Consumables</h2>
+                    </div>
+                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                        <p class="text-sm text-slate-500 font-bold mb-6">
+                            <i class="fas fa-info-circle mr-2"></i> Dispense items required for this prescription (e.g.
+                            Syringes, Canulas).
+                        </p>
+                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Pharmacy,Procedure Room" %}
+                    </div>
+                </div>
             <form method="post" id="prescription-form">
                 {% csrf_token %}
                 <!-- Diagnosis Section -->
@@ -215,22 +232,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Dispense Consumables Section -->
-                <div class="premium-card">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
-                            <i class="fas fa-box-open text-lg"></i>
-                        </div>
-                        <h2 class="text-xl font-black text-slate-900">Dispense Consumables</h2>
-                    </div>
-                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                        <p class="text-sm text-slate-500 font-bold mb-6">
-                            <i class="fas fa-info-circle mr-2"></i> Dispense items required for this prescription (e.g.
-                            Syringes, Canulas).
-                        </p>
-                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit %}
-                    </div>
-                </div>
+            
                 <!-- Medications Section -->
                 <div class="premium-card">
                     <div class="flex items-center justify-between mb-10">

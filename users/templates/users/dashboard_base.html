@@ -290,6 +290,11 @@
                                 <i class="fas fa-exchange-alt"></i>
                                 <span>Stock Transfer</span>
                             </a>
+                            <a href="{% url 'inventory:stock_activity' %}" 
+                               class="menu-item submenu-item {% if request.resolver_match.url_name == 'stock_activity' %}active{% endif %}">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Stock Activity</span>
+                            </a>
                         </div>
                     {% endif %}
                     {% if user.role == 'Nurse' or user.role == 'Admin' %}

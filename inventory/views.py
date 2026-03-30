@@ -213,11 +213,11 @@ def request_list(request):
     # Separate requests by status
     pending_requests = InventoryRequest.objects.filter(
         status='Pending'
-    ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+    ).select_related('item', 'requested_by', 'location', 'requested_from').order_by('-requested_at')
     
     processed_requests = InventoryRequest.objects.filter(
         status__in=['Approved', 'Rejected']
-    ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+    ).select_related('item', 'requested_by', 'location', 'requested_from').order_by('-requested_at')
     
     return render(request, 'inventory/request_list.html', {
         'pending_requests': pending_requests,
@@ -234,29 +234,31 @@ def update_request_status(request, request_id):
             try:
                 adjusted_qty = int(request.POST.get('adjusted_quantity', inventory_request.quantity))
                 
-                # Retrieve Main Store
-                try:
-                    main_store = Departments.objects.get(name='Main Store')
-                except Departments.DoesNotExist:
-                    messages.error(request, 'Main Store department not found.')
-                    return redirect('inventory:request_list')
+                # Retrieve Source Department (Requested From or default to Main Store)
+                source_dept = inventory_request.requested_from
+                if not source_dept:
+                    try:
+                        source_dept = Departments.objects.get(name='Main Store')
+                    except Departments.DoesNotExist:
+                        messages.error(request, 'Default source department (Main Store) not found.')
+                        return redirect('inventory:request_list')
 
-                # Check if enough stock in Main Store
+                # Check if enough stock in Source Department
                 total_stock = StockRecord.objects.filter(
                     item=inventory_request.item, 
-                    current_location=main_store
+                    current_location=source_dept
                 ).aggregate(Sum('quantity'))['quantity__sum'] or 0
                 
                 if total_stock < adjusted_qty:
-                    messages.error(request, f'Insufficient stock in Main Store. Available: {total_stock}')
+                    messages.error(request, f'Insufficient stock in {source_dept.name}. Available: {total_stock}')
                     return redirect('inventory:request_list')
 
                 # Proceed with Transfer
                 remaining_qty = adjusted_qty
-                # Get batches from Main Store (FIFO)
+                # Get batches from Source Department (FIFO)
                 source_records = StockRecord.objects.filter(
                     item=inventory_request.item, 
-                    current_location=main_store, 
+                    current_location=source_dept, 
                     quantity__gt=0
                 ).order_by('expiry_date')
 
@@ -292,13 +294,13 @@ def update_request_status(request, request_id):
                         adjustment_type='Transfer Out',
                         reason=f'Approved Request to {inventory_request.location.name}',
                         adjusted_by=request.user,
-                        adjusted_from=main_store
+                        adjusted_from=source_dept
                     )
                     StockAdjustment.objects.create(
                         item=inventory_request.item,
                         quantity=qty_to_take,
                         adjustment_type='Transfer In',
-                        reason=f'Approved Request from Main Store',
+                        reason=f'Approved Request from {source_dept.name}',
                         adjusted_by=request.user,
                         adjusted_from=inventory_request.location
                     )
@@ -307,7 +309,7 @@ def update_request_status(request, request_id):
 
                 inventory_request.adjusted_quantity = adjusted_qty
                 inventory_request.status = 'Approved'
-                messages.success(request, f'Request approved. {adjusted_qty} units transferred to {inventory_request.location.name}.')
+                messages.success(request, f'Request approved. {adjusted_qty} units transferred to {inventory_request.location.name} from {source_dept.name}.')
             except ValueError:
                 messages.error(request, 'Invalid quantity provided.')
                 return redirect('inventory:request_list')
@@ -551,6 +553,7 @@ def procurement_dashboard(request):
     
     # Imports inside function to avoid circular imports if any
     from accounts.models import InventoryPurchase, SupplierInvoice
+    from .forms import InventoryPurchaseForm
     
     # Get date filters
     from_date = request.GET.get('from_date')
@@ -563,15 +566,18 @@ def procurement_dashboard(request):
     if to_date:
         purchases = purchases.filter(date__lte=to_date)
         
-    # Form for adding purchase (GRN)
-    # We need to import the form here or ensure it's available
-    from .forms import InventoryPurchaseForm
+    # Calculations for stats
+    from django.db.models import Sum
+    total_value = purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_suppliers = purchases.values('supplier').distinct().count()
     
     context = {
         'purchases': purchases,
         'from_date': from_date,
         'to_date': to_date,
         'purchase_form': InventoryPurchaseForm(),
+        'total_value': total_value,
+        'total_suppliers': total_suppliers,
     }
     return render(request, 'inventory/procurement_dashboard.html', context)
 
@@ -1036,7 +1042,9 @@ def ipd_pharmacy_dashboard(request):
     if mini_pharmacy:
         mini_pharmacy_stock = StockRecord.objects.filter(
             current_location=mini_pharmacy
-        ).select_related('item', 'supplier').annotate(
+        ).values(
+            'item__name', 'item__dispensing_unit'
+        ).annotate(
             total_quantity=Sum('quantity')
         ).filter(total_quantity__gt=0).order_by('item__name')
     
@@ -1046,7 +1054,7 @@ def ipd_pharmacy_dashboard(request):
         mini_pharmacy_requests = InventoryRequest.objects.filter(
             location=mini_pharmacy,
             status='Pending'
-        ).select_related('item', 'requested_by', 'location').order_by('-requested_at')
+        ).select_related('item', 'requested_by', 'location', 'requested_from').order_by('-requested_at')
 
     # Show all pending items
     context = {
@@ -1170,3 +1178,39 @@ def confirm_ipd_fulfillment(request):
         messages.error(request, f"Dispensing failed: {str(e)}")
         
     return redirect('inventory:ipd_pharmacy_dashboard')
+@login_required
+def stock_activity(request):
+    """
+    View to track how inventory has been used by patients.
+    Includes filtering by item and date.
+    """
+    item_id = request.GET.get('item_id')
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+
+    # Base queryset for activities
+    activities = DispensedItem.objects.all().select_related(
+        'item', 'patient', 'dispensed_by', 'department', 'visit'
+    )
+
+    # Apply filters
+    if item_id:
+        activities = activities.filter(item_id=item_id)
+    
+    if from_date:
+        activities = activities.filter(dispensed_at__date__gte=from_date)
+    if to_date:
+        activities = activities.filter(dispensed_at__date__lte=to_date)
+
+    # All items for the filter search (or use the JSON search API)
+    items = InventoryItem.objects.all().order_by('name')
+
+    context = {
+        'activities': activities[:200],  # Limit to 200 for performance
+        'items': items,
+        'selected_item_id': int(item_id) if item_id and item_id.isdigit() else None,
+        'from_date': from_date,
+        'to_date': to_date,
+        'title': 'Stock Activity'
+    }
+    return render(request, 'inventory/stock_activity.html', context)

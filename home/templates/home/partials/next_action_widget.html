@@ -5,6 +5,7 @@
         </h3>
         <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-widest">New Request</span>
     </div>
+{% if visit.is_active %}:
     <form id="nextActionForm" method="POST" action="{% url 'home:submit_next_action' %}">
         {% csrf_token %}
         <input type="hidden" name="patient_id" value="{{ patient_id }}">
@@ -60,6 +61,15 @@
             <button type="button" id="execute-btn" onclick="submitNextAction()" disabled class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex-1">Execute Action</button>
         </div>
     </form>
+{% else %}
+    <div class="p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-sm mb-4">
+            <i class="fas fa-lock text-slate-400"></i>
+        </div>
+        <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">Visit Closed</h4>
+        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-loose">Further clinical actions are restricted for this historical record.</p>
+    </div>
+{% endif %}
 </div>
 <!-- Context Data -->
 {{ medical_tests_data|default:"[]"|json_script:"services-data" }}
