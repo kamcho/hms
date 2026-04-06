@@ -1013,14 +1013,15 @@ def transfer_stock(request):
 def ipd_pharmacy_dashboard(request):
     """
     Dashboard for pharmacists to dispense items to inpatients.
-    Shows pending partial fulfillments.
+    Shows pending partial fulfillments grouped by visit/patient.
     """
     from inpatient.models import MedicationChart, InpatientConsumable
     from home.models import Departments
     from django.db.models import F
+    from collections import OrderedDict
     
-    # Only Pharmacist and Nurse should access this page.
-    if request.user.role not in ['Pharmacist', 'Nurse']:
+    # Pharmacist, Nurse, and Admin can access this page.
+    if request.user.role not in ['Pharmacist', 'Nurse', 'Admin'] and not request.user.is_superuser:
         return HttpResponseForbidden("Access denied.")
 
     # Identify and lock to the user's dispensing department.
@@ -1029,17 +1030,63 @@ def ipd_pharmacy_dashboard(request):
         user_dept = Departments.objects.filter(name='Pharmacy').first()
     elif request.user.role == 'Nurse':
         user_dept = Departments.objects.filter(name='Mini Pharmacy').first()
+    elif request.user.role == 'Admin' or request.user.is_superuser:
+        user_dept = Departments.objects.filter(name='Pharmacy').first()
+    
+    # Search filter
+    search_query = request.GET.get('q', '').strip()
     
     # Fetch pending meds
     pending_meds = MedicationChart.objects.filter(
         quantity_dispensed__lt=F('total_quantity'),
         is_active=True
-    ).select_related('admission__patient', 'admission__bed__ward', 'item', 'request_location')
+    ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
     
     # Fetch pending consumables
     pending_consumables = InpatientConsumable.objects.filter(
         quantity_dispensed__lt=F('total_quantity')
-    ).select_related('admission__patient', 'item', 'request_location')
+    ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
+
+    # Apply search filter — split into words so "John Doe" works
+    if search_query:
+        search_terms = search_query.split()
+        med_filter = Q()
+        for term in search_terms:
+            med_filter &= (Q(admission__patient__first_name__icontains=term) | Q(admission__patient__last_name__icontains=term) | Q(admission__patient__id_number__icontains=term) | Q(admission__patient__phone__icontains=term) | Q(item__name__icontains=term))
+        pending_meds = pending_meds.filter(med_filter)
+        pending_consumables = pending_consumables.filter(med_filter)
+
+    # Group medications by visit
+    visits_meds = OrderedDict()
+    for med in pending_meds.order_by('admission__patient__first_name', 'admission__visit__id'):
+        visit = med.admission.visit
+        key = visit.id if visit else f'no-visit-{med.admission.id}'
+        if key not in visits_meds:
+            visits_meds[key] = {
+                'visit': visit,
+                'patient': med.admission.patient,
+                'admission': med.admission,
+                'meds': [],
+                'consumables': [],
+            }
+        visits_meds[key]['meds'].append(med)
+    
+    # Group consumables by visit  
+    for con in pending_consumables.order_by('admission__patient__first_name', 'admission__visit__id'):
+        visit = con.admission.visit
+        key = visit.id if visit else f'no-visit-{con.admission.id}'
+        if key not in visits_meds:
+            visits_meds[key] = {
+                'visit': visit,
+                'patient': con.admission.patient,
+                'admission': con.admission,
+                'meds': [],
+                'consumables': [],
+            }
+        visits_meds[key]['consumables'].append(con)
+
+    total_pending_meds = sum(len(v['meds']) for v in visits_meds.values())
+    total_pending_consumables = sum(len(v['consumables']) for v in visits_meds.values())
 
     # Get Mini Pharmacy department
     mini_pharmacy = Departments.objects.filter(name='Mini Pharmacy').first()
@@ -1063,12 +1110,14 @@ def ipd_pharmacy_dashboard(request):
             status='Pending'
         ).select_related('item', 'requested_by', 'location', 'requested_from').order_by('-requested_at')
 
-    # Show all pending items
     context = {
-        'pending_meds': pending_meds,
-        'pending_consumables': pending_consumables,
+        'visits_grouped': visits_meds,
+        'total_pending_meds': total_pending_meds,
+        'total_pending_consumables': total_pending_consumables,
+        'total_patients': len(visits_meds),
         'mini_pharmacy_stock': mini_pharmacy_stock,
         'mini_pharmacy_requests': mini_pharmacy_requests,
+        'search_query': search_query,
         'title': 'IPD Pharmacy Fulfillment',
         'all_pharmacies': [user_dept] if user_dept else [],
         'locked_department': user_dept,
@@ -1111,6 +1160,8 @@ def confirm_ipd_fulfillment(request):
                 department = Departments.objects.filter(name='Pharmacy').first()
             elif request.user.role == 'Nurse':
                 department = Departments.objects.filter(name='Mini Pharmacy').first()
+            elif request.user.role == 'Admin' or request.user.is_superuser:
+                department = Departments.objects.filter(name='Pharmacy').first()
             else:
                 messages.error(request, "Access denied.")
                 return redirect('inventory:ipd_pharmacy_dashboard')

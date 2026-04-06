@@ -9,13 +9,21 @@
             <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">IPD Pharmacy Fulfillment</h1>
             <p class="text-slate-500 text-sm font-medium mt-1 uppercase tracking-widest">Dispense and bill medications for admitted patients</p>
         </div>
-        <div class="flex items-center gap-4">
-            <!-- Global filter removed per user request -->
-        </div>
     </div>
 
     <!-- Stats Row -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <!-- Patients Stat -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-violet-500/5 group">
+            <div class="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-users text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patients</div>
+                <div class="text-2xl font-black text-slate-900">{{ total_patients }}</div>
+            </div>
+        </div>
+
         <!-- Meds Stat -->
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-indigo-500/5 group">
             <div class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 transition-transform group-hover:scale-110">
@@ -23,11 +31,11 @@
             </div>
             <div>
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending Meds</div>
-                <div class="text-2xl font-black text-slate-900">{{ pending_meds.count }}</div>
+                <div class="text-2xl font-black text-slate-900">{{ total_pending_meds }}</div>
             </div>
         </div>
 
-        <!-- Consumables Stat -->
+        <!-- Mini Pharmacy Stock Stat -->
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:shadow-emerald-500/5 group">
             <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
                 <i class="fas fa-warehouse text-xl"></i>
@@ -50,83 +58,215 @@
         </div>
     </div>
 
-    <!-- Main Content Tabs/Tables -->
+    <!-- Search Bar -->
+    <div class="mb-10">
+        <form method="GET" action="" id="searchForm" class="relative max-w-2xl">
+            <div class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <i class="fas fa-search text-sm"></i>
+            </div>
+            <input type="text" name="q" id="patientSearchInput" value="{{ search_query }}" placeholder="Search by patient name, ID number, phone, or medicine name..." class="w-full bg-white border-2 border-slate-100 text-slate-900 text-xs font-bold py-4 pl-14 pr-32 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none shadow-sm" autocomplete="off">
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {% if search_query %}
+                <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" class="px-3 py-2 text-[10px] font-black text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors">
+                    <i class="fas fa-times mr-1"></i>Clear
+                </a>
+                {% endif %}
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Main Content -->
     <div class="space-y-10">
-        
-        <!-- Medications Table -->
-        <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-white">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
-                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Pending Medication Dispenses</h2>
+
+        <!-- Patient Visit Cards -->
+        <div>
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Pending Dispensing by Patient</h2>
+                <span class="px-4 py-1.5 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ total_patients }} Patient{{ total_patients|pluralize }}</span>
+            </div>
+
+            {% if search_query and not visits_grouped %}
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-16 text-center">
+                <i class="fas fa-search text-5xl text-slate-200 mb-6 block"></i>
+                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">No results found</p>
+                <p class="text-xs text-slate-400">No patients or medications match "<span class="text-indigo-600">{{ search_query }}</span>"</p>
+            </div>
+            {% endif %}
+
+            {% for visit_id, group in visits_grouped.items %}
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-6 transition-all hover:shadow-lg hover:shadow-slate-200/50">
+                <!-- Patient Header -->
+                <div class="px-8 py-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-lg font-black shadow-lg shadow-indigo-500/20">
+                                {{ group.patient.first_name|first }}{{ group.patient.last_name|first }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 uppercase tracking-tight">{{ group.patient.full_name }}</div>
+                                <div class="flex items-center gap-4 mt-1.5 flex-wrap">
+                                    {% if group.patient.id_number %}
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fas fa-id-card text-slate-300"></i> {{ group.patient.id_number }}
+                                    </span>
+                                    {% endif %}
+                                    {% if group.admission.bed %}
+                                    <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fas fa-bed text-indigo-400"></i> {{ group.admission.bed.ward.name }} &mdash; Bed {{ group.admission.bed.bed_number }}
+                                    </span>
+                                    {% endif %}
+                                    {% if group.visit %}
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fas fa-calendar-alt text-slate-300"></i> Visit #{{ group.visit.id }} &mdash; {{ group.visit.visit_date|date:"d M Y" }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            {% if group.meds %}
+                            <span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-[9px] font-black rounded-xl uppercase tracking-widest">{{ group.meds|length }} Med{{ group.meds|length|pluralize }}</span>
+                            {% endif %}
+                            {% if group.consumables %}
+                            <span class="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[9px] font-black rounded-xl uppercase tracking-widest">{{ group.consumables|length }} Consumable{{ group.consumables|length|pluralize }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <span class="px-4 py-1.5 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-tighter">{{ pending_meds.count }} Tasks</span>
+
+                <!-- Medications Table -->
+                {% if group.meds %}
+                <div class="px-6 pt-4 pb-2">
+                    <div class="flex items-center gap-2 mb-3 px-2">
+                        <i class="fas fa-pills text-indigo-400 text-xs"></i>
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Medications</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th class="px-4 py-3">Medication</th>
+                                    <th class="px-4 py-3">Prescription Rule</th>
+                                    <th class="px-4 py-3">Dispense Progress</th>
+                                    <th class="px-4 py-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                {% for med in group.meds %}
+                                <tr class="hover:bg-indigo-50/30 transition-colors group">
+                                    <td class="px-4 py-4">
+                                        <div class="text-xs font-black text-indigo-600 uppercase tracking-tighter">{{ med.item.name }}</div>
+                                        {% if med.instructions %}
+                                        <div class="text-[9px] text-slate-400 italic mt-1 truncate max-w-[200px]" title="{{ med.instructions }}">{{ med.instructions }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-block px-2.5 py-1 rounded-lg {% if med.administration_type == 'Sessions' %}bg-purple-50 text-purple-700{% else %}bg-amber-50 text-amber-700{% endif %} text-[9px] font-black uppercase tracking-widest mb-1">{{ med.administration_type }}</span>
+                                        <div class="text-[10px] font-bold text-slate-500 uppercase leading-none">{{ med.dose_per_session }} units &times; {{ med.frequency }}</div>
+                                    </td>
+                                    <td class="px-4 py-4 min-w-[160px]">
+                                        <div class="flex justify-between items-center mb-1.5">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ med.quantity_dispensed }} / {{ med.total_quantity }} Units</span>
+                                            {% widthratio med.quantity_dispensed med.total_quantity 100 as p_pct %}
+                                            <span class="text-[9px] font-black text-indigo-600">{{ p_pct }}%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
+                                            <div class="bg-indigo-500 h-full rounded-full transition-all duration-700" style="width: {{ p_pct }}%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 text-center">
+                                        <button type="button" onclick="openDispenseModal('med', '{{ med.id }}', '{{ med.item.name|escapejs }}', {{ med.total_quantity }}, {{ med.quantity_dispensed }}, '{{ med.dose_per_session }} units &times; {{ med.frequency }}{% if med.duration_days %} for {{ med.duration_days }} day{{ med.duration_days|pluralize }}{% endif %}{% if med.instructions %} • {{ med.instructions|escapejs }}{% endif %}')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                                            Dispense
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Consumables Table -->
+                {% if group.consumables %}
+                <div class="px-6 pt-4 pb-2 {% if group.meds %}border-t border-slate-100{% endif %}">
+                    <div class="flex items-center gap-2 mb-3 px-2">
+                        <i class="fas fa-box-open text-emerald-400 text-xs"></i>
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consumables</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th class="px-4 py-3">Item</th>
+                                    <th class="px-4 py-3">Instructions</th>
+                                    <th class="px-4 py-3">Dispense Progress</th>
+                                    <th class="px-4 py-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                {% for con in group.consumables %}
+                                <tr class="hover:bg-emerald-50/30 transition-colors group">
+                                    <td class="px-4 py-4">
+                                        <div class="text-xs font-black text-emerald-600 uppercase tracking-tighter">{{ con.item.name }}</div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        {% if con.instructions %}
+                                        <div class="text-[10px] text-slate-500 italic truncate max-w-[200px]" title="{{ con.instructions }}">{{ con.instructions }}</div>
+                                        {% else %}
+                                        <span class="text-[10px] text-slate-300 italic">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-4 min-w-[160px]">
+                                        <div class="flex justify-between items-center mb-1.5">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ con.quantity_dispensed }} / {{ con.total_quantity }} Units</span>
+                                            {% widthratio con.quantity_dispensed con.total_quantity 100 as c_pct %}
+                                            <span class="text-[9px] font-black text-emerald-600">{{ c_pct }}%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
+                                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: {{ c_pct }}%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 text-center">
+                                        <button type="button" onclick="openDispenseModal('consumable', '{{ con.id }}', '{{ con.item.name|escapejs }}', {{ con.total_quantity }}, {{ con.quantity_dispensed }}, '{% if con.instructions %}{{ con.instructions|escapejs }}{% else %}No instructions{% endif %}')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                                            Dispense
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Card Footer -->
+                <div class="px-8 py-3 bg-slate-50/50 border-t border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            {{ group.meds|length }} med{{ group.meds|length|pluralize }} + {{ group.consumables|length }} consumable{{ group.consumables|length|pluralize }} pending
+                        </span>
+                        {% if group.admission.admitted_at %}
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            <i class="fas fa-clock text-slate-300 mr-1"></i> Admitted {{ group.admission.admitted_at|date:"d M Y, H:i" }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                            <th class="px-8 py-4">Patient & Location</th>
-                            <th class="px-8 py-4">Medication Details</th>
-                            <th class="px-8 py-4">Prescription Rule</th>
-                            <th class="px-8 py-4">Dispense Progress</th>
-                            <th class="px-8 py-4 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50">
-                        {% for med in pending_meds %}
-                        <tr class="hover:bg-slate-50/80 transition-colors group">
-                            <td class="px-8 py-5">
-                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ med.admission.patient.full_name }}</div>
-                                <div class="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1.5 uppercase">
-                                    <i class="fas fa-bed text-indigo-400"></i>
-                                    {{ med.admission.bed.ward.name }} - {{ med.admission.bed.bed_number }}
-                                </div>
-                            </td>
-                            <td class="px-8 py-5">
-                                <div class="text-xs font-black text-indigo-600 uppercase tracking-tighter">{{ med.item.name }}</div>
-                                {% if med.instructions %}
-                                <div class="text-[9px] text-slate-400 italic mt-1 truncate max-w-[200px]" title="{{ med.instructions }}">{{ med.instructions }}</div>
-                                {% endif %}
-                            </td>
-                            <td class="px-8 py-5">
-                                <span class="inline-block px-2.5 py-1 rounded-lg {% if med.administration_type == 'Sessions' %}bg-purple-50 text-purple-700{% else %}bg-amber-50 text-amber-700{% endif %} text-[9px] font-black uppercase tracking-widest mb-2">
-                                    {{ med.administration_type }}
-                                </span>
-                                <div class="text-[10px] font-bold text-slate-500 uppercase leading-none">
-                                    {{ med.dose_per_session }} units × {{ med.frequency }}
-                                </div>
-                            </td>
-                            <td class="px-8 py-5 min-w-[180px]">
-                                <div class="flex justify-between items-center mb-1.5">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ med.quantity_dispensed }} / {{ med.total_quantity }} Units</span>
-                                    {% widthratio med.quantity_dispensed med.total_quantity 100 as p_pct %}
-                                    <span class="text-[9px] font-black text-indigo-600">{{ p_pct }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/30">
-                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-700" style="width: {{ p_pct }}%"></div>
-                                </div>
-                            </td>
-                            <td class="px-8 py-5 text-center">
-                                <button type="button" 
-                                        onclick="openDispenseModal('med', '{{ med.id }}', '{{ med.item.name|escapejs }}', {{ med.total_quantity }}, {{ med.quantity_dispensed }}, '{{ med.dose_per_session }} units × {{ med.frequency }}{% if med.duration_days %} for {{ med.duration_days }} day{{ med.duration_days|pluralize }}{% endif %}{% if med.instructions %} • {{ med.instructions|escapejs }}{% endif %}')"
-                                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
-                                    Dispense
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="px-8 py-20 text-center">
-                                <i class="fas fa-pills text-4xl text-slate-200 mb-4 block"></i>
-                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending medication requests</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            {% empty %}
+            {% if not search_query %}
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-16 text-center">
+                <i class="fas fa-check-circle text-5xl text-emerald-200 mb-6 block"></i>
+                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">All Clear</p>
+                <p class="text-xs text-slate-400">No pending dispensing tasks at this time.</p>
             </div>
+            {% endif %}
+            {% endfor %}
         </div>
 
         <!-- Mini Pharmacy Stock Table -->
@@ -211,18 +351,12 @@
                                 <div class="text-xs font-black text-slate-600 uppercase tracking-tighter">{{ request.requested_at|date:"d M Y, H:i" }}</div>
                             </td>
                             <td class="px-8 py-5 text-center">
-                                <span class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block
-                                    {% if request.status == 'Pending' %}bg-amber-50 text-amber-700
-                                    {% elif request.status == 'Approved' %}bg-emerald-50 text-emerald-700
-                                    {% elif request.status == 'Rejected' %}bg-red-50 text-red-700
-                                    {% endif %}">
-                                    {{ request.status }}
-                                </span>
+                                <span class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block {% if request.status == 'Pending' %}bg-amber-50 text-amber-700{% elif request.status == 'Approved' %}bg-emerald-50 text-emerald-700{% elif request.status == 'Rejected' %}bg-red-50 text-red-700{% endif %}">{{ request.status }}</span>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="px-8 py-20 text-center">
+                            <td colspan="6" class="px-8 py-20 text-center">
                                 <i class="fas fa-clipboard-list text-4xl text-slate-200 mb-4 block"></i>
                                 <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">No pending stock requests for Mini Pharmacy</p>
                             </td>
@@ -235,7 +369,7 @@
     </div>
 </div>
 
-<!-- Dispense Modal (Tailwind Logic) -->
+<!-- Dispense Modal -->
 <div id="dispenseModal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 py-10 text-center">
         <!-- Overlay -->
@@ -307,12 +441,13 @@
                         <div id="remainingHelp" class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl"></div>
                     </div>
 
+                </div>
                 <div class="mt-8 flex gap-4">
                     <button type="button" onclick="closeDispenseModal()" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all border-2 border-transparent hover:border-slate-100 rounded-2xl">
                         Cancel
                     </button>
                     <button type="submit" class="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 active:scale-95 transition-all">
-                        Confirm & Bill
+                        Confirm &amp; Bill
                     </button>
                 </div>
             </form>
