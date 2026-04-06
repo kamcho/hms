@@ -1258,7 +1258,7 @@
     </div>
     <div class="p-6">
         {% if latest_visit %}
-            {% include 'inventory/partials/dispense_widget.html' with visit=latest_visit patient=pregnancy.patient %}
+            {% include 'inventory/partials/dispense_widget.html' with visit=latest_visit patient=pregnancy.patient exclude_pharmaceuticals="true" %}
         {% else %}
             <div class="text-center p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                 <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 text-xl shadow-sm">

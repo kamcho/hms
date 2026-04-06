@@ -337,11 +337,18 @@ def search_inventory(request):
     """
     query = request.GET.get('q', '')
     department_id = request.GET.get('department_id')
+    exclude_pharmaceuticals = request.GET.get('exclude_pharmaceuticals') == 'true'
     
     if len(query) < 2:
         return JsonResponse({'results': []})
         
-    items = InventoryItem.objects.filter(name__icontains=query).select_related('category').order_by('name')[:20]
+    items = InventoryItem.objects.filter(name__icontains=query)
+    
+    if exclude_pharmaceuticals:
+        # Items that don't have a linked Medication record
+        items = items.filter(medication__isnull=True)
+        
+    items = items.select_related('category').order_by('name')[:20]
     
     results = []
     for item in items:

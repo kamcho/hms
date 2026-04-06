@@ -411,7 +411,7 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         
         # Get lab results and reports for this patient
         from lab.models import LabResult, LabReport
-        lab_results = LabResult.objects.filter(**lab_filter).select_related('service', 'requested_by').order_by('-requested_at')
+        lab_results = LabResult.objects.filter(**lab_filter).select_related('service', 'requested_by', 'invoice_item__procedure_completion').order_by('-requested_at')
         context['lab_results'] = lab_results
         
         # Get lab reports for this patient
@@ -450,6 +450,25 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         
         # Get dispensed items history (Normalized)
         context['dispensed_items'] = _get_normalized_history(selected_visit, patient)
+        
+        # Get procedures (billed services specifically in clinical departments)
+        # Avoid showing items that are already tracked by the LabResult ordering system
+        if selected_visit:
+            existing_lab_item_ids = LabResult.objects.filter(invoice__visit=selected_visit, invoice_item__isnull=False).values_list('invoice_item_id', flat=True)
+            procedures = InvoiceItem.objects.filter(
+                invoice__visit=selected_visit,
+                service__isnull=False,
+                service__department__name__in=['Procedure Room', 'Imaging', 'Lab']
+            ).exclude(id__in=existing_lab_item_ids).select_related('service', 'procedure_completion').order_by('-created_at')
+        else:
+            existing_lab_item_ids = LabResult.objects.filter(invoice__visit__patient=patient, invoice_item__isnull=False).values_list('invoice_item_id', flat=True)
+            procedures = InvoiceItem.objects.filter(
+                invoice__patient=patient,
+                service__isnull=False,
+                service__department__name__in=['Procedure Room', 'Imaging', 'Lab']
+            ).exclude(id__in=existing_lab_item_ids).select_related('service', 'procedure_completion').order_by('-created_at')
+        
+        context['procedures'] = procedures
         
         # Get departments for dispensing widget
         context['dispensing_departments'] = Departments.objects.all().order_by('name')
@@ -1144,6 +1163,30 @@ def add_impression(request):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
+def update_impression(request, pk):
+    """Update an existing impression"""
+    if request.method == 'POST':
+        try:
+            from .models import Impression
+            impression = get_object_or_404(Impression, pk=pk)
+            visit = impression.visit
+
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot edit impressions on a previous visit.'})
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot edit impressions on a closed visit.'})
+
+            data = request.POST.get('data')
+            impression.data = data
+            impression.updated_by = request.user
+            impression.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
 def add_diagnosis(request):
     """Add diagnosis to a visit"""
     if request.method == 'POST':
@@ -1167,6 +1210,59 @@ def add_diagnosis(request):
                 data=data,
                 created_by=request.user
             )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def update_diagnosis(request, pk):
+    """Update an existing diagnosis"""
+    if request.method == 'POST':
+        try:
+            from .models import Diagnosis
+            diagnosis = get_object_or_404(Diagnosis, pk=pk)
+            visit = diagnosis.visit
+
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot edit diagnosis on a previous visit.'})
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot edit diagnosis on a closed visit.'})
+
+            data = request.POST.get('data')
+            diagnosis.data = data
+            diagnosis.updated_by = request.user
+            diagnosis.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def update_consultation_note(request, pk):
+    """Update an existing consultation note"""
+    if request.user.role != 'Doctor':
+        return JsonResponse({'success': False, 'error': 'Only doctors can edit clinical notes.'})
+    if request.method == 'POST':
+        try:
+            note = get_object_or_404(ConsultationNotes, pk=pk)
+            visit = note.consultation.visit
+
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot edit notes on a previous visit.'})
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot edit notes on a closed visit.'})
+
+            note_content = request.POST.get('note_content')
+            note_type_detail = request.POST.get('note_type_detail', '').strip()
+            if note_type_detail:
+                note_content = f"{note_content}\n\nFocus Area: {note_type_detail}"
+
+            note.notes = note_content
+            note.updated_by = request.user
+            note.save()
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})

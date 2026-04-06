@@ -5,7 +5,7 @@
         </h3>
         <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-widest">New Request</span>
     </div>
-{% if visit.is_active %}:
+{% if visit.is_active %}
     <form id="nextActionForm" method="POST" action="{% url 'home:submit_next_action' %}">
         {% csrf_token %}
         <input type="hidden" name="patient_id" value="{{ patient_id }}">

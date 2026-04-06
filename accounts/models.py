@@ -78,7 +78,7 @@ class Invoice(models.Model):
         
         # Determine status based on effective amount (after insurance adjustment)
         effective = self.effective_amount
-        if self.paid_amount >= effective and effective > 0:
+        if self.paid_amount >= effective:
             self.status = 'Paid'
         elif self.paid_amount > 0:
             self.status = 'Partial'

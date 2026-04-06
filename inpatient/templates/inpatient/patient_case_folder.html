@@ -5,240 +5,250 @@
 
     <style>
     :root {
-        --dash-bg: #f4f6f9;
-        --card-bg: #ffffff;
-        --text-primary: #1f2937;
-        --text-secondary: #6b7280;
-        --accent-primary: #7e3af2;
-        --accent-primary-light: rgba(126, 58, 242, 0.1);
-        --accent-success: #10b981;
-        --accent-danger: #ef4444;
-        --accent-warning: #f59e0b;
-        --border-color: #e5e7eb;
-        --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        
-        --clinical-primary: #6366f1;
-        --clinical-primary-light: #e0e7ff;
-        --clinical-secondary: #64748b;
-        --clinical-success: #10b981;
-        --clinical-warning: #f59e0b;
-        --clinical-danger: #ef4444;
-        --clinical-info: #3b82f6;
-        --clinical-bg: #f8fafc;
-        --clinical-card-bg: #ffffff;
-        --clinical-text-main: #1e293b;
-        --clinical-text-muted: #64748b;
-        --clinical-border: #e2e8f0;
-        --clinical-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        --clinical-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --cf-bg: #f8fafc;
+        --cf-card: #ffffff;
+        --cf-text: #0f172a;
+        --cf-muted: #64748b;
+        --cf-primary: #6366f1;
+        --cf-primary-soft: #eef2ff;
+        --cf-border: rgba(226, 232, 240, 0.8);
+        --cf-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        --cf-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        --cf-radius: 20px;
+        --font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    
+    .case-folder-root { 
+        background: var(--cf-bg); 
+        font-family: var(--font-family); 
+        color: var(--cf-text); 
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
     }
 
-    .case-folder-root {
-        background-color: var(--clinical-bg);
-        color: var(--clinical-text-main);
-        font-family: var(--font-family);
-    }
+    /* ── Master layout ───────────────────────────────── */
+    .cf-layout { min-height: 100vh; background: var(--cf-bg); }
+    .cf-main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
+    @media(max-width:768px){ .cf-main { padding: 1rem; } }
 
-    .profile-grid {
-        display: grid;
-        grid-template-columns: 350px 1fr;
-        gap: 2rem;
-        align-items: start;
-        padding: 2rem;
-        max-width: 1600px;
-        margin: 0 auto;
+    /* Patient Header */
+    .cf-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding: 1rem 0; border-bottom: 1px solid var(--cf-border); }
+    .cf-header-avatar { 
+        width: 64px; height: 64px; border-radius: 18px; 
+        background: linear-gradient(135deg, var(--cf-primary) 0%, #818cf8 100%); 
+        color: #fff; display: flex; align-items: center; justify-content: center; 
+        font-weight: 800; font-size: 1.5rem; flex-shrink: 0;
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
     }
+    .cf-header-name { font-size: 1.75rem; font-weight: 900; letter-spacing: -0.025em; display: flex; align-items: center; gap: 1rem; }
+    .cf-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .cf-badge-inpatient { background: #dcfce7; color: #166534; }
+    .cf-badge-discharged { background: #f1f5f9; color: #475569; }
 
-    @media (max-width: 1200px) {
-        .profile-grid { grid-template-columns: 1fr; padding: 1rem; }
+    /* ── Dashboard Grid ────────────────── */
+    .dashboard-grid { 
+        display: grid; 
+        grid-template-columns: 2fr 1fr; 
+        gap: 1.5rem; 
+        margin-bottom: 2rem; 
     }
-
-    .modern-card {
-        background: var(--clinical-card-bg);
-        border-radius: 16px;
-        border: 1px solid var(--clinical-border);
-        box-shadow: var(--clinical-shadow);
+    @media(max-width:1024px){ .dashboard-grid { grid-template-columns: 1fr; } }
+    
+    .cf-card { 
+        background: #fff; 
+        border-radius: var(--cf-radius); 
+        border: 1px solid var(--cf-border); 
+        box-shadow: var(--cf-shadow); 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
         overflow: hidden;
-        margin-bottom: 1.5rem;
+        height: 100%;
     }
-
-    .modern-card-header {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--clinical-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #fbfcfe;
+    .cf-card:hover { transform: translateY(-4px); box-shadow: var(--cf-shadow-lg); }
+    .cf-card-head { 
+        padding: 1.25rem 1.5rem; 
+        border-bottom: 1px solid var(--cf-border); 
+        display: flex; align-items: center; justify-content: space-between; 
+        flex-shrink: 0; 
     }
-
-    .modern-card-title {
-        font-size: 1.125rem;
-        font-weight: 700;
-        color: var(--clinical-text-main);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
+    .cf-card-title { font-size: 0.938rem; font-weight: 700; color: var(--cf-text); display: flex; align-items: center; gap: 0.75rem; }
+    .cf-card-body { padding: 1.5rem; flex: 1; overflow-y: auto; max-height: 400px; }
+    
+    .cf-info-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; }
+    .cf-info-row + .cf-info-row { border-top: 1px solid rgba(0,0,0,0.03); }
+    .cf-info-icon { 
+        width: 36px; height: 36px; border-radius: 10px; 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 0.9rem; flex-shrink: 0; 
     }
+    .cf-info-label { font-size: 0.65rem; font-weight: 700; color: var(--cf-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .cf-info-value { font-size: 0.938rem; font-weight: 800; color: var(--cf-text); }
 
-    .modern-card-body { padding: 1.5rem; }
-
-    .patient-profile-summary {
-        text-align: center;
-        padding: 2.5rem 1.5rem;
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        color: white;
-        position: relative;
+    /* Accent card */
+    .cf-accent-card { 
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
+        border: none; color: #fff; 
+        position: relative; overflow: hidden;
     }
+    .cf-accent-card .cf-card-head { border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .cf-accent-card .cf-card-title { color: #fff; }
 
-    .avatar-circle {
-        width: 100px; height: 100px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 4px solid rgba(255, 255, 255, 0.2);
-        border-radius: 24px;
-        margin: 0 auto 1.5rem;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 2.5rem; font-weight: 700;
-        backdrop-filter: blur(4px);
+    /* Stats Ring */
+    .cf-stats-ring { width: 120px; height: 120px; border-radius: 50%; border: 8px solid #eef2ff; display: flex; align-items: center; justify-content: center; position: relative; }
+    .cf-stats-ring::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 8px solid var(--cf-primary); border-right-color: transparent; border-bottom-color: transparent; transform: rotate(45deg); }
+
+    /* Vitals mini-cards */
+    .vitals-dashboard-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+    .vital-mini { background: #fff; padding: 1.25rem; border-radius: 20px; border: 1px solid var(--cf-border); display: flex; align-items: center; gap: 1rem; transition: all 0.3s; }
+    .vital-mini:hover { border-color: var(--cf-primary); transform: translateY(-2px); box-shadow: var(--cf-shadow); }
+    .vital-mini-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .vital-mini-val { font-size: 1.25rem; font-weight: 800; color: var(--cf-text); }
+    .vital-mini-label { font-size: 0.65rem; font-weight: 700; color: var(--cf-muted); text-transform: uppercase; margin-bottom: 0.1rem; }
+
+    /* Clinical Tabs */
+    .modern-card { background: #fff; border-radius: 32px; border: 1px solid var(--cf-border); box-shadow: var(--cf-shadow-lg); overflow: hidden; }
+    .clinical-tab-container { background: #fbfcfe; padding: 1rem 1.5rem; border-bottom: 1px solid var(--cf-border); overflow-x: auto; }
+    .clinical-tabs { display: flex; gap: 0.75rem; }
+    .clinical-tab { 
+        padding: 0.75rem 1.5rem; border-radius: 14px; font-size: 0.813rem; font-weight: 700; 
+        color: var(--cf-muted); transition: all 0.2s; cursor: pointer; border: 1px solid transparent; 
     }
+    .clinical-tab.active { background: #fff; color: var(--cf-primary); border-color: var(--cf-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 
-    .patient-name-large { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.025em; }
+    /* Bottom Activity Log */
+    .activity-section { margin-top: 3rem; border-top: 2px solid #f1f5f9; padding-top: 3rem; margin-bottom: 3rem; }
+    .activity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
 
-    .patient-meta-badges { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    .meta-badge {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 0.25rem 0.75rem;
-        border-radius: 99px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .detail-list { display: flex; flex-direction: column; gap: 1rem; }
-
-    .detail-item {
-        display: flex; justify-content: space-between;
-        padding-bottom: 0.75rem;
-        border-bottom: 1px solid var(--clinical-border);
-    }
-
-    .detail-label { color: var(--clinical-text-muted); font-size: 0.813rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
-    .detail-value { color: var(--clinical-text-main); font-weight: 700; font-size: 0.813rem; }
-
-    .clinical-tab-container { background: #f8fafc; padding: 0.75rem; border-bottom: 1px solid var(--clinical-border); }
-    .clinical-tabs { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; }
-    .clinical-tab {
-        padding: 0.625rem 1.25rem; border-radius: 12px; font-size: 0.813rem; font-weight: 700;
-        color: var(--clinical-text-muted); white-space: nowrap; transition: all 0.2s; border: 1px solid transparent;
-    }
-    .clinical-tab:hover { background: white; color: var(--clinical-primary); }
-    .clinical-tab.active {
-        background: white; color: var(--clinical-primary); border-color: var(--clinical-border);
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-
-    .status-badge { padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; }
-
-    .action-stack { display: flex; flex-direction: column; gap: 0.75rem; }
-    .modern-btn {
-        display: inline-flex; align-items: center; justify-content: center; gap: 0.625rem;
-        padding: 0.75rem 1.25rem; border-radius: 12px; font-weight: 700; font-size: 0.813rem;
-        transition: all 0.2s; border: none; cursor: pointer; text-decoration: none !important;
-    }
-    .btn-primary { background: var(--clinical-primary); color: white; }
-    .btn-secondary { background: white; color: var(--clinical-text-main); border: 1px solid var(--clinical-border); }
-
-    .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .vital-card { background: white; padding: 1.25rem; border-radius: 20px; border: 1px solid var(--clinical-border); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .vital-card:hover { border-color: var(--clinical-primary); transform: translateY(-2px); }
-    .vital-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 1rem; }
-    .vital-label { font-size: 0.65rem; font-weight: 800; color: var(--clinical-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;}
-    .vital-value { font-size: 1.5rem; font-weight: 800; color: var(--clinical-text-main); }
-
-    @media print { .sidebar-column, .no-print { display: none !important; } .profile-grid { display: block; } }
+    @media print { .cf-sidebar, .no-print { display: none !important; } .cf-layout { display: block; } }
     </style>
 
 <div class="case-folder-root">
-    <div class="profile-grid">
-        <aside class="sidebar-column">
-            <div class="modern-card">
-                <div class="patient-profile-summary">
-                    <div class="avatar-circle">
-                        {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
+    <div class="cf-layout">
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <main class="cf-main">
+            <!-- Patient Header Bar -->
+            <div class="cf-header">
+                <div class="cf-header-avatar">
+                   {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
+                </div>
+                <div class="cf-header-info">
+                    <div class="cf-header-name">
+                        {{ admission.patient.full_name }}
+                        <span class="cf-badge {% if admission.status == 'Discharged' %}cf-badge-discharged{% else %}cf-badge-inpatient{% endif %}">{{ admission.status|default:"Inpatient" }}</span>
                     </div>
-                    <h1 class="patient-name-large">{{ admission.patient.full_name }}</h1>
-                    <div class="patient-meta-badges">
-                        <span class="meta-badge">{{ admission.patient.age }} Years</span>
-                        <span class="meta-badge">{{ admission.patient.get_gender_display }}</span>
+                    <div class="cf-header-sub">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-calendar-alt text-indigo-500"></i> Admitted: {{ admission.admitted_at|date:"d M Y" }}</span>
+                        <span class="text-slate-200">|</span>
+                        <span class="flex items-center gap-1.5"><i class="fas fa-fingerprint text-indigo-500"></i> PID: {{ admission.patient.patient_id }}</span>
                     </div>
                 </div>
-                <div class="modern-card-body">
-                    <div class="detail-list">
-                        <div class="detail-item">
-                            <span class="detail-label">Patient ID</span>
-                            <span class="detail-value">#PAT-{{ admission.patient.id|stringformat:"05d" }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Admission ID</span>
-                            <span class="detail-value">ADM-{{ admission.id }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status</span>
-                            <span class="detail-value">
-                                <span class="status-badge" style="background: {% if admission.status == 'Discharged' %}#ecfdf5; color: #059669{% else %}#fffbeb; color: #d97706{% endif %};">
-                                    {{ admission.status|default:"Inpatient" }}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
+                <div class="cf-header-actions no-print">
+                    <a href="{% url 'home:patient_detail' pk=admission.patient.pk %}" class="cf-icon-btn" title="Patient Record"><i class="fas fa-id-card"></i></a>
+                    {% if admission.patient.phone %}<a href="tel:{{ admission.patient.phone }}" class="cf-icon-btn" title="Call"><i class="fas fa-phone"></i></a>{% endif %}
+                    <button class="cf-icon-btn" onclick="window.print()" title="Print"><i class="fas fa-print"></i></button>
+                    {% if admission.status != 'Discharged' %}
+                    <button class="cf-icon-btn" onclick="showModal('transferModal')" title="Transfer"><i class="fas fa-exchange-alt"></i></button>
+                    <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="cf-icon-btn group discharge-btn" title="Discharge" style="border-color:#fca5a5;color:#ef4444;"><i class="fas fa-sign-out-alt"></i></a>
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="modern-card">
-                <div class="modern-card-header"><h3 class="modern-card-title"><i class="fas fa-bed"></i> Admission Info</h3></div>
-                <div class="modern-card-body">
-                    <div class="detail-list">
-                        <div class="detail-item"><span class="detail-label">Ward / Bed</span><span class="detail-value">{% if admission.bed %}{{ admission.bed.ward.name }} / B{{ admission.bed.bed_number }}{% else %}Unassigned{% endif %}</span></div>
-                        <div class="detail-item"><span class="detail-label">Admitted</span><span class="detail-value">{{ admission.admitted_at|date:"M d, H:i" }}</span></div>
+            <!-- ══ Dashboard Layout ══ -->
+            <div class="dashboard-grid">
+                <!-- Left: Patient Background & Vitals -->
+                <div class="space-y-6">
+                    <!-- Top Row: Profile + Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <!-- Profile Block -->
+                        <div class="cf-card">
+                            <div class="cf-card-head"><span class="cf-card-title"><i class="fas fa-user-circle text-indigo-500"></i> Clinical Profile</span></div>
+                            <div class="cf-card-body">
+                                <div class="cf-info-row">
+                                    <div class="cf-info-icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-venus-mars"></i></div>
+                                    <div><div class="cf-info-label">Gender / Age</div><div class="cf-info-value">{{ admission.patient.get_gender_display }} / {{ admission.patient.age }} yrs</div></div>
+                                </div>
+                                <div class="cf-info-row">
+                                    <div class="cf-info-icon" style="background:#f0f9ff;color:#0ea5e9"><i class="fas fa-id-badge"></i></div>
+                                    <div><div class="cf-info-label">Patient ID</div><div class="cf-info-value">#{{ admission.patient.patient_id }}</div></div>
+                                </div>
+                                <div class="cf-info-row">
+                                    <div class="cf-info-icon" style="background:#fdf2f8;color:#db2777"><i class="fas fa-map-marker-alt"></i></div>
+                                    <div><div class="cf-info-label">Residential Area</div><div class="cf-info-value">{{ admission.patient.location|default:"Not specified" }}</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ward Block -->
+                        <div class="cf-card cf-accent-card">
+                            <div class="cf-card-head" style="border:none;"><span class="cf-card-title text-white"><i class="fas fa-bed"></i> Current Allocation</span></div>
+                            <div class="cf-card-body flex flex-col justify-center text-center">
+                                <div class="text-[0.7rem] font-bold uppercase tracking-widest opacity-70 mb-2">Ward Floor</div>
+                                <div class="text-2xl font-black mb-6">{% if admission.bed %}{{ admission.bed.ward.name }}{% else %}Waitlist{% endif %}</div>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex-1 bg-white/10 rounded-xl py-3 border border-white/5">
+                                        <div class="text-[0.6rem] font-bold uppercase opacity-60">Bed</div>
+                                        <div class="text-lg font-black mt-1">{% if admission.bed %}#{{ admission.bed.bed_number }}{% else %}—{% endif %}</div>
+                                    </div>
+                                    <div class="flex-1 bg-white/10 rounded-xl py-3 border border-white/5">
+                                        <div class="text-[0.6rem] font-bold uppercase opacity-60">Status</div>
+                                        <div class="text-[0.7rem] font-black mt-1">RESERVED</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vitals Dashboard Mini-Row -->
+                    <div class="vitals-dashboard-row">
+                        <div class="vital-mini">
+                            <div class="vital-mini-icon" style="background:#fff1f2; color:#e11d48;"><i class="fas fa-heartbeat"></i></div>
+                            <div>
+                                <div class="vital-mini-label">Pulse Rate</div>
+                                <div class="vital-mini-val">{{ latest_vitals.pulse_rate|default:"--" }} <span class="text-[0.6rem] text-slate-400 font-bold uppercase">bpm</span></div>
+                            </div>
+                        </div>
+                        <div class="vital-mini">
+                            <div class="vital-mini-icon" style="background:#eff6ff; color:#2563eb;"><i class="fas fa-gauge-high"></i></div>
+                            <div>
+                                <div class="vital-mini-label">Blood Pressure</div>
+                                <div class="vital-mini-val text-lg">{{ latest_vitals.systolic_bp|default:"-" }}/{{ latest_vitals.diastolic_bp|default:"-" }}</div>
+                            </div>
+                        </div>
+                        <div class="vital-mini group cursor-pointer" onclick="showModal('vitalsModal')">
+                            <div class="vital-mini-icon group-hover:bg-indigo-600 group-hover:text-white transition-colors" style="background:#f8fafc; color:#cbd5e1; border:1px dashed #e2e8f0;"><i class="fas fa-plus"></i></div>
+                            <div class="text-[0.6rem] font-bold uppercase text-slate-400 group-hover:text-indigo-600">Update Vitals</div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="modern-card no-print">
-                <div class="modern-card-header"><h3 class="modern-card-title"><i class="fas fa-bolt"></i> Clinical Actions</h3></div>
-                <div class="modern-card-body">
-                    <div class="action-stack">
+                <!-- Right: Admission Stats Ring -->
+                <div class="cf-card">
+                    <div class="cf-card-head"><span class="cf-card-title"><i class="fas fa-chart-line text-indigo-500"></i> Admission Metrics</span></div>
+                    <div class="cf-card-body flex flex-col items-center justify-center py-8">
+                        <div class="cf-stats-ring">
+                            <div class="flex flex-col items-center">
+                                <span class="cf-stats-number text-4xl font-black text-indigo-600">{{ days_admitted }}</span>
+                                <span class="cf-stats-label text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">Days Logged</span>
+                            </div>
+                        </div>
+                        <div class="mt-8 text-center">
+                            <div class="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Admitted On</div>
+                            <div class="text-sm font-black text-slate-700">{{ admission.admitted_at|date:"d M Y" }}</div>
+                        </div>
                         {% if admission.status != 'Discharged' %}
-                            <button onclick="showModal('transferModal')" class="modern-btn btn-secondary w-full"><i class="fas fa-exchange-alt"></i> Transfer</button>
-                            <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="modern-btn btn-primary w-full"><i class="fas fa-sign-out-alt"></i> Discharge</a>
+                        <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="mt-8 w-full py-4 bg-rose-50 text-rose-600 rounded-2xl text-[0.7rem] font-bold uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100 flex items-center justify-center gap-2">
+                           <i class="fas fa-sign-out-alt"></i> Discharge Inpatient
+                        </a>
                         {% endif %}
-                        <a href="{% url 'inpatient:dashboard' %}" class="modern-btn btn-secondary w-full"><i class="fas fa-arrow-left"></i> Dashboard</a>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main-column">
-            <div class="vitals-grid">
-                <div class="vital-card">
-                    <div class="vital-icon" style="background: #fff1f2; color: #e11d48;"><i class="fas fa-heartbeat"></i></div>
-                    <div class="vital-label">Pulse</div><div class="vital-value">{{ latest_vitals.pulse_rate|default:"--" }}<span class="text-xs ml-1">bpm</span></div>
-                </div>
-                <div class="vital-card">
-                    <div class="vital-icon" style="background: #eff6ff; color: #2563eb;"><i class="fas fa-gauge-high"></i></div>
-                    <div class="vital-label">BP</div><div class="vital-value">{{ latest_vitals.systolic_bp|default:"-" }}/{{ latest_vitals.diastolic_bp|default:"-" }}</div>
-                </div>
-                <div class="vital-card">
-                    <div class="vital-icon" style="background: #ecfdf5; color: #059669;"><i class="fas fa-wind"></i></div>
-                    <div class="vital-label">SpO2</div><div class="vital-value">{{ latest_vitals.spo2|default:"--" }}%</div>
-                </div>
-                <div class="vital-card" onclick="showModal('vitalsModal')" style="cursor: pointer; background: #fafafa; border-style: dashed;">
-                    <div class="flex flex-col items-center justify-center h-full text-slate-400">
-                        <i class="fas fa-plus-circle text-xl mb-1"></i><span class="text-[9px] font-bold uppercase">Add Vitals</span>
                     </div>
                 </div>
             </div>
 
+            <!-- Tabbed Interface Section -->
             <div class="modern-card">
                 <div class="clinical-tab-container no-scrollbar">
                     <div class="clinical-tabs">
@@ -258,11 +268,11 @@
                         <div id="clinical-notes" class="clinical-pane active space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                                 <div>
-                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Progress Notes</h4>
+                                    <h4 class="text-xl font-bold text-slate-700 tracking-tight">Progress Notes</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Documentation Timeline</p>
                                 </div>
                                 {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
-                                    <button onclick="showModal('noteModal')" class="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 transform active:scale-95">
+                                    <button onclick="showNoteModal()" class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 transform active:scale-95">
                                         <i class="fas fa-plus-circle text-indigo-400"></i> New Entry
                                     </button>
                                 {% endif %}
@@ -292,12 +302,21 @@
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100/50">
-                                                <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-[10px] text-white font-bold shadow-sm">
+                                                <div class="w-7 h-7 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-[10px] text-indigo-700 font-bold shadow-sm">
                                                     {{ note.created_by.last_name|first|upper }}
                                                 </div>
                                                 <span class="text-[11px] font-bold text-slate-700 uppercase tracking-widest">
                                                     {% if note.created_by.role == 'Doctor' %}DR.{% elif note.created_by.role == 'Nurse' %}NS.{% endif %} {{ note.created_by.last_name|upper|default:"SYSTEM" }}
                                                 </span>
+                                                {% if note.created_by == request.user and admission.status != 'Discharged' %}
+                                                    <button class="edit-note-btn w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-all ml-1" 
+                                                            data-id="{{ note.id }}" 
+                                                            data-type="{{ note.note_type }}" 
+                                                            data-content="{{ note.content|escapejs }}"
+                                                            title="Edit Note">
+                                                        <i class="fas fa-edit text-[10px]"></i>
+                                                    </button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         
@@ -310,7 +329,7 @@
                                         <div class="w-24 h-24 rounded-[32px] bg-slate-50 flex items-center justify-center text-slate-200 mb-6 shadow-inner">
                                             <i class="fas fa-clipboard-list text-4xl"></i>
                                         </div>
-                                        <h5 class="text-sm font-bold text-slate-900 uppercase tracking-widest mb-1">Timeline is empty</h5>
+                                        <h5 class="text-sm font-bold text-slate-600 uppercase tracking-widest mb-1">Timeline is empty</h5>
                                         <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">No clinical notes recorded for this admission.</p>
                                     </div>
                                 {% endfor %}
@@ -319,7 +338,7 @@
                         <!-- Medications Tab Content -->
                         <div id="clinical-medications" class="clinical-pane space-y-6" style="display: none;">
                             <div class="flex justify-between items-center mb-8">
-                                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Treatment Card (Active meds)</h4>
+                                <h4 class="text-sm font-bold text-slate-700 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Treatment Card (Active meds)</h4>
                                 {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
                                     <button onclick="showMedicationModal()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all inline-flex items-center">
                                         <i class="fas fa-pills mr-2"></i> Prescribe
@@ -346,7 +365,7 @@
                                             <tr class="group hover:bg-slate-50/30 transition-all {% if not med.is_active %}opacity-50{% endif %}">
                                                 <!-- Drug Name -->
                                                 <td class="p-3 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50/90 z-10 align-middle">
-                                                    <div class="font-bold text-slate-900 text-xs w-48 whitespace-normal leading-tight caps">{{ med.item.name }}</div>
+                                                    <div class="font-bold text-slate-700 text-xs w-48 whitespace-normal leading-tight caps">{{ med.item.name }}</div>
                                                     
                                                     <!-- Dispense Progress Bar -->
                                                     <div class="mt-2 w-32">
@@ -469,7 +488,7 @@
                                 
                                 .clinical-tab.active {
                                     background: white !important;
-                                    color: #0f172a !important; /* slate-900 */
+                                    color: #475569 !important; /* slate-600 */
                                     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
                                 }
                                 .clinical-tab:not(.active) {
@@ -485,7 +504,7 @@
                         <!-- Consumables Tab Content -->
                         <div id="clinical-consumables" class="clinical-pane space-y-6" style="display: none;">
                             {% if admission.status != 'Discharged' %}
-                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit allowed_departments="Mini Pharmacy,Pharmacy" %}
+                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit allowed_departments="Mini Pharmacy,Pharmacy" exclude_pharmaceuticals="true" %}
                             {% else %}
                                 <div class="py-20 flex flex-col items-center justify-center text-center opacity-40">
                                     <i class="fas fa-lock text-6xl text-slate-200 mb-6"></i>
@@ -501,7 +520,7 @@
                         <div id="clinical-fluids" class="clinical-pane space-y-8 animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
-                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Intake & Output</h4>
+                                    <h4 class="text-xl font-bold text-slate-700 tracking-tight">Intake & Output</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily Hydration Monitoring</p>
                                 </div>
                                 {% if admission.status != 'Discharged' %}
@@ -541,13 +560,13 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[32px] p-8 border border-slate-700 flex flex-col items-center justify-center col-span-1 md:col-span-2 lg:col-span-1 shadow-2xl shadow-slate-200">
+                                <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-[32px] p-8 border border-indigo-200/50 flex flex-col items-center justify-center col-span-1 md:col-span-2 lg:col-span-1 shadow-lg shadow-indigo-100/50">
                                     <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Net Fluid Balance</div>
                                     <div class="flex items-baseline gap-2">
-                                        <span class="text-4xl font-bold text-white tracking-tighter">{{ fluid_intake|default:0|add:0 }}</span>
+                                        <span class="text-4xl font-bold text-indigo-700 tracking-tighter">{{ fluid_intake|default:0|add:0 }}</span>
                                         <span class="text-lg font-bold text-slate-500">mL</span>
                                     </div>
-                                    <div class="mt-4 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div class="mt-4 w-full h-1.5 bg-indigo-200 rounded-full overflow-hidden">
                                         <div class="h-full bg-emerald-500 w-[65%]"></div>
                                     </div>
                                 </div>
@@ -569,7 +588,7 @@
                                                     <span class="px-2 py-0.5 {% if fluid.fluid_type == 'Intake' %}bg-blue-100 text-blue-700{% else %}bg-rose-100 text-rose-700{% endif %} text-[9px] font-bold rounded-lg uppercase">{{ fluid.fluid_type }}</span>
                                                 </td>
                                                 <td class="px-8 py-4 text-sm font-bold text-slate-700">{{ fluid.item }}</td>
-                                                <td class="px-8 py-4 text-sm font-bold text-slate-900">{{ fluid.amount_ml }} mL</td>
+                                                <td class="px-8 py-4 text-sm font-bold text-slate-700">{{ fluid.amount_ml }} mL</td>
                                                 <td class="px-8 py-4 text-right text-[10px] font-bold text-slate-400 uppercase">{{ fluid.recorded_at|date:"H:i" }}</td>
                                             </tr>
                                         {% empty %}
@@ -586,7 +605,7 @@
                         <div id="clinical-nutrition" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                                 <div>
-                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Nutrition Services</h4>
+                                    <h4 class="text-xl font-bold text-slate-700 tracking-tight">Nutrition Services</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Prescribed Diet and Culinary Orders</p>
                                 </div>
                                 {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
@@ -606,7 +625,7 @@
 
                                     <div class="relative z-10">
                                         <div class="text-[11px] font-bold text-orange-500 uppercase tracking-[0.2em] mb-3">CURRENTLY PRESCRIBED DIET</div>
-                                        <h2 class="text-4xl font-bold text-slate-900 mb-6 tracking-tight leading-none group-hover:scale-105 transition-transform">
+                                        <h2 class="text-4xl font-bold text-slate-700 mb-6 tracking-tight leading-none group-hover:scale-105 transition-transform">
                                             {{ current_nutrition.get_diet_type_display }}
                                         </h2>
                                         
@@ -620,11 +639,11 @@
                                         <div class="mt-8 flex flex-col items-center gap-4">
                                             <div class="h-px w-24 bg-slate-100"></div>
                                             <div class="flex items-center gap-3 bg-white px-5 py-2 rounded-full border border-slate-100 shadow-sm">
-                                                <div class="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[9px] text-white font-bold">
+                                                <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] text-white font-bold">
                                                     {{ current_nutrition.prescribed_by.last_name|first|upper }}
                                                 </div>
                                                 <div class="text-[10px] font-bold text-slate-500 tracking-wider">
-                                                    ORDERED BY <span class="text-slate-900">DR. {{ current_nutrition.prescribed_by.last_name|upper }}</span> <span class="mx-1 opacity-30">•</span> {{ current_nutrition.prescribed_at|date:"d M, H:i" }}
+                                                    ORDERED BY <span class="text-slate-700">DR. {{ current_nutrition.prescribed_by.last_name|upper }}</span> <span class="mx-1 opacity-30">•</span> {{ current_nutrition.prescribed_at|date:"d M, H:i" }}
                                                 </div>
                                             </div>
                                         </div>
@@ -652,14 +671,14 @@
                                                     <i class="fas fa-utensils"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="text-sm font-bold text-slate-900">
+                                                    <div class="text-sm font-bold text-slate-700">
                                                         {{ order.get_diet_type_display }}
                                                     </div>
                                                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{{ order.prescribed_at|date:"d M Y" }}</div>
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="text-[10px] font-bold text-slate-900 uppercase tracking-wider">
+                                                <div class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                                                     DR.
                                                     {{ order.prescribed_by.last_name|upper }}
                                                 </div>
@@ -674,7 +693,7 @@
                         <div id="clinical-procedures" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                                 <div>
-                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Clinical Procedures</h4>
+                                    <h4 class="text-xl font-bold text-slate-700 tracking-tight">Clinical Procedures</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Interventions and Surgical Charges</p>
                                 </div>
                             </div>
@@ -697,17 +716,17 @@
                                 </div>
                                 <!-- Right: Instructions/Info -->
                                 <div class="space-y-6">
-                                    <div class="bg-indigo-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
+                                    <div class="bg-indigo-50 rounded-[32px] p-8 text-indigo-900 relative overflow-hidden shadow-2xl shadow-indigo-200">
                                         <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                                        <h5 class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-300 mb-6">
+                                        <h5 class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-6">
                                             <i class="fas fa-info-circle"></i> Billing Guide
                                         </h5>
-                                        <p class="text-xs font-bold leading-relaxed text-indigo-100/80">
+                                        <p class="text-xs font-bold leading-relaxed text-indigo-700/70">
                                             Procedures selected are immediately applied to the patient's active invoice. 
                                             <br><br>
                                             Please verify accurate clinical selection as reversing charges requires administrative clearance.
                                         </p>
-                                        <div class="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                                        <div class="mt-8 pt-6 border-t border-indigo-200 flex items-center justify-between">
                                             <span class="text-[9px] font-bold text-indigo-400 uppercase">Automated Billing</span>
                                             <i class="fas fa-shield-alt text-indigo-400"></i>
                                         </div>
@@ -720,7 +739,7 @@
                         <div id="clinical-investigations" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                                 <div>
-                                    <h4 class="text-xl font-bold text-slate-900 tracking-tight">Diagnostics Hub</h4>
+                                    <h4 class="text-xl font-bold text-slate-700 tracking-tight">Diagnostics Hub</h4>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Laboratory and Imaging Dispatch</p>
                                 </div>
                             </div>
@@ -731,7 +750,7 @@
                                     <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] px-4">New Requisition</h5>
                                     {% if user.role in 'Doctor,Nurse' and admission.status != 'Discharged' %}
                                         <div class="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
-                                            {% include 'home/partials/next_action_widget.html' with patient_id=admission.patient.pk %}
+                                            {% include 'home/partials/next_action_widget.html' with patient_id=admission.patient.pk visit=admission.visit %}
                                         </div>
                                     {% else %}
                                         <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[32px] p-20 text-center">
@@ -757,7 +776,7 @@
                     <div id="clinical-timeline" class="clinical-pane animate-in fade-in duration-500" style="display: none;">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                             <div>
-                                <h4 class="text-xl font-bold text-slate-900 tracking-tight">Full Clinical Activity Log</h4>
+                                <h4 class="text-xl font-bold text-slate-700 tracking-tight">Full Clinical Activity Log</h4>
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sorted by Most Recent</p>
                             </div>
                         </div>
@@ -770,7 +789,7 @@
                                     </div>
                                     <div class="bg-white border border-slate-100 p-6 rounded-2xl hover:border-slate-300 transition-all group shadow-sm">
                                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3"> <!-- Added flex layout for title/time -->
-                                            <h5 class="text-xs font-bold text-slate-900 uppercase tracking-widest leading-relaxed"> <!-- Added leading-relaxed -->
+                                            <h5 class="text-xs font-bold text-slate-700 uppercase tracking-widest leading-relaxed"> <!-- Added leading-relaxed -->
                                                 {{ log.title}}
                                             </h5>
                                             <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-lg shrink-0">{{ log.time|date:"H:i" }}</span> <!-- Added px-3 py-1 and shrink-0 -->
@@ -810,7 +829,7 @@
                 <div class="bg-white rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                     <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between">
                         <div>
-                            <h3 class="text-xl font-bold text-slate-900 tracking-tight">Vitals Trending & Clinical Analytics</h3>
+                            <h3 class="text-xl font-bold text-slate-700 tracking-tight">Vitals Trending & Clinical Analytics</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Multi-parameter longitudinal data visualization</p>
                         </div>
                         <div class="flex items-center gap-4">
@@ -827,7 +846,7 @@
                         </div>
                     </div>
                     <div class="p-10">
-                        <div class="bg-slate-900 rounded-[32px] p-8 relative overflow-hidden shadow-2xl shadow-indigo-500/10 min-h-[400px] flex flex-col items-center justify-center">
+                        <div class="bg-indigo-50 rounded-[32px] p-8 relative overflow-hidden shadow-lg shadow-indigo-500/10 min-h-[400px] flex flex-col items-center justify-center">
                             <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent opacity-50"></div>
                             
                             <div id="vitalsChartContainer" class="w-full h-full relative" style="opacity: 0.9; display: none;">
@@ -848,8 +867,9 @@
                     </div>
                 </div>
             </div>
-    </div>
-</div>
+        </main> <!-- end cf-main -->
+    </div> <!-- end cf-layout -->
+</div> <!-- end case-folder-root -->
 {% endblock %}
 <!-- Modals Migration: Standard HMS Modal Styling -->
 
@@ -886,12 +906,12 @@
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('noteModal')"></div>
         <div class="relative z-10 w-full max-w-lg bg-white rounded-[32px] text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
                 <div class="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h5 class="text-sm font-bold text-slate-900 uppercase tracking-widest">New Progress Note</h5>
+                    <h5 id="noteModalTitle" class="text-sm font-bold text-slate-700 uppercase tracking-widest">New Progress Note</h5>
                     <button type="button" onclick="hideModal('noteModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-slate-400 hover:text-slate-600 transition-all shadow-sm">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
-                <form action="{% url 'inpatient:add_clinical_note' admission.id %}" method="POST">
+                <form id="noteModalForm" action="{% url 'inpatient:add_clinical_note' admission.id %}" method="POST">
                     {% csrf_token %}
                     <div class="p-8 space-y-6">
                         <div>
@@ -1093,7 +1113,7 @@
             <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 mx-auto mb-4">
                 <i class="fas fa-syringe text-2xl"></i>
             </div>
-            <h5 class="text-lg font-bold text-slate-900 mb-2">Confirm Administration</h5>
+            <h5 class="text-lg font-bold text-slate-700 mb-2">Confirm Administration</h5>
             <p class="text-sm text-slate-500 mb-6 leading-relaxed">
                 Confirming administration of <strong id="admin-drug-name" class="text-slate-800"></strong> 
                 for <span id="admin-dose-title" class="font-semibold text-slate-700"></span>.
@@ -1113,14 +1133,43 @@
     {{ vitals_data|default:"{}"|json_script:"vitals-data" }}
     {{ medical_tests_data|default:"[]"|json_script:"services-data" }}
 
-    <script>
-    function confirmAdministration(url, drugName, doseTitle) {
-        document.getElementById('admin-drug-name').textContent = drugName;
-        document.getElementById('admin-dose-title').textContent = doseTitle;
-        document.getElementById('admin-confirm-btn').href = url;
-        showModal('administerModal');
-    }
 
+            <!-- ══ Recent Clinical Activity ══ -->
+            <div class="activity-section">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-700 tracking-tight">Recent Activity Log</h3>
+                        <p class="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Audit Trail</p>
+                    </div>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 text-[0.7rem] font-bold uppercase tracking-widest shadow-sm">
+                        Total Events <span class="bg-indigo-600 text-white px-2 py-0.5 rounded-full ml-1">{% if activity_log %}{{ activity_log|length }}{% else %}0{% endif %}</span>
+                    </div>
+                </div>
+                
+                <div class="activity-grid">
+                    {% for log in activity_log|slice:":6" %}
+                    <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex gap-5 items-center group">
+                        <div class="w-12 h-12 rounded-2xl bg-{% if log.color == 'rose' %}rose{% elif log.color == 'indigo' %}indigo{% elif log.color == 'purple' %}purple{% elif log.color == 'emerald' %}emerald{% elif log.color == 'blue' %}blue{% elif log.color == 'amber' %}amber{% elif log.color == 'orange' %}orange{% else %}slate{% endif %}-50 text-{% if log.color == 'rose' %}rose{% elif log.color == 'indigo' %}indigo{% elif log.color == 'purple' %}purple{% elif log.color == 'emerald' %}emerald{% elif log.color == 'blue' %}blue{% elif log.color == 'amber' %}amber{% elif log.color == 'orange' %}orange{% else %}slate{% endif %}-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[0.938rem] font-bold text-slate-700 truncate mb-1">{{ log.title }}</div>
+                            <div class="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest">{{ log.time|date:"d M Y · H:i" }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full py-16 text-center bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
+                        <div class="text-slate-300 mb-4 scale-150"><i class="fas fa-history text-4xl"></i></div>
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-4">No recent activity found</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+    // ═══ FUNCTION DEFINITIONS ═══
     function showModal(id) {
         const modal = document.getElementById(id);
         if (modal) {
@@ -1137,11 +1186,67 @@
         }
     }
 
+    function filterWardPatients(term) {
+        const items = document.querySelectorAll('.cf-patient-item');
+        const lower = term.toLowerCase();
+        items.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            item.style.display = name.toLowerCase().includes(lower) ? '' : 'none';
+        });
+    }
+
+    function filterWardTab(mode, btn) {
+        document.querySelectorAll('.cf-filter-tab').forEach(t => t.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const list = document.getElementById('wardPatientList');
+        if (!list) return;
+        const items = Array.from(list.querySelectorAll('.cf-patient-item'));
+        if (mode === 'recent') {
+            items.sort((a, b) => (parseInt(b.dataset.date) || 0) - (parseInt(a.dataset.date) || 0));
+        } else if (mode === 'longest') {
+            items.sort((a, b) => (parseInt(a.dataset.date) || 0) - (parseInt(b.dataset.date) || 0));
+        }
+        items.forEach(item => list.appendChild(item));
+    }
+
+    function confirmAdministration(url, drugName, doseTitle) {
+        const nameEl = document.getElementById('admin-drug-name');
+        const doseEl = document.getElementById('admin-dose-title');
+        const btnEl = document.getElementById('admin-confirm-btn');
+        if (nameEl) nameEl.textContent = drugName;
+        if (doseEl) doseEl.textContent = doseTitle;
+        if (btnEl) btnEl.href = url;
+        showModal('administerModal');
+    }
+
+    function showNoteModal() {
+        const title = document.getElementById('noteModalTitle');
+        const form = document.getElementById('noteModalForm');
+        const typeField = document.getElementById('id_note_type');
+        const contentField = document.getElementById('id_content');
+        
+        if (title) title.textContent = 'New Progress Note';
+        if (form) form.action = "/inpatient/admissions/{{ admission.id }}/add-note/";
+        if (typeField) typeField.value = 'Doctor';
+        if (contentField) contentField.value = '';
+        showModal('noteModal');
+    }
+
+    function editNote(id, type, content) {
+        const title = document.getElementById('noteModalTitle');
+        const form = document.getElementById('noteModalForm');
+        const typeField = document.getElementById('id_note_type');
+        const contentField = document.getElementById('id_content');
+
+        if (title) title.textContent = 'Edit Clinical Note';
+        if (form) form.action = `/inpatient/notes/${id}/edit/`;
+        if (typeField) typeField.value = type;
+        if (contentField) contentField.value = content;
+        showModal('noteModal');
+    }
+
     function showMedicationModal() { showModal('medicationModal'); }
     function hideMedicationModal() { hideModal('medicationModal'); }
-
-    // Safe Data Injection
-    const medMetadata = JSON.parse(document.getElementById('med-metadata').textContent);
 
     function showClinicalTab(tabName) {
         document.querySelectorAll('.clinical-pane').forEach(p => p.style.display = 'none');
@@ -1153,7 +1258,9 @@
         if (btn) btn.classList.add('active');
     }
 
+    // ═══ DOCUMENT READY ═══
     document.addEventListener('DOMContentLoaded', function () {
+        // Tab switching from URL
         const urlParams = new URLSearchParams(window.location.search);
         const activeTab = urlParams.get('tab');
         if (activeTab) {
@@ -1163,7 +1270,7 @@
             }
         }
 
-        // DYNAMIC BED LOADING
+        // Dynamic Bed Selection
         const wardSelect = document.getElementById('id_ward');
         const bedSelect = document.getElementById('id_to_bed');
         if (wardSelect && bedSelect) {
@@ -1180,16 +1287,28 @@
                                 opt.textContent = `${bed.bed_number} (${bed.bed_type})`;
                                 bedSelect.appendChild(opt);
                             });
+                        }).catch(e => {
+                            console.error('Bed loading failed:', e);
+                            bedSelect.innerHTML = '<option value="">Error loading beds</option>';
                         });
                 }
             });
         }
 
-        // VITALS CHARTING
-        const vitalsDataEl = document.getElementById('vitals-data');
-        const vitalsData = vitalsDataEl ? JSON.parse(vitalsDataEl.textContent) : {};
+        // Data Parsing with Safety
+        function getSafeJSON(id) {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            try { return JSON.parse(el.textContent); } 
+            catch (e) { console.error('Failed to parse JSON for ' + id, e); return null; }
+        }
+
+        const vitalsData = getSafeJSON('vitals-data');
+        const medMetadata = getSafeJSON('med-metadata') || {};
+
+        // Vitals Charts
         const ctx = document.getElementById('vitalsChart');
-        if (ctx && vitalsData.times && vitalsData.times.length >= 2) {
+        if (ctx && vitalsData && vitalsData.times && vitalsData.times.length >= 2) {
             document.getElementById('vitalsChartContainer').style.display = 'block';
             document.getElementById('vitalsEmptyState').style.display = 'none';
             new Chart(ctx, {
@@ -1205,7 +1324,7 @@
             });
         }
 
-        // MEDICATION SEARCH
+        // Medication Search logic
         const medSearchInput = document.getElementById('med-search-input');
         const medDropdown = document.getElementById('med-dropdown');
         const medSelect = document.querySelector('.medication-select');
@@ -1214,6 +1333,7 @@
             Array.from(medSelect.options).forEach(o => { if (o.value) medications.push({ id: o.value, name: o.textContent.trim() }); });
         }
         function showDropdown(term = '') {
+            if (!medDropdown) return;
             const filtered = medications.filter(m => m.name.toLowerCase().includes(term.toLowerCase()));
             medDropdown.innerHTML = filtered.map(m => `<div class="med-option px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm" data-id="${m.id}">${m.name}</div>`).join('');
             medDropdown.querySelectorAll('.med-option').forEach(o => o.onclick = () => {
@@ -1227,15 +1347,14 @@
         if (medSearchInput) {
             medSearchInput.onfocus = () => showDropdown(medSearchInput.value);
             medSearchInput.oninput = () => showDropdown(medSearchInput.value);
-            document.addEventListener('click', e => { if (!medSearchInput.contains(e.target)) medDropdown.classList.add('hidden'); });
+            document.addEventListener('click', e => { if (medDropdown && !medSearchInput.contains(e.target)) medDropdown.classList.add('hidden'); });
         }
 
-        // ==================== SMART PRESCRIPTION CALCULATION ====================
+        // Calculation logic
         const doseInput = document.querySelector('#{{ med_form.dose_per_session.id_for_label }}');
         const freqInput = document.querySelector('#{{ med_form.frequency.id_for_label }}');
         const durationInput = document.querySelector('#{{ med_form.duration_days.id_for_label }}');
         const qtyInput = document.querySelector('#{{ med_form.quantity.id_for_label }}');
-        const medForm = document.querySelector('#medicationModal form');
         
         function calculateQuantity() {
             if (!qtyInput) return;
@@ -1254,7 +1373,6 @@
             
             const medId = medSelect ? medSelect.value : null;
             if (medId && medMetadata[medId] && medMetadata[medId].is_dispensed_as_whole) {
-                // If dispensed as whole, usually 1 unit like 1 vial or 1 tube is given regardless
                 qtyInput.value = 1;
             } else {
                 qtyInput.value = totalQty;
@@ -1277,53 +1395,62 @@
                 calculateQuantity();
             });
         }
-    });
-    </script>
 
-    <!-- Move to Morgue Modal -->
-    <div id="morgueModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;" role="dialog" aria-modal="true">
-        <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('morgueModal')"></div>
-        <div class="relative z-10 w-full max-w-lg bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
-            <div class="px-8 py-6 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
-                <h5 class="text-sm font-bold text-rose-900 uppercase tracking-widest">Move Patient to Morgue</h5>
-                <button type="button" onclick="hideModal('morgueModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-rose-400 hover:text-rose-600 transition-all shadow-sm">
-                    <i class="fas fa-times"></i>
+        // Handle Edit Note Buttons
+        document.querySelectorAll('.edit-note-btn').forEach(btn => {
+            btn.onclick = function() {
+                const id = this.getAttribute('data-id');
+                const type = this.getAttribute('data-type');
+                const content = this.getAttribute('data-content');
+                editNote(id, type, content);
+            };
+        });
+    });
+</script>
+
+<!-- Move to Morgue Modal -->
+<div id="morgueModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;" role="dialog" aria-modal="true">
+    <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" aria-hidden="true" onclick="hideModal('morgueModal')"></div>
+    <div class="relative z-10 w-full max-w-lg bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all border border-slate-100">
+        <div class="px-8 py-6 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+            <h5 class="text-sm font-bold text-rose-900 uppercase tracking-widest">Move Patient to Morgue</h5>
+            <button type="button" onclick="hideModal('morgueModal')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-rose-400 hover:text-rose-600 transition-all shadow-sm">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form method="POST" action="{% url 'inpatient:move_to_morgue' admission.id %}">
+            {% csrf_token %}
+            <div class="px-8 py-6 space-y-5">
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 text-[11px] text-rose-700 flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                    <span>This action will mark the patient as <strong>Deceased</strong>, free the bed, and create a morgue record. This cannot be undone.</span>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Cause of Death <span class="text-rose-500">*</span></label>
+                    <textarea name="cause_of_death" required rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" placeholder="Enter cause of death..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Place of Death</label>
+                    <input type="text" name="place_of_death" value="In-Hospital ({{ admission.bed.ward.name|default:'Ward' }})" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Date of Death <span class="text-rose-500">*</span></label>
+                        <input type="date" name="date_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Time of Death <span class="text-rose-500">*</span></label>
+                        <input type="time" name="time_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+                    </div>
+                </div>
+            </div>
+            <div class="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onclick="hideModal('morgueModal')" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:border-slate-400 transition-all">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 bg-rose-700 text-white rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:bg-rose-800 transition-all shadow-md flex items-center gap-2">
+                    <i class="fas fa-skull-crossbones text-[8px]"></i> Confirm Move to Morgue
                 </button>
             </div>
-            <form method="POST" action="{% url 'inpatient:move_to_morgue' admission.id %}">
-                {% csrf_token %}
-                <div class="px-8 py-6 space-y-5">
-                    <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 text-[11px] text-rose-700 flex items-start gap-2">
-                        <i class="fas fa-exclamation-triangle mt-0.5"></i>
-                        <span>This action will mark the patient as <strong>Deceased</strong>, free the bed, and create a morgue record. This cannot be undone.</span>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Cause of Death <span class="text-rose-500">*</span></label>
-                        <textarea name="cause_of_death" required rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" placeholder="Enter cause of death..."></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Place of Death</label>
-                        <input type="text" name="place_of_death" value="In-Hospital ({{ admission.bed.ward.name|default:'Ward' }})" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Date of Death <span class="text-rose-500">*</span></label>
-                            <input type="date" name="date_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Time of Death <span class="text-rose-500">*</span></label>
-                            <input type="time" name="time_of_death" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
-                        </div>
-                    </div>
-                </div>
-                <div class="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" onclick="hideModal('morgueModal')" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:border-slate-400 transition-all">Cancel</button>
-                    <button type="submit" class="px-5 py-2.5 bg-rose-700 text-white rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:bg-rose-800 transition-all shadow-md flex items-center gap-2">
-                        <i class="fas fa-skull-crossbones text-[8px]"></i> Confirm Move to Morgue
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
-
+</div>
 {% endblock %}

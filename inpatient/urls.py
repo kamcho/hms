@@ -26,4 +26,5 @@ urlpatterns = [
     path('admissions/<int:admission_id>/gatepass/generate/', views.generate_gatepass, name='generate_gatepass'),
     path('gatepasses/<int:pass_id>/view/', views.view_gatepass, name='view_gatepass'),
     path('admissions/<int:admission_id>/move-to-morgue/', views.move_to_morgue, name='move_to_morgue'),
+    path('notes/<int:note_id>/edit/', views.edit_clinical_note, name='edit_clinical_note'),
 ]

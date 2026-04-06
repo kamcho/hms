@@ -197,25 +197,45 @@ def accountant_dashboard(request):
 @user_passes_test(lambda u: u.is_authenticated and (u.role in ['SHA Manager', 'Admin', 'Accountant'] or u.is_superuser))
 def insurance_manager(request):
     search_query = request.GET.get('search', '')
+    search_opd = request.GET.get('search_opd', '')
+    search_ipd = request.GET.get('search_ipd', '')
+    search_mat = request.GET.get('search_mat', '')
     
-    # Filter for unpaid or partially paid invoices
+    # Base filter for unpaid or partially paid invoices
     unpaid_invoices = Invoice.objects.filter(
         status__in=['Pending', 'Partial']
     ).select_related('patient', 'visit', 'deceased').order_by('-created_at')
     
-    if search_query:
-        unpaid_invoices = unpaid_invoices.filter(
-            Q(patient__first_name__icontains=search_query) |
-            Q(patient__last_name__icontains=search_query) |
-            Q(deceased__surname__icontains=search_query) |
-            Q(deceased__other_names__icontains=search_query) |
-            Q(id__icontains=search_query)
-        )
+    def apply_robust_search(queryset, query):
+        if not query:
+            return queryset
+        search_terms = query.split()
+        q_objects = Q()
+        for term in search_terms:
+            term_q = Q(
+                Q(patient__first_name__icontains=term) |
+                Q(patient__last_name__icontains=term) |
+                Q(patient__id_number__icontains=term) |
+                Q(patient__phone__icontains=term) |
+                Q(deceased__surname__icontains=term) |
+                Q(deceased__other_names__icontains=term) |
+                Q(id__icontains=term)
+            )
+            q_objects &= term_q
+        return queryset.filter(q_objects)
+
+    # Initial global search if any
+    unpaid_invoices = apply_robust_search(unpaid_invoices, search_query)
 
     # Grouping by visit type
     opd_invoices = unpaid_invoices.filter(visit__visit_type='OUT-PATIENT')
-    ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=True)  # Exclude maternity cases
-    maternity_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=False)  # IPD visits with linked delivery records
+    ipd_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=True)
+    maternity_invoices = unpaid_invoices.filter(visit__visit_type='IN-PATIENT', visit__labor_delivery__isnull=False)
+
+    # Apply section-specific searches
+    opd_invoices = apply_robust_search(opd_invoices, search_opd)
+    ipd_invoices = apply_robust_search(ipd_invoices, search_ipd)
+    maternity_invoices = apply_robust_search(maternity_invoices, search_mat)
 
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     from home.models import Visit
@@ -230,6 +250,9 @@ def insurance_manager(request):
         'ipd_invoices': ipd_invoices,
         'maternity_invoices': maternity_invoices,
         'search_query': search_query,
+        'search_opd': search_opd,
+        'search_ipd': search_ipd,
+        'search_mat': search_mat,
         'active_cash_visits': active_cash_visits,
         'title': 'Insurance & Credit Manager'
     }

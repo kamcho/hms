@@ -14,7 +14,9 @@
                             {% if result.is_abnormal %}<span class="bg-rose-100 text-rose-600 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">Abnormal</span>{% endif %}
                         </div>
                     </div>
-                    <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest {% if result.status == 'Completed' %}bg-emerald-100 text-emerald-700 {% elif result.status == 'Pending' %}bg-amber-100 text-amber-700 {% elif result.status == 'In Progress' %}bg-blue-100 text-blue-700 {% else %}bg-slate-100 text-slate-700{% endif %}">{{ result.status }}</span>
+                    <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest {% if result.status == 'Completed' or result.invoice_item.procedure_completion %}bg-emerald-100 text-emerald-700 {% elif result.status == 'Pending' %}bg-amber-100 text-amber-700 {% elif result.status == 'In Progress' %}bg-blue-100 text-blue-700 {% else %}bg-slate-100 text-slate-700{% endif %}">
+                        {% if result.status == 'Completed' or result.invoice_item.procedure_completion %}Completed{% else %}{{ result.status }}{% endif %}
+                    </span>
                 </div>
                 <!-- Service Parameters -->
                 {% if result.service.parameters.exists %}

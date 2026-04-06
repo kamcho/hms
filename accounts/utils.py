@@ -15,7 +15,7 @@ def get_or_create_invoice(visit=None, deceased=None, user=None):
                 visit=visit,
                 defaults={
                     'patient': visit.patient,
-                    'status': 'Pending',
+                    'status': 'Draft',
                     'created_by': user
                 }
             )
@@ -23,7 +23,7 @@ def get_or_create_invoice(visit=None, deceased=None, user=None):
             invoice, created = Invoice.objects.get_or_create(
                 deceased=deceased,
                 defaults={
-                    'status': 'Pending',
+                    'status': 'Draft',
                     'created_by': user
                 }
             )

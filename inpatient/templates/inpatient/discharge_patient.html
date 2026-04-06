@@ -111,22 +111,94 @@
                                 <!-- Medications -->
                                 <tr class="hover:bg-slate-50 transition-colors">
                                     <td class="px-10 py-6">
-                                        <div class="text-sm font-black text-slate-900">Medical Supplies & Pharmacy</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensed during admission</div>
+                                        <div class="text-sm font-black text-slate-900">Clinical Medications</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensed and administered during stay</div>
+                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
+                                            {% for med in billed_meds %}
+                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
+                                                    <div>
+                                                        <div class="text-[11px] font-black text-slate-900">{{ med.name }}</div>
+                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ med.quantity }} @ ${{ med.unit_price }}</div>
+                                                    </div>
+                                                    <div class="text-[11px] font-black text-slate-600">
+                                                        ${{ med.amount }}
+                                                    </div>
+                                                </div>
+                                            {% empty %}
+                                                <div class="text-[10px] font-bold text-slate-400 italic">No medications billed.</div>
+                                            {% endfor %}
+                                        </div>
                                     </td>
                                     <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Standard Hospital Catalog</span>
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Pharmacy Inventory</span>
                                     </td>
                                     <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ med_cost }}</td>
+                                </tr>
+                                <!-- Consumables -->
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-10 py-6">
+                                        <div class="text-sm font-black text-slate-900">Medical Supplies & Consumables</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Non-drug supplies used</div>
+                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
+                                            {% for con in billed_consumables %}
+                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
+                                                    <div>
+                                                        <div class="text-[11px] font-black text-slate-900">{{ con.name }}</div>
+                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ con.quantity }} @ ${{ con.unit_price }}</div>
+                                                    </div>
+                                                    <div class="text-[11px] font-black text-slate-600">
+                                                        ${{ con.amount }}
+                                                    </div>
+                                                </div>
+                                            {% empty %}
+                                                <div class="text-[10px] font-bold text-slate-400 italic">No consumables billed.</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-6 text-center">
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Inventory Catalog</span>
+                                    </td>
+                                    <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ consumable_cost }}</td>
                                 </tr>
                                 <!-- Services -->
                                 <tr class="hover:bg-slate-50 transition-colors">
                                     <td class="px-10 py-6">
                                         <div class="text-sm font-black text-slate-900">Clinical Services</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Oxygen, Procedures, Nursing Care</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Procedures, Nursing Care, and Diagnostics</div>
+                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
+                                            {% for service in billed_services %}
+                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
+                                                    <div>
+                                                        <div class="text-[11px] font-black text-slate-900">{{ service.name }}</div>
+                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ service.quantity }} @ ${{ service.unit_price }}</div>
+                                                    </div>
+                                                    <div class="text-[11px] font-black text-slate-600">
+                                                        ${{ service.amount }}
+                                                    </div>
+                                                </div>
+                                            {% empty %}
+                                                <div class="text-[10px] font-bold text-slate-400 italic">No services billed.</div>
+                                            {% endfor %}
+                                            
+                                            {% if lab_results or radiology_results %}
+                                                <div class="mt-4 pt-4 border-t border-slate-100">
+                                                    <div class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">Lab & Imaging Activity</div>
+                                                    {% for res in lab_results %}
+                                                        <div class="text-[11px] font-medium text-slate-500 mb-1 flex items-center gap-2">
+                                                            <i class="fas fa-microscope text-[8px] text-indigo-400"></i> {{ res.service.name }}
+                                                        </div>
+                                                    {% endfor %}
+                                                    {% for res in radiology_results %}
+                                                        <div class="text-[11px] font-medium text-slate-500 mb-1 flex items-center gap-2">
+                                                            <i class="fas fa-x-ray text-[8px] text-rose-400"></i> {{ res.service.name }}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Variable / Point of service</span>
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Variable Diagnostics</span>
                                     </td>
                                     <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ service_cost }}</td>
                                 </tr>

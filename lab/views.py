@@ -36,7 +36,7 @@ def radiology_dashboard(request):
     payment_filter = request.GET.get('payment_status', '')
 
     # Get all InvoiceItems related to Diagnostics
-    categories = ['Lab', 'Imaging', 'Procedure Room']
+    categories = ['Lab', 'Imaging']
     if dept_focus:
         categories = [dept_focus]
 

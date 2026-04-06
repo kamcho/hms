@@ -63,6 +63,11 @@
         --theme-bg: #fffbeb;
         border-color: #fef3c7 !important;
     }
+    .maternity-theme { 
+        --theme-primary: #ec4899; 
+        --theme-bg: #fdf2f8;
+        border-color: #fce7f3 !important;
+    }
 
     .theme-icon {
         width: 44px;
@@ -191,6 +196,23 @@
     .search-input:focus {
         border-color: var(--clinical-primary);
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .section-search {
+        background: white;
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+        padding: 0.5rem 1rem 0.5rem 2.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        width: 240px;
+        transition: all 0.2s;
+        outline: none;
+        height: 38px;
+    }
+    .section-search:focus {
+        border-color: var(--clinical-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
 
     .empty-state {
@@ -472,7 +494,7 @@
                 <form method="GET" class="flex items-center gap-3">
                     <div class="relative">
                         <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient, ID or invoice..." class="search-input pl-11">
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient name, phone, ID or invoice..." class="search-input pl-11">
                     </div>
                     <button type="submit" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">Search</button>
                     {% if search_query %}
@@ -493,7 +515,16 @@
                             Out-Patient (OPD) Pending Claims
                             <span class="badge-count !bg-indigo-600 !shadow-indigo-200">{{ opd_invoices.count }}</span>
                         </h2>
-                        <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Awaiting Settlement</div>
+                        <form method="GET" class="flex items-center gap-2">
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" name="search_opd" value="{{ search_opd }}" placeholder="Filter OPD..." class="section-search">
+                            </div>
+                            {% if search_opd %}
+                                <a href="?search={{ search_query }}" class="text-[10px] font-bold text-rose-500 hover:text-rose-600">Clear</a>
+                            {% endif %}
+                        </form>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="custom-table">
@@ -558,10 +589,16 @@
                             In-Patient (IPD) Pending Claims
                             <span class="badge-count !bg-emerald-600 !shadow-emerald-200">{{ ipd_invoices.count }}</span>
                         </h2>
-                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                            Outstanding Hospital
-                            Bills
-                        </div>
+                        <form method="GET" class="flex items-center gap-2">
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" name="search_ipd" value="{{ search_ipd }}" placeholder="Filter IPD..." class="section-search">
+                            </div>
+                            {% if search_ipd %}
+                                <a href="?search={{ search_query }}" class="text-[10px] font-bold text-rose-500 hover:text-rose-600">Clear</a>
+                            {% endif %}
+                        </form>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="custom-table">
@@ -629,25 +666,36 @@
                             <span class="theme-icon">
                                 <i class="fas fa-baby-carriage"></i>
                             </span>
-                            Maternity Services
+                            Maternity Services (In-Patient)
+                            <span class="badge-count !bg-pink-600 !shadow-pink-200">{{ maternity_invoices.count }}</span>
                         </h2>
+                        <form method="GET" class="flex items-center gap-2">
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" name="search_mat" value="{{ search_mat }}" placeholder="Filter Maternity..." class="section-search">
+                            </div>
+                            {% if search_mat %}
+                                <a href="?search={{ search_query }}" class="text-[10px] font-bold text-rose-500 hover:text-rose-600">Clear</a>
+                            {% endif %}
+                        </form>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="modern-table">
+                        <table class="custom-table">
                             <thead>
-                                <tr class="modern-table-header">
-                                    <th>Patient</th>
-                                    <th>Invoice #</th>
-                                    <th>Date</th>
-                                    <th>Total Amount</th>
-                                    <th>Balance</th>
+                                <tr>
+                                    <th>Patient Details</th>
+                                    <th>Invoice Date</th>
+                                    <th>L&D Record</th>
+                                    <th>Total Bill</th>
+                                    <th>Balance Due</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th class="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for inv in maternity_invoices %}
-                                    <tr class="cursor-pointer hover:bg-pink-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer hover:bg-pink-50/50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
                                         <td>
                                             <div class="patient-cell">
                                                 <span class="patient-name">{{ inv.patient.full_name }}</span>
@@ -655,13 +703,20 @@
                                             </div>
                                         </td>
                                         <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
+                                        <td>
+                                            {% if inv.visit.labor_delivery %}
+                                                <span class="font-bold text-[11px] px-2 py-1 bg-pink-100 rounded text-pink-700">L&D #{{ inv.visit.labor_delivery.id }}</span>
+                                            {% else %}
+                                                <span class="text-slate-300 italic">No Linked Delivery</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
-                                        <td class="amount-cell text-rose-600">Ksh {{ inv.balance|floatformat:2 }}</td>
+                                        <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
                                         <td class="text-right">
-                                            <a href="{% url 'accounts:invoice_detail' inv.id %}" onclick="event.stopPropagation()" class="action-btn btn-view">
+                                            <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
                                                 <i class="fas fa-eye text-[10px]"></i> View Details
                                             </a>
                                         </td>

@@ -187,9 +187,60 @@
                 </div>
 
                 <!-- Care Plan -->
-                <div>
+                <div class="mb-8">
                     <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-900 pb-1">Care Plan & Instructions</h6>
                     <div class="text-sm font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{{ discharge.discharge_care_plan|default:"Standard follow-up instructions provided." }}</div>
+                </div>
+
+                <!-- Session Activity Summary -->
+                <div class="pt-6 border-t-2 border-slate-900 mt-10">
+                    <h2 class="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6">Complete Admission Activity Log</h2>
+                    
+                    <div class="grid grid-cols-2 gap-10">
+                        <!-- Ward Medications -->
+                        <div>
+                            <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-200 pb-1">Medications Administered</h6>
+                            <div class="space-y-2">
+                                {% for med in medications %}
+                                    <div class="text-[11px] flex justify-between border-b border-slate-50 pb-1">
+                                        <span class="font-bold text-slate-700">{{ med.item.name }}</span>
+                                        <span class="text-slate-500 italic">Qty: {{ med.quantity }}</span>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-[10px] italic text-slate-400">No clinical medications recorded.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Ward Consumables -->
+                        <div>
+                            <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-200 pb-1">Consumables Dispensed</h6>
+                            <div class="space-y-2">
+                                {% for con in consumables %}
+                                    <div class="text-[11px] flex justify-between border-b border-slate-50 pb-1">
+                                        <span class="font-bold text-slate-700">{{ con.item.name }}</span>
+                                        <span class="text-slate-500 italic">Qty: {{ con.quantity }}</span>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-[10px] italic text-slate-400">No clinical consumables recorded.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <h6 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-200 pb-1">Ward Services Rendered</h6>
+                        <div class="grid grid-cols-2 gap-x-10 gap-y-2">
+                            {% for srv in services %}
+                                <div class="text-[11px] flex justify-between border-b border-slate-50 pb-1">
+                                    <span class="font-bold text-slate-700">{{ srv.service.name }}</span>
+                                    <span class="text-slate-500 italic">Qty: {{ srv.quantity }}</span>
+                                </div>
+                            {% empty %}
+                                <p class="text-[10px] italic text-slate-400">No clinical services recorded.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
 

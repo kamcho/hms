@@ -399,6 +399,12 @@
     .filter-select:focus {
         border-color: var(--clinical-primary);
     }
+
+    textarea.form-control {
+        overflow-y: hidden;
+        resize: none;
+        min-height: 80px;
+    }
     </style>
 
     <div class="profile-grid">
@@ -588,7 +594,7 @@
                             <i class="fas fa-calendar-alt"></i> Visits
                         </div>
                         <div class="tab-item" onclick="openTab(event, 'labs')">
-                            <i class="fas fa-flask"></i> Laboratory
+                            <i class="fas fa-microscope"></i> Diagnostics
                         </div>
                         <div class="tab-item" onclick="openTab(event, 'prescriptions')">
                             <i class="fas fa-prescription"></i> Prescriptions
@@ -607,7 +613,7 @@
                     <!-- DISPENSE TAB -->
                     <div id="dispense" class="tab-content">
                         {% if selected_visit or latest_visit %}
-                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient allowed_departments="Pharmacy" %}
+                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient allowed_departments="Pharmacy" exclude_pharmaceuticals="true" %}
                         {% else %}
                             <div class="text-center py-8">
                                 <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>
@@ -720,7 +726,7 @@
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
                                                     {% if user.role == 'Doctor' %}
-                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="showModal('noteModal')">
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openNoteModal()">
                                                             <i class="fas fa-plus"></i> Add
                                                         </button>
                                                     {% endif %}
@@ -728,9 +734,16 @@
                                             </div>
                                             {% for note in consultation_notes %}
                                                 {% if note.consultation.visit == visit %}
-                                                    <div style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid var(--clinical-primary);">
+                                                    <div style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid var(--clinical-primary); position: relative;">
                                                         <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ note.notes|linebreaksbr }}</p>
-                                                        <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ note.created_at|date:"M d, H:i" }}</span>
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem;">
+                                                            <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ note.created_at|date:"M d, H:i" }}</span>
+                                                            {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                    <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" onclick="openEditNoteModal('{{ note.id }}', '{{ note.notes|escapejs }}')"><i class="fas fa-edit"></i> Edit</button>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 {% endif %}
                                             {% endfor %}
@@ -752,7 +765,14 @@
                                             {% for impression in impressions %}
                                                 {% if impression.visit == visit %}
                                                     <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
-                                                        <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">{{ impression.data }}</p>
+                                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                            <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main); flex: 1;">{{ impression.data }}</p>
+                                                            {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                    <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; margin-left: 0.5rem; flex-shrink: 0;" onclick="openEditImpressionModal('{{ visit.id }}', '{{ impression.id }}', '{{ impression.data|escapejs }}')"><i class="fas fa-edit"></i></button>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 {% endif %}
                                             {% endfor %}
@@ -766,8 +786,7 @@
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
                                                     {% if user.role == 'Doctor' %}
                                                         <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openDiagnosisModal('{{ visit.id }}')">
-                                                            <i class="fas fa-plus"></i>
-                                                            Add
+                                                            <i class="fas fa-plus"></i> Add
                                                         </button>
                                                     {% endif %}
                                                 {% endif %}
@@ -775,7 +794,14 @@
                                             {% for diagnosis in diagnoses %}
                                                 {% if diagnosis.visit == visit %}
                                                     <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #bfdbfe;">
-                                                        <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600;">{{ diagnosis.data }}</p>
+                                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                            <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600; flex: 1;">{{ diagnosis.data }}</p>
+                                                            {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                    <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; margin-left: 0.5rem; flex-shrink: 0;" onclick="openEditDiagnosisModal('{{ visit.id }}', '{{ diagnosis.id }}', '{{ diagnosis.data|escapejs }}')"><i class="fas fa-edit"></i></button>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 {% endif %}
                                             {% endfor %}
@@ -798,7 +824,7 @@
                                             {% endfor %}
                                         </div>
                                         {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
-                                            <div class="mb-8">{% include 'home/partials/next_action_widget.html' with patient_id=patient.pk %}</div>
+                                            <div class="mb-8">{% include 'home/partials/next_action_widget.html' with patient_id=patient.pk visit=latest_visit %}</div>
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
@@ -813,16 +839,64 @@
                             </div>
                         {% endif %}
                     </div>
-                    <!-- LABS TAB -->
+                    <!-- DIAGNOSTICS & PROCEDURES TAB -->
                     <div id="labs" class="tab-content">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                             <h4 style="margin: 0; font-size: 1rem; color: var(--clinical-text-muted);">
-                                Laboratory
-                                Investigations
+                                <i class="fas fa-microscope"></i> Investigations & Procedures
                                 {% if selected_visit %}({{ selected_visit.visit_date|date:"M d, Y" }}){% endif %}
                             </h4>
                         </div>
-                        {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
+                        
+                        <!-- Lab & Imaging Section -->
+                        <div class="mb-4">
+                            <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <i class="fas fa-flask text-indigo-500"></i> Laboratory & Imaging
+                            </h5>
+                            {% include 'lab/partials/lab_result_widget.html' with lab_results=lab_results %}
+                        </div>
+
+                        <!-- Procedures Section -->
+                        {% if procedures %}
+                        <div class="mt-8 pt-8 border-t border-slate-100">
+                            <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <i class="fas fa-hand-holding-medical text-indigo-500"></i> Clinical Procedures
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% for proc in procedures %}
+                                    {% if not selected_visit or proc.invoice.visit == selected_visit %}
+                                        <div class="bg-white border border-slate-100 rounded-2xl p-5 hover:border-indigo-200 transition-all shadow-sm group">
+                                            <div class="flex justify-between items-start mb-3">
+                                                <div class="flex-1">
+                                                    <h6 class="text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{{ proc.name }}</h6>
+                                                    <div class="flex items-center gap-2 mt-1">
+                                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                                                            <i class="fas fa-calendar-alt mr-1"></i> {{ proc.created_at|date:"d M, H:i" }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest {% if proc.procedure_completion %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                                    {% if proc.procedure_completion %}Completed{% else %}Pending{% endif %}
+                                                </span>
+                                            </div>
+                                            
+                                            {% if proc.procedure_completion %}
+                                                <div class="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                                    <div class="flex justify-between items-center text-[9px] font-bold text-slate-500 mb-2">
+                                                        <span>PERFORMED BY</span>
+                                                        <span class="text-indigo-600">{{ proc.procedure_completion.completed_by.get_full_name|default:proc.procedure_completion.completed_by.last_name }}</span>
+                                                    </div>
+                                                    {% if proc.procedure_completion.notes %}
+                                                        <p class="text-[10px] text-slate-500 italic leading-relaxed">"{{ proc.procedure_completion.notes }}"</p>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     <!-- PRESCRIPTIONS TAB -->
                     <div id="prescriptions" class="tab-content">
@@ -1042,7 +1116,7 @@
         <div id="noteModal" class="custom-modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                    <h3 id="noteModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
                         <i class="fas fa-edit"></i> Add Clinical Note
                     </h3>
                     <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('noteModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
@@ -1054,11 +1128,9 @@
                         {% csrf_token %}
                         <input type="hidden" name="patient_id" value="{{ patient.pk }}">
                         <input type="hidden" name="visit_id" value="{{ latest_visit.id }}">
+                        <input type="hidden" name="note_id" id="note_edit_id" value="">
                         <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label class="form-label" style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">
-                                Clinical
-                                Note Details
-                            </label>
+                            <label class="form-label" style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem; text-transform: uppercase;">Clinical Note Details</label>
                             <textarea name="note_content" rows="6" class="form-control" style="border-radius: 10px; border: 1px solid var(--clinical-border); padding: 1rem; font-size: 0.95rem;" placeholder="Record patient assessment, findings, or treatment updates..."></textarea>
                         </div>
                         <div class="form-group">
@@ -1070,7 +1142,7 @@
                 </div>
                 <div class="modern-modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border); padding: 1rem 1.5rem;">
                     <button class="modern-btn btn-secondary" onclick="closeModal('noteModal')">Discard</button>
-                    <button class="modern-btn btn-primary" onclick="submitNote()">Save Entry</button>
+                    <button class="modern-btn btn-primary" id="noteModalSubmitBtn" onclick="submitNote()">Save Entry</button>
                 </div>
             </div>
         </div>
@@ -1127,7 +1199,7 @@
         <div id="symptomsModal" class="custom-modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                    <h3 id="symptomsModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
                         <i class="fas fa-notes-medical"></i> Add Symptoms
                     </h3>
                     <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('symptomsModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
@@ -1139,10 +1211,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="visit_id" id="symptoms_visit_id">
                         <div class="form-group">
-                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">
-                                Symptoms
-                                Description
-                            </label>
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Symptoms Description</label>
                             <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
                         </div>
                     </form>
@@ -1157,7 +1226,7 @@
         <div id="impressionModal" class="custom-modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                    <h3 id="impressionModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
                         <i class="fas fa-brain"></i> Add Clinical Impression
                     </h3>
                     <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('impressionModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
@@ -1168,18 +1237,16 @@
                     <form id="addImpressionForm">
                         {% csrf_token %}
                         <input type="hidden" name="visit_id" id="impression_visit_id">
+                        <input type="hidden" name="impression_id" id="impression_edit_id" value="">
                         <div class="form-group">
-                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">
-                                Clinical
-                                Impression
-                            </label>
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Clinical Impression</label>
                             <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
                     <button class="modern-btn btn-secondary" onclick="closeModal('impressionModal')">Cancel</button>
-                    <button class="modern-btn btn-primary" onclick="submitImpression()">Save</button>
+                    <button class="modern-btn btn-primary" id="impressionModalSubmitBtn" onclick="submitImpression()">Save</button>
                 </div>
             </div>
         </div>
@@ -1187,7 +1254,7 @@
         <div id="diagnosisModal" class="custom-modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header" style="background: var(--clinical-primary); border: none;">
-                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                    <h3 id="diagnosisModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
                         <i class="fas fa-diagnoses"></i> Add Diagnosis
                     </h3>
                     <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('diagnosisModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
@@ -1198,6 +1265,7 @@
                     <form id="addDiagnosisForm">
                         {% csrf_token %}
                         <input type="hidden" name="visit_id" id="diagnosis_visit_id">
+                        <input type="hidden" name="diagnosis_id" id="diagnosis_edit_id" value="">
                         <div class="form-group">
                             <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis</label>
                             <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
@@ -1206,7 +1274,7 @@
                 </div>
                 <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
                     <button class="modern-btn btn-secondary" onclick="closeModal('diagnosisModal')">Cancel</button>
-                    <button class="modern-btn btn-primary" onclick="submitDiagnosis()">Save</button>
+                    <button class="modern-btn btn-primary" id="diagnosisModalSubmitBtn" onclick="submitDiagnosis()">Save</button>
                 </div>
             </div>
         </div>
@@ -1314,7 +1382,22 @@
             // Default to visits tab if no hash
             openTab(null, 'visits');
         }
+
+        // Initialize auto-expanding textareas
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                autoExpand(this);
+            });
+        });
     });
+
+    /**
+     * Auto-expanding textarea utility
+     */
+    function autoExpand(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
 
     /**
      * Unified Modal Logic
@@ -1323,7 +1406,12 @@
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.style.display = "flex";
-            // Add entry animation trigger if needed
+            // Trigger auto-expand for any textareas in the modal once it's visible
+            setTimeout(() => {
+                modal.querySelectorAll('textarea').forEach(textarea => {
+                    autoExpand(textarea);
+                });
+            }, 50);
         }
     }
 
@@ -1344,10 +1432,44 @@
     /**
      * Clinical Form Submissions
      */
+    /* ---- Note Modal (Add / Edit) ---- */
+    let noteEditId = null;
+
+    function openNoteModal() {
+        noteEditId = null;
+        document.getElementById('note_edit_id').value = '';
+        document.getElementById('noteModalTitle').innerHTML = '<i class="fas fa-edit"></i> Add Clinical Note';
+        document.querySelector('#addNoteForm textarea[name="note_content"]').value = '';
+        document.querySelector('#addNoteForm textarea[name="note_type_detail"]').value = '';
+        showModal('noteModal');
+    }
+
+    function openEditNoteModal(id, existingNotes) {
+        noteEditId = id;
+        document.getElementById('note_edit_id').value = id;
+        document.getElementById('noteModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Clinical Note';
+        // Split focus area from notes if present
+        let mainNotes = existingNotes;
+        let focusArea = '';
+        const faSplit = existingNotes.split('\n\nFocus Area: ');
+        if (faSplit.length > 1) {
+            mainNotes = faSplit[0];
+            focusArea = faSplit.slice(1).join('\n\nFocus Area: ');
+        }
+        document.querySelector('#addNoteForm textarea[name="note_content"]').value = mainNotes;
+        document.querySelector('#addNoteForm textarea[name="note_type_detail"]').value = focusArea;
+        showModal('noteModal');
+    }
+
     function submitNote() {
         const form = document.getElementById('addNoteForm');
         const formData = new FormData(form);
-        const url = "{% url 'home:add_consultation_note' %}";
+        let url;
+        if (noteEditId) {
+            url = `/home/notes/${noteEditId}/update/`;
+        } else {
+            url = "{% url 'home:add_consultation_note' %}";
+        }
 
         fetch(url, {
             method: 'POST',
@@ -1367,12 +1489,9 @@
 
     {% if active_admission %}
     function submitMedication() {
-        // Inpatient med submission logic
-        // Using standard form submit for simplicity, can be upgraded to fetch
         document.getElementById('addMedicationForm').submit();
     }
     function submitService() {
-        // Inpatient service billing logic
         document.getElementById('addServiceForm').submit();
     }
     {% endif %}
@@ -1387,26 +1506,22 @@
         } else {
             currentUrl.searchParams.set('visit_id', visitId);
         }
-        // Preserve current tab hash if it exists
         if (window.location.hash) {
             currentUrl.hash = window.location.hash;
         }
         window.location.href = currentUrl.toString();
     }
 
-
-
-
     /**
-     * System Notifications
-     */
-    /**
-     * Clinical Data Modals
+     * Clinical Data Modals – Symptoms
      */
     function openSymptomsModal(visitId, existingData) {
         document.getElementById('symptoms_visit_id').value = visitId;
         const dataField = document.querySelector('#addSymptomsForm textarea[name="data"]');
-        if (existingData) { dataField.value = existingData; } else { dataField.value = ''; }
+        dataField.value = existingData || '';
+        document.getElementById('symptomsModalTitle').innerHTML = existingData
+            ? '<i class="fas fa-notes-medical"></i> Edit Symptoms'
+            : '<i class="fas fa-notes-medical"></i> Add Symptoms';
         showModal('symptomsModal');
     }
 
@@ -1431,15 +1546,36 @@
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
 
+    /* ---- Impression Modal (Add / Edit) ---- */
+    let impressionEditId = null;
+
     function openImpressionModal(visitId) {
+        impressionEditId = null;
+        document.getElementById('impression_edit_id').value = '';
         document.getElementById('impression_visit_id').value = visitId;
+        document.getElementById('impressionModalTitle').innerHTML = '<i class="fas fa-brain"></i> Add Clinical Impression';
+        document.querySelector('#addImpressionForm textarea[name="data"]').value = '';
+        showModal('impressionModal');
+    }
+
+    function openEditImpressionModal(visitId, id, existingData) {
+        impressionEditId = id;
+        document.getElementById('impression_edit_id').value = id;
+        document.getElementById('impression_visit_id').value = visitId;
+        document.getElementById('impressionModalTitle').innerHTML = '<i class="fas fa-brain"></i> Edit Clinical Impression';
+        document.querySelector('#addImpressionForm textarea[name="data"]').value = existingData;
         showModal('impressionModal');
     }
 
     function submitImpression() {
         const form = document.getElementById('addImpressionForm');
         const formData = new FormData(form);
-        const url = "{% url 'home:add_impression' %}";
+        let url;
+        if (impressionEditId) {
+            url = `/home/impression/${impressionEditId}/update/`;
+        } else {
+            url = "{% url 'home:add_impression' %}";
+        }
 
         fetch(url, {
             method: 'POST',
@@ -1449,23 +1585,44 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessageModal('Success', 'Clinical impression recorded successfully.', () => location.reload(), 'success');
+                    showMessageModal('Success', 'Clinical impression saved successfully.', () => location.reload(), 'success');
                 } else {
-                    showMessageModal('Error', data.error || 'Failed to record impression.', null, 'error');
+                    showMessageModal('Error', data.error || 'Failed to save impression.', null, 'error');
                 }
             })
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
 
+    /* ---- Diagnosis Modal (Add / Edit) ---- */
+    let diagnosisEditId = null;
+
     function openDiagnosisModal(visitId) {
+        diagnosisEditId = null;
+        document.getElementById('diagnosis_edit_id').value = '';
         document.getElementById('diagnosis_visit_id').value = visitId;
+        document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Add Diagnosis';
+        document.querySelector('#addDiagnosisForm textarea[name="data"]').value = '';
+        showModal('diagnosisModal');
+    }
+
+    function openEditDiagnosisModal(visitId, id, existingData) {
+        diagnosisEditId = id;
+        document.getElementById('diagnosis_edit_id').value = id;
+        document.getElementById('diagnosis_visit_id').value = visitId;
+        document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Edit Diagnosis';
+        document.querySelector('#addDiagnosisForm textarea[name="data"]').value = existingData;
         showModal('diagnosisModal');
     }
 
     function submitDiagnosis() {
         const form = document.getElementById('addDiagnosisForm');
         const formData = new FormData(form);
-        const url = "{% url 'home:add_diagnosis' %}";
+        let url;
+        if (diagnosisEditId) {
+            url = `/home/diagnosis/${diagnosisEditId}/update/`;
+        } else {
+            url = "{% url 'home:add_diagnosis' %}";
+        }
 
         fetch(url, {
             method: 'POST',
@@ -1475,9 +1632,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessageModal('Success', 'Diagnosis recorded successfully.', () => location.reload(), 'success');
+                    showMessageModal('Success', 'Diagnosis saved successfully.', () => location.reload(), 'success');
                 } else {
-                    showMessageModal('Error', data.error || 'Failed to record diagnosis.', null, 'error');
+                    showMessageModal('Error', data.error || 'Failed to save diagnosis.', null, 'error');
                 }
             })
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));

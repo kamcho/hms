@@ -129,7 +129,7 @@
                 return;
             }
 
-            fetch(`{% url 'inventory:search_inventory' %}?q=${encodeURIComponent(query)}&department_id=${departmentId}`)
+            fetch(`{% url 'inventory:search_inventory' %}?q=${encodeURIComponent(query)}&department_id=${departmentId}&exclude_pharmaceuticals={{ exclude_pharmaceuticals|default:'false' }}`)
                 .then(r => r.json())
                 .then(data => {
                     renderResults(data.results);

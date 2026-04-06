@@ -84,9 +84,12 @@ def admit_patient(request, patient_id):
     
     # For the transition logic, we'll allow the admission but show a warning in the template
     existing_admission = None
+    pending_balance = 0
     if is_already_admitted:
         existing_admission = Admission.objects.filter(patient=patient, status='Admitted').order_by('-admitted_at').first()
-        print(f"DEBUG: Patient already admitted, will show warning. Admission ID: {existing_admission.id}")
+        if existing_admission:
+            _, pending_balance, _ = check_billing_clearance(existing_admission)
+        print(f"DEBUG: Patient already admitted. Admission ID: {existing_admission.id}, Balance: {pending_balance}")
     
     print(f"DEBUG: Continuing with admission process...")
     
@@ -145,6 +148,7 @@ def admit_patient(request, patient_id):
         'previous_invoice': previous_invoice,
         'is_already_admitted': is_already_admitted,
         'existing_admission': existing_admission,
+        'pending_balance': pending_balance,
         'title': f'Admit Patient: {patient.full_name}',
     })
 
@@ -153,6 +157,18 @@ def patient_case_folder(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
     all_admissions = Admission.objects.filter(patient=admission.patient).order_by('-admitted_at')
     
+    # Ward Patient Queue - All currently admitted patients for sidebar
+    ward_patients = Admission.objects.filter(status='Admitted').select_related(
+        'patient', 'bed', 'bed__ward'
+    ).order_by('-admitted_at')
+
+    # Days admitted calculation
+    days_admitted = (timezone.now() - admission.admitted_at).days if admission.admitted_at else 0
+
+    # Emergency contact
+    from home.models import EmergencyContact
+    emergency_contact = EmergencyContact.objects.filter(patient=admission.patient).first()
+
     # Clinical Data
     vitals = admission.vitals.all().order_by('-recorded_at')[:10]
     vitals_history = admission.vitals.all().order_by('recorded_at')[:20]  # For charts
@@ -417,6 +433,9 @@ def patient_case_folder(request, admission_id):
         'dispensed_items': dispensed_items_ui,
         'admission': admission,
         'all_admissions': all_admissions,
+        'ward_patients': ward_patients,
+        'days_admitted': days_admitted,
+        'emergency_contact': emergency_contact,
         'vitals': vitals,
         'vitals_history': vitals_history,
         'vitals_data': vitals_data,
@@ -436,7 +455,6 @@ def patient_case_folder(request, admission_id):
         'nutrition_orders': nutrition_orders,
         'current_nutrition': current_nutrition,
         'activity_log': activity_log,
-        'medical_tests_data': medical_tests_data,
         'medical_tests_data': medical_tests_data,
         'available_departments': Departments.objects.all().order_by('name'),
         'dispensing_departments': Departments.objects.all().order_by('name'),
@@ -492,6 +510,29 @@ def add_clinical_note(request, admission_id):
             messages.success(request, "Clinical note added.")
         else:
             messages.error(request, "Error adding clinical note.")
+    return redirect(f'/inpatient/admissions/{admission.id}/case-folder/?tab=notes')
+@login_required
+def edit_clinical_note(request, note_id):
+    note = get_object_or_404(ClinicalNote, id=note_id)
+    if note.created_by != request.user:
+        messages.error(request, "Permission Denied: You can only edit notes you created.")
+        return redirect('inpatient:patient_case_folder', admission_id=note.admission.id)
+    
+    admission = note.admission
+    # Block if not latest visit
+    from home.models import Visit
+    latest_visit = Visit.objects.filter(patient=admission.patient).order_by('-visit_date').first()
+    if admission.visit != latest_visit:
+        messages.error(request, "Cannot modify records for a previous visit.")
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
+
+    if request.method == 'POST':
+        form = ClinicalNoteForm(request.POST, instance=note)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Note updated successfully.")
+        else:
+            messages.error(request, "Error updating note.")
     return redirect(f'/inpatient/admissions/{admission.id}/case-folder/?tab=notes')
 
 @login_required
@@ -838,18 +879,53 @@ def discharge_patient(request, admission_id):
     else:
         ward_cost = 0
     
-    # Calculate meds (based on quantity dispensed initially by pharmacy)
-    med_cost = admission.medications.filter(is_dispensed=True).aggregate(
-        total=Sum(F('item__selling_price') * F('quantity'))
-    )['total'] or 0
+    # Fetch invoice to see what is actually "Billed" (including transfers)
+    invoice = get_or_create_invoice(visit=admission.visit, user=request.user)
+    billed_items = invoice.items.all().select_related('inventory_item', 'service')
+
+    # Billed medicines - using Invoice items to ensure matches with financial reality
+    # Note: We filter by presence of medication on the inventory item or specific naming
+    billed_meds = billed_items.filter(
+        Q(inventory_item__medication__isnull=False) | Q(name__icontains='Dispense')
+    )
+    med_cost = billed_meds.aggregate(total=Sum('amount'))['total'] or 0
     
-    service_cost = admission.services.exclude(
+    # Billed consumables
+    billed_consumables = billed_items.filter(
+        inventory_item__isnull=False
+    ).exclude(
+        id__in=billed_meds.values_list('id', flat=True)
+    )
+    consumable_cost = billed_consumables.aggregate(total=Sum('amount'))['total'] or 0
+
+    # Billed services (excluding accommodation)
+    billed_services = billed_items.filter(
+        inventory_item__isnull=True
+    ).exclude(
+        Q(name__icontains='Ward') | Q(name__icontains='Accomodation')
+    )
+    service_cost = billed_services.aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Clinical records for detail display (showing everything requested/linkable)
+    administered_meds = admission.medications.all().select_related('item')
+    dispensed_consumables = admission.consumables.all().select_related('item')
+    services_rendered = admission.services.exclude(
         service__department__name='Inpatient'
-    ).aggregate(
-        total=Sum(F('service__price') * F('quantity'))
-    )['total'] or 0
+    ).select_related('service')
     
-    total_bill = ward_cost + med_cost + service_cost
+    # Lab & Imaging
+    from lab.models import LabResult
+    lab_results = LabResult.objects.filter(
+        invoice__visit=admission.visit,
+        service__department__name='Lab'
+    ).select_related('service', 'performed_by')
+
+    radiology_results = LabResult.objects.filter(
+        invoice__visit=admission.visit,
+        service__department__name='Imaging'
+    ).select_related('service', 'performed_by')
+
+    total_bill = ward_cost + med_cost + service_cost + consumable_cost
 
     # Create formset for take-home prescriptions
     PrescriptionItemFormSet = inlineformset_factory(
@@ -952,8 +1028,17 @@ def discharge_patient(request, admission_id):
         'days_stayed': days_stayed,
         'ward_cost': ward_cost,
         'med_cost': med_cost,
+        'consumable_cost': consumable_cost,
         'service_cost': service_cost,
         'total_bill': total_bill,
+        'administered_meds': administered_meds,
+        'dispensed_consumables': dispensed_consumables,
+        'services_rendered': services_rendered,
+        'billed_meds': billed_meds,
+        'billed_consumables': billed_consumables,
+        'billed_services': billed_services,
+        'lab_results': lab_results,
+        'radiology_results': radiology_results,
         'title': f'Discharge: {admission.patient.full_name}'
     })
 
@@ -992,6 +1077,7 @@ def discharge_summary(request, pk, template_name='inpatient/inpatient_discharge_
         'radiology_results': radiology_results,
         'prescriptions': prescriptions,
         'medications': admission.medications.filter(is_dispensed=True).select_related('item'),
+        'consumables': admission.consumables.filter(is_dispensed=True).select_related('item'),
         'services': admission.services.all().select_related('service'),
         'title': f'Discharge Summary: {admission.patient.full_name}'
     })

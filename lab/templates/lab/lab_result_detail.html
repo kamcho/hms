@@ -17,6 +17,7 @@
         --clinical-text-muted: #64748b;
         --clinical-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.05), 0 4px 6px -2px rgba(99, 102, 241, 0.03);
     }
+    
 
     .lab-container {
         max-width: 1200px;
@@ -313,6 +314,7 @@
     <div class="lab-container">
         <!-- Premium Header -->
         <header class="lab-header">
+            
             <a href="{% url 'lab:radiology_dashboard' %}" class="modern-btn" style="background: white; border: 1px solid var(--clinical-border); color: var(--clinical-secondary); text-decoration: none; padding: 0.6rem 1.2rem;">
                 <i class="fas fa-arrow-left"></i> Dashboard
             </a>
@@ -347,7 +349,7 @@
                     </div>
                     <div class="card-body">
                         {% if not is_read_only %}
-                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit dispensed_items=dispensed_items %}
+                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit dispensed_items=dispensed_items exclude_pharmaceuticals="true" %}
                         {% else %}
                              <div class="space-y-4">
                                 <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Dispensed History (This Visit)</h5>
