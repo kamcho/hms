@@ -1,8 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Edit Prescription - {{ patient.full_name }} - HMS{% endblock %}
-{% block extra_css %}
-    <style>
+{% block content %} 
+   <style>
     @keyframes fadeIn {
         from {
             opacity: 0;
@@ -163,8 +163,7 @@
         transform: rotate(90deg);
     }
     </style>
-{% endblock %}
-{% block content %}
+
     <div class="bg-[#f8fafc] min-h-screen">
         <div class="prescription-container animate-fade-in">
             <!-- Header -->
@@ -268,7 +267,7 @@
                     {{ formset.management_form }}
                     <div id="medication-formset" class="space-y-6">
                         {% for form in formset %}
-                            <div class="medication-entry">
+                            <div class="medication-entry {% if form.instance.dispensed %}is-dispensed{% endif %}">
                                 <div class="medication-header">
                                     <div class="flex items-center gap-3">
                                         <span class="med-badge">Drug #{{ forloop.counter }}</span>
@@ -401,6 +400,14 @@
             if (select.value && medMetadata[select.value]) {
                 searchInput.value = medMetadata[select.value].name;
                 updateMedDetails(select);
+            }
+
+            // Lock if dispensed
+            if (entry.classList.contains('is-dispensed')) {
+                searchInput.readOnly = true;
+                searchInput.disabled = true;
+                searchInput.tabIndex = -1;
+                searchInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
             }
         }
     }
@@ -667,6 +674,18 @@
     // Initial load
     document.querySelectorAll('.medication-entry').forEach(entry => {
         initializeSearchWidget(entry);
+        
+        // Lock down all inputs if dispensed
+        if (entry.classList.contains('is-dispensed')) {
+            entry.querySelectorAll('input, select, textarea').forEach(el => {
+                el.readOnly = true;
+                el.tabIndex = -1;
+                if (el.tagName === 'SELECT') {
+                    el.style.pointerEvents = 'none';
+                }
+                el.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
+            });
+        }
     });
 
     function addMedication() {

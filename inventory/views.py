@@ -4,7 +4,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from .models import InventoryItem, InventoryCategory, Supplier, StockRecord, InventoryRequest, StockAdjustment
-from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, StockRecordForm, InventoryRequestForm, MedicationForm, ConsumableDetailForm
+from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, StockRecordForm, InventoryRequestForm, MedicationForm, ConsumableDetailForm, GeneralUsageForm
 from home.models import Departments, Patient, Visit
 from accounts.utils import get_or_create_invoice
 
@@ -808,6 +808,100 @@ def inventory_distribution(request, item_id):
         'title': f'Distribution: {item.name}'
     }
     return render(request, 'inventory/inventory_distribution.html', context)
+
+@login_required
+def record_usage(request):
+    """
+    View to record general stock usage not linked to a patient.
+    """
+    # Permission Check: Nurse (includes Triage Nurse), Pharmacist, Admin
+    user_role = getattr(request.user, 'role', None) or ('Admin' if request.user.is_superuser else None)
+    if user_role not in ['Admin', 'Nurse', 'Pharmacist', 'Triage Nurse'] and not request.user.is_superuser:
+         return HttpResponseForbidden("You do not have permission to access this page.")
+
+    if request.method == 'POST':
+        form = GeneralUsageForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                usage = form.save(commit=False)
+                usage.adjusted_by = request.user
+                usage.adjustment_type = 'Usage'
+                
+                # Use reason_type directly as it's now strictly internal and has no "Other"
+                usage.reason = form.cleaned_data.get('reason_type')
+                
+                item = usage.item
+                quantity = usage.quantity
+                department = usage.adjusted_from
+                
+                # Deduct Stock (FEFO/FIFO)
+                available_stock = StockRecord.objects.filter(
+                    item=item, 
+                    current_location=department
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+                
+                if available_stock < quantity:
+                    messages.error(request, f'Insufficient stock in {department.name}. Available: {available_stock}')
+                else:
+                    remaining_to_deduct = quantity
+                    batches = StockRecord.objects.filter(
+                        item=item, 
+                        current_location=department, 
+                        quantity__gt=0
+                    ).order_by('expiry_date', 'received_date')
+                    
+                    for batch in batches:
+                        if remaining_to_deduct <= 0:
+                            break
+                        
+                        deduction = min(batch.quantity, remaining_to_deduct)
+                        batch.quantity -= deduction
+                        batch.save()
+                        remaining_to_deduct -= deduction
+                    
+                    # Set quantity to negative for the adjustment record
+                    usage.quantity = -quantity
+                    usage.save()
+                    
+                    messages.success(request, f'Recorded usage of {quantity} {item.dispensing_unit}(s) of {item.name}.')
+                    return redirect('inventory:record_usage')
+    else:
+        form = GeneralUsageForm()
+    
+    # Get recent general usages (those that match the internal options in this page)
+    internal_reasons = [c[0] for c in GeneralUsageForm.REASON_CHOICES]
+    recent_usages = StockAdjustment.objects.filter(
+        adjustment_type='Usage',
+        reason__in=internal_reasons
+    ).select_related('item', 'adjusted_by', 'adjusted_from').order_by('-adjusted_at')[:30]
+    
+    inventory_items = InventoryItem.objects.all().order_by('name')
+    
+    # Calculate stock by department for all items
+    stock_records = StockRecord.objects.filter(quantity__gt=0).values(
+        'item_id', 'current_location_id', 'current_location__name'
+    ).annotate(total_quantity=Sum('quantity'))
+    
+    stock_by_department = {}
+    for record in stock_records:
+        dept_id = str(record['current_location_id'])
+        if dept_id not in stock_by_department:
+            stock_by_department[dept_id] = {
+                'name': record['current_location__name'],
+                'items': []
+            }
+        stock_by_department[dept_id]['items'].append({
+            'item_id': record['item_id'],
+            'total_quantity': record['total_quantity']
+        })
+
+    return render(request, 'inventory/record_usage.html', {
+        'form': form,
+        'recent_usages': recent_usages,
+        'inventory_items': inventory_items,
+        'stock_by_department': stock_by_department,
+        'title': 'Record Stock Usage'
+    })
 
 def is_admin(user):
     return user.is_authenticated and (user.role == 'Admin')

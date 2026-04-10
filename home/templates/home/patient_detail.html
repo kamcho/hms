@@ -543,9 +543,15 @@
                                         <a href="{% url 'home:refer_patient' latest_visit.id %}" class="modern-btn btn-info" style="width: 100%;">
                                             <i class="fas fa-stethoscope"></i> Refer Patient
                                         </a>
-                                        <a href="{% url 'home:create_prescription' latest_visit.id %}" class="modern-btn btn-success" style="width: 100%;">
-                                            <i class="fas fa-prescription"></i> New Prescription
-                                        </a>
+                                        {% if latest_visit.prescriptions.all %}
+                                            <a href="{% url 'home:edit_prescription' latest_visit.prescriptions.first.pk %}" class="modern-btn btn-primary" style="width: 100%; background: #7c3aed; color: white;">
+                                                <i class="fas fa-edit"></i> Edit Prescription
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'home:create_prescription' latest_visit.id %}" class="modern-btn btn-success" style="width: 100%;">
+                                                <i class="fas fa-prescription"></i> New Prescription
+                                            </a>
+                                        {% endif %}
                                     {% endif %}
                                     <button onclick="showModal('appointmentModal')" class="modern-btn btn-primary" style="width: 100%; border: none;">
                                         <i class="fas fa-calendar-plus"></i> Book Appointment
@@ -812,13 +818,35 @@
                                                 <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
                                                     <i class="fas fa-prescription"></i> Prescriptions
                                                 </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' %}
+                                                        {% with visit_prescriptions=visit.prescriptions.all %}
+                                                            {% if visit_prescriptions %}
+                                                                <a href="{% url 'home:edit_prescription' visit_prescriptions.first.pk %}" class="modern-btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </a>
+                                                            {% else %}
+                                                                <a href="{% url 'home:create_prescription' visit.id %}" class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
+                                                                    <i class="fas fa-plus"></i> Add
+                                                                </a>
+                                                            {% endif %}
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                {% endif %}
                                             </div>
                                             {% for prescription in prescriptions %}
                                                 {% if prescription.visit == visit %}
                                                     <div style="background: var(--clinical-bg); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem;">
-                                                        <div style="font-weight: 600; font-size: 0.9rem;">{{ prescription.diagnosis|truncatewords:5 }}</div>
-                                                        <div style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ prescription.prescribed_at|date:"M d, H:i" }}</div>
-                                                        <span class="status-badge" style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">{{ prescription.status }}</span>
+                                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                            <div>
+                                                                <div style="font-weight: 600; font-size: 0.9rem;">{{ prescription.diagnosis|truncatewords:5 }}</div>
+                                                                <div style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ prescription.prescribed_at|date:"M d, H:i" }}</div>
+                                                                <span class="status-badge" style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">{{ prescription.status }}</span>
+                                                            </div>
+                                                            {% if visit.is_active %}
+                                                                <a href="{% url 'home:edit_prescription' prescription.pk %}" class="modern-btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.7rem; flex-shrink: 0;"><i class="fas fa-edit"></i> Edit</a>
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 {% endif %}
                                             {% endfor %}
@@ -933,7 +961,12 @@
                                                         <span class="status-badge" style="background: {% if prescription.status == 'Active' %}var(--clinical-primary-light){% elif prescription.status == 'Completed' %}var(--clinical-bg){% else %}#fee2e2{% endif %}; color: {% if prescription.status == 'Active' %}var(--clinical-primary){% elif prescription.status == 'Completed' %}var(--clinical-secondary){% else %}var(--clinical-danger){% endif %}; font-size: 0.7rem;">{{ prescription.status }}</span>
                                                     </td>
                                                     <td style="padding: 1rem; text-align: right;">
-                                                        <a href="{% url 'home:prescription_detail' prescription.id %}" class="modern-btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage</a>
+                                                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                                            {% if prescription.visit.is_active %}
+                                                                <a href="{% url 'home:edit_prescription' prescription.pk %}" class="modern-btn btn-primary btn-sm" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;"><i class="fas fa-edit"></i> Edit</a>
+                                                            {% endif %}
+                                                            <a href="{% url 'home:prescription_detail' prescription.id %}" class="modern-btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage</a>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             {% endif %}

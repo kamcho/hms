@@ -1,0 +1,480 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block content %}
+    <div class="p-6 lg:p-10 space-y-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight">General Stock Usage</h1>
+        </div>
+        <div class="max-w-5xl mx-auto space-y-8">
+            <!-- Usage Form -->
+            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900">Usage Details</h2>
+                </div>
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="p-4 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 font-medium text-sm">
+                            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="space-y-4">
+                        <!-- Source Department -->
+                        <div>
+                            <label for="{{ form.adjusted_from.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Source Department</label>
+                            {{ form.adjusted_from }}
+                            {% if form.adjusted_from.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.adjusted_from.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <!-- Item -->
+                        <div>
+                            <label for="{{ form.item.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.item.label }}</label>
+                            <div class="hybrid-select-container" id="hybridItemSelect">
+                                <div class="hybrid-select-input-wrapper">
+                                    <input type="text" 
+                                           class="form-control hybrid-search-input" 
+                                           id="itemSearchInput" 
+                                           placeholder="Search for an inventory item..." 
+                                           autocomplete="off">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="hybrid-dropdown" id="itemDropdown">
+                                    <div class="hybrid-options-list" id="optionsList">
+                                        {% for item in inventory_items %}
+                                            <div class="hybrid-option" 
+                                                 data-value="{{ item.id }}" 
+                                                 data-name="{{ item.name|escapejs }}">
+                                                <span class="option-name">{{ item.name }}</span>
+                                                <span class="option-meta" data-item-id="{{ item.id }}">{{ item.category.name|default:"General" }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="hybrid-no-results" id="noResults" style="display: none;">
+                                        <i class="fas fa-search" style="display: block; font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.3; margin-top: 1rem;"></i>
+                                        <span class="block">No items match your search</span>
+                                        <small class="text-slate-400 mt-2 block">Try searching for a generic name or category</small>
+                                    </div>
+                                </div>
+                                <!-- Hidden actual select for Django Form compatibility -->
+                                <div style="display: none;">
+                                    {{ form.item }}
+                                </div>
+                            </div>
+                            {% if form.item.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.item.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <!-- Available Stock Display -->
+                        <div id="stockDisplay" style="display: none;">
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-warehouse text-slate-400"></i>
+                                    <h4 class="text-sm font-bold text-slate-700">Available Stock in <span id="departmentNameDisplay">--</span></h4>
+                                </div>
+                                <div id="stockInfo" class="text-xs text-slate-600">
+                                    <!-- Stock info will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Quantity -->
+                            <div>
+                                <label for="{{ form.quantity.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.quantity.label }}</label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.quantity.errors.0 }}</p>{% endif %}
+                            </div>
+                            <!-- Reason Type -->
+                            <div>
+                                <label for="{{ form.reason_type.id_for_label }}" class="block mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Usage Reason</label>
+                                {{ form.reason_type }}
+                                {% if form.reason_type.errors %}<p class="mt-1 text-xs font-bold text-rose-500">{{ form.reason_type.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-200 transform hover:-translate-y-1">Record Usage</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Activity Table -->
+            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900">Recent Usage Activity</h2>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th class="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</th>
+                                <th class="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Item</th>
+                                <th class="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Qty</th>
+                                <th class="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            {% for usage in recent_usages %}
+                                <tr class="group hover:bg-slate-50/50 transition-colors">
+                                    <td class="py-4 whitespace-nowrap">
+                                        <p class="text-xs font-bold text-slate-700">{{ usage.adjusted_at|date:"d M, H:i" }}</p>
+                                        <p class="text-[10px] text-slate-400">{{ usage.adjusted_by.get_full_name }}</p>
+                                    </td>
+                                    <td class="py-4">
+                                        <p class="text-xs font-bold text-slate-800">{{ usage.item.name }}</p>
+                                        <p class="text-[10px] text-slate-400">{{ usage.adjusted_from.name }}</p>
+                                    </td>
+                                    <td class="py-4">
+                                        <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black">
+                                            {% if usage.quantity < 0 %}{{ usage.quantity|stringformat:"d"|slice:"1:" }}{% else %}{{ usage.quantity }}{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="py-4">
+                                        <p class="text-xs font-medium text-slate-600">{{ usage.reason }}</p>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-slate-400 text-sm italic">No recent usage recorded</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-indigo-900 p-8 rounded-[40px] shadow-xl text-white relative overflow-hidden">
+                <div class="relative z-10">
+                    <h3 class="text-lg font-bold mb-2">Usage Audit Trail</h3>
+                    <p class="text-indigo-200 text-xs leading-relaxed mb-6">All general usage is recorded in the stock adjustments log. Use this for items utilized for hospital operations (cleaning, office supplies, or internal staff use).</p>
+                    <a href="{% url 'inventory:stock_activity' %}" class="inline-flex items-center gap-2 text-xs font-bold text-white hover:text-indigo-100 transition-colors group">
+                        View Full Activity Log
+                        <i class="fas fa-arrow-right text-[10px] transition-transform group-hover:translate-x-1"></i>
+                    </a>
+                </div>
+                <div class="absolute top-0 right-0 p-8 opacity-10">
+                    <i class="fas fa-file-invoice text-8xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* Styling for Django Form Widgets */
+    select,
+    input[type="text"],
+    input[type="number"] {
+        @apply w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-amber-600/20 transition-all outline-none;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #f8fafc;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid transparent;
+    }
+
+    select:focus,
+    input:focus {
+        background-color: #ffffff;
+        border-color: #e2e8f0;
+        box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.1);
+    }
+
+    /* Hybrid Search Select Styling */
+    .hybrid-select-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .hybrid-select-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .hybrid-select-input-wrapper i {
+        position: absolute;
+        right: 1.25rem;
+        color: #94a3b8;
+        pointer-events: none;
+        transition: transform 0.3s ease;
+    }
+
+    .hybrid-select-container.active .hybrid-select-input-wrapper i {
+        transform: rotate(180deg);
+        color: #d97706;
+    }
+
+    .hybrid-search-input {
+        width: 100%;
+        cursor: text !important;
+        padding-right: 3rem !important;
+    }
+
+    .hybrid-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        z-index: 1000;
+        max-height: 350px;
+        overflow-y: auto;
+        display: none;
+        animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hybrid-dropdown.show {
+        display: block;
+    }
+
+    .hybrid-option {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .hybrid-option:last-child {
+        border-bottom: none;
+    }
+
+    .hybrid-option:hover {
+        background: rgba(217, 119, 6, 0.05);
+        padding-left: 1.5rem;
+    }
+
+    .hybrid-option.selected {
+        background: rgba(217, 119, 6, 0.1);
+        color: #d97706;
+        font-weight: 700;
+    }
+
+    .hybrid-option .option-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .hybrid-option .option-meta {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .hybrid-no-results {
+        padding: 2.5rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+
+    /* Custom Scrollbar */
+    .hybrid-dropdown::-webkit-scrollbar {
+        width: 8px;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 0 16px 16px 0;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+    .hybrid-dropdown::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    </style>
+
+<!-- Stock Data -->
+{{ stock_by_department|json_script:"stock-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get stock data
+    const stockByDepartment = JSON.parse(document.getElementById('stock-data').textContent);
+    
+    // Hybrid Select Elements
+    const hybridContainer = document.getElementById('hybridItemSelect');
+    const searchInput = document.getElementById('itemSearchInput');
+    const dropdown = document.getElementById('itemDropdown');
+    const optionsList = document.getElementById('optionsList');
+    const options = optionsList.querySelectorAll('.hybrid-option');
+    const noResults = document.getElementById('noResults');
+    const actualSelect = document.querySelector('select[name="item"]');
+    const departmentSource = document.querySelector('select[name="adjusted_from"]');
+    const quantityInput = document.querySelector('input[name="quantity"]');
+    const reasonTypeSelect = document.querySelector('select[name="reason_type"]');
+    const stockDisplay = document.getElementById('stockDisplay');
+    const departmentNameDisplay = document.getElementById('departmentNameDisplay');
+    const stockInfo = document.getElementById('stockInfo');
+
+    if (!hybridContainer || !searchInput || !actualSelect) return;
+
+    // Initialize state
+    let isOpen = false;
+
+    // Function to update stock display
+    function updateStockDisplay() {
+        const selectedItemId = actualSelect.value;
+        const deptId = departmentSource.value;
+        const enteredQty = parseInt(quantityInput.value) || 0;
+        
+        if (!selectedItemId || !deptId) {
+            stockDisplay.style.display = 'none';
+            return;
+        }
+        
+        const deptData = stockByDepartment[deptId];
+        if (!deptData) {
+            stockDisplay.style.display = 'none';
+            return;
+        }
+        
+        const itemStock = deptData.items.find(item => item.item_id == selectedItemId);
+        const deptName = departmentSource.options[departmentSource.selectedIndex].text;
+        departmentNameDisplay.textContent = deptName;
+        
+        if (itemStock && itemStock.total_quantity > 0) {
+            const isInsufficient = enteredQty > itemStock.total_quantity;
+            const bgClass = isInsufficient ? 'bg-amber-50' : 'bg-green-50';
+            const borderClass = isInsufficient ? 'border-amber-200' : 'border-green-200';
+            const textClass = isInsufficient ? 'text-amber-700' : 'text-green-700';
+            const iconClass = isInsufficient ? 'fa-exclamation-triangle text-amber-600' : 'fa-check-circle text-green-600';
+            
+            stockInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 ${bgClass} border ${borderClass} rounded-lg transition-colors">
+                    <span class="font-semibold ${textClass}">${itemStock.total_quantity} units available</span>
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                ${isInsufficient ? `<p class="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-tighter"><i class="fas fa-times-circle mr-1"></i> Requested quantity exceeds available stock</p>` : ''}
+            `;
+        } else {
+            stockInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <span class="font-semibold text-red-700">No stock available in this department</span>
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                </div>
+            `;
+        }
+        
+        stockDisplay.style.display = 'block';
+    }
+
+
+    // Function to handle selection
+    function selectItem(value, name) {
+        actualSelect.value = value;
+        searchInput.value = name;
+        
+        // Update selection UI
+        options.forEach(opt => {
+            if (opt.dataset.value === value) {
+                opt.classList.add('selected');
+            } else {
+                opt.classList.remove('selected');
+            }
+        });
+
+        closeDropdown();
+        searchInput.style.borderColor = '#d97706';
+        searchInput.style.boxShadow = '0 0 0 4px rgba(217, 119, 6, 0.1)';
+        
+        // Update stock display
+        updateStockDisplay();
+    }
+
+    // Toggle Dropdown
+    function openDropdown() {
+        isOpen = true;
+        dropdown.classList.add('show');
+        hybridContainer.classList.add('active');
+    }
+
+    function closeDropdown() {
+        isOpen = false;
+        dropdown.classList.remove('show');
+        hybridContainer.classList.remove('active');
+    }
+
+    searchInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!isOpen) openDropdown();
+        this.select();
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (!isOpen) openDropdown();
+    });
+
+    // Search Logic
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        let hasResults = false;
+
+        options.forEach(opt => {
+            const name = opt.dataset.name.toLowerCase();
+            const meta = opt.querySelector('.option-meta').textContent.toLowerCase();
+            if (name.includes(query) || meta.includes(query)) {
+                opt.style.display = 'flex';
+                hasResults = true;
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+
+        noResults.style.display = hasResults ? 'none' : 'block';
+        if (!isOpen) openDropdown();
+    });
+
+    options.forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectItem(this.dataset.value, this.dataset.name);
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!hybridContainer.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    if (departmentSource) {
+        departmentSource.addEventListener('change', updateStockDisplay);
+    }
+    
+    if (quantityInput) {
+        quantityInput.addEventListener('input', updateStockDisplay);
+    }
+
+    // Initial check
+    updateStockDisplay();
+});
+</script>
+{% endblock %}

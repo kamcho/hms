@@ -336,7 +336,7 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         from inpatient.models import Admission
 
         # Get all visits for the filter dropdown
-        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date')
+        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date').prefetch_related('prescriptions')
         latest_visit = all_visits.first()
 
         # Get visit filter from GET parameters
@@ -1450,7 +1450,19 @@ def admit_patient_visit(request):
             main_service = get_object_or_404(Service, pk=consultation_id)
 
             # Close any previous active visits
-            Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
+            active_visits = Visit.objects.filter(patient=patient, is_active=True)
+            for old_visit in active_visits:
+                old_visit.is_active = False
+                old_visit.save(update_fields=['is_active'])
+                
+                if old_visit.visit_type == 'IN-PATIENT':
+                    from inpatient.models import Admission
+                    active_admissions = Admission.objects.filter(visit=old_visit, status='Admitted')
+                    for admission in active_admissions:
+                        admission.status = 'Discharged'
+                        admission.discharged_at = timezone.now()
+                        admission.discharged_by = request.user
+                        admission.save()
 
             service_name_upper = main_service.name.upper()
             is_mch = 'MCH' in service_name_upper
@@ -1991,13 +2003,8 @@ def edit_prescription(request, prescription_id):
                     if med_form.cleaned_data.get('DELETE'):
                         messages.error(request, f"Cannot delete {med_form.instance.medication.name} because it has already been dispensed.")
                         dispensed_conflict = True
-                    elif 'medication' in med_form.changed_data:
-                        messages.error(request, f"Cannot change medication for {med_form.instance.medication.name} because it has already been dispensed.")
-                        dispensed_conflict = True
-                    elif 'quantity' in med_form.changed_data:
-                        # If quantity decreased, it might be an issue depending on how dispensing works.
-                        # For now, let's block significant changes to dispensed items.
-                        messages.error(request, f"Cannot change quantity for {med_form.instance.medication.name} because it has already been dispensed.")
+                    elif any(field in med_form.changed_data for field in ['medication', 'quantity', 'dose_count', 'frequency', 'number_of_days', 'instructions']):
+                        messages.error(request, f"Cannot modify {med_form.instance.medication.name} as it has already been dispensed to the patient.")
                         dispensed_conflict = True
 
             if not dispensed_conflict:
@@ -2926,7 +2933,8 @@ def opd_dashboard(request):
         sent_to__name__icontains='Consultation',
         status='PENDING',
         visit__is_active=True,
-        visit__visit_type='OUT-PATIENT'
+        visit__visit_type='OUT-PATIENT',
+        visit__visit_date__date=today
     ).select_related('visit__patient', 'sent_to', 'qued_from')
 
     # Apply Search Filter
@@ -2992,7 +3000,8 @@ def opd_dashboard(request):
     
     # Get recent consultations for history list
     recent_consultations = Consultation.objects.filter(
-        doctor=request.user
+        doctor=request.user,
+        visit__visit_date__date=today
     ).select_related('visit__patient').order_by('-checkin_date')[:5]
     context['recent_consultations'] = recent_consultations
     

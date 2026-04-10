@@ -167,3 +167,41 @@ class StockTransferForm(forms.Form):
             raise forms.ValidationError("Source and destination departments cannot be the same.")
         
         return cleaned_data
+
+class GeneralUsageForm(forms.ModelForm):
+    REASON_CHOICES = [
+        ('Internal Hospital Use', 'Internal Hospital Use'),
+        ('Cleaning & Sanitation', 'Cleaning & Sanitation'),
+        ('Stationery & Office', 'Stationery & Office'),
+        ('Laboratory Operations', 'Laboratory Operations'),
+        ('Internal Staff Use', 'Internal Staff Use'),
+    ]
+    
+    reason_type = forms.ChoiceField(
+        choices=REASON_CHOICES, 
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    class Meta:
+        from .models import StockAdjustment
+        model = StockAdjustment
+        fields = ['item', 'quantity', 'adjusted_from']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'form-select select2'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'adjusted_from': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import InventoryItem
+        from home.models import Departments
+        self.fields['item'].queryset = InventoryItem.objects.all().order_by('name')
+        self.fields['adjusted_from'].queryset = Departments.objects.all().order_by('name')
+        self.fields['item'].empty_label = "Select Item"
+        self.fields['adjusted_from'].empty_label = "Select Source Department"
+        
+        # Try to pre-select Mini Pharmacy if it exists as a sensible default
+        mini_pharmacy = Departments.objects.filter(name='Mini Pharmacy').first()
+        if mini_pharmacy:
+            self.fields['adjusted_from'].initial = mini_pharmacy

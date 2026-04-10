@@ -63,9 +63,16 @@ class Command(BaseCommand):
                 'route': 'Subcutaneous'
             },
             {
-                'name': 'Vitamin A',
-                'abbreviation': 'Vit A',
-                'description': 'Essential micronutrient supplementation',
+                'name': 'Vitamin A (100,000 IU)',
+                'abbreviation': 'Vit A 100k',
+                'description': 'Essential micronutrient supplementation (100,000 IU)',
+                'target_diseases': 'Vitamin A Deficiency',
+                'route': 'Oral'
+            },
+            {
+                'name': 'Vitamin A (200,000 IU)',
+                'abbreviation': 'Vit A 200k',
+                'description': 'Essential micronutrient supplementation (200,000 IU)',
                 'target_diseases': 'Vitamin A Deficiency',
                 'route': 'Oral'
             },
