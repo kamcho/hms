@@ -86,14 +86,7 @@ def clean_duplicates(request):
                     
                     # Dynamically update all foreign keys pointing to InventoryItem
                     for related_object in InventoryItem._meta.related_objects:
-                        if isinstance(related_object, ManyToOneRel):
-                            # It's a reverse ForeignKey relationship
-                            related_model = related_object.related_model
-                            field_name = related_object.field.name
-                            kwargs_filter = {field_name: delete_item}
-                            kwargs_update = {field_name: keep_item}
-                            related_model.objects.filter(**kwargs_filter).update(**kwargs_update)
-                        elif isinstance(related_object, OneToOneRel):
+                        if isinstance(related_object, OneToOneRel):
                             # Move OneToOne if keeping item doesn't have it
                             related_model = related_object.related_model
                             field_name = related_object.field.name
@@ -102,6 +95,27 @@ def clean_duplicates(request):
                                 kwargs_filter = {field_name: delete_item}
                                 kwargs_update = {field_name: keep_item}
                                 related_model.objects.filter(**kwargs_filter).update(**kwargs_update)
+                            else:
+                                # Keep item already has this one-to-one, delete the duplicate's one-to-one
+                                kwargs_filter = {field_name: delete_item}
+                                related_model.objects.filter(**kwargs_filter).delete()
+                        elif isinstance(related_object, ManyToOneRel):
+                            # It's a reverse ForeignKey relationship
+                            related_model = related_object.related_model
+                            field_name = related_object.field.name
+                            kwargs_filter = {field_name: delete_item}
+                            kwargs_update = {field_name: keep_item}
+                            try:
+                                related_model.objects.filter(**kwargs_filter).update(**kwargs_update)
+                            except Exception as model_e:
+                                # Catch multi-column unique constraint failures incrementally
+                                # If direct update fails (e.g. duplicate entry), we loop and try handling gracefully
+                                for obj in related_model.objects.filter(**kwargs_filter):
+                                    setattr(obj, field_name, keep_item)
+                                    try:
+                                        obj.save()
+                                    except Exception:
+                                        obj.delete() # Or merge logic depending on model, delete is safest for pure duplicates
                     
                     delete_item_name = delete_item.name
                     delete_item.delete()
