@@ -894,9 +894,12 @@ def reception_dashboard(request):
     if user_role == 'Receptionist' or user_role == 'Admin':
         # Receptionist (and Admin) sees invoices
         # Get patient service invoices with search functionality
-        invoices = Invoice.objects.filter(
+        invoices = Invoice.objects.annotate(
+            balance_due=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+        ).filter(
             Q(status__in=['Pending', 'Partial', 'Draft']) & 
-            (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True))
+            (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True)) &
+            Q(balance_due__gt=0)
         ).select_related('patient', 'deceased').prefetch_related(
             Prefetch('items', queryset=InvoiceItem.objects.filter(paid_amount__lt=F('amount')).select_related('service'))
         )
@@ -914,9 +917,12 @@ def reception_dashboard(request):
         invoices = invoices.order_by('-created_at')
         
         # Get unpaid invoices count
-        unpaid_invoices = Invoice.objects.filter(
+        unpaid_invoices = Invoice.objects.annotate(
+            balance_due=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+        ).filter(
             Q(status__in=['Pending', 'Partial', 'Draft']) & 
-            (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True))
+            (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True)) &
+            Q(balance_due__gt=0)
         ).count()
         
         # Get active services grouped by department for quick invoicing
