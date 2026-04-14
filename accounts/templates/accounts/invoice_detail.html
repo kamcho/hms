@@ -280,6 +280,12 @@
                                             </button>
                                         {% endif %}
                                     {% endif %}
+                                    
+                                    {% if is_delivery and request.user.role in 'SHA Manager,Accountant,Admin' or request.user.is_superuser %}
+                                        <button onclick="zeroInvoiceItem({{ item.id }})" class="ml-2 text-emerald-500 hover:text-emerald-700 transition-colors font-bold text-xs" title="Zero Item (Delivery Waiver)">
+                                            Zero Price
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td>{{ item.quantity }}</td>
@@ -552,6 +558,26 @@
                     window.location.reload();
                 } else {
                     showMessageModal('Error', data.error || 'Failed to delete item');
+                }
+            })
+            .catch(err => showMessageModal('Error', 'Connection error: ' + err));
+    }
+    
+    function zeroInvoiceItem(itemId) {
+        if (!confirm('Are you sure you want to zero the price of this item? This is an irreversible action for delivery management.')) return;
+
+        const zeroUrl = `{% url 'accounts:zero_invoice_item' 0 %}`.replace('/0/', `/${itemId}/`);
+
+        fetch(zeroUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to zero item');
                 }
             })
             .catch(err => showMessageModal('Error', 'Connection error: ' + err));

@@ -2149,13 +2149,11 @@ from datetime import timedelta
 from .models import Prescription, PrescriptionItem
 from inventory.models import InventoryItem, StockRecord, InventoryRequest
 from home.models import Departments
-from inpatient.models import MedicationChart
 
 
-@login_required
 @login_required
 def pharmacy_dashboard(request):
-    """Pharmacy dashboard showing prescriptions, consumables, stock, and requests"""
+    """Pharmacy dashboard showing OPD prescriptions, consumables, stock, and requests"""
     # Role-based access control
     if request.user.role not in ['Pharmacist', 'Nurse']:
         messages.error(request, "Access denied. Only pharmacists and nurses can access the pharmacy dashboard.")
@@ -2174,7 +2172,7 @@ def pharmacy_dashboard(request):
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
 
-    # Get pending prescriptions (not dispensed)
+    # Get pending OPD prescriptions (not dispensed)
     pending_items = PrescriptionItem.objects.filter(
         dispensed=False
     ).select_related(
@@ -2185,35 +2183,14 @@ def pharmacy_dashboard(request):
         'medication'
     ).order_by('-prescription__prescribed_at')
 
-    # Get pending IPD medications (from MedicationChart)
-    pending_ipd_items = MedicationChart.objects.filter(
-        is_dispensed=False
-    ).select_related(
-        'admission__patient',
-        'admission__visit',
-        'admission__bed__ward',
-        'prescribed_by',
-        'item'
-    ).order_by('-prescribed_at')
-
-    # Get pending IPD consumables
-    from inpatient.models import Admission, InpatientConsumable
-    pending_ipd_consumables = InpatientConsumable.objects.filter(
-        is_dispensed=False
-    ).select_related(
-        'admission__patient',
-        'admission__visit',
-        'prescribed_by',
-        'item'
-    ).order_by('-prescribed_at')
-
-    # Get pending consumables — InvoiceItems with inventory_item that have NOT been dispensed yet
+    # Get pending OPD consumables — InvoiceItems with inventory_item that have NOT been dispensed yet
     from accounts.models import Invoice, InvoiceItem
+    from inpatient.models import Admission
 
     # Consumable InvoiceItems: have inventory_item set, but are NOT medications
     pending_consumables = InvoiceItem.objects.filter(
         inventory_item__isnull=False,
-        inventory_item__medication__isnull=True, # Structural check for consumables (non-drugs)
+        inventory_item__medication__isnull=True,  # Structural check for consumables (non-drugs)
         invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
     ).select_related(
         'invoice__patient',
@@ -2231,23 +2208,16 @@ def pharmacy_dashboard(request):
     for ci in pending_consumables:
         key = (ci.invoice.visit_id, ci.inventory_item_id, ci.quantity)
         if key not in dispensed_consumable_keys:
-            pending_consumable_list.append(ci)
+            # Skip IPD consumables — those are handled by the IPD Pharmacy dashboard
+            is_ipd = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
+            if not is_ipd:
+                pending_consumable_list.append(ci)
 
     if search_query:
         pending_items = pending_items.filter(
             Q(prescription__patient__first_name__icontains=search_query) |
             Q(prescription__patient__last_name__icontains=search_query) |
             Q(medication__name__icontains=search_query)
-        )
-        pending_ipd_items = pending_ipd_items.filter(
-            Q(admission__patient__first_name__icontains=search_query) |
-            Q(admission__patient__last_name__icontains=search_query) |
-            Q(item__name__icontains=search_query)
-        )
-        pending_ipd_consumables = pending_ipd_consumables.filter(
-            Q(admission__patient__first_name__icontains=search_query) |
-            Q(admission__patient__last_name__icontains=search_query) |
-            Q(item__name__icontains=search_query)
         )
         # Filter pending consumable list
         pending_consumable_list = [
@@ -2276,7 +2246,6 @@ def pharmacy_dashboard(request):
         visit = item.prescription.visit
         if not visit:
             continue
-        # PrescriptionItem is guaranteed OPD (IPD blocked at create_prescription)
         vkey = visit.id
         group = opd_visit_groups[vkey]
         group['patient'] = item.prescription.patient
@@ -2295,10 +2264,6 @@ def pharmacy_dashboard(request):
         visit = ci.invoice.visit
         if not visit:
             continue
-        # Check if this visit is IPD — skip, those go in IPD section
-        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
-        if is_ipd:
-            continue
         vkey = visit.id
         group = opd_visit_groups[vkey]
         group['patient'] = ci.invoice.patient
@@ -2312,52 +2277,6 @@ def pharmacy_dashboard(request):
     opd_groups = sorted(
         [g for g in opd_visit_groups.values() if g['patient']],
         key=lambda g: g['prescribed_at'] or timezone.now(),
-        reverse=True
-    )
-
-    # ---- Build IPD grouped data ----
-    ipd_visit_groups = defaultdict(lambda: {
-        'patient': None,
-        'visit': None,
-        'admission': None,
-        'medications': [],
-        'consumables': [],
-    })
-
-    for item in pending_ipd_items:
-        vkey = item.admission.visit_id
-        group = ipd_visit_groups[vkey]
-        group['patient'] = item.admission.patient
-        group['visit'] = item.admission.visit
-        group['admission'] = item.admission
-        group['medications'].append(item)
-
-    for item in pending_ipd_consumables:
-        vkey = item.admission.visit_id
-        group = ipd_visit_groups[vkey]
-        group['patient'] = item.admission.patient
-        group['visit'] = item.admission.visit
-        group['admission'] = item.admission
-        group['consumables'].append(item)
-
-    for ci in pending_consumable_list:
-        visit = ci.invoice.visit
-        if not visit:
-            continue
-        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
-        if not is_ipd:
-            continue
-        vkey = visit.id
-        group = ipd_visit_groups[vkey]
-        group['patient'] = ci.invoice.patient
-        group['visit'] = visit
-        if not group['admission']:
-            group['admission'] = Admission.objects.filter(visit=visit, status='Admitted').first()
-        group['consumables'].append(ci)
-
-    ipd_groups = sorted(
-        [g for g in ipd_visit_groups.values() if g['patient']],
-        key=lambda g: g['admission'].admitted_at if g['admission'] else timezone.now(),
         reverse=True
     )
 
@@ -2428,8 +2347,7 @@ def pharmacy_dashboard(request):
 
     # Statistics
     stats = {
-        'pending_prescriptions': pending_items.count() + len([c for c in pending_consumable_list if not Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
-        'pending_ipd_count': pending_ipd_items.count() + pending_ipd_consumables.count() + len([c for c in pending_consumable_list if Admission.objects.filter(visit=c.invoice.visit, status='Admitted').exists()]),
+        'pending_prescriptions': pending_items.count() + len(pending_consumable_list),
         'low_stock_count': len(low_stock_items),
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
@@ -2438,10 +2356,8 @@ def pharmacy_dashboard(request):
     }
 
     context = {
-        'opd_groups': opd_groups if request.user.role in ['Pharmacist', 'Admin'] else [],
-        'ipd_groups': ipd_groups if request.user.role in ['Nurse', 'Pharmacist', 'Admin'] else [],
+        'opd_groups': opd_groups,
         'pending_items': pending_items,
-        'pending_ipd_items': pending_ipd_items,
         'dispensed_items': dispensed_items,
         'pharmacy_stock': pharmacy_stock,
         'low_stock_items': low_stock_items,

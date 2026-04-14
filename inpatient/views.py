@@ -394,7 +394,6 @@ def patient_case_folder(request, admission_id):
     
     dispensed_items_ui = []
     
-    # Add requests
     for req in consumable_reqs:
         dispensed_items_ui.append({
             'item_name': req.item.name,
@@ -402,21 +401,29 @@ def patient_case_folder(request, admission_id):
             'status_class': 'bg-emerald-100 text-emerald-700' if req.is_dispensed else 'bg-amber-100 text-amber-700',
             'at': req.dispensed_at if req.is_dispensed else req.prescribed_at,
             'by': req.dispensed_by if req.is_dispensed else req.prescribed_by,
-            'quantity': req.quantity
+            'quantity': req.total_quantity
         })
         
-    # Add legacy items (avoid duplicates if possible, though visit_id + item_id might clash)
-    processed_new_flow_keys = set((req.item_id, req.quantity) for req in consumable_reqs if req.is_dispensed)
+    # Deduplicate DispensedItems against InpatientConsumables
+    # If the combined requests account for the DispensedItem, we hide the DispensedItem.
+    consumed_dispensed_qty = {}
+    for req in consumable_reqs:
+        if req.quantity_dispensed > 0:
+            consumed_dispensed_qty[req.item_id] = consumed_dispensed_qty.get(req.item_id, 0) + req.quantity_dispensed
+
     for ld in legacy_dispensed:
-        if (ld.item_id, ld.quantity) not in processed_new_flow_keys:
-            dispensed_items_ui.append({
-                'item_name': ld.item.name,
-                'status': 'Dispensed',
-                'status_class': 'bg-emerald-100 text-emerald-700',
-                'at': ld.dispensed_at,
-                'by': ld.dispensed_by,
-                'quantity': ld.quantity
-            })
+        if consumed_dispensed_qty.get(ld.item_id, 0) >= ld.quantity:
+            consumed_dispensed_qty[ld.item_id] -= ld.quantity
+            continue
+            
+        dispensed_items_ui.append({
+            'item_name': ld.item.name,
+            'status': 'Dispensed',
+            'status_class': 'bg-emerald-100 text-emerald-700',
+            'at': ld.dispensed_at,
+            'by': ld.dispensed_by,
+            'quantity': ld.quantity
+        })
             
     # Sort UI list by date
     dispensed_items_ui.sort(key=lambda x: x['at'] or timezone.now(), reverse=True)
@@ -992,13 +999,66 @@ def discharge_patient(request, admission_id):
             admission.discharged_by = request.user
             admission.save()
 
-            
+            # --- Cleanup unbilled/undispensed medications & consumables ---
+            from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
+
+            # Deactivate all active MedicationChart entries that are not fully dispensed
+            pending_meds = MedicationChart.objects.filter(admission=admission, is_active=True, is_dispensed=False)
+            for med in pending_meds:
+                med.is_active = False
+                med.save()
+                # Delete pending MAR entries for this medication
+                MedicationAdministrationRecord.objects.filter(chart=med, status='Pending').delete()
+
+            # Remove InpatientConsumable entries that were never dispensed at all
+            InpatientConsumable.objects.filter(admission=admission, is_dispensed=False, quantity_dispensed=0).delete()
+
+            # For partially dispensed consumables, cap total_quantity at quantity_dispensed and mark as fully dispensed
+            partial_consumables = InpatientConsumable.objects.filter(admission=admission, is_dispensed=False, quantity_dispensed__gt=0)
+            for con in partial_consumables:
+                con.total_quantity = con.quantity_dispensed
+                con.is_dispensed = True
+                con.dispensed_at = now
+                con.dispensed_by = request.user
+                con.save()
+
             messages.success(request, f"Patient {admission.patient.full_name} has been discharged and take-home medications recorded.")
             return redirect('inpatient:discharge_summary', pk=discharge.pk)
     else:
-        # Pre-fill provisional diagnosis from admission
+        # Build initial operations/procedures string
+        from accounts.models import InvoiceItem
+        performed_list = []
+        
+        procedure_items = InvoiceItem.objects.filter(
+            invoice__visit=admission.visit, 
+            service__department__name='Procedure Room'
+        ).select_related('service')
+        
+        if procedure_items.exists():
+            performed_list.append("PROCEDURES:")
+            # Use distinct names to avoid duplicating quantities
+            proc_names = set(p.service.name for p in procedure_items if p.service)
+            for name in proc_names:
+                performed_list.append(f"- {name}")
+                
+        if radiology_results.exists():
+            if performed_list: performed_list.append("")
+            performed_list.append("IMAGING / RADIOLOGY:")
+            for r in radiology_results:
+                performed_list.append(f"- {r.service.name}")
+                
+        if lab_results.exists():
+            if performed_list: performed_list.append("")
+            performed_list.append("LABORATORY:")
+            for l in lab_results:
+                performed_list.append(f"- {l.service.name}")
+                
+        initial_ops = "\n".join(performed_list)
+
+        # Pre-fill provisional diagnosis from admission and autogenerated procedures
         form = InpatientDischargeForm(initial={
-            'provisional_diagnosis': admission.provisional_diagnosis
+            'provisional_diagnosis': admission.provisional_diagnosis,
+            'operations_procedures': initial_ops
         })
         formset = PrescriptionItemFormSet(prefix='meds')
 
@@ -1228,6 +1288,27 @@ def move_to_morgue(request, admission_id):
         admission.discharged_at = now
         admission.discharged_by = request.user
         admission.save()
+
+        # --- Cleanup unbilled/undispensed medications & consumables ---
+        from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
+
+        # Deactivate all active MedicationChart entries that are not fully dispensed
+        pending_meds_qs = MedicationChart.objects.filter(admission=admission, is_active=True, is_dispensed=False)
+        for med in pending_meds_qs:
+            med.is_active = False
+            med.save()
+            MedicationAdministrationRecord.objects.filter(chart=med, status='Pending').delete()
+
+        # Remove InpatientConsumable entries that were never dispensed at all
+        InpatientConsumable.objects.filter(admission=admission, is_dispensed=False, quantity_dispensed=0).delete()
+
+        # For partially dispensed consumables, cap and mark complete
+        for con in InpatientConsumable.objects.filter(admission=admission, is_dispensed=False, quantity_dispensed__gt=0):
+            con.total_quantity = con.quantity_dispensed
+            con.is_dispensed = True
+            con.dispensed_at = now
+            con.dispensed_by = request.user
+            con.save()
 
         messages.success(request, f"Patient {patient.full_name} has been moved to morgue records. Deceased record created.")
         return redirect('morgue:deceased_detail', pk=deceased.pk)

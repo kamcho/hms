@@ -440,10 +440,9 @@ def dispense_item(request):
             # Record Physical Dispensing (Inventory Stock Movement)
             # ONLY for departments other than Pharmacy/Mini Pharmacy
             # because those two are handled at pickup.
-            is_pharmacy = department and (
-                'pharmacy' in department.name.lower() or 
-                'store' in department.name.lower()
-            )
+            # Strict check: only the main 'Pharmacy' handles deferred dispensing/billing.
+            # All other departments (including Mini Pharmacy) bill and adjust stock immediately.
+            is_pharmacy = department and department.name == 'Pharmacy'
             
             
             if not is_pharmacy:
@@ -487,6 +486,7 @@ def dispense_item(request):
                         adjusted_from=department
                     )
 
+                # 1. Physical Stock Movement (Audit Trail)
                 DispensedItem.objects.create(
                     item=item,
                     patient=patient,
@@ -496,38 +496,64 @@ def dispense_item(request):
                     dispensed_by=request.user
                 )
 
-            if active_admission:
-                # IPD Flow: Marks as dispensed ONLY if not pharmacy
-                InpatientConsumable.objects.create(
-                    admission=active_admission,
-                    item=item,
-                    total_quantity=quantity,
-                    quantity_dispensed=quantity if not is_pharmacy else 0,
-                    instructions=instructions,
-                    prescribed_by=request.user,
-                    request_location=department if is_pharmacy else None,
-                    is_dispensed=not is_pharmacy,
-                    dispensed_at=timezone.now() if not is_pharmacy else None,
-                    dispensed_by=request.user if not is_pharmacy else None
-                )
-                
-                # Explicitly Bill if NOT pharmacy
-                if not is_pharmacy:
-                    invoice = get_or_create_invoice(visit=visit, user=request.user)
-                    InvoiceItem.objects.create(
-                        invoice=invoice,
-                        inventory_item=item,
-                        name=f"{item.name} (IPD Dispense)",
-                        quantity=quantity,
-                        unit_price=item.selling_price,
-                        created_by=request.user
-                    )
+                if active_admission:
+                    # Satisfy existing pending requests for this item first
+                    remaining_to_fulfill = quantity
+                    pending_requests = InpatientConsumable.objects.filter(
+                        admission=active_admission,
+                        item=item,
+                        is_dispensed=False
+                    ).order_by('prescribed_at')
 
-                status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'{item.name} x{quantity} {status_msg} successfully.'
-                })
+                    for req in pending_requests:
+                        if remaining_to_fulfill <= 0:
+                            break
+                        
+                        can_fulfill = req.total_quantity - req.quantity_dispensed
+                        fill_qty = min(can_fulfill, remaining_to_fulfill)
+                        
+                        req.quantity_dispensed += fill_qty
+                        if req.quantity_dispensed >= req.total_quantity:
+                            req.is_dispensed = True
+                            req.dispensed_at = timezone.now()
+                            req.dispensed_by = request.user
+                        req.save()
+                        remaining_to_fulfill -= fill_qty
+
+                    # If there's surplus quantity (not satisfying a specific request), 
+                    # create a new "Immediate" clinical record
+                    if remaining_to_fulfill > 0:
+                        InpatientConsumable.objects.create(
+                            admission=active_admission,
+                            item=item,
+                            quantity=remaining_to_fulfill,
+                            total_quantity=remaining_to_fulfill,
+                            quantity_dispensed=remaining_to_fulfill if not is_pharmacy else 0,
+                            instructions=instructions or "Direct dispense",
+                            prescribed_by=request.user,
+                            request_location=department if is_pharmacy else None,
+                            is_dispensed=not is_pharmacy,
+                            dispensed_at=timezone.now() if not is_pharmacy else None,
+                            dispensed_by=request.user if not is_pharmacy else None
+                        )
+                    
+                    # 2. Explicitly Bill if NOT pharmacy
+                    if not is_pharmacy:
+                        invoice = get_or_create_invoice(visit=visit, user=request.user)
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            inventory_item=item,
+                            name=f"{item.name} (IPD Dispense)",
+                            quantity=quantity,
+                            unit_price=item.selling_price,
+                            created_by=request.user
+                        )
+
+                    status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': f'{item.name} x{quantity} {status_msg} successfully.'
+                    })
 
             # OPD Flow: Get or Create Consolidate Visit Invoice
             invoice = get_or_create_invoice(visit=visit, user=request.user)
@@ -1130,15 +1156,17 @@ def ipd_pharmacy_dashboard(request):
     # Search filter
     search_query = request.GET.get('q', '').strip()
     
-    # Fetch pending meds
+    # Fetch pending meds (only for currently admitted patients)
     pending_meds = MedicationChart.objects.filter(
         quantity_dispensed__lt=F('total_quantity'),
-        is_active=True
+        is_active=True,
+        admission__status='Admitted'
     ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
     
-    # Fetch pending consumables
+    # Fetch pending consumables (only for currently admitted patients)
     pending_consumables = InpatientConsumable.objects.filter(
-        quantity_dispensed__lt=F('total_quantity')
+        quantity_dispensed__lt=F('total_quantity'),
+        admission__status='Admitted'
     ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
 
     # Apply search filter — split into words so "John Doe" works

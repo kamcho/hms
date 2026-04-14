@@ -849,7 +849,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Insurance Per-Diem
                         Coverage</span>
-                        <span class="text-[10px] font-black text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100" id="perDiemRateLabel">Ksh 2,400 / Day</span>
+                        <span class="text-[10px] font-black text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100" id="perDiemRateLabel">Ksh 2,240 / Day</span>
                     </div>
                     <div class="flex justify-between items-end">
                         <div>
@@ -1080,7 +1080,7 @@
         const val = parseFloat(amountInput.value) || 0;
         const max = window.currentInvoiceBalance || 0;
 
-        // Skip max amount check for IPD (Admission) because they pay flat rate 2400
+        // Skip max amount check for IPD (Admission) because they pay flat rate 2240
         const isIPD = currentAdmissionInfo !== null;
         const isInvalid = val <= 0 || (!isIPD && val > max);
 

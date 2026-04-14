@@ -14,7 +14,7 @@
         background: #ffffff !important;
         border: 2px solid #e2e8f0 !important;
         border-radius: 12px !important;
-        padding: 12px 16px !important;
+        padding: 24px 16px !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #1e293b !important;
@@ -32,7 +32,7 @@
     }
 
     .discharge-container textarea {
-        min-height: 100px !important;
+        min-height: 200px !important;
     }
 
     .discharge-container textarea:focus,
@@ -65,155 +65,10 @@
                 </a>
             </div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            <!-- Billing & Stay Summary -->
-            <div class="lg:col-span-2 space-y-8">
-                <!-- Billing Dashboard -->
-                <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="px-10 py-6 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
-                            <i class="fas fa-file-invoice-dollar text-indigo-500"></i> Provisionary Billing Summary
-                        </h2>
-                        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-widest">Pre-Discharge Audit</span>
-                    </div>
-                    <div class="p-0">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/30">
-                                    <th class="px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Item Description</th>
-                                    <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center">Reference / Details</th>
-                                    <th class="px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Amount (USD)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-50">
-                                <!-- Ward Accommodation -->
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-10 py-6">
-                                        <div class="text-sm font-black text-slate-900">Ward Accommodation</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                            {% if admission.bed %}
-                                                {{ admission.bed.ward.name }} ({{ admission.bed.ward.ward_type }})
-                                            {% else %}
-                                                No Bed Assigned
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-6 text-center">
-                                        <span class="px-3 py-1 bg-slate-100 text-slate-600 text-[11px] font-black rounded-lg">
-                                            {{ days_stayed }} Day{{ days_stayed|pluralize }} 
-                                            {% if admission.bed %}
-                                                @ ${{ admission.bed.ward.base_charge_per_day }}/day
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                    <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ ward_cost }}</td>
-                                </tr>
-                                <!-- Medications -->
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-10 py-6">
-                                        <div class="text-sm font-black text-slate-900">Clinical Medications</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensed and administered during stay</div>
-                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
-                                            {% for med in billed_meds %}
-                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
-                                                    <div>
-                                                        <div class="text-[11px] font-black text-slate-900">{{ med.name }}</div>
-                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ med.quantity }} @ ${{ med.unit_price }}</div>
-                                                    </div>
-                                                    <div class="text-[11px] font-black text-slate-600">
-                                                        ${{ med.amount }}
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div class="text-[10px] font-bold text-slate-400 italic">No medications billed.</div>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Pharmacy Inventory</span>
-                                    </td>
-                                    <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ med_cost }}</td>
-                                </tr>
-                                <!-- Consumables -->
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-10 py-6">
-                                        <div class="text-sm font-black text-slate-900">Medical Supplies & Consumables</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Non-drug supplies used</div>
-                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
-                                            {% for con in billed_consumables %}
-                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
-                                                    <div>
-                                                        <div class="text-[11px] font-black text-slate-900">{{ con.name }}</div>
-                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ con.quantity }} @ ${{ con.unit_price }}</div>
-                                                    </div>
-                                                    <div class="text-[11px] font-black text-slate-600">
-                                                        ${{ con.amount }}
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div class="text-[10px] font-bold text-slate-400 italic">No consumables billed.</div>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Inventory Catalog</span>
-                                    </td>
-                                    <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ consumable_cost }}</td>
-                                </tr>
-                                <!-- Services -->
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-10 py-6">
-                                        <div class="text-sm font-black text-slate-900">Clinical Services</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Procedures, Nursing Care, and Diagnostics</div>
-                                        <div class="mt-4 space-y-2 max-h-40 overflow-y-auto pr-4 custom-scrollbar">
-                                            {% for service in billed_services %}
-                                                <div class="flex justify-between items-center bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
-                                                    <div>
-                                                        <div class="text-[11px] font-black text-slate-900">{{ service.name }}</div>
-                                                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Qty: {{ service.quantity }} @ ${{ service.unit_price }}</div>
-                                                    </div>
-                                                    <div class="text-[11px] font-black text-slate-600">
-                                                        ${{ service.amount }}
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div class="text-[10px] font-bold text-slate-400 italic">No services billed.</div>
-                                            {% endfor %}
-                                            
-                                            {% if lab_results or radiology_results %}
-                                                <div class="mt-4 pt-4 border-t border-slate-100">
-                                                    <div class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">Lab & Imaging Activity</div>
-                                                    {% for res in lab_results %}
-                                                        <div class="text-[11px] font-medium text-slate-500 mb-1 flex items-center gap-2">
-                                                            <i class="fas fa-microscope text-[8px] text-indigo-400"></i> {{ res.service.name }}
-                                                        </div>
-                                                    {% endfor %}
-                                                    {% for res in radiology_results %}
-                                                        <div class="text-[11px] font-medium text-slate-500 mb-1 flex items-center gap-2">
-                                                            <i class="fas fa-x-ray text-[8px] text-rose-400"></i> {{ res.service.name }}
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-6 text-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Variable Diagnostics</span>
-                                    </td>
-                                    <td class="px-10 py-6 text-right text-lg font-black text-slate-900">${{ service_cost }}</td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr class="bg-indigo-600 text-white">
-                                    <td colspan="2" class="px-10 py-6 text-sm font-black uppercase tracking-widest">
-                                        Total Estimated Liability
-                                    </td>
-                                    <td class="px-10 py-6 text-right text-3xl font-black">${{ total_bill }}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+        <div class="w-full">
+            <!-- Discharge form full width -->
+            <div class="w-full space-y-8">
+
                 <!-- Authorization Form -->
                 <div class="bg-white rounded-[32px] shadow-lg border-2 border-emerald-100 overflow-hidden relative">
                     <div class="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full -mr-24 -mt-24 blur-3xl opacity-50"></div>
@@ -354,59 +209,7 @@
                     </form>
                 </div>
             </div>
-            <!-- Right Side: Admission Context -->
-            <div class="space-y-8">
-                <div class="bg-slate-900 rounded-[32px] shadow-2xl p-8 text-white relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-8 text-indigo-400 flex items-center gap-2">
-                        <i class="fas fa-info-circle"></i> Admission Context
-                    </h3>
-                    <div class="space-y-8">
-                        <div>
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time of Admission</div>
-                            <div class="text-lg font-black text-white">{{ admission.admitted_at|date:"F d, Y" }}</div>
-                            <div class="text-[11px] font-bold text-indigo-400 mt-1 uppercase tracking-widest">
-                                {{ admission.admitted_at|time:"H:i" }} HRS
-                            </div>
-                        </div>
-                        <div class="pt-8 border-t border-white/5">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Entrance Diagnosis</div>
-                            <div class="p-4 bg-white/5 rounded-2xl border border-white/10 text-sm font-medium text-slate-100 leading-relaxed italic">"{{ admission.provisional_diagnosis }}"</div>
-                        </div>
-                        <div class="pt-8 border-t border-white/5">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                Ward Assignment
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-black text-slate-100 uppercase tracking-widest">
-                                    {% if admission.bed %}{{ admission.bed.ward.name }}{% else %}N/A{% endif %}
-                                </span>
-                                <span class="px-2 py-1 bg-indigo-500 text-white text-[9px] font-black rounded-lg uppercase tracking-wider">
-                                    {% if admission.bed %}UNIT {{ admission.bed.bed_number }}{% else %}No Bed{% endif %}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Discharge Checklist -->
-                <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 p-8">
-                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">Process Checklist</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-3 text-[11px] font-black text-emerald-600 uppercase tracking-widest">
-                            <i class="fas fa-check-circle"></i> Clinical Stability Verified
-                        </div>
-                        <div class="flex items-center gap-3 text-[11px] font-black text-emerald-600 uppercase tracking-widest">
-                            <i class="fas fa-check-circle"></i> Billing Audit Performed
-                        </div>
-                        <div class="flex items-center gap-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                            <i class="far fa-circle"></i> Medication Reconciliation
-                        </div>
-                        <div class="flex items-center gap-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                            <i class="far fa-circle"></i> Return of Personal Items
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
     <script>

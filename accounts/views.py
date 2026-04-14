@@ -201,9 +201,13 @@ def insurance_manager(request):
     search_ipd = request.GET.get('search_ipd', '')
     search_mat = request.GET.get('search_mat', '')
     
-    # Base filter for unpaid or partially paid invoices
+    # Base filter for unpaid or partially paid invoices with actual balance > 0
     unpaid_invoices = Invoice.objects.filter(
         status__in=['Pending', 'Partial']
+    ).annotate(
+        balance_check=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+    ).filter(
+        balance_check__gt=0.01
     ).select_related('patient', 'visit', 'deceased').order_by('-created_at')
     
     def apply_robust_search(queryset, query):
@@ -294,7 +298,7 @@ def get_invoice_items(request, invoice_id):
                 days = max(1, (admission.discharged_at - admission.admitted_at).days)
             else:
                 days = max(1, (timezone.now() - admission.admitted_at).days)
-            per_diem_rate = 2400
+            per_diem_rate = 2240
             
             # Calculate total billed excluding Normal Delivery for per-diem calculation
             normal_delivery_total = invoice.items.filter(
@@ -423,11 +427,20 @@ def invoice_detail(request, pk):
                 can_authorize = True
                 admission_type = 'Morgue'
                 
+    is_delivery = False
+    if invoice.visit and hasattr(invoice.visit, 'labor_delivery'):
+        is_delivery = True
+    elif admission_type == 'IPD':
+        # Alternatively check admission
+        if Admission.objects.filter(visit=invoice.visit, status='Admitted', delivery__isnull=False).exists():
+            is_delivery = True
+            
     context = {
         'invoice': invoice,
         'can_authorize': can_authorize,
         'admission_type': admission_type,
         'can_record_payment': is_receptionist(request.user),
+        'is_delivery': is_delivery,
     }
     return render(request, 'accounts/invoice_detail.html', context)
 
@@ -642,6 +655,36 @@ def delete_invoice_item(request, item_id):
             
     return HttpResponse(status=405)
 
+@login_required
+@require_POST
+def zero_invoice_item(request, item_id):
+    """Sets the unit price to 0 for an invoice item if allowed by SHA or Accountant on a delivery visit."""
+    item = get_object_or_404(InvoiceItem, pk=item_id)
+    invoice = item.invoice
+    
+    # Permission condition
+    if request.user.role not in ['SHA Manager', 'Accountant', 'Admin'] and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Only SHA Manager or Accountant can zero invoice items.'})
+        
+    is_delivery = False
+    if invoice.visit and hasattr(invoice.visit, 'labor_delivery'):
+        is_delivery = True
+    elif invoice.visit and Admission.objects.filter(visit=invoice.visit, delivery__isnull=False).exists():
+        is_delivery = True
+        
+    if not is_delivery:
+        return JsonResponse({'success': False, 'error': 'Zeroing items is strictly for Delivery/Maternity visits.'})
+        
+    if item.paid_amount > 0:
+        return JsonResponse({'success': False, 'error': 'Cannot zero a partially or fully paid item.'})
+        
+    try:
+        item.unit_price = 0
+        item.save()
+        invoice.update_totals()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 @login_required
 @user_passes_test(is_billing_staff)
 def invoice_list(request):
