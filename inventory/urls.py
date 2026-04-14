@@ -24,6 +24,7 @@ urlpatterns = [
     path('items/<int:item_id>/update-details/', views.update_item_details, name='update_item_details'),
     path('items/<int:item_id>/reconcile/<int:location_id>/', views.reconcile_stock, name='reconcile_stock'),
     path('items/<int:item_id>/delete/', views.delete_item, name='delete_item'),
+    path('clean-duplicates/', views.clean_duplicates, name='clean_duplicates'),
     path('transfer/', views.transfer_stock, name='transfer_stock'),
     path('record-usage/', views.record_usage, name='record_usage'),
     

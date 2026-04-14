@@ -11,6 +11,7 @@ from accounts.utils import get_or_create_invoice
 from django.db.models import Sum, Count, Q, Case, When, Value, IntegerField
 from django.db import transaction
 from django.utils import timezone
+from django.db.models import ManyToManyRel, ManyToOneRel, OneToOneRel
 
 @login_required
 def item_list(request):
@@ -70,6 +71,71 @@ def delete_item(request, item_id):
     item.delete()
     messages.success(request, f'Item "{item_name}" deleted successfully.')
     return redirect('inventory:item_list')
+
+@login_required
+def clean_duplicates(request):
+    if request.method == 'POST':
+        keep_id = request.POST.get('keep_id')
+        delete_id = request.POST.get('delete_id')
+        
+        if keep_id and delete_id and keep_id != delete_id:
+            try:
+                with transaction.atomic():
+                    keep_item = InventoryItem.objects.get(id=keep_id)
+                    delete_item = InventoryItem.objects.get(id=delete_id)
+                    
+                    # Dynamically update all foreign keys pointing to InventoryItem
+                    for related_object in InventoryItem._meta.related_objects:
+                        if isinstance(related_object, ManyToOneRel):
+                            # It's a reverse ForeignKey relationship
+                            related_model = related_object.related_model
+                            field_name = related_object.field.name
+                            kwargs_filter = {field_name: delete_item}
+                            kwargs_update = {field_name: keep_item}
+                            related_model.objects.filter(**kwargs_filter).update(**kwargs_update)
+                        elif isinstance(related_object, OneToOneRel):
+                            # Move OneToOne if keeping item doesn't have it
+                            related_model = related_object.related_model
+                            field_name = related_object.field.name
+                            has_keep = related_model.objects.filter(**{field_name: keep_item}).exists()
+                            if not has_keep:
+                                kwargs_filter = {field_name: delete_item}
+                                kwargs_update = {field_name: keep_item}
+                                related_model.objects.filter(**kwargs_filter).update(**kwargs_update)
+                    
+                    delete_item_name = delete_item.name
+                    delete_item.delete()
+                    messages.success(request, f"Successfully merged '{delete_item_name}' into '{keep_item.name}'.")
+            except Exception as e:
+                messages.error(request, f"Error merging duplicates: {str(e)}")
+        else:
+            messages.error(request, "Please select two different items to merge.")
+            
+        return redirect('inventory:clean_duplicates')
+
+    # Basic Search implementation for manual selection
+    search_query = request.GET.get('q', '')
+    search_results = []
+    if search_query:
+        search_results = InventoryItem.objects.filter(name__icontains=search_query).order_by('name')[:50]
+
+    # Find duplicates by exact name grouping
+    duplicates = InventoryItem.objects.values('name').annotate(name_count=Count('id')).filter(name_count__gt=1).order_by('name')
+    
+    duplicate_groups = []
+    for dup in duplicates:
+        items = InventoryItem.objects.filter(name=dup['name']).annotate(total_stock=Sum('stock_records__quantity'))
+        duplicate_groups.append({
+            'name': dup['name'],
+            'items': items
+        })
+        
+    return render(request, 'inventory/clean_duplicates.html', {
+        'duplicate_groups': duplicate_groups,
+        'search_query': search_query,
+        'search_results': search_results,
+        'title': 'Clean Inventory Duplicates'
+    })
 
 @login_required
 @require_POST

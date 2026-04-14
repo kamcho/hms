@@ -202,10 +202,16 @@
     </style>
     <div class="inventory-header">
         <h1>Inventory Items</h1>
-        <a href="{% url 'inventory:add_item' %}" class="btn-add">
-            <i class="fas fa-plus"></i>
-            Add New Item
-        </a>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'inventory:clean_duplicates' %}" class="btn-add" style="background: var(--warning-gradient); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">
+                <i class="fas fa-broom"></i>
+                Clean Duplicates
+            </a>
+            <a href="{% url 'inventory:add_item' %}" class="btn-add">
+                <i class="fas fa-plus"></i>
+                Add New Item
+            </a>
+        </div>
     </div>
     <!-- Filter Section -->
     <div class="inventory-table-container" style="margin-bottom: 1.5rem;">

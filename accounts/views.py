@@ -200,10 +200,12 @@ def insurance_manager(request):
     search_opd = request.GET.get('search_opd', '')
     search_ipd = request.GET.get('search_ipd', '')
     search_mat = request.GET.get('search_mat', '')
+    search_sha = request.GET.get('search_sha', '')
     
     # Base filter for unpaid or partially paid invoices with actual balance > 0
     unpaid_invoices = Invoice.objects.filter(
-        status__in=['Pending', 'Partial']
+        status__in=['Pending', 'Partial'],
+        visit__payment_method='SHA'
     ).annotate(
         balance_check=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
     ).filter(
@@ -241,13 +243,37 @@ def insurance_manager(request):
     ipd_invoices = apply_robust_search(ipd_invoices, search_ipd)
     maternity_invoices = apply_robust_search(maternity_invoices, search_mat)
 
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     from home.models import Visit
-    active_cash_visits = Visit.objects.filter(
-        is_active=True, 
-        payment_method='CASH', 
-        visit_date__gte=today_start
-    ).order_by('-visit_date')
+    
+    def apply_visit_search(queryset, query):
+        if not query:
+            return queryset
+        search_terms = query.split()
+        q_objects = Q()
+        for term in search_terms:
+            term_q = Q(
+                Q(patient__first_name__icontains=term) |
+                Q(patient__last_name__icontains=term) |
+                Q(patient__id_number__icontains=term) |
+                Q(patient__phone__icontains=term) |
+                Q(id__icontains=term)
+            )
+            q_objects &= term_q
+        return queryset.filter(q_objects)
+
+    if search_query or search_sha:
+        active_cash_visits = Visit.objects.filter(is_active=True, payment_method='CASH').order_by('-visit_date')
+        if search_query:
+            active_cash_visits = apply_visit_search(active_cash_visits, search_query)
+        if search_sha:
+            active_cash_visits = apply_visit_search(active_cash_visits, search_sha)
+    else:
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        active_cash_visits = Visit.objects.filter(
+            is_active=True, 
+            payment_method='CASH', 
+            visit_date__gte=today_start
+        ).order_by('-visit_date')
 
     context = {
         'opd_invoices': opd_invoices,
@@ -257,6 +283,7 @@ def insurance_manager(request):
         'search_opd': search_opd,
         'search_ipd': search_ipd,
         'search_mat': search_mat,
+        'search_sha': search_sha,
         'active_cash_visits': active_cash_visits,
         'title': 'Insurance & Credit Manager'
     }
