@@ -28,8 +28,11 @@ urlpatterns = [
     path('vaccination/', views.vaccination_dashboard, name='vaccination_dashboard'),
     path('vaccination/administer/<int:que_id>/', views.administer_vaccine, name='administer_vaccine'),
     path('visit-queue-center/', views.visit_queue_center, name='visit_queue_center'),
+    path('free-dispensing/', views.maternity_free_dispensing, name='free_dispensing'),
+    path('dispensing-report/', views.maternity_dispensing_report, name='dispensing_report'),
 
     path('admit-to-maternity/', views.admit_to_maternity, name='admit_to_maternity'),
+
     path('api/search-patients/', views.api_search_patients, name='api_search_patients'),
     path('api/cwc-create-visit/', views.api_cwc_create_visit, name='api_cwc_create_visit'),
     path('referral/<int:referral_id>/print/', views.generate_referral_letter, name='generate_referral_letter'),

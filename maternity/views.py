@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.http import JsonResponse
@@ -22,6 +22,10 @@ from home.models import PatientQue, Departments, Visit, Prescription, Prescripti
 from home.forms import PrescriptionItemForm, Patient, PatientForm # Added PrescriptionItemForm, PatientForm
 from inpatient.models import Admission, Ward, Bed
 from inpatient.forms import AdmissionForm
+from django.db import transaction
+
+def is_pharmacist_or_admin(user):
+    return user.is_authenticated and (user.role in ['Admin', 'Pharmacist'] or user.is_superuser)
 
 
 @login_required
@@ -2323,3 +2327,210 @@ def api_cwc_create_visit(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@user_passes_test(is_pharmacist_or_admin)
+def maternity_free_dispensing(request):
+    """View to dispense free items specifically to maternity patients, listing pending requests from nurses."""
+    from inventory.models import InventoryItem, DispensedItem, StockRecord, StockAdjustment
+    from home.models import Departments
+    from inpatient.models import InpatientConsumable
+    from django.db.models import F
+    
+    # Get active maternity admissions with pending consumables
+    pending_consumables = InpatientConsumable.objects.filter(
+        quantity_dispensed__lt=F('total_quantity'),
+        admission__status='Admitted',
+        admission__bed__ward__ward_type='Maternity'
+    ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location').order_by('-prescribed_at')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'dispense_request':
+            consumable_id = request.POST.get('consumable_id')
+            dispense_qty_raw = request.POST.get('quantity', '0')
+            
+            try:
+                dispense_qty = int(dispense_qty_raw)
+                if not (consumable_id and dispense_qty > 0):
+                    messages.error(request, "Invalid entry.")
+                else:
+                    obj = get_object_or_404(InpatientConsumable, id=consumable_id)
+                    admission = obj.admission
+                    item = obj.item
+                    
+                    # Check for department stock (Maternity Ward or Pharmacy)
+                    dept = Departments.objects.filter(name__icontains='Maternity').first() or \
+                           Departments.objects.filter(name='Pharmacy').first()
+                    
+                    if not dept:
+                        messages.error(request, "Dispensing department not found.")
+                        return redirect('maternity:free_dispensing')
+
+                    with transaction.atomic():
+                        # Deduct stock
+                        available_stock = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=dept
+                        ).aggregate(total=Sum('quantity'))['total'] or 0
+                        
+                        if available_stock < dispense_qty:
+                            messages.error(request, f"Insufficient stock in {dept.name}. Available: {available_stock}")
+                            return redirect('maternity:free_dispensing')
+                            
+                        remaining_to_deduct = dispense_qty
+                        batches = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=dept, 
+                            quantity__gt=0
+                        ).order_by('expiry_date', 'received_date')
+                        
+                        for batch in batches:
+                            if remaining_to_deduct <= 0:
+                                break
+                            deduction = min(batch.quantity, remaining_to_deduct)
+                            batch.quantity -= deduction
+                            batch.save()
+                            remaining_to_deduct -= deduction
+
+                        # Create DispensedItem (No Invoice Item = Free)
+                        DispensedItem.objects.create(
+                            item=item,
+                            patient=admission.patient,
+                            visit=admission.visit,
+                            quantity=dispense_qty,
+                            dispensed_by=request.user,
+                            department=dept
+                        )
+                        
+                        # Update InpatientConsumable
+                        obj.quantity_dispensed += dispense_qty
+                        if obj.quantity_dispensed >= obj.total_quantity:
+                            obj.is_dispensed = True
+                            obj.dispensed_at = timezone.now()
+                            obj.dispensed_by = request.user
+                        obj.save()
+                        
+                        # Log Adjustment
+                        StockAdjustment.objects.create(
+                            item=item,
+                            quantity=-dispense_qty,
+                            adjustment_type='Usage',
+                            reason=f'Free Maternity Dispense (Request) to {admission.patient.full_name}',
+                            adjusted_by=request.user,
+                            adjusted_from=dept
+                        )
+                        
+                        messages.success(request, f"Successfully dispensed {dispense_qty} {item.name} for free to {admission.patient.full_name}.")
+            except Exception as e:
+                messages.error(request, f"Error: {str(e)}")
+        
+        elif action == 'direct_dispense':
+            admission_id = request.POST.get('admission_id')
+            item_id = request.POST.get('item_id')
+            quantity_str = request.POST.get('quantity', '0')
+            
+            try:
+                quantity = int(quantity_str)
+                if not (admission_id and item_id and quantity > 0):
+                    messages.error(request, "Missing information for direct dispensing.")
+                else:
+                    admission = get_object_or_404(Admission, id=admission_id)
+                    item = get_object_or_404(InventoryItem, id=item_id)
+                    
+                    dept = Departments.objects.filter(name__icontains='Maternity').first() or \
+                           Departments.objects.filter(name='Pharmacy').first()
+                    
+                    if not dept:
+                        messages.error(request, "Dispensing department not found.")
+                        return redirect('maternity:free_dispensing')
+
+                    with transaction.atomic():
+                        # Deduct stock
+                        available_stock = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=dept
+                        ).aggregate(total=Sum('quantity'))['total'] or 0
+                        
+                        if available_stock < quantity:
+                            messages.error(request, f"Insufficient stock in {dept.name}. Available: {available_stock}")
+                            return redirect('maternity:free_dispensing')
+                            
+                        remaining_to_deduct = quantity
+                        batches = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=dept, 
+                            quantity__gt=0
+                        ).order_by('expiry_date', 'received_date')
+                        
+                        for batch in batches:
+                            if remaining_to_deduct <= 0:
+                                break
+                            deduction = min(batch.quantity, remaining_to_deduct)
+                            batch.quantity -= deduction
+                            batch.save()
+                            remaining_to_deduct -= deduction
+
+                        # Create DispensedItem
+                        DispensedItem.objects.create(
+                            item=item,
+                            patient=admission.patient,
+                            visit=admission.visit,
+                            quantity=quantity,
+                            dispensed_by=request.user,
+                            department=dept
+                        )
+                        
+                        # Log Adjustment
+                        StockAdjustment.objects.create(
+                            item=item,
+                            quantity=-quantity,
+                            adjustment_type='Usage',
+                            reason=f'Free Maternity Dispense (Direct) to {admission.patient.full_name}',
+                            adjusted_by=request.user,
+                            adjusted_from=dept
+                        )
+                        
+                        messages.success(request, f"Successfully dispensed {quantity} {item.name} for free to {admission.patient.full_name}.")
+            except Exception as e:
+                messages.error(request, f"Error: {str(e)}")
+                
+        return redirect('maternity:free_dispensing')
+
+    # Get active maternity admissions for direct dispensing
+    maternity_admissions = Admission.objects.filter(
+        status='Admitted',
+        bed__ward__ward_type='Maternity'
+    ).select_related('patient', 'visit', 'bed__ward').order_by('-admitted_at')
+
+    # Consumables for search
+    maternity_items = InventoryItem.objects.all().order_by('name') # Category check can be added if needed
+    
+    context = {
+        'pending_consumables': pending_consumables,
+        'admissions': maternity_admissions,
+        'maternity_items': maternity_items,
+        'title': 'MCH Free Dispensing'
+    }
+    return render(request, 'maternity/free_dispensing.html', context)
+
+
+@login_required
+@user_passes_test(is_pharmacist_or_admin)
+def maternity_dispensing_report(request):
+    """View to see all consumables dispensed to maternity patients"""
+    from inventory.models import DispensedItem
+    
+    # Filter DispensedItems where the visit is linked to a maternity admission
+    # We use __visit__admissions__bed__ward__ward_type='Maternity'
+    dispensed_items = DispensedItem.objects.filter(
+        visit__admissions__bed__ward__ward_type='Maternity'
+    ).select_related('item', 'patient', 'visit', 'dispensed_by', 'department').order_by('-dispensed_at')
+    
+    context = {
+        'dispensed_items': dispensed_items,
+        'title': 'Maternity Consumables Report'
+    }
+    return render(request, 'maternity/dispensing_report.html', context)
+

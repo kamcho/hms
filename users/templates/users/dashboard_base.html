@@ -245,6 +245,11 @@
                             <i class="fas fa-truck-medical"></i>
                             <span>IPD Pharmacy</span>
                         </a>
+                        <a href="{% url 'maternity:free_dispensing' %}" 
+                           class="menu-item {% if request.resolver_match.url_name == 'free_dispensing' %}active{% endif %}">
+                            <i class="fas fa-baby-carriage"></i>
+                            <span>MCH Free Dispensing</span>
+                        </a>
                     {% endif %}
                     {% if user.role == 'Admin' %}
                         <a href="{% url 'home:ambulance_dashboard' %}" 
