@@ -468,6 +468,7 @@ def dispense_item(request):
     quantity_str = request.POST.get('quantity', '0')
     instructions = request.POST.get('instructions', '').strip()
     procedure_item_id = request.POST.get('procedure_item_id')
+    free_dispense = request.POST.get('free_dispense', 'true') == 'true'
 
     try:
         quantity = int(quantity_str)
@@ -576,9 +577,11 @@ def dispense_item(request):
                     dispensed_by=request.user
                 )
 
-                if active_admission:
+            if active_admission:
+                remaining_to_fulfill = quantity
+                
+                if not is_pharmacy:
                     # Satisfy existing pending requests for this item first
-                    remaining_to_fulfill = quantity
                     pending_requests = InpatientConsumable.objects.filter(
                         admission=active_admission,
                         item=item,
@@ -600,40 +603,40 @@ def dispense_item(request):
                         req.save()
                         remaining_to_fulfill -= fill_qty
 
-                    # If there's surplus quantity (not satisfying a specific request), 
-                    # create a new "Immediate" clinical record
-                    if remaining_to_fulfill > 0:
-                        InpatientConsumable.objects.create(
-                            admission=active_admission,
-                            item=item,
-                            quantity=remaining_to_fulfill,
-                            total_quantity=remaining_to_fulfill,
-                            quantity_dispensed=remaining_to_fulfill if not is_pharmacy else 0,
-                            instructions=instructions or "Direct dispense",
-                            prescribed_by=request.user,
-                            request_location=department if is_pharmacy else None,
-                            is_dispensed=not is_pharmacy,
-                            dispensed_at=timezone.now() if not is_pharmacy else None,
-                            dispensed_by=request.user if not is_pharmacy else None
-                        )
-                    
-                    # 2. Explicitly Bill if NOT pharmacy
-                    if not is_pharmacy:
-                        invoice = get_or_create_invoice(visit=visit, user=request.user)
-                        InvoiceItem.objects.create(
-                            invoice=invoice,
-                            inventory_item=item,
-                            name=f"{item.name} (IPD Dispense)",
-                            quantity=quantity,
-                            unit_price=item.selling_price,
-                            created_by=request.user
-                        )
+                # If there's surplus quantity (not satisfying a specific request), 
+                # or if it's pharmacy, create a new clinical record
+                if remaining_to_fulfill > 0:
+                    InpatientConsumable.objects.create(
+                        admission=active_admission,
+                        item=item,
+                        quantity=remaining_to_fulfill,
+                        total_quantity=remaining_to_fulfill,
+                        quantity_dispensed=remaining_to_fulfill if not is_pharmacy else 0,
+                        instructions=instructions or "Direct dispense",
+                        prescribed_by=request.user,
+                        request_location=department if is_pharmacy else None,
+                        is_dispensed=not is_pharmacy,
+                        dispensed_at=timezone.now() if not is_pharmacy else None,
+                        dispensed_by=request.user if not is_pharmacy else None
+                    )
+                
+                # 2. Explicitly Bill if NOT pharmacy
+                if not is_pharmacy:
+                    invoice = get_or_create_invoice(visit=visit, user=request.user)
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        inventory_item=item,
+                        name=f"{item.name} (IPD Dispense)",
+                        quantity=quantity,
+                        unit_price=0 if free_dispense else item.selling_price,
+                        created_by=request.user
+                    )
 
-                    status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
-                    return JsonResponse({
-                        'status': 'success',
-                        'message': f'{item.name} x{quantity} {status_msg} successfully.'
-                    })
+                status_msg = "dispensed and recorded" if not is_pharmacy else "requested"
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'{item.name} x{quantity} {status_msg} successfully.'
+                })
 
             # OPD Flow: Get or Create Consolidate Visit Invoice
             invoice = get_or_create_invoice(visit=visit, user=request.user)
@@ -648,7 +651,7 @@ def dispense_item(request):
                 inventory_item=item,
                 name=item_name,
                 quantity=quantity,
-                unit_price=item.selling_price,
+                unit_price=0 if free_dispense else item.selling_price,
                 created_by=request.user
             )
 

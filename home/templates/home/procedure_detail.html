@@ -96,7 +96,7 @@
                         Select a procedure on the left to activate dispensing.
                     </div>
                     <!-- Use the partial widget -->
-                    {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Procedure Room" preferred_department="Procedure Room" require_procedure_selection="true" exclude_pharmaceuticals="true" %}
+                    {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Procedure Room" preferred_department="Procedure Room" require_procedure_selection="true" exclude_pharmaceuticals="true" free_dispense="true" %}
                 </div>
             </div>
         </div>

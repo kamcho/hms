@@ -349,7 +349,7 @@
                     </div>
                     <div class="card-body">
                         {% if not is_read_only %}
-                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit dispensed_items=dispensed_items exclude_pharmaceuticals="true" %}
+                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit dispensed_items=dispensed_items exclude_pharmaceuticals="true" free_dispense="true" %}
                         {% else %}
                              <div class="space-y-4">
                                 <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Dispensed History (This Visit)</h5>

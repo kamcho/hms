@@ -257,6 +257,9 @@
         formData.append('quantity', quantity);
         formData.append('instructions', instructions);
         if (selectedProcedureId) formData.append('procedure_item_id', selectedProcedureId);
+        {% if free_dispense %}
+        formData.append('free_dispense', 'true');
+        {% endif %}
 
         // Get selected department
         const deptInput = document.querySelector('input[name="dispense_department"]:checked');

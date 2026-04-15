@@ -2338,10 +2338,17 @@ def maternity_free_dispensing(request):
     from django.db.models import F
     
     # Get active maternity admissions with pending consumables
+    # Find maternity admissions via the LaborDelivery link (authoritative)
+    # Also include admissions in wards typed 'Maternity' as a fallback
+    maternity_admission_ids = Admission.objects.filter(
+        status='Admitted'
+    ).filter(
+        Q(delivery__isnull=False) | Q(bed__ward__ward_type='Maternity')
+    ).values_list('id', flat=True)
+
     pending_consumables = InpatientConsumable.objects.filter(
         quantity_dispensed__lt=F('total_quantity'),
-        admission__status='Admitted',
-        admission__bed__ward__ward_type='Maternity'
+        admission_id__in=maternity_admission_ids
     ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location').order_by('-prescribed_at')
     
     if request.method == 'POST':
@@ -2500,8 +2507,9 @@ def maternity_free_dispensing(request):
 
     # Get active maternity admissions for direct dispensing
     maternity_admissions = Admission.objects.filter(
-        status='Admitted',
-        bed__ward__ward_type='Maternity'
+        status='Admitted'
+    ).filter(
+        Q(delivery__isnull=False) | Q(bed__ward__ward_type='Maternity')
     ).select_related('patient', 'visit', 'bed__ward').order_by('-admitted_at')
 
     # Consumables for search
@@ -2524,8 +2532,13 @@ def maternity_dispensing_report(request):
     
     # Filter DispensedItems where the visit is linked to a maternity admission
     # We use __visit__admissions__bed__ward__ward_type='Maternity'
+    # Find maternity visits via LaborDelivery link or ward_type fallback
+    maternity_visit_ids = Admission.objects.filter(
+        Q(delivery__isnull=False) | Q(bed__ward__ward_type='Maternity')
+    ).values_list('visit_id', flat=True)
+    
     dispensed_items = DispensedItem.objects.filter(
-        visit__admissions__bed__ward__ward_type='Maternity'
+        visit_id__in=maternity_visit_ids
     ).select_related('item', 'patient', 'visit', 'dispensed_by', 'department').order_by('-dispensed_at')
     
     context = {

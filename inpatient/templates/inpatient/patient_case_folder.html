@@ -504,7 +504,7 @@
                         <!-- Consumables Tab Content -->
                         <div id="clinical-consumables" class="clinical-pane space-y-6" style="display: none;">
                             {% if admission.status != 'Discharged' %}
-                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit allowed_departments="Mini Pharmacy,Pharmacy" exclude_pharmaceuticals="true" %}
+                                {% include 'inventory/partials/dispense_widget.html' with patient=admission.patient visit=admission.visit allowed_departments="Mini Pharmacy,Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
                             {% else %}
                                 <div class="py-20 flex flex-col items-center justify-center text-center opacity-40">
                                     <i class="fas fa-lock text-6xl text-slate-200 mb-6"></i>
