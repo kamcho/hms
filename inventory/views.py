@@ -1246,11 +1246,14 @@ def ipd_pharmacy_dashboard(request):
         admission__status='Admitted'
     ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
     
-    # Fetch pending consumables (only for currently admitted patients)
-    pending_consumables = InpatientConsumable.objects.filter(
-        quantity_dispensed__lt=F('total_quantity'),
-        admission__status='Admitted'
-    ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
+    # Fetch pending consumables (only for currently admitted patients) - restricted strictly to roles
+    if request.user.role in ['Pharmacist', 'Admin']:
+        pending_consumables = InpatientConsumable.objects.filter(
+            quantity_dispensed__lt=F('total_quantity'),
+            admission__status='Admitted'
+        ).select_related('admission__patient', 'admission__visit', 'admission__bed__ward', 'item', 'request_location')
+    else:
+        pending_consumables = InpatientConsumable.objects.none()
 
     # Apply search filter — split into words so "John Doe" works
     if search_query:

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div class="p-6 lg:p-10 bg-slate-50 min-h-screen">
+ <div class="p-6 lg:p-10 bg-slate-50 min-h-screen">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
@@ -131,7 +131,7 @@
                             {% if group.meds %}
                             <span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-[9px] font-black rounded-xl uppercase tracking-widest">{{ group.meds|length }} Med{{ group.meds|length|pluralize }}</span>
                             {% endif %}
-                            {% if group.consumables %}
+                            {% if group.consumables and user.role in "Pharmacist Admin" %}
                             <span class="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[9px] font-black rounded-xl uppercase tracking-widest">{{ group.consumables|length }} Consumable{{ group.consumables|length|pluralize }}</span>
                             {% endif %}
                         </div>
@@ -192,7 +192,7 @@
                 {% endif %}
 
                 <!-- Consumables Table -->
-                {% if group.consumables %}
+                {% if group.consumables and user.role in "Pharmacist Admin" %}
                 <div class="px-6 pt-4 pb-2 {% if group.meds %}border-t border-slate-100{% endif %}">
                     <div class="flex items-center gap-2 mb-3 px-2">
                         <i class="fas fa-box-open text-emerald-400 text-xs"></i>
@@ -248,7 +248,7 @@
                 <div class="px-8 py-3 bg-slate-50/50 border-t border-slate-100">
                     <div class="flex items-center justify-between">
                         <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                            {{ group.meds|length }} med{{ group.meds|length|pluralize }} + {{ group.consumables|length }} consumable{{ group.consumables|length|pluralize }} pending
+                            {{ group.meds|length }} med{{ group.meds|length|pluralize }} {% if user.role in "Pharmacist Admin" %}+ {{ group.consumables|length }} consumable{{ group.consumables|length|pluralize }}{% endif %} pending
                         </span>
                         {% if group.admission.admitted_at %}
                         <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
