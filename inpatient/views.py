@@ -1002,6 +1002,11 @@ def discharge_patient(request, admission_id):
             admission.discharged_by = request.user
             admission.save()
 
+            # Mark the visit as inactive since they have left the admission
+            if admission.visit:
+                admission.visit.is_active = False
+                admission.visit.save()
+
             # --- Cleanup unbilled/undispensed medications & consumables ---
             from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
 
@@ -1291,6 +1296,11 @@ def move_to_morgue(request, admission_id):
         admission.discharged_at = now
         admission.discharged_by = request.user
         admission.save()
+
+        # Mark visit as inactive
+        if admission.visit:
+            admission.visit.is_active = False
+            admission.visit.save()
 
         # --- Cleanup unbilled/undispensed medications & consumables ---
         from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
