@@ -2337,14 +2337,29 @@ def maternity_free_dispensing(request):
     from inpatient.models import InpatientConsumable
     from django.db.models import F
     
-    # Get active maternity admissions with pending consumables
-    # Find maternity admissions via the LaborDelivery link (authoritative)
-    # Also include admissions in wards typed 'Maternity' as a fallback
-    maternity_admission_ids = Admission.objects.filter(
+    # Search filter
+    search_query = request.GET.get('q', '').strip()
+    
+    # Get active maternity admissions
+    maternity_admissions_base = Admission.objects.filter(
         status='Admitted'
     ).filter(
         Q(delivery__isnull=False) | Q(bed__ward__ward_type='Maternity')
-    ).values_list('id', flat=True)
+    )
+
+    if search_query:
+        search_terms = search_query.split()
+        search_filter = Q()
+        for term in search_terms:
+            search_filter &= (
+                Q(patient__first_name__icontains=term) | 
+                Q(patient__last_name__icontains=term) | 
+                Q(patient__id_number__icontains=term) | 
+                Q(patient__phone__icontains=term)
+            )
+        maternity_admissions_base = maternity_admissions_base.filter(search_filter)
+
+    maternity_admission_ids = maternity_admissions_base.values_list('id', flat=True)
 
     pending_consumables = InpatientConsumable.objects.filter(
         quantity_dispensed__lt=F('total_quantity'),
@@ -2505,20 +2520,33 @@ def maternity_free_dispensing(request):
                 
         return redirect('maternity:free_dispensing')
 
-    # Get active maternity admissions for direct dispensing
-    maternity_admissions = Admission.objects.filter(
-        status='Admitted'
-    ).filter(
-        Q(delivery__isnull=False) | Q(bed__ward__ward_type='Maternity')
-    ).select_related('patient', 'visit', 'bed__ward').order_by('-admitted_at')
+    # Get active maternity admissions for direct dispensing (already filtered if search exists)
+    maternity_admissions = maternity_admissions_base.select_related('patient', 'visit', 'bed__ward').order_by('-admitted_at')
 
     # Consumables for search
-    maternity_items = InventoryItem.objects.all().order_by('name') # Category check can be added if needed
+    maternity_items = InventoryItem.objects.all().order_by('name') 
     
+    # Group consumables by visit/admission
+    from collections import OrderedDict
+    visits_grouped = OrderedDict()
+    for con in pending_consumables:
+        visit = con.admission.visit
+        key = visit.id if visit else f'no-visit-{con.admission.id}'
+        if key not in visits_grouped:
+            visits_grouped[key] = {
+                'visit': visit,
+                'patient': con.admission.patient,
+                'admission': con.admission,
+                'consumables': [],
+            }
+        visits_grouped[key]['consumables'].append(con)
+
     context = {
+        'visits_grouped': visits_grouped,
         'pending_consumables': pending_consumables,
         'admissions': maternity_admissions,
         'maternity_items': maternity_items,
+        'search_query': search_query,
         'title': 'MCH Free Dispensing'
     }
     return render(request, 'maternity/free_dispensing.html', context)

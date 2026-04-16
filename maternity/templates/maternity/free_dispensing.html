@@ -1,289 +1,262 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Maternity Free Dispensing - HMS{% endblock %}
+
 {% block content %}
-<div class="max-w-[1600px] mx-auto p-5">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+<div class="min-h-screen bg-slate-50/50 p-6 lg:p-10">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div>
-            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Maternity Free Dispensing</h1>
-            <p class="text-slate-500 mt-1 font-medium text-lg">Dispense free consumables to maternity admissions (Nurse Requests & Direct)</p>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">Maternity Free Dispensing</h1>
+            <p class="text-slate-500 mt-1 font-bold text-xs uppercase tracking-widest">Manage clinical consumable fulfillment for maternity care</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{% url 'maternity:dispensing_report' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-xl transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0">
-                <i class="fas fa-file-alt text-lg"></i> Consumables Report
+            <a href="{% url 'maternity:dispensing_report' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0 transition-all">
+                <i class="fas fa-file-invoice text-sm"></i> Dispensing Report
             </a>
         </div>
     </div>
 
-    <!-- Section 1: Pending Nurse Requests -->
-    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden mb-10">
-        <div class="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-gradient-to-r from-blue-50/50 to-transparent">
-            <div>
-                <h2 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    Pending Nurse Requests
-                </h2>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1 ml-13">Consumables prescribed by ward staff</p>
+    <!-- Quick Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 group hover:shadow-lg transition-all cursor-default">
+            <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-user-pregnant text-xl"></i>
             </div>
-            <span class="px-4 py-1.5 bg-blue-100 text-blue-700 text-xs font-black rounded-full uppercase tracking-wider">{{ pending_consumables|length }} PENDING</span>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Admissions</div>
+                <div class="text-2xl font-black text-slate-900">{{ admissions|length }}</div>
+            </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Patient / Admission</th>
-                        <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Item Requested</th>
-                        <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Qty</th>
-                        <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Requested By</th>
-                        <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50">
-                    {% for con in pending_consumables %}
-                    <tr class="group hover:bg-blue-50/30 transition-all">
-                        <td class="px-8 py-5">
-                            <div class="font-black text-slate-900 group-hover:text-blue-700 transition-colors">{{ con.admission.patient.full_name }}</div>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 uppercase">ADM #{{ con.admission.id }}</span>
-                                <span class="text-[10px] font-bold text-blue-500">{{ con.admission.bed.ward.name }}</span>
-                            </div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="font-bold text-slate-700">{{ con.item.name }}</div>
-                            <div class="text-[10px] text-slate-400 italic">"{{ con.instructions|default:'No specific instructions' }}"</div>
-                        </td>
-                        <td class="px-8 py-5 text-center text-sm font-black text-slate-900">
-                            {{ con.total_quantity }} <span class="text-slate-400 font-bold ml-1">{{ con.item.dispensing_unit }}</span>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="text-sm font-bold text-slate-700">{{ con.prescribed_by.username }}</div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">{{ con.prescribed_at|timesince }} ago</div>
-                        </td>
-                        <td class="px-8 py-5 text-right">
-                            <form method="POST" class="inline-flex items-center gap-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="dispense_request">
-                                <input type="hidden" name="consumable_id" value="{{ con.id }}">
-                                <input type="hidden" name="quantity" value="{{ con.total_quantity }}">
-                                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2">
-                                    <i class="fas fa-check-circle text-sm"></i> Dispense Free
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="px-8 py-16 text-center text-slate-400 italic">
-                            <i class="fas fa-check-circle block text-4xl mb-4 opacity-20 text-emerald-500"></i>
-                            <span class="text-lg font-bold">All nurse requests have been fulfilled!</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 group hover:shadow-lg transition-all cursor-default">
+            <div class="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-clipboard-check text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending Requests</div>
+                <div class="text-2xl font-black text-slate-900 text-amber-600">{{ pending_consumables|length }}</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 group hover:shadow-lg transition-all cursor-default">
+            <div class="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-box-open text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending Patients</div>
+                <div class="text-2xl font-black text-slate-900">{{ visits_grouped|length }}</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 group hover:shadow-lg transition-all cursor-default">
+            <div class="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 transition-transform group-hover:scale-110">
+                <i class="fas fa-clock text-xl"></i>
+            </div>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Lead Time</div>
+                <div class="text-2xl font-black text-slate-900">--</div>
+            </div>
         </div>
     </div>
 
-    <!-- Section 2: Direct Dispensing -->
-    <div class="">
-        <!-- <div class="lg:col-span-1">
-            <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden sticky top-5">
-                <div class="p-8 border-b border-slate-50 bg-gradient-to-br from-indigo-50/50 to-transparent">
-                    <h2 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                            <i class="fas fa-plus-circle"></i>
-                        </div>
-                        Direct Dispense
-                    </h2>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Issue items without nurse request</p>
-                </div>
-                <div class="p-8">
-                    <form method="POST" id="directDispenseForm" class="space-y-6">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="direct_dispense">
-                        
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Select Patient Admission</label>
-                            <select name="admission_id" class="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 text-sm font-bold focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all appearance-none bg-slate-50/50" required>
-                                <option value="" disabled selected>-- Choose Admission --</option>
-                                {% for adm in admissions %}
-                                <option value="{{ adm.id }}">{{ adm.patient.full_name }} (ADM #{{ adm.id }}) - {{ adm.bed.ward.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="relative">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Search & Select Item</label>
-                            <input type="text" id="itemSearch" class="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 text-sm font-bold focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all bg-slate-50/50" placeholder="Type item name..." oninput="debouncedSearch(this.value)" autocomplete="off">
-                            <input type="hidden" name="item_id" id="selectedItemId" required>
-                            <div id="searchResults" class="absolute w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 hidden max-h-60 overflow-y-auto p-2"></div>
-                        </div>
-
-                        <div id="selectionSummary" class="hidden animate-fade-in p-5 rounded-2xl bg-emerald-50 border border-emerald-100">
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <div class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Selected Item</div>
-                                    <div class="font-black text-slate-800" id="selectedItemName">--</div>
-                                </div>
-                                <button type="button" onclick="clearSelection()" class="w-8 h-8 rounded-full bg-white text-rose-500 shadow-sm flex items-center justify-center hover:bg-rose-50 transition-colors">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="flex gap-4 items-end">
-                                <div class="flex-1">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Quantity</label>
-                                    <input type="number" name="quantity" id="dispense_quantity" value="1" min="1" class="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 text-sm font-black text-center focus:border-emerald-500 transition-all outline-none">
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock</div>
-                                    <div class="font-black text-emerald-600 text-sm" id="selectedItemStock">--</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" id="submitBtn" disabled class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 disabled:opacity-30 disabled:translate-y-0 disabled:shadow-none transition-all flex items-center justify-center gap-3">
-                            <i class="fas fa-paper-plane"></i> Process Dispense
-                        </button>
-                    </form>
-                </div>
+    <!-- Search Section -->
+    <div class="mb-10">
+        <form method="GET" action="" class="relative max-w-2xl group">
+            <div class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-blue-600 transition-colors">
+                <i class="fas fa-search text-sm"></i>
             </div>
-        </div> -->
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search patients by name, ID number or phone..." 
+                   class="w-full bg-white border-2 border-slate-100 text-slate-900 text-xs font-black py-5 pl-14 pr-32 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm group-hover:border-slate-200">
+            
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {% if search_query %}
+                <a href="{% url 'maternity:free_dispensing' %}" class="px-3 py-2 text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors mr-1">
+                    <i class="fas fa-times mr-1"></i> Clear
+                </a>
+                {% endif %}
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
 
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
-                <div class="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                    <h2 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 shadow-sm">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        Active Maternity List
-                    </h2>
+    <!-- Main Dashboard Body -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-10">
+        
+        <!-- Left: Fulfillment Queue (2/3 width) -->
+        <div class="xl:col-span-2 space-y-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-2 h-8 bg-blue-600 rounded-full"></div>
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Fulfillment Queue</h2>
+                {% if search_query %}
+                <span class="text-[10px] font-bold text-slate-400 uppercase ml-2">Results for "{{ search_query }}"</span>
+                {% endif %}
+                <div class="flex-1 border-b border-slate-200 border-dashed ml-4"></div>
+            </div>
+
+            {% if not visits_grouped %}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-20 text-center">
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-user-slash text-2xl text-slate-300"></i>
                 </div>
+                {% if search_query %}
+                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">No Match Found</p>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-tight">Try searching with a different name or ID.</p>
+                <a href="{% url 'maternity:free_dispensing' %}" class="inline-block mt-8 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-700">View All Pending</a>
+                {% else %}
+                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Queue is Empty</p>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-tight">All nurse requests have been fulfilled for today.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% for visit_id, group in visits_grouped.items %}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-xl hover:shadow-slate-200/50 group">
+                <!-- Patient Header -->
+                <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                    <div class="flex items-center gap-6">
+                        <div class="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 text-lg font-black shadow-sm group-hover:border-blue-500 transition-colors">
+                            {{ group.patient.first_name|first }}{{ group.patient.last_name|first }}
+                        </div>
+                        <div>
+                            <div class="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">{{ group.patient.full_name }}</div>
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <i class="fas fa-fingerprint text-slate-300"></i> ADM #{{ group.admission.id }}
+                                </span>
+                                <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                                    <i class="fas fa-bed text-blue-400"></i> {{ group.admission.bed.ward.name }} &mdash; {{ group.admission.bed.bed_number }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block px-4 py-1.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-blue-500/20">
+                            {{ group.consumables|length }} Item{{ group.consumables|length|pluralize }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Consumables Table -->
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left">
                         <thead>
-                            <tr class="bg-slate-50/50">
-                                <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Maternity Admission</th>
-                                <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Ward/Bed</th>
-                                <th class="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Admitted On</th>
+                            <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                                <th class="px-8 py-4">Consumable</th>
+                                <th class="px-8 py-4">Directions</th>
+                                <th class="px-8 py-4 text-center">Required</th>
+                                <th class="px-8 py-4">Requestor</th>
+                                <th class="px-8 py-4 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50">
-                            {% for adm in admissions %}
-                            <tr class="hover:bg-slate-50/50 transition-colors">
+                            {% for con in group.consumables %}
+                            <tr class="hover:bg-blue-50/20 transition-colors group/row">
                                 <td class="px-8 py-5">
-                                    <div class="font-black text-slate-900">{{ adm.patient.full_name }}</div>
-                                    <div class="text-[10px] font-bold text-slate-400 uppercase mt-1">Visit ID: #{{ adm.visit.id }} • Admission #{{ adm.id }}</div>
+                                    <div class="text-xs font-black text-slate-800 uppercase tracking-tighter">{{ con.item.name }}</div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <div class="text-[10px] text-slate-400 font-bold italic truncate max-w-[200px]" title="{{ con.instructions }}">
+                                        {{ con.instructions|default:'No clinical instructions' }}
+                                    </div>
                                 </td>
                                 <td class="px-8 py-5 text-center">
-                                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-lg uppercase tracking-wider">
-                                        {{ adm.bed.ward.name }} / {{ adm.bed.bed_number }}
-                                    </span>
+                                    <span class="text-xs font-black text-slate-900">{{ con.total_quantity }}</span>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase ml-1">{{ con.item.dispensing_unit }}</span>
                                 </td>
                                 <td class="px-8 py-5">
-                                    <div class="text-sm font-bold text-slate-700">{{ adm.admitted_at|date:"d M Y" }}</div>
-                                    <div class="text-[10px] text-slate-400 font-bold uppercase">{{ adm.admitted_at|time }}</div>
+                                    <div class="text-[10px] font-black text-slate-600 uppercase">{{ con.prescribed_by.username }}</div>
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{{ con.prescribed_at|timesince }} ago</div>
                                 </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="px-8 py-10 text-center text-slate-400 italic font-bold">No active maternity admissions found.</td>
+                                <td class="px-8 py-5 text-right">
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="dispense_request">
+                                        <input type="hidden" name="consumable_id" value="{{ con.id }}">
+                                        <input type="hidden" name="quantity" value="{{ con.total_quantity }}">
+                                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2">
+                                            Confirm Dispense
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+            {% endfor %}
         </div>
+
+        <!-- Right: Active List / Sidebar (1/3 width) -->
+        <div class="space-y-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Maternity Admissions</h2>
+                <div class="flex-1 border-b border-slate-200 border-dashed ml-4"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-6 border-b border-slate-50 flex items-center justify-between">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Admitted</span>
+                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[9px] font-black rounded-lg">{{ admissions|length }}</span>
+                </div>
+                <div class="divide-y divide-slate-50 max-h-[700px] overflow-y-auto custom-scrollbar">
+                    {% for adm in admissions %}
+                    <div class="p-6 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xs">
+                                {{ adm.patient.first_name|first }}{{ adm.patient.last_name|first }}
+                            </div>
+                            <div>
+                                <div class="text-xs font-black text-slate-900 uppercase tracking-tight mb-1">{{ adm.patient.full_name }}</div>
+                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Bed: {{ adm.bed.bed_number }}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-black text-slate-900 mb-1">ADM #{{ adm.id }}</div>
+                            <div class="text-[8px] font-bold text-slate-400 uppercase">{{ adm.admitted_at|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-10 text-center">
+                        <i class="fas fa-users-slash text-slate-200 text-3xl mb-3 block"></i>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">No active admissions</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Hint Card -->
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-xl shadow-blue-500/20">
+                <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
+                    <i class="fas fa-info-circle text-xl"></i>
+                </div>
+                <h3 class="text-lg font-black uppercase tracking-tight mb-3">Free Dispensing Policy</h3>
+                <p class="text-blue-50 text-[11px] font-bold uppercase leading-relaxed tracking-wider opacity-80">
+                    All items dispensed through this module are automatically marked with 0 KSH cost. This is restricted to clinical consumables for maternity patients.
+                </p>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<script>
-    let searchTimeout;
-
-    function debouncedSearch(query) {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            if (query.length < 2) {
-                document.getElementById('searchResults').classList.add('hidden');
-                return;
-            }
-            // Use existing API but we will filter results for UI
-            fetch(`{% url 'inventory:search_inventory' %}?q=${encodeURIComponent(query)}`)
-                .then(r => r.json())
-                .then(data => {
-                    renderResults(data.results);
-                });
-        }, 300);
-    }
-
-    function renderResults(items) {
-        const container = document.getElementById('searchResults');
-        container.innerHTML = '';
-        if (items.length === 0) {
-            container.innerHTML = '<div class="p-4 text-xs text-slate-400 font-bold italic text-center">No compatible items found</div>';
-            container.classList.remove('hidden');
-            return;
-        }
-
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'px-4 py-3 hover:bg-indigo-50 rounded-xl cursor-pointer transition-all flex justify-between items-center group';
-            div.innerHTML = `
-                <div>
-                    <div class="font-black text-slate-700 text-sm group-hover:text-indigo-700">${item.name}</div>
-                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${item.category}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-xs font-black text-emerald-600">${item.stock_quantity || 0}</div>
-                    <div class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">In Stock</div>
-                </div>
-            `;
-            div.onclick = () => selectItem(item);
-            container.appendChild(div);
-        });
-        container.classList.remove('hidden');
-    }
-
-    function selectItem(item) {
-        document.getElementById('selectedItemId').value = item.id;
-        document.getElementById('selectedItemName').innerText = item.name;
-        document.getElementById('selectedItemStock').innerText = item.stock_quantity || 0;
-        
-        document.getElementById('itemSearch').value = '';
-        document.getElementById('searchResults').classList.add('hidden');
-        document.getElementById('selectionSummary').classList.remove('hidden');
-        document.getElementById('submitBtn').disabled = false;
-        
-        // Quality check
-        const qtyInput = document.getElementById('dispense_quantity');
-        qtyInput.max = item.stock_quantity || 0;
-    }
-
-    function clearSelection() {
-        document.getElementById('selectedItemId').value = '';
-        document.getElementById('selectionSummary').classList.add('hidden');
-        document.getElementById('submitBtn').disabled = true;
-    }
-
-    // Close search results on click outside
-    document.addEventListener('click', function(e) {
-        const searchContainer = document.getElementById('itemSearch').parentElement;
-        if (!searchContainer.contains(e.target)) {
-            document.getElementById('searchResults').classList.add('hidden');
-        }
-    });
-</script>
-
 <style>
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
     }
-    .animate-fade-in {
-        animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f8fafc;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
     }
 </style>
 {% endblock %}
