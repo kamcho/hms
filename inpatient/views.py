@@ -140,7 +140,11 @@ def admit_patient(request, patient_id):
             messages.success(request, f"Patient {patient.full_name} admitted successfully.")
             return redirect('inpatient:patient_case_folder', admission_id=admission.id)
     else:
-        form = AdmissionForm(patient=patient)
+        initial_data = {}
+        provisional_diagnosis = request.GET.get('provisional_diagnosis')
+        if provisional_diagnosis:
+            initial_data['provisional_diagnosis'] = provisional_diagnosis
+        form = AdmissionForm(patient=patient, initial=initial_data)
         
     return render(request, 'inpatient/admit_patient.html', {
         'form': form,

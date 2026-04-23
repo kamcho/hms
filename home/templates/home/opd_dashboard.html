@@ -132,10 +132,12 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                            <span class="type-badge type-{{ item.queue_type|lower|default:'initial' }}">
-                                                <i class="fas {% if item.queue_type == 'REVIEW' %}fa-redo{% else %}fa-user-plus{% endif %}"></i>
+                                            <span class="type-badge {% if item.queue_type == 'REVIEW' %}type-review{% elif item.is_revisit %}type-revisit{% else %}type-initial{% endif %}">
+                                                <i class="fas {% if item.queue_type == 'REVIEW' %}fa-redo{% elif item.is_revisit %}fa-history{% else %}fa-user-plus{% endif %}"></i>
                                                 {% if item.queue_type == 'REVIEW' %}
                                                     REVIEW
+                                                {% elif item.is_revisit %}
+                                                    REVISIT
                                                 {% else %}
                                                     NEW VISIT
                                                 {% endif %}
@@ -241,6 +243,12 @@
         color: #9d174d;
         border: 1px solid #fce7f3;
         animation: pulse-pink 2s infinite;
+    }
+
+    .type-revisit {
+        background: #f5f3ff;
+        color: #5b21b6;
+        border: 1px solid #ddd6fe;
     }
 
     @keyframes pulse-pink {

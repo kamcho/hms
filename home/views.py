@@ -402,6 +402,10 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['symptoms'] = symptoms
         context['impressions'] = impressions
         context['diagnoses'] = diagnoses
+        
+        # Get latest diagnosis for pre-filling admission
+        latest_diag_obj = diagnoses.first()
+        context['latest_diagnosis'] = latest_diag_obj.data if latest_diag_obj else ""
             
         context['triage_entries'] = TriageEntry.objects.filter(**triage_filter).order_by('-entry_date')
         context['consultations'] = Consultation.objects.filter(**consultation_filter).order_by('-checkin_date')
@@ -1723,12 +1727,10 @@ def create_prescription(request, visit_id):
     from django.db.models import Sum, Q 
     from inventory.models import StockRecord
 
-    # Determine eligible departments for stock check
-    departments = ['Pharmacy'] # Base for everyone
-    if visit.visit_type == 'OUT-PATIENT':
-        departments.append('Main Store')
-    else: # In-Patient
-        departments.extend(['Main Store', 'Mini Pharmacy'])
+    # Determine eligible departments for stock check (Pharmacy only for outpatient, include Mini Pharmacy for inpatient)
+    departments = ['Pharmacy'] 
+    if visit.visit_type == 'IN-PATIENT':
+        departments.append('Mini Pharmacy')
     
     med_metadata = {}
     for item in medications:
@@ -2093,7 +2095,10 @@ def edit_prescription(request, prescription_id):
     from django.db.models import Sum
     from inventory.models import StockRecord
 
-    departments = ['Pharmacy', 'Main Store', 'Mini Pharmacy']
+    # Determine eligible departments for stock check (Pharmacy only for outpatient, include Mini Pharmacy for inpatient)
+    departments = ['Pharmacy']
+    if prescription.visit and prescription.visit.visit_type == 'IN-PATIENT':
+        departments.append('Mini Pharmacy')
     
     med_metadata = {}
     for item in medications:
@@ -2886,6 +2891,12 @@ def opd_dashboard(request):
         # Get latest triage for this visit
         triage = TriageEntry.objects.filter(visit=item.visit).order_by('-entry_date').first()
         
+        # Check if patient has visited before today
+        has_previous_visit = Visit.objects.filter(
+            patient=item.visit.patient, 
+            visit_date__date__lt=today
+        ).exists()
+        
         queue_list.append({
             'queue_id': item.id,
             'patient': item.visit.patient,
@@ -2893,6 +2904,7 @@ def opd_dashboard(request):
             'sent_to': item.sent_to.name if item.sent_to else 'General OPD',
             'queued_at': item.created_at,
             'queue_type': item.queue_type,
+            'is_revisit': has_previous_visit,
             'wait_time': None, # Can calculate relative time in template
             'triage': triage,
             'priority_rank': 0 if not triage else {

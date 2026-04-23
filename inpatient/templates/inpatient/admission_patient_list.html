@@ -36,8 +36,7 @@
         <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                 <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Search Results</h2>
-                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-black uppercase tracking-widest">{{
-                patients|length }} Records Found</span>
+                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-black uppercase tracking-widest">{{ patients|length }} Records Found</span>
             </div>
             <div class="divide-y divide-slate-50">
                 {% for patient in patients %}
@@ -52,12 +51,9 @@
                                         <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-black rounded uppercase tracking-widest">{{ patient.gender }} • {{ patient.age }}Y</span>
                                     </div>
                                     <div class="flex items-center gap-4 text-xs font-bold text-slate-400">
-                                        <span class="flex items-center gap-1"><i class="fas fa-id-card"></i> {{ patient.id
-                                        }}</span>
-                                        <span class="flex items-center gap-1"><i class="fas fa-phone"></i> {{ patient.phone
-                                        }}</span>
-                                        <span class="flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> {{
-                                        patient.location }}</span>
+                                        <span class="flex items-center gap-1"><i class="fas fa-id-card"></i> {{ patient.id }}</span>
+                                        <span class="flex items-center gap-1"><i class="fas fa-phone"></i> {{ patient.phone }}</span>
+                                        <span class="flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> {{ patient.location }}</span>
                                     </div>
                                 </div>
                             </div>

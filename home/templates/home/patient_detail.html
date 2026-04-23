@@ -536,7 +536,7 @@
                                     </a>
 
                                 {% else %}
-                                    <a href="{% url 'inpatient:admit_patient' patient.pk %}" class="modern-btn btn-warning" style="width: 100%;">
+                                    <a href="{% url 'inpatient:admit_patient' patient.pk %}?provisional_diagnosis={{ latest_diagnosis|urlencode }}" class="modern-btn btn-warning" style="width: 100%;">
                                         <i class="fas fa-bed"></i> Admit for Observation
                                     </a>
                                     {% if latest_visit %}
