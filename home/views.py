@@ -97,10 +97,13 @@ class PatientListView(LoginRequiredMixin, ListView):
         # Add statistics
         today = timezone.localdate()
         all_patients = Patient.objects.all()
+        from datetime import datetime, time
+        start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+        end_of_day = timezone.make_aware(datetime.combine(today, time.max))
         
         context['stats'] = {
             'total': all_patients.count(),
-            'new_today': all_patients.filter(created_at__date=today).count(),
+            'new_today': all_patients.filter(created_at__range=(start_of_day, end_of_day)).count(),
             'male': all_patients.filter(gender='M').count(),
             'female': all_patients.filter(gender='F').count(),
         }
@@ -2890,10 +2893,13 @@ def opd_dashboard(request):
     """
     today = timezone.localdate()
     
-    # 1. Analytics
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+    
     # Total "Walk In" or "Appointment" visits today
     todays_visits_count = Visit.objects.filter(
-        visit_date__date=today,
+        visit_date__range=(start_of_day, end_of_day),
         visit_type='OUT-PATIENT'
     ).count()
     
@@ -2905,7 +2911,7 @@ def opd_dashboard(request):
         status='PENDING',
         visit__is_active=True,
         visit__visit_type='OUT-PATIENT',
-        visit__visit_date__date=today
+        visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related('visit__patient', 'sent_to', 'qued_from')
 
     # Apply Search Filter
@@ -2922,7 +2928,7 @@ def opd_dashboard(request):
 
     
     # Priority Distribution from Triage Entries linked to today's visits
-    triage_today = TriageEntry.objects.filter(visit__visit_date__date=today)
+    triage_today = TriageEntry.objects.filter(visit__visit_date__range=(start_of_day, end_of_day))
     critical_count = triage_today.filter(priority__in=['URGENT', 'CRITICAL']).count()
     
     # 2. The Queue Data
@@ -2938,7 +2944,7 @@ def opd_dashboard(request):
         # Check if patient has visited before today
         has_previous_visit = Visit.objects.filter(
             patient=item.visit.patient, 
-            visit_date__date__lt=today
+            visit_date__lt=start_of_day
         ).exists()
         
         queue_list.append({
