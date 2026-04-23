@@ -380,6 +380,13 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         active_adm = Admission.objects.filter(patient=patient, status='Admitted').first()
         context['active_admission'] = active_adm
         
+        # TB Screening context
+        from .forms import TBScreeningForm
+        from .models import TBScreening
+        context['tb_screening_form'] = TBScreeningForm()
+        if latest_visit:
+            context['current_tb_screening'] = TBScreening.objects.filter(visit=latest_visit).first()
+        
         if active_adm:
             context['active_medications'] = active_adm.medications.all().order_by('-prescribed_at')
             context['active_services'] = active_adm.services.all().order_by('-date_provided')
@@ -1245,6 +1252,43 @@ def update_diagnosis(request, pk):
             diagnosis.updated_by = request.user
             diagnosis.save()
             return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+@login_required
+def add_tb_screening(request):
+    """Save mandatory TB screening data for a visit"""
+    if request.method == 'POST':
+        try:
+            from .forms import TBScreeningForm
+            from .models import TBScreening
+            
+            visit_id = request.POST.get('visit_id')
+            visit = get_object_or_404(Visit, pk=visit_id)
+            
+            # Block if not latest visit
+            latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
+            if visit != latest_visit:
+                return JsonResponse({'success': False, 'error': 'Cannot add screening to a previous visit.'})
+                
+            if not visit.is_active:
+                return JsonResponse({'success': False, 'error': 'Cannot add screening to a closed visit.'})
+
+            # Handle existing screening (Update instead of Create if already exists)
+            screening = TBScreening.objects.filter(visit=visit).first()
+            form = TBScreeningForm(request.POST, instance=screening)
+            
+            if form.is_valid():
+                tb_obj = form.save(commit=False)
+                tb_obj.visit = visit
+                tb_obj.screened_by = request.user
+                tb_obj.save()
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid data submitted.'})
+                
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request'})

@@ -690,6 +690,37 @@
                                                 </div>
                                             </div>
                                         {% endfor %}
+                                        <!-- 0.5 TB SCREENING SECTION -->
+                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                            <div class="event-header">
+                                                <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
+                                                    <i class="fas fa-lungs"></i> TB Screening
+                                                </h5>
+                                                {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
+                                                    {% if user.role == 'Doctor' or user.role == 'Nurse' %}
+                                                        <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openTBModal('{{ visit.id }}')">
+                                                            <i class="fas fa-plus"></i> {% if visit.tb_screening %}Edit{% else %}Add{% endif %}
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            {% if visit.tb_screening %}
+                                                <div style="background: {% if visit.tb_screening.has_cough or visit.tb_screening.has_chest_pain or visit.tb_screening.has_night_sweats or visit.tb_screening.has_unexplained_fever or visit.tb_screening.has_weight_loss or visit.tb_screening.failure_to_thrive %}#fff1f2{% else %}#f0fdf4{% endif %}; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--clinical-border);">
+                                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem;">
+                                                        <div style="font-size: 0.75rem;">Cough: <strong>{% if visit.tb_screening.has_cough %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        <div style="font-size: 0.75rem;">Chest Pain: <strong>{% if visit.tb_screening.has_chest_pain %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        <div style="font-size: 0.75rem;">Night Sweats: <strong>{% if visit.tb_screening.has_night_sweats %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        <div style="font-size: 0.75rem;">Fever: <strong>{% if visit.tb_screening.has_unexplained_fever %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        <div style="font-size: 0.75rem;">Weight Loss: <strong>{% if visit.tb_screening.has_weight_loss %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        {% if visit.patient.age < 15 %}
+                                                            <div style="font-size: 0.75rem;">Failure to Thrive: <strong>{% if visit.tb_screening.failure_to_thrive %}<span class="text-danger">YES</span>{% else %}NO{% endif %}</strong></div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <p style="font-size: 0.8rem; color: var(--clinical-text-muted); margin: 0; padding: 0.5rem;">No TB screening recorded for this visit.</p>
+                                            {% endif %}
+                                        </div>
                                         <!-- 1. SYMPTOMS SECTION -->
                                         <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
                                             <div class="event-header">
@@ -1228,6 +1259,32 @@
                 </div>
             </div>
         {% endif %}
+        <!-- TB Screening Modal -->
+        <div id="tbModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header" style="background: var(--clinical-primary); border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-lungs"></i> Compulsory TB Screening
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('tbModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="tbScreeningForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="visit_id" id="tb_visit_id">
+                        <div class="clinical-form-styled">
+                            {{ tb_screening_form.as_p }}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('tbModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitTBScreening()">Save Screening</button>
+                </div>
+            </div>
+        </div>
         <!-- Symptoms Modal -->
         <div id="symptomsModal" class="custom-modal">
             <div class="modal-content" style="max-width: 500px;">
@@ -1671,6 +1728,35 @@
                 }
             })
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    /**
+     * TB Screening Logic
+     */
+    function openTBModal(visitId) {
+        document.getElementById('tb_visit_id').value = visitId;
+        showModal('tbModal');
+    }
+
+    function submitTBScreening() {
+        const form = document.getElementById('tbScreeningForm');
+        const formData = new FormData(form);
+        const url = "{% url 'home:add_tb_screening' %}";
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Success', 'TB screening recorded successfully.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to record TB screening.', null, 'error');
+                }
+            })
+            .catch(err => showMessageModal('Error', 'Network error while saving TB screening.', null, 'error'));
     }
 
     function showMessageModal(title, message, callback, type = 'info') {

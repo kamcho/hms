@@ -235,7 +235,33 @@ class PatientForm(forms.ModelForm):
             self.fields['payment_method'].required = False
             # Hide them in the template or just leave them as optional
 
-from .models import Symptoms, Impression, Diagnosis, Referral
+from .models import Symptoms, Impression, Diagnosis, Referral, TBScreening
+ 
+class TBScreeningForm(forms.ModelForm):
+    """Form for compulsory TB screening"""
+    class Meta:
+        model = TBScreening
+        fields = [
+            'has_cough', 'has_chest_pain', 'has_night_sweats', 
+            'has_unexplained_fever', 'has_weight_loss', 'failure_to_thrive'
+        ]
+        widgets = {
+            'has_cough': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_chest_pain': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_night_sweats': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_unexplained_fever': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_weight_loss': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'failure_to_thrive': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Apply Tailwind styling to all checkbox fields
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 transition-all cursor-pointer'
+            })
+
 
 class SymptomsForm(forms.ModelForm):
     class Meta:

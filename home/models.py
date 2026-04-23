@@ -398,3 +398,18 @@ class ProcedureCompletion(models.Model):
 
     def __str__(self):
         return f"Procedure completion for Visit #{self.visit_id} - Item #{self.invoice_item_id}"
+
+class TBScreening(models.Model):
+    visit = models.OneToOneField(Visit, on_delete=models.CASCADE, related_name='tb_screening')
+    has_cough = models.BooleanField(default=False, verbose_name="Cough")
+    has_chest_pain = models.BooleanField(default=False, verbose_name="Chest Pain")
+    has_night_sweats = models.BooleanField(default=False, verbose_name="Night Sweats")
+    has_unexplained_fever = models.BooleanField(default=False, verbose_name="Unexplained Fever")
+    has_weight_loss = models.BooleanField(default=False, verbose_name="Weight Loss")
+    failure_to_thrive = models.BooleanField(default=False, verbose_name="Failure to Thrive (in children)")
+    
+    screened_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='tb_screenings')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"TB Screening for {self.visit.patient.full_name}"

@@ -18,6 +18,7 @@ urlpatterns = [
     path('impression/add/', views.add_impression, name='add_impression'),
     path('impression/<int:pk>/update/', views.update_impression, name='update_impression'),
     path('diagnosis/add/', views.add_diagnosis, name='add_diagnosis'),
+    path('tb-screening/add/', views.add_tb_screening, name='add_tb_screening'),
     path('diagnosis/<int:pk>/update/', views.update_diagnosis, name='update_diagnosis'),
     path('notes/<int:pk>/update/', views.update_consultation_note, name='update_consultation_note'),
     path('patients/<int:pk>/delete/', views.PatientDeleteView.as_view(), name='patient_delete'),
