@@ -95,7 +95,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         
         # Add statistics
-        today = timezone.now().date()
+        today = timezone.localdate()
         all_patients = Patient.objects.all()
         
         context['stats'] = {
@@ -885,7 +885,7 @@ def reception_dashboard(request):
     user_role = request.user.role
     
     # Get today's visits
-    today = timezone.now().date()
+    today = timezone.localdate()
     today_visits = Visit.objects.filter(visit_date__date=today).count()
     
     # Get total patients count
@@ -2369,7 +2369,7 @@ def pharmacy_dashboard(request):
     # Identify low stock items (below reorder level)
     low_stock_items = []
     expiring_soon_items = []
-    today = timezone.now().date()
+    today = timezone.localdate()
     thirty_days_later = today + timedelta(days=30)
 
     for stock in pharmacy_stock:
@@ -2797,7 +2797,7 @@ def appointments_dashboard(request):
     Dashboard for Doctors to view Appointments
     Shows analytics and a schedule of appointments
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     # Base query for all active appointments
     appointments = Appointments.objects.all().select_related('patient').order_by('appointment_date')
@@ -2888,7 +2888,7 @@ def opd_dashboard(request):
     Dashboard for Outpatient Department (Doctors)
     Shows analytics and waiting patient queue
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     # 1. Analytics
     # Total "Walk In" or "Appointment" visits today
@@ -3219,7 +3219,7 @@ def ambulance_dashboard(request):
         return redirect('home:ambulance_dashboard')
 
     # Fetch Data
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date = today - timedelta(days=30)
     
     # Summary Stats
