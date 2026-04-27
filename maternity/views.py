@@ -92,6 +92,8 @@ def maternity_dashboard(request):
 def anc_dashboard(request):
     """Dedicated Antenatal Care Dashboard"""
     today = timezone.now().date()
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     
     # Recent ANC Visits (last 20)
     recent_anc_visits = AntenatalVisit.objects.select_related('pregnancy__patient').order_by('-visit_date')[:20]
@@ -186,6 +188,8 @@ def anc_dashboard(request):
 def pnc_dashboard(request):
     """Dedicated Postnatal Care Dashboard"""
     today = timezone.now().date()
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     
     # Recent PNC Visits
     recent_mother_pnc = PostnatalMotherVisit.objects.select_related('delivery__pregnancy__patient').order_by('-visit_date')[:15]
@@ -316,6 +320,8 @@ def pnc_dashboard(request):
 def visit_queue_center(request):
     """Refined Clinical Queue Center for MCH Department with Search Capabilities"""
     today = timezone.now().date()
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     search_query = request.GET.get('q', '')
 
     # Helper function to process queue items with maternity context
@@ -350,9 +356,7 @@ def visit_queue_center(request):
                 # CWC detection (Immunization or Consumables)
                 from inventory.models import DispensedItem
                 has_consumables = DispensedItem.objects.filter(visit=que.visit).exists()
-                sod = timezone.make_aware(datetime.combine(today, time.min))
-                eod = timezone.make_aware(datetime.combine(today, time.max))
-                has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered__range=(sod, eod)).exists()
+                has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered__range=(start_of_day, end_of_day)).exists()
                 if has_consumables or has_vaccines:
                     que.has_cwc_records = True
 
