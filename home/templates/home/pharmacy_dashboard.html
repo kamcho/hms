@@ -12,9 +12,10 @@
         --pharm-gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         --pharm-bg: #0f172a;
         --pharm-card-bg: #1e293b;
-        --pharm-border: rgba(148, 163, 184, 0.1);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
+        --pharm-border: rgba(148, 163, 184, 0.2);
+        --text-primary: #ffffff;
+        --text-secondary: #e2e8f0;
+        --text-muted: #94a3b8;
     }
 
     body {
@@ -242,24 +243,27 @@
     }
 
     .med-table th {
-        padding: 0.75rem 1rem;
+        padding: 1rem;
         text-align: left;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text-primary);
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .med-table td {
-        padding: 1.25rem 1rem;
-        background: rgba(255, 255, 255, 0.03);
+        padding: 1.5rem 1rem;
+        background: rgba(255, 255, 255, 0.04);
         border-top: 1px solid var(--pharm-border);
         border-bottom: 1px solid var(--pharm-border);
+        font-size: 1.05rem;
+        color: var(--text-primary);
     }
 
-    .med-table tr td:first-child { border-left: 1px solid var(--pharm-border); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-    .med-table tr td:last-child { border-right: 1px solid var(--pharm-border); border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+    .med-table tr td:first-child { border-left: 1px solid var(--pharm-border); border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+    .med-table tr td:last-child { border-right: 1px solid var(--pharm-border); border-top-right-radius: 16px; border-bottom-right-radius: 16px; }
 
     .side-card {
         background: var(--pharm-card-bg);
@@ -403,7 +407,8 @@
                                     <thead>
                                         <tr>
                                             <th>Item Name</th>
-                                            <th>Dosage & Frequency</th>
+                                            <th>Dose</th>
+                                            <th>Frequency</th>
                                             <th>Qty</th>
                                             <th>Instructions</th>
                                             <th>Category</th>
@@ -412,27 +417,26 @@
                                     <tbody>
                                         {% for item in group.prescriptions %}
                                             <tr>
-                                                <td class="font-bold whitespace-nowrap">{{ item.medication.name }}</td>
-                                                <td class="text-xs">
-                                                    <div class="font-bold text-slate-300">{{ item.dose_count }} units</div>
-                                                    <div class="text-[10px] text-slate-500 uppercase tracking-tighter">{{ item.frequency }}</div>
-                                                </td>
-                                                <td class="font-bold">{{ item.quantity }}</td>
-                                                <td class="text-xs italic text-slate-400">
+                                                <td class="font-black whitespace-nowrap" style="color: #60a5fa;">{{ item.medication.name }}</td>
+                                                <td class="font-black" style="color: #fbbf24;">{{ item.dose_count }} units</td>
+                                                <td class="font-black uppercase tracking-wider" style="color: #34d399;">{{ item.frequency }}</td>
+                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="italic font-medium" style="color: #e2e8f0;">
                                                     {{ item.instructions|default:"No instructions" }}
                                                 </td>
-                                                <td><span class="badge badge-primary">Medication</span></td>
+                                                <td><span class="badge badge-primary" style="font-size: 12px; padding: 0.5rem 1rem;">Medication</span></td>
                                             </tr>
                                         {% endfor %}
                                         {% for item in group.consumables %}
                                             <tr>
-                                                <td class="font-bold whitespace-nowrap">{{ item.inventory_item.name }}</td>
-                                                <td class="text-xs text-slate-500">-</td>
-                                                <td class="font-bold">{{ item.quantity }}</td>
-                                                <td class="text-xs italic text-slate-400">
+                                                <td class="font-black whitespace-nowrap" style="color: #f472b6;">{{ item.inventory_item.name }}</td>
+                                                <td class="text-slate-400">-</td>
+                                                <td class="text-slate-400">-</td>
+                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="italic font-medium" style="color: #e2e8f0;">
                                                     {{ item.instructions|default:"-" }}
                                                 </td>
-                                                <td><span class="badge badge-warning">Consumable</span></td>
+                                                <td><span class="badge badge-warning" style="font-size: 12px; padding: 0.5rem 1rem;">Consumable</span></td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
