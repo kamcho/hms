@@ -113,18 +113,22 @@ def anc_dashboard(request):
     active_count = Pregnancy.objects.filter(status='Active').count()
     anc_coverage = int((total_anc_this_month / (active_count * 1.0)) * 100) if active_count > 0 else 0
 
+    from datetime import time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+
     # ANC Receiving Queue (Existing Visits)
     search_query = request.GET.get('q', '')
     anc_queue = AntenatalVisit.objects.filter(
         is_closed=False,
-        visit_date=today
+        visit_date__range=(start_of_day, end_of_day)
     ).select_related('pregnancy__patient').order_by('created_at')
 
     # New Arrivals (using PatientQue)
     # Filter by 'ANC' department OR 'Maternity' fallback
     new_arrivals_raw = PatientQue.objects.filter(
         Q(sent_to__name__iexact='ANC') | Q(sent_to__name__iexact='Maternity'),
-        visit__visit_date__date=today,
+        visit__visit_date__range=(start_of_day, end_of_day),
         visit__is_active=True,
         status__iexact='PENDING'
     ).select_related('visit__patient').prefetch_related('visit__invoice__items').order_by('-created_at')
@@ -151,7 +155,7 @@ def anc_dashboard(request):
             que.active_anc_visit = AntenatalVisit.objects.filter(
                 pregnancy=que.active_pregnancy, 
                 is_closed=False, 
-                visit_date=today
+                visit_date__range=(start_of_day, end_of_day)
             ).first()
         new_arrivals.append(que)
         seen_patients.add(que.visit.patient.id)
@@ -209,23 +213,27 @@ def pnc_dashboard(request):
     total_pnc_this_month = PostnatalMotherVisit.objects.filter(visit_date__gte=today.replace(day=1)).count() + \
                            PostnatalBabyVisit.objects.filter(visit_date__gte=today.replace(day=1)).count()
     
+    from datetime import time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+
     # PNC Receiving Queues
     search_query = request.GET.get('q', '')
     mother_queue = PostnatalMotherVisit.objects.filter(
         service_received=False,
-        visit_date=today
+        visit_date__range=(start_of_day, end_of_day)
     ).select_related('delivery__pregnancy__patient').order_by('created_at')
     
     baby_queue = PostnatalBabyVisit.objects.filter(
         service_received=False,
-        visit_date=today
+        visit_date__range=(start_of_day, end_of_day)
     ).select_related('newborn__delivery__pregnancy__patient').order_by('created_at')
 
     # New Arrivals from Triage (using PatientQue)
     # Filter by explicit 'PNC' or fallback to 'Maternity' (legacy)
     new_arrivals_raw = PatientQue.objects.filter(
         Q(sent_to__name='PNC') | Q(sent_to__name='Maternity'), 
-        visit__visit_date__date=today
+        visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related('visit__patient').prefetch_related('visit__invoice__items').order_by('-created_at')
 
     new_pnc_arrivals = []
@@ -253,7 +261,7 @@ def pnc_dashboard(request):
             patient = que.visit.patient
             # Case 1: Mother arrival
             if patient.gender == 'F' and patient.age >= 12:
-                has_mother_visit = PostnatalMotherVisit.objects.filter(delivery__pregnancy__patient=patient, visit_date=today).exists()
+                has_mother_visit = PostnatalMotherVisit.objects.filter(delivery__pregnancy__patient=patient, visit_date__range=(start_of_day, end_of_day)).exists()
                 if not has_mother_visit:
                     que.active_pregnancy = Pregnancy.objects.filter(patient=patient, status='Delivered').first()
                     que.arrival_type = 'Mother'
@@ -262,7 +270,7 @@ def pnc_dashboard(request):
             
             # Case 2: Child arrival (specifically registered as patient)
             elif patient.age <= 5:
-                has_baby_visit = PostnatalBabyVisit.objects.filter(newborn__patient_profile=patient, visit_date=today).exists()
+                has_baby_visit = PostnatalBabyVisit.objects.filter(newborn__patient_profile=patient, visit_date__range=(start_of_day, end_of_day)).exists()
                 if not has_baby_visit:
                     linked_newborn = Newborn.objects.filter(patient_profile=patient).first()
                     
@@ -350,7 +358,10 @@ def visit_queue_center(request):
                 # CWC detection (Immunization or Consumables)
                 from inventory.models import DispensedItem
                 has_consumables = DispensedItem.objects.filter(visit=que.visit).exists()
-                has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered=today).exists()
+                from datetime import datetime, time
+                sod = timezone.make_aware(datetime.combine(today, time.min))
+                eod = timezone.make_aware(datetime.combine(today, time.max))
+                has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered__range=(sod, eod)).exists()
                 if has_consumables or has_vaccines:
                     que.has_cwc_records = True
 
@@ -414,10 +425,14 @@ def visit_queue_center(request):
             processed.append(que)
         return processed
 
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+
     # 1. Main Queue: Specifically for the MCH department (Today's Pending)
     clinical_queue_raw = PatientQue.objects.filter(
         sent_to__name='MCH',  # Strictly MCH
-        visit__visit_date__date=today,
+        visit__visit_date__range=(start_of_day, end_of_day),
         visit__is_active=True,  # Visit not closed
         status='PENDING'
     ).select_related('visit__patient', 'sent_to', 'qued_from').order_by('created_at')
@@ -496,7 +511,7 @@ def visit_queue_center(request):
             active_que = PatientQue.objects.filter(
                 visit__patient=patient,
                 status='PENDING',
-                visit__visit_date__date=today,
+                visit__visit_date__range=(start_of_day, end_of_day),
                 sent_to__name__in=['ANC', 'PNC', 'CWC', 'MCH', 'Maternity']
             ).order_by('-created_at').first()
 

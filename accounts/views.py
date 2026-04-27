@@ -92,8 +92,10 @@ def accountant_dashboard(request):
 
     # Weekly/Monthly Revenue (only if no custom filter)
     if not from_date and not to_date:
-        weekly_revenue = Payment.objects.filter(payment_date__date__gte=start_of_week).aggregate(Sum('amount'))['amount__sum'] or 0
-        monthly_revenue = Payment.objects.filter(payment_date__date__gte=start_of_month).aggregate(Sum('amount'))['amount__sum'] or 0
+        start_of_week_dt = timezone.make_aware(datetime.combine(start_of_week, time.min))
+        start_of_month_dt = timezone.make_aware(datetime.combine(start_of_month, time.min))
+        weekly_revenue = Payment.objects.filter(payment_date__gte=start_of_week_dt).aggregate(Sum('amount'))['amount__sum'] or 0
+        monthly_revenue = Payment.objects.filter(payment_date__gte=start_of_month_dt).aggregate(Sum('amount'))['amount__sum'] or 0
     else:
         weekly_revenue = 0
         monthly_revenue = 0
@@ -140,10 +142,13 @@ def accountant_dashboard(request):
     # Revenue Trend (Daily or Monthly)
     daily_revenue_data = []
     daily_labels = []
+    from datetime import time
     for i in range(30, 0, -1):
         date = today - timedelta(days=i)
         daily_labels.append(date.strftime('%b %d'))
-        day_rev = Payment.objects.filter(payment_date__date=date).aggregate(Sum('amount'))['amount__sum'] or 0
+        sod = timezone.make_aware(datetime.combine(date, time.min))
+        eod = timezone.make_aware(datetime.combine(date, time.max))
+        day_rev = Payment.objects.filter(payment_date__range=(sod, eod)).aggregate(Sum('amount'))['amount__sum'] or 0
         daily_revenue_data.append(float(day_rev))
         
     # Service Type Breakdown (Revenue by Service Category)

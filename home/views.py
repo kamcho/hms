@@ -889,7 +889,10 @@ def reception_dashboard(request):
     
     # Get today's visits
     today = timezone.localdate()
-    today_visits = Visit.objects.filter(visit_date__date=today).count()
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+    today_visits = Visit.objects.filter(visit_date__range=(start_of_day, end_of_day)).count()
     
     # Get total patients count
     total_patients = Patient.objects.count()
@@ -995,12 +998,12 @@ def reception_dashboard(request):
             visit.services_summary = ", ".join(visit.services_list[:3])
         
         # Get triage entries count for today
-        today_triage_entries = TriageEntry.objects.filter(entry_date__date=today).count()
+        today_triage_entries = TriageEntry.objects.filter(entry_date__range=(start_of_day, end_of_day)).count()
         
         # Get pending triage count (visits without triage)
         pending_triage_count = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
-            visit_date__date=today,
+            visit_date__range=(start_of_day, end_of_day),
             patient_queue__sent_to__name='Triage',
             patient_queue__status='PENDING'
         ).distinct().count()
@@ -2230,10 +2233,15 @@ def pharmacy_dashboard(request):
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
 
+    today = timezone.localdate()
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+
     # Get pending OPD prescriptions (not dispensed) - Limited to today's visits
     pending_items = PrescriptionItem.objects.filter(
         dispensed=False,
-        prescription__visit__visit_date__date=timezone.localdate()
+        prescription__visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related(
         'prescription__patient',
         'prescription__prescribed_by',
@@ -2251,7 +2259,7 @@ def pharmacy_dashboard(request):
         inventory_item__isnull=False,
         inventory_item__medication__isnull=True,  # Structural check for consumables (non-drugs)
         invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
-        invoice__visit__visit_date__date=timezone.localdate()
+        invoice__visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related(
         'invoice__patient',
         'invoice__visit',
@@ -2411,7 +2419,7 @@ def pharmacy_dashboard(request):
         'low_stock_count': len(low_stock_items),
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
-            dispensed_at__date=today
+            dispensed_at__range=(start_of_day, end_of_day)
         ).count(),
     }
 
@@ -2803,6 +2811,9 @@ def appointments_dashboard(request):
     Shows analytics and a schedule of appointments
     """
     today = timezone.localdate()
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     
     # Base query for all active appointments
     appointments = Appointments.objects.all().select_related('patient').order_by('appointment_date')
@@ -2810,7 +2821,7 @@ def appointments_dashboard(request):
     # 1. Analytics
     # Today's Appointments
     today_appointments = appointments.filter(
-        appointment_date__date=today
+        appointment_date__range=(start_of_day, end_of_day)
     )
     todays_count = today_appointments.count()
     
@@ -2987,7 +2998,7 @@ def opd_dashboard(request):
     # Get recent consultations for history list
     recent_consultations = Consultation.objects.filter(
         doctor=request.user,
-        visit__visit_date__date=today
+        visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related('visit__patient').order_by('-checkin_date')[:5]
     context['recent_consultations'] = recent_consultations
     
@@ -3228,12 +3239,16 @@ def ambulance_dashboard(request):
 
     # Fetch Data
     today = timezone.localdate()
+    from datetime import datetime, time
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+
     start_date = today - timedelta(days=30)
     
     # Summary Stats
     total_trips = AmbulanceActivity.objects.count()
     total_revenue = AmbulanceActivity.objects.aggregate(total=Sum('amount'))['total'] or 0
-    trips_today = AmbulanceActivity.objects.filter(date__date=today).count()
+    trips_today = AmbulanceActivity.objects.filter(date__range=(start_of_day, end_of_day)).count()
     
     # Recent Activities
     activities = AmbulanceActivity.objects.all().select_related('patient', 'route', 'invoice').order_by('-date')[:20]
