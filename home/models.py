@@ -325,7 +325,7 @@ class PrescriptionItem(models.Model):
     medication = models.ForeignKey('inventory.InventoryItem', on_delete=models.PROTECT, related_name='prescription_items')
     
     # Numeric components for auto-calculation and record keeping
-    dose_count = models.DecimalField(max_digits=10, decimal_places=2, default=1.00, help_text="Units per dose (e.g., 2 tablets or 5.5 ml)")
+    dose_count = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Units per dose (e.g., 2 tablets or 5.5 ml)")
     dose_unit = models.CharField(max_length=20, blank=True, null=True, help_text="Unit of dose (e.g., ml, g, mg)")
     frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     number_of_days = models.IntegerField(help_text="Number of days to take the medication", null=True, blank=True)

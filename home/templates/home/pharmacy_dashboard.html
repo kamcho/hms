@@ -418,7 +418,7 @@
                                         {% for item in group.prescriptions %}
                                             <tr>
                                                 <td class="font-black whitespace-nowrap" style="color: #60a5fa;">{{ item.medication.name }}</td>
-                                                <td class="font-black" style="color: #fbbf24;">{{ item.dose_count }} units</td>
+                                                <td class="font-black" style="color: #fbbf24;">{{ item.dose_count }} {% if item.dose_unit %}{{ item.dose_unit }}{% else %}units{% endif %}</td>
                                                 <td class="font-black uppercase tracking-wider" style="color: #34d399;">{{ item.frequency }}</td>
                                                 <td class="font-black">{{ item.quantity }}</td>
                                                 <td class="italic font-medium" style="color: #e2e8f0;">

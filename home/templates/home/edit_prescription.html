@@ -610,6 +610,8 @@
 
             // Toggle whole dispense notice and enforce integer steps
             const wholeNotice = entry.querySelector('.whole-dispense-notice');
+            const doseInput = entry.querySelector('input[name$="-dose_count"]');
+            const doseUnitContainer = entry.querySelector('.dose-unit-container');
 
             if (data.is_dispensed_as_whole) {
                 if (wholeNotice) {
@@ -631,11 +633,25 @@
                 if (!quantityInput.value || quantityInput.value == 0) {
                     quantityInput.value = 1;
                 }
+                
+                // Allow decimals for dose_count if whole unit (e.g., ml)
+                doseInput.step = "any";
+
                 if (quantityLabel) quantityLabel.innerHTML = `Total Quantity (${data.dispensing_unit}) *`;
             } else {
                 if (wholeNotice) wholeNotice.classList.add('hidden');
-                quantityInput.step = "any";
+                quantityInput.step = "1";
+                quantityInput.min = "1";
                 if (quantityLabel) quantityLabel.innerHTML = `Total Quantity *`;
+
+                // RESTRICT decimals for dose_count if NOT whole unit (e.g., tablets)
+                doseInput.step = "1";
+                if (doseInput.value) {
+                    const roundedDose = Math.round(parseFloat(doseInput.value) || 0) || 1;
+                    if (doseInput.value != roundedDose) doseInput.value = roundedDose;
+                }
+
+                if (doseUnitContainer) doseUnitContainer.classList.add('hidden');
             }
         }
     }
@@ -671,6 +687,15 @@
         if (e.target.matches('select[name$="-frequency"]')) {
             const entry = e.target.closest('.medication-entry');
             if (entry) updatePricePreview(entry);
+        }
+    });
+
+    // Prevent decimal input on the UI by making input to accept whole numbers only where required
+    document.addEventListener('keypress', (e) => {
+        if (e.target.matches('input[name$="-dose_count"], input[name$="-quantity"], input[name$="-number_of_days"]')) {
+            if (e.target.step === "1" && (e.key === "." || e.key === "," || e.key === "e" || e.key === "E")) {
+                e.preventDefault();
+            }
         }
     });
 
