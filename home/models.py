@@ -325,10 +325,11 @@ class PrescriptionItem(models.Model):
     medication = models.ForeignKey('inventory.InventoryItem', on_delete=models.PROTECT, related_name='prescription_items')
     
     # Numeric components for auto-calculation and record keeping
-    dose_count = models.PositiveIntegerField(default=1, help_text="Units per dose (e.g., 2 tablets)")
+    dose_count = models.DecimalField(max_digits=10, decimal_places=2, default=1.00, help_text="Units per dose (e.g., 2 tablets or 5.5 ml)")
+    dose_unit = models.CharField(max_length=20, blank=True, null=True, help_text="Unit of dose (e.g., ml, g, mg)")
     frequency = models.CharField(max_length=20, choices=frequency_choices, default='Once Daily', help_text="Frequency of medication")
     number_of_days = models.IntegerField(help_text="Number of days to take the medication", null=True, blank=True)
-    quantity = models.IntegerField(help_text="Total units to dispense")
+    quantity = models.IntegerField(help_text="Total units to dispense", null=True, blank=True)
     instructions = models.TextField(blank=True, help_text="Special instructions for this medication")
     dispensed = models.BooleanField(default=False, help_text="Has this been dispensed by pharmacy?")
     dispensed_at = models.DateTimeField(null=True, blank=True)
@@ -340,21 +341,26 @@ class PrescriptionItem(models.Model):
 
     def save(self, *args, **kwargs):
         # Auto-calculate quantity based on dose, frequency and days
-        # Only if not dispensed as whole and frequency is not 'As Needed'
-        if self.medication and not self.medication.is_dispensed_as_whole and self.frequency != 'As Needed' and self.number_of_days:
-            freq_map = {
-                'Once Daily': 1,
-                'Twice Daily': 2,
-                'Thrice Daily': 3,
-                'Four Times Daily': 4,
-                'Every 6 Hours': 4,
-                'Every 8 Hours': 3,
-                'Every 12 Hours': 2,
-                'Every 24 Hours': 1
-            }
-            multiplier = freq_map.get(self.frequency)
-            if multiplier:
-                self.quantity = (self.dose_count or 0) * multiplier * self.number_of_days
+        if self.medication:
+            if self.medication.is_dispensed_as_whole:
+                # If quantity is not set, default to 1 for items dispensed as whole
+                if self.quantity is None:
+                    self.quantity = 1
+            elif self.frequency != 'As Needed' and self.number_of_days:
+                freq_map = {
+                    'Once Daily': 1,
+                    'Twice Daily': 2,
+                    'Thrice Daily': 3,
+                    'Four Times Daily': 4,
+                    'Every 6 Hours': 4,
+                    'Every 8 Hours': 3,
+                    'Every 12 Hours': 2,
+                    'Every 24 Hours': 1
+                }
+                multiplier = freq_map.get(self.frequency)
+                if multiplier:
+                    # Calculate quantity, ensuring it's an integer for the IntegerField
+                    self.quantity = int((float(self.dose_count) or 0) * multiplier * self.number_of_days)
         
         super().save(*args, **kwargs)
     

@@ -88,10 +88,11 @@ class PrescriptionItemForm(forms.ModelForm):
     
     class Meta:
         model = PrescriptionItem
-        fields = ['medication', 'dose_count', 'frequency', 'number_of_days', 'quantity', 'instructions']
+        fields = ['medication', 'dose_count', 'dose_unit', 'frequency', 'number_of_days', 'quantity', 'instructions']
         widgets = {
             'medication': forms.Select(attrs={'class': 'medication-select'}),
-            'dose_count': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Pills/Dose'}),
+            'dose_count': forms.NumberInput(attrs={'min': 0, 'placeholder': 'Units', 'step': '0.01'}),
+            'dose_unit': forms.TextInput(attrs={'placeholder': 'e.g. ml, g, mg'}),
             'frequency': forms.Select(attrs={'class': 'frequency-select'}),
             'number_of_days': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Days'}),
             'quantity': forms.NumberInput(attrs={'min': 1, 'placeholder': 'Total quantity'}),
