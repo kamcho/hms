@@ -294,6 +294,7 @@
     .badge-success { background: rgba(56, 249, 215, 0.1); color: #38f9d7; }
     .badge-warning { background: rgba(254, 225, 64, 0.1); color: #fee140; }
     .badge-danger { background: rgba(245, 87, 108, 0.1); color: #f5576c; }
+    .badge-info { background: rgba(79, 172, 254, 0.1); color: #4facfe; }
     </style>
 
     <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
@@ -344,7 +345,8 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <!-- Main Grid Area -->
+        <div style="display: gid; grid-template-columns: 2fr 1fr; gap: 2rem;">
             <div>
                 {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
                     <!-- OPD Pending Items -->
@@ -439,84 +441,18 @@
                                 </table>
                             </div>
                         {% empty %}
-                            <div class="empty-state">
-                                <i class="fas fa-check-circle"></i>
+                            <div class="empty-state" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                                <i class="fas fa-check-circle" style="font-size: 3rem; opacity: 0.2; margin-bottom: 1rem;"></i>
                                 <h4>All Clear</h4>
                                 <p>No pending OPD prescriptions.</p>
                             </div>
                         {% endfor %}
                     </div>
                 {% endif %}
-
-            
-
-                <!-- Stock Requests Section -->
-                <div class="section-card" id="stock-requests">
-                    <div class="section-header">
-                        <div class="flex items-center gap-4">
-                            <h2><i class="fas fa-clipboard-list"></i> Recent Stock Requests</h2>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="badge badge-primary">{{ inventory_requests|length }} Total</span>
-                            <a href="{% url 'inventory:request_list' %}" class="badge badge-success" style="text-decoration: none;">View All</a>
-                        </div>
-                    </div>
-                    
-                    <div class="search-box">
-                        <form method="GET" action="#stock-requests">
-                            <i class="fas fa-search"></i>
-                            <input type="text" name="request_search" placeholder="Search item or requester..." value="{{ request_search }}">
-                        </form>
-                    </div>
-
-                    <div style="padding: 0 2rem 2rem;">
-                        <table class="med-table">
-                            <thead>
-                                <tr>
-                                    <th>Inventory Item</th>
-                                    <th>Priority</th>
-                                    <th>Qty</th>
-                                    <th>Status</th>
-                                    <th>Requested At</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for req in inventory_requests %}
-                                <tr>
-                                    <td class="font-bold">{{ req.item.name }}</td>
-                                    <td>
-                                        <span class="badge {% if req.priority == 'Urgent' %}badge-danger{% elif req.priority == 'Critical' %}badge-danger{% else %}badge-primary{% endif %}">
-                                            {{ req.priority|default:"Normal" }}
-                                        </span>
-                                    </td>
-                                    <td class="font-bold">{{ req.quantity }}</td>
-                                    <td>
-                                        <span class="badge {% if req.status == 'Pending' %}badge-warning{% elif req.status == 'Approved' %}badge-success{% else %}badge-danger{% endif %}">
-                                            {{ req.status }}
-                                        </span>
-                                    </td>
-                                    <td class="text-xs text-slate-400">{{ req.requested_at|date:"M d, H:i" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                                        <i class="fas fa-inbox block mb-2" style="font-size: 2rem; opacity: 0.2;"></i>
-                                        <p>No active stock requests</p>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Available Stock Table Section -->
-               
             </div>
 
             <!-- Sidebar -->
             <div>
-                <!-- Stock Record Section -->
                 <div class="side-card">
                     <h3><i class="fas fa-boxes"></i> Current Stock</h3>
                     <div style="max-height: 400px; overflow-y: auto;">
@@ -540,95 +476,180 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Stock Alerts -->
-                <div class="side-card">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Alerts</h3>
-                    {% for item in low_stock_items %}
-                        <div style="padding: 1rem; background: rgba(245, 87, 108, 0.05); border-radius: 12px; margin-bottom: 0.75rem; border-left: 3px solid #f5576c;">
-                            <div style="font-weight: 700; font-size: 0.9rem;">{{ item.item.name }}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Low stock: {{ item.quantity }} (Limit: {{ item.reorder_level }})</div>
-                        </div>
-                    {% endfor %}
-                    {% for item in expiring_soon_items %}
-                        <div style="padding: 1rem; background: rgba(254, 225, 64, 0.05); border-radius: 12px; margin-bottom: 0.75rem; border-left: 3px solid #fee140;">
-                            <div style="font-weight: 700; font-size: 0.9rem;">{{ item.item.name }}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Expiring: {{ item.expiry_date|date:"d M Y" }}</div>
-                        </div>
-                    {% endfor %}
-                    {% if not low_stock_items and not expiring_soon_items %}
-                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                            <i class="fas fa-check-circle" style="font-size: 2rem; opacity: 0.2; margin-bottom: 0.5rem;"></i>
-                            <p style="font-size: 0.8rem;">All clear</p>
-                        </div>
-                    {% endif %}
+        <!-- Recent Stock Requests (Full Width) -->
+        <div class="section-card" id="stock-requests">
+            <div class="section-header">
+                <h2><i class="fas fa-clipboard-list"></i> Recent Stock Requests</h2>
+                <div class="flex items-center gap-3">
+                    <span class="badge badge-primary">{{ inventory_requests|length }} Total</span>
+                    <a href="{% url 'inventory:request_list' %}" class="badge badge-success" style="text-decoration: none;">View All</a>
                 </div>
+            </div>
+            
+            <div class="search-box">
+                <form method="GET" action="#stock-requests">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="request_search" placeholder="Search item or requester..." value="{{ request_search }}">
+                </form>
+            </div>
+
+            <div style="padding: 0 2rem 2rem;">
+                <table class="med-table">
+                    <thead>
+                        <tr>
+                            <th>Inventory Item</th>
+                            <th>Priority</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in inventory_requests %}
+                        <tr>
+                            <td class="font-bold">{{ req.item.name }}</td>
+                            <td>
+                                <span class="badge {% if req.priority == 'Urgent' or req.priority == 'Critical' %}badge-danger{% else %}badge-primary{% endif %}">
+                                    {{ req.priority|default:"Normal" }}
+                                </span>
+                            </td>
+                            <td class="font-bold">{{ req.quantity }}</td>
+                            <td>
+                                <span class="badge {% if req.status == 'Pending' %}badge-warning{% elif req.status == 'Approved' %}badge-success{% else %}badge-danger{% endif %}">
+                                    {{ req.status }}
+                                </span>
+                            </td>
+                            <td class="text-xs text-slate-400">{{ req.requested_at|date:"M d, H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                                <i class="fas fa-inbox block mb-2" style="font-size: 2rem; opacity: 0.2;"></i>
+                                <p>No active stock requests</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detailed Stock Availability (Full Width) -->
+        <div class="section-card" id="available-stock">
+            <div class="section-header">
+                <h2><i class="fas fa-boxes"></i> Detailed Stock Availability</h2>
+                <div class="flex items-center gap-3">
+                    <span class="badge badge-info">{{ pharmacy_stock|length }} Items</span>
+                    <a href="{% url 'inventory:item_list' %}" class="badge badge-primary" style="text-decoration: none;">Inventory Manager</a>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <form method="GET" action="#available-stock">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="stock_search" placeholder="Search stock by name or batch..." value="{{ stock_search }}">
+                </form>
+            </div>
+
+            <div style="padding: 0 2rem 2rem;">
+                <table class="med-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th>Units</th>
+                            <th>Status</th>
+                            <th>Batch / Expiry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in pharmacy_stock %}
+                        <tr>
+                            <td class="font-bold">{{ stock.item.name }}</td>
+                            <td><span class="badge badge-primary">{{ stock.item.category.name|default:"General" }}</span></td>
+                            <td class="font-bold {% if stock.quantity <= stock.item.reorder_level %}text-red-400{% else %}text-emerald-400{% endif %}">
+                                {{ stock.quantity }} {{ stock.item.dispensing_unit }}
+                            </td>
+                            <td>
+                                {% if stock.quantity <= stock.item.reorder_level %}
+                                    <span class="badge badge-danger">Low Stock</span>
+                                {% else %}
+                                    <span class="badge badge-success">Sufficient</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs">
+                                <div class="text-slate-300">#{{ stock.batch_number|default:"N/A" }}</div>
+                                <div class="{% if stock.expiry_date <= today_plus_30 %}text-red-400{% else %}text-slate-500{% endif %}">
+                                    Exp: {{ stock.expiry_date|date:"Y-m-d"|default:"Unknown" }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stock Alerts & Warnings (Full Width, Table, Bottom) -->
+        <div class="section-card" id="stock-alerts">
+            <div class="section-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Stock Alerts & Warnings</h2>
+                <span class="badge badge-danger">{{ low_stock_items|length|add:expiring_soon_items|length }} Total Alerts</span>
+            </div>
+            <div style="padding: 0 2rem 2rem;">
+                <table class="med-table">
+                    <thead>
+                        <tr>
+                            <th>Alert Type</th>
+                            <th>Item Name</th>
+                            <th>Current Stock</th>
+                            <th>Details</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in low_stock_items %}
+                        <tr>
+                            <td><span class="badge badge-danger">Low Stock</span></td>
+                            <td class="font-bold">{{ item.item.name }}</td>
+                            <td class="font-bold text-rose-400">{{ item.quantity }}</td>
+                            <td class="text-xs">Limit: {{ item.item.reorder_level }}</td>
+                            <td>
+                                <a href="{% url 'inventory:create_request' %}?item_id={{ item.item.id }}" class="badge badge-primary" style="text-decoration: none;">Request Stock</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for item in expiring_soon_items %}
+                        <tr>
+                            <td><span class="badge badge-warning">Expiring Soon</span></td>
+                            <td class="font-bold">{{ item.item.name }}</td>
+                            <td class="font-bold">{{ item.quantity }}</td>
+                            <td class="text-xs text-amber-400">Exp: {{ item.expiry_date|date:"d M Y" }}</td>
+                            <td>-</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not low_stock_items and not expiring_soon_items %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                                <i class="fas fa-check-circle block mb-2" style="font-size: 2rem; opacity: 0.2;"></i>
+                                <p>No critical alerts at this time</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
- <div class="section-card" id="available-stock">
-                    <div class="section-header">
-                        <h2><i class="fas fa-boxes"></i> Detailed Stock Availability</h2>
-                        <div class="flex items-center gap-3">
-                            <span class="badge badge-info">{{ pharmacy_stock|length }} Items</span>
-                            <a href="{% url 'inventory:item_list' %}" class="badge badge-primary" style="text-decoration: none;">Inventory Manager</a>
-                        </div>
-                    </div>
 
-                    <div class="search-box">
-                        <form method="GET" action="#available-stock">
-                            <i class="fas fa-search"></i>
-                            <input type="text" name="stock_search" placeholder="Search stock by name or batch..." value="{{ stock_search }}">
-                        </form>
-                    </div>
-
-                    <div style="padding: 0 2rem 2rem;">
-                        <table class="med-table">
-                            <thead>
-                                <tr>
-                                    <th>Item Name</th>
-                                    <th>Category</th>
-                                    <th>Units</th>
-                                    <th>Status</th>
-                                    <th>Batch / Expiry</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stock in pharmacy_stock %}
-                                <tr>
-                                    <td class="font-bold">{{ stock.item.name }}</td>
-                                    <td>
-                                        <span class="badge badge-primary">{{ stock.item.category.name|default:"General" }}</span>
-                                    </td>
-                                    <td class="font-bold {% if stock.quantity <= stock.item.reorder_level %}text-red-400{% else %}text-emerald-400{% endif %}">
-                                        {{ stock.quantity }} {{ stock.item.dispensing_unit }}
-                                    </td>
-                                    <td>
-                                        {% if stock.quantity <= stock.item.reorder_level %}
-                                            <span class="badge badge-danger">Low Stock</span>
-                                        {% else %}
-                                            <span class="badge badge-success">Sufficient</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-xs">
-                                        <div class="text-slate-300">#{{ stock.batch_number|default:"N/A" }}</div>
-                                        <div class="{% if stock.expiry_date <= today_plus_30 %}text-red-400{% else %}text-slate-500{% endif %}">
-                                            Exp: {{ stock.expiry_date|date:"Y-m-d"|default:"Unknown" }}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                                        No stock records found for this location.
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-    <!-- Instruction Modal (Fail-safe Inline Styles) -->
+    <!-- Instruction Modal -->
     <div id="instructionModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
         <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" onclick="hideInstruction()"></div>
         <div style="position: relative; z-index: 10; width: 100%; max-width: 500px; background: #1e293b; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">

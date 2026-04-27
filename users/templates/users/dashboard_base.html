@@ -451,23 +451,32 @@
                         </div>
                     </div>
                 </header>
-                <main>
-                    {% if messages %}
-                        <div class="space-y-4 mb-6">
+                {% if messages %}
+                    <div class="px-10 py-6">
+                        <div class="space-y-4">
                             {% for message in messages %}
-                                <div class="p-4 rounded-xl border flex items-center gap-3 {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif message.tags == 'error' or message.tags == 'danger' %}bg-rose-50 text-rose-700 border-rose-100{% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
-                                    {% if message.tags == 'success' %}
-                                        <i class="fas fa-check-circle"></i>
-                                    {% elif message.tags == 'error' or message.tags == 'danger' %}
-                                        <i class="fas fa-exclamation-circle"></i>
-                                    {% else %}
-                                        <i class="fas fa-info-circle"></i>
-                                    {% endif %}
-                                    <span class="font-medium">{{ message }}</span>
+                                <div class="p-5 rounded-2xl border flex items-center gap-4 shadow-sm {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif message.tags == 'error' or message.tags == 'danger' %}bg-rose-50 text-rose-700 border-rose-100{% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
+                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center {% if message.tags == 'success' %}bg-emerald-100{% elif message.tags == 'error' or message.tags == 'danger' %}bg-rose-100{% else %}bg-blue-100{% endif %}">
+                                        {% if message.tags == 'success' %}
+                                            <i class="fas fa-check-circle text-lg"></i>
+                                        {% elif message.tags == 'error' or message.tags == 'danger' %}
+                                            <i class="fas fa-exclamation-circle text-lg"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle text-lg"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-black text-[10px] uppercase tracking-widest opacity-60 mb-0.5">
+                                            {% if message.tags == 'success' %}Success{% elif message.tags == 'error' or message.tags == 'danger' %}Error{% else %}Information{% endif %}
+                                        </div>
+                                        <span class="font-bold text-sm">{{ message }}</span>
+                                    </div>
                                 </div>
                             {% endfor %}
                         </div>
-                    {% endif %}
+                    </div>
+                {% endif %}
+                <main>
                     {% block content %}{% endblock %}
                 </main>
             </div>
