@@ -2230,9 +2230,10 @@ def pharmacy_dashboard(request):
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
 
-    # Get pending OPD prescriptions (not dispensed)
+    # Get pending OPD prescriptions (not dispensed) - Limited to today's visits
     pending_items = PrescriptionItem.objects.filter(
-        dispensed=False
+        dispensed=False,
+        prescription__visit__visit_date__date=timezone.localdate()
     ).select_related(
         'prescription__patient',
         'prescription__prescribed_by',
@@ -2245,11 +2246,12 @@ def pharmacy_dashboard(request):
     from accounts.models import Invoice, InvoiceItem
     from inpatient.models import Admission
 
-    # Consumable InvoiceItems: have inventory_item set, but are NOT medications
+    # Consumable InvoiceItems: have inventory_item set, but are NOT medications - Limited to today's visits
     pending_consumables = InvoiceItem.objects.filter(
         inventory_item__isnull=False,
         inventory_item__medication__isnull=True,  # Structural check for consumables (non-drugs)
         invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
+        invoice__visit__visit_date__date=timezone.localdate()
     ).select_related(
         'invoice__patient',
         'invoice__visit',
