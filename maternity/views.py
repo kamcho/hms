@@ -4,7 +4,7 @@ from django.db.models import Count, Q
 from django.urls import reverse
 from django.http import JsonResponse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 from django.contrib import messages
 from .models import (
     Pregnancy, AntenatalVisit, LaborDelivery, Newborn, 
@@ -113,10 +113,6 @@ def anc_dashboard(request):
     active_count = Pregnancy.objects.filter(status='Active').count()
     anc_coverage = int((total_anc_this_month / (active_count * 1.0)) * 100) if active_count > 0 else 0
 
-    from datetime import time
-    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
-    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-
     # ANC Receiving Queue (Existing Visits)
     search_query = request.GET.get('q', '')
     anc_queue = AntenatalVisit.objects.filter(
@@ -213,10 +209,6 @@ def pnc_dashboard(request):
     total_pnc_this_month = PostnatalMotherVisit.objects.filter(visit_date__gte=today.replace(day=1)).count() + \
                            PostnatalBabyVisit.objects.filter(visit_date__gte=today.replace(day=1)).count()
     
-    from datetime import time
-    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
-    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-
     # PNC Receiving Queues
     search_query = request.GET.get('q', '')
     mother_queue = PostnatalMotherVisit.objects.filter(
@@ -358,7 +350,6 @@ def visit_queue_center(request):
                 # CWC detection (Immunization or Consumables)
                 from inventory.models import DispensedItem
                 has_consumables = DispensedItem.objects.filter(visit=que.visit).exists()
-                from datetime import datetime, time
                 sod = timezone.make_aware(datetime.combine(today, time.min))
                 eod = timezone.make_aware(datetime.combine(today, time.max))
                 has_vaccines = ImmunizationRecord.objects.filter(patient=patient, date_administered__range=(sod, eod)).exists()
@@ -424,10 +415,6 @@ def visit_queue_center(request):
 
             processed.append(que)
         return processed
-
-    from datetime import datetime, time
-    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
-    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
 
     # 1. Main Queue: Specifically for the MCH department (Today's Pending)
     clinical_queue_raw = PatientQue.objects.filter(

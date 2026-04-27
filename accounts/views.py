@@ -4,7 +4,7 @@ from .utils import get_or_create_invoice
 from django.db.models import Sum, Count, Q, F
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, time
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
 from django.views.decorators.http import require_POST
@@ -142,7 +142,6 @@ def accountant_dashboard(request):
     # Revenue Trend (Daily or Monthly)
     daily_revenue_data = []
     daily_labels = []
-    from datetime import time
     for i in range(30, 0, -1):
         date = today - timedelta(days=i)
         daily_labels.append(date.strftime('%b %d'))

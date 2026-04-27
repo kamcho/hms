@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis, ProcedureCompletion
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
@@ -889,7 +889,6 @@ def reception_dashboard(request):
     
     # Get today's visits
     today = timezone.localdate()
-    from datetime import datetime, time
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     today_visits = Visit.objects.filter(visit_date__range=(start_of_day, end_of_day)).count()
@@ -2811,7 +2810,6 @@ def appointments_dashboard(request):
     Shows analytics and a schedule of appointments
     """
     today = timezone.localdate()
-    from datetime import datetime, time
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     
@@ -3239,7 +3237,6 @@ def ambulance_dashboard(request):
 
     # Fetch Data
     today = timezone.localdate()
-    from datetime import datetime, time
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
 
