@@ -403,38 +403,36 @@
                                     <thead>
                                         <tr>
                                             <th>Item Name</th>
-                                            <th>Category</th>
+                                            <th>Dosage & Frequency</th>
                                             <th>Qty</th>
-                                            <th>Action</th>
+                                            <th>Instructions</th>
+                                            <th>Category</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for item in group.prescriptions %}
                                             <tr>
                                                 <td class="font-bold whitespace-nowrap">{{ item.medication.name }}</td>
-                                                <td><span class="badge badge-primary">Medication</span></td>
-                                                <td class="font-bold">{{ item.quantity }}</td>
-                                                <td>
-                                                    {% if item.instructions %}
-                                                        <button onclick="showInstruction('{{ item.medication.name|escapejs }}', '{{ item.instructions|escapejs }}')" class="badge badge-primary" style="cursor: pointer; border: 0;">
-                                                            View Instructions
-                                                        </button>
-                                                    {% endif %}
+                                                <td class="text-xs">
+                                                    <div class="font-bold text-slate-300">{{ item.dose_count }} units</div>
+                                                    <div class="text-[10px] text-slate-500 uppercase tracking-tighter">{{ item.frequency }}</div>
                                                 </td>
+                                                <td class="font-bold">{{ item.quantity }}</td>
+                                                <td class="text-xs italic text-slate-400">
+                                                    {{ item.instructions|default:"No instructions" }}
+                                                </td>
+                                                <td><span class="badge badge-primary">Medication</span></td>
                                             </tr>
                                         {% endfor %}
                                         {% for item in group.consumables %}
                                             <tr>
                                                 <td class="font-bold whitespace-nowrap">{{ item.inventory_item.name }}</td>
-                                                <td><span class="badge badge-warning">Consumable</span></td>
+                                                <td class="text-xs text-slate-500">-</td>
                                                 <td class="font-bold">{{ item.quantity }}</td>
-                                                <td>
-                                                    {% if item.instructions %}
-                                                        <button onclick="showInstruction('{{ item.inventory_item.name|escapejs }}', '{{ item.instructions|escapejs }}')" class="badge badge-primary" style="cursor: pointer; border: 0;">
-                                                            View Instructions
-                                                        </button>
-                                                    {% endif %}
+                                                <td class="text-xs italic text-slate-400">
+                                                    {{ item.instructions|default:"-" }}
                                                 </td>
+                                                <td><span class="badge badge-warning">Consumable</span></td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
