@@ -808,6 +808,82 @@ def add_grn_item(request, grn_id):
     return render(request, 'inventory/add_grn_item.html', context)
 
 @login_required
+@require_POST
+def delete_grn_item(request, grn_id, record_id):
+    """Delete a stock record from a GRN and reverse the stock from the location."""
+    from accounts.models import InventoryPurchase
+
+    purchase = get_object_or_404(InventoryPurchase, id=grn_id)
+    record = get_object_or_404(StockRecord, id=record_id, purchase_ref=purchase)
+
+    item = record.item
+    location = record.current_location
+    original_qty = record.quantity
+
+    with transaction.atomic():
+        # Check current stock at this location for this item
+        total_stock_at_location = StockRecord.objects.filter(
+            item=item,
+            current_location=location
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+
+        if total_stock_at_location < original_qty:
+            # Stock has been partially consumed/transferred - can't fully reverse
+            shortfall = original_qty - total_stock_at_location
+            messages.error(
+                request,
+                f'Cannot delete "{item.name}" (Batch: {record.batch_number}). '
+                f'Only {total_stock_at_location} of {original_qty} units remain in {location.name}. '
+                f'{shortfall} unit(s) have already been dispensed or transferred. '
+                f'Please reconcile the stock in {location.name} first before removing this GRN entry.'
+            )
+            return redirect('inventory:add_grn_item', grn_id=purchase.id)
+
+        # Stock is fully available — deduct from location using FEFO
+        remaining_to_deduct = original_qty
+        batches = StockRecord.objects.filter(
+            item=item,
+            current_location=location,
+            quantity__gt=0
+        ).order_by('expiry_date', 'received_date').select_for_update()
+
+        for batch in batches:
+            if remaining_to_deduct <= 0:
+                break
+            deduction = min(batch.quantity, remaining_to_deduct)
+            batch.quantity -= deduction
+            batch.save()
+            remaining_to_deduct -= deduction
+
+        # Delete the actual stock record (it now has 0 qty or we've deducted from other batches)
+        record.delete()
+
+        # Clean up any zero-quantity records left behind
+        StockRecord.objects.filter(
+            item=item,
+            current_location=location,
+            quantity=0
+        ).delete()
+
+        # Create an audit trail
+        StockAdjustment.objects.create(
+            item=item,
+            quantity=-original_qty,
+            adjustment_type='Correction',
+            reason=f'GRN item removed: {original_qty} units of {item.name} (Batch: {record.batch_number}) reversed from {location.name}. GRN #{purchase.id}',
+            adjusted_by=request.user,
+            adjusted_from=location
+        )
+
+        messages.success(
+            request,
+            f'Removed "{item.name}" (Batch: {record.batch_number}, Qty: {original_qty}) '
+            f'from GRN and reversed stock from {location.name}.'
+        )
+
+    return redirect('inventory:add_grn_item', grn_id=purchase.id)
+
+@login_required
 def inventory_distribution(request, item_id):
     """
     View to show and edit inventory item distribution and details.

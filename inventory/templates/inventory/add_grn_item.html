@@ -475,6 +475,197 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
+    /* Delete Button */
+    .btn-delete-grn {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        border: 2px solid #fecaca;
+        background: #fef2f2;
+        color: #ef4444;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+    }
+
+    .btn-delete-grn:hover {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+        transform: scale(1.15);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    }
+
+    /* Delete Confirmation Modal */
+    .delete-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .delete-modal-overlay.show {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .delete-modal {
+        background: white;
+        border-radius: 24px;
+        max-width: 480px;
+        width: 90%;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: modalSlideUp 0.3s ease-out;
+        overflow: hidden;
+    }
+
+    .delete-modal-header {
+        padding: 1.5rem 2rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .delete-modal-header .modal-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: #fef2f2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ef4444;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .delete-modal-header h4 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .delete-modal-header p {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin: 0.15rem 0 0;
+    }
+
+    .delete-modal-body {
+        padding: 1rem 2rem 1.5rem;
+    }
+
+    .delete-modal-body .item-detail-strip {
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .delete-modal-body .item-detail-strip .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .delete-modal-body .item-detail-strip .detail-label {
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+    }
+
+    .delete-modal-body .item-detail-strip .detail-value {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .delete-modal-body .warning-box {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        font-size: 0.8rem;
+        color: #92400e;
+    }
+
+    .delete-modal-body .warning-box i {
+        color: #f59e0b;
+        margin-top: 0.15rem;
+        flex-shrink: 0;
+    }
+
+    .delete-modal-footer {
+        padding: 0 2rem 1.5rem;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    .delete-modal-footer .btn-cancel-modal {
+        padding: 0.65rem 1.5rem;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        background: white;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .delete-modal-footer .btn-cancel-modal:hover {
+        background: #f8fafc;
+        color: #1e293b;
+    }
+
+    .delete-modal-footer .btn-confirm-delete {
+        padding: 0.65rem 1.5rem;
+        border-radius: 12px;
+        border: none;
+        background: var(--danger-gradient);
+        color: white;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .delete-modal-footer .btn-confirm-delete:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes modalSlideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -722,6 +913,7 @@
                             <th style="text-align: center;">Qty</th>
                             <th style="text-align: right;">Unit Cost</th>
                             <th style="text-align: right;">Location</th>
+                            <th style="text-align: center;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -737,10 +929,7 @@
                                 <td>
                                     <div style="font-weight: 600; color: #475569; font-size: 0.85rem;">{{ record.batch_number }}</div>
                                     {% if record.expiry_date %}
-                                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; margin-top: 0.2rem;">
-                                            Exp:
-                                            {{ record.expiry_date|date:"M Y" }}
-                                        </div>
+                                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; margin-top: 0.2rem;">Exp: {{ record.expiry_date|date:"M Y" }}</div>
                                     {% endif %}
                                 </td>
                                 <td style="text-align: center;">
@@ -751,6 +940,11 @@
                                 </td>
                                 <td style="text-align: right;">
                                     <span class="badge badge-muted">{{ record.current_location.name }}</span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="btn-delete-grn" title="Remove from GRN" onclick="showDeleteModal('{{ record.id }}', '{{ record.item.name|escapejs }}', '{{ record.batch_number|escapejs }}', '{{ record.quantity }}', '{{ record.current_location.name|escapejs }}')">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -763,6 +957,52 @@
                     <small style="color: #cbd5e1;">Use the form on the left to record each item received.</small>
                 </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="delete-modal-overlay" id="deleteModalOverlay">
+    <div class="delete-modal">
+        <div class="delete-modal-header">
+            <div class="modal-icon">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <div>
+                <h4>Remove GRN Item</h4>
+                <p>This will reverse the stock from the store</p>
+            </div>
+        </div>
+        <div class="delete-modal-body">
+            <div class="item-detail-strip">
+                <div class="detail-item">
+                    <span class="detail-label">Product</span>
+                    <span class="detail-value" id="modalItemName">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Batch</span>
+                    <span class="detail-value" id="modalBatchNumber">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Quantity</span>
+                    <span class="detail-value" id="modalQuantity">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value" id="modalLocation">—</span>
+                </div>
+            </div>
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>This action will <strong>deduct the quantity</strong> from the storage location. If the stock has already been dispensed or transferred, the deletion will be blocked and you'll need to reconcile first.</div>
+            </div>
+        </div>
+        <div class="delete-modal-footer">
+            <button type="button" class="btn-cancel-modal" onclick="hideDeleteModal()">Cancel</button>
+            <form id="deleteForm" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-confirm-delete"><i class="fas fa-trash-alt" style="margin-right: 0.4rem;"></i> Confirm Delete</button>
+            </form>
         </div>
     </div>
 </div>
@@ -996,6 +1236,34 @@
                     }
                 }
             }
+        }
+    });
+
+    // --- Delete Modal Logic ---
+    window.showDeleteModal = function(recordId, itemName, batchNumber, quantity, location) {
+        document.getElementById('modalItemName').textContent = itemName;
+        document.getElementById('modalBatchNumber').textContent = batchNumber;
+        document.getElementById('modalQuantity').textContent = quantity + ' units';
+        document.getElementById('modalLocation').textContent = location;
+        document.getElementById('deleteForm').action = '/inventory/procurement/{{ purchase.id }}/delete-item/' + recordId + '/';
+        document.getElementById('deleteModalOverlay').classList.add('show');
+    };
+
+    window.hideDeleteModal = function() {
+        document.getElementById('deleteModalOverlay').classList.remove('show');
+    };
+
+    // Close modal on overlay click
+    document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideDeleteModal();
+        }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideDeleteModal();
         }
     });
 });

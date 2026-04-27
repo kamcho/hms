@@ -1085,7 +1085,7 @@ def pregnancy_detail(request, pregnancy_id):
         'baby_pnc': PostnatalBabyVisit.objects.filter(newborn__in=newborns).select_related('newborn', 'recorded_by') if has_delivery else [],
         'discharge': discharge,
         'referrals': referrals,
-        'available_departments': Departments.objects.all().order_by('name'),
+        'available_departments': Departments.objects.filter(name__in=['Lab', 'Imaging', 'Procedure Room']).order_by('name'),
         'dispensing_departments': Departments.objects.all().order_by('name'),
         'maternity_services': maternity_services,
         'dispense_form': dispense_form,

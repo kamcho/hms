@@ -810,86 +810,7 @@
                     </div>
                 </div>
             {% elif user_role == 'Triage Nurse' %}
-                <div class="section">
-                    <div class="section-header">
-                        <h3>
-                            <i class="fas fa-clipboard-list"></i> Recent Triage Entries
-                        </h3>
-                        <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                    <div class="search-section">
-                        <form method="GET" class="search-form">
-                            <div class="search-container" style="position: relative;">
-                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
-                                <input type="text" name="triage_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ triage_search }}">
-                                {% if triage_search %}
-                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
-                                        <i class="fas fa-times"></i> Clear
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </form>
-                    </div>
-                    {% if triage_search %}
-                        <div class="search-results-info">
-                            Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search }}</strong>"
-                        </div>
-                    {% endif %}
-                    <div class="table-responsive">
-                        <table class="premium-table">
-                            <thead>
-                                <tr>
-                                    <th>Patient</th>
-                                    <th>Vitals</th>
-                                    <th>Priority Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for triage in triage_entries %}
-                                    <tr class="triage-row" data-triage-id="{{ triage.pk }}">
-                                        <td>
-                                            <div class="patient-profile-inline">
-                                                <div class="avatar-initials" data-name="{{ triage.visit.patient.first_name }}">{{ triage.visit.patient.first_name|first }}{{ triage.visit.patient.last_name|first }}</div>
-                                                <div class="name-id">
-                                                    <span class="full-name">{{ triage.visit.patient.first_name }}
-                                                    {{ triage.visit.patient.last_name }}</span>
-                                                    <span class="patient-id">#PAT-{{ triage.visit.patient.pk|stringformat:"05d" }}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="vitals-display">
-                                                <span class="vital-item" title="Temperature">
-                                                    <i class="fas fa-thermometer-half"></i> {{ triage.temperature }}°C
-                                                </span>
-                                                <span class="vital-item" title="Blood Pressure">
-                                                    <i class="fas fa-heartbeat"></i> {{ triage.blood_pressure }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="priority-badge-modern priority-{{ triage.priority|lower }}">
-                                                <i class="fas fa-circle"></i> {{ triage.get_priority_display }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="no-records">
-                                            <div class="empty-state-small">
-                                                <i class="fas fa-clipboard-list"></i>
-                                                <p>No triage entries found today.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="section">
+             <div class="section">
                     <div class="section-header">
                         <h3>
                             <i class="fas fa-hourglass-half"></i> Visits Pending Triage
@@ -970,6 +891,86 @@
                         </table>
                     </div>
                 </div>
+                <div class="section">
+                    <div class="section-header">
+                        <h3>
+                            <i class="fas fa-clipboard-list"></i> Recent Triage Entries
+                        </h3>
+                        <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="search-section">
+                        <form method="GET" class="search-form">
+                            <div class="search-container" style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <input type="text" name="triage_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ triage_search }}">
+                                {% if triage_search %}
+                                    <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    {% if triage_search %}
+                        <div class="search-results-info">
+                            Found <strong>{{ triage_entries|length }}</strong> entry(s) matching "<strong>{{ triage_search }}</strong>"
+                        </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Vitals</th>
+                                    <th>Priority Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for triage in triage_entries %}
+                                    <tr class="triage-row" data-triage-id="{{ triage.pk }}">
+                                        <td>
+                                            <div class="patient-profile-inline">
+                                                <div class="avatar-initials" data-name="{{ triage.visit.patient.first_name }}">{{ triage.visit.patient.first_name|first }}{{ triage.visit.patient.last_name|first }}</div>
+                                                <div class="name-id">
+                                                    <span class="full-name">{{ triage.visit.patient.first_name }}
+                                                    {{ triage.visit.patient.last_name }}</span>
+                                                    <span class="patient-id">#PAT-{{ triage.visit.patient.pk|stringformat:"05d" }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="vitals-display">
+                                                <span class="vital-item" title="Temperature">
+                                                    <i class="fas fa-thermometer-half"></i> {{ triage.temperature }}°C
+                                                </span>
+                                                <span class="vital-item" title="Blood Pressure">
+                                                    <i class="fas fa-heartbeat"></i> {{ triage.blood_pressure }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="priority-badge-modern priority-{{ triage.priority|lower }}">
+                                                <i class="fas fa-circle"></i> {{ triage.get_priority_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="no-records">
+                                            <div class="empty-state-small">
+                                                <i class="fas fa-clipboard-list"></i>
+                                                <p>No triage entries found today.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+               
             {% endif %}
         </div>
     </div>

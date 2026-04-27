@@ -467,7 +467,7 @@ def patient_case_folder(request, admission_id):
         'current_nutrition': current_nutrition,
         'activity_log': activity_log,
         'medical_tests_data': medical_tests_data,
-        'available_departments': Departments.objects.all().order_by('name'),
+        'available_departments': Departments.objects.filter(name__in=['Lab', 'Imaging', 'Procedure Room']).order_by('name'),
         'dispensing_departments': Departments.objects.all().order_by('name'),
         'lab_results': LabResult.objects.filter(patient=admission.patient).select_related('service', 'requested_by').order_by('-requested_at'),
         'invoice_is_paid': invoice_is_paid,
