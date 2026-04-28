@@ -319,9 +319,10 @@ class Newborn(models.Model):
     # Feeding
     breastfeeding_initiated = models.BooleanField(default=False)
     
-    # Immunizations
-    bcg_given = models.BooleanField(default=False)
-    opv_0_given = models.BooleanField(default=False, verbose_name="OPV 0 Given")
+    # Care & Medications
+    chlorhexidine_given = models.BooleanField(default=False, verbose_name="Chlorhexidine gel 7.1% Given")
+    vitamin_k1_given = models.BooleanField(default=False, verbose_name="Vitamin K1 2mg/0.2ml Given")
+    teo_given = models.BooleanField(default=False, verbose_name="Tetracycline eye ointment (TEO) 1% 3.5gm Given")
     
     # Notes
     notes = models.TextField(blank=True, null=True)
@@ -332,6 +333,96 @@ class Newborn(models.Model):
     class Meta:
         ordering = ['baby_number']
     
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        old_instance = None
+        if not is_new:
+            old_instance = Newborn.objects.get(pk=self.pk)
+
+        # "Once marked cannot be unmarked" logic
+        if old_instance:
+            if old_instance.chlorhexidine_given and not self.chlorhexidine_given:
+                self.chlorhexidine_given = True
+            if old_instance.vitamin_k1_given and not self.vitamin_k1_given:
+                self.vitamin_k1_given = True
+            if old_instance.teo_given and not self.teo_given:
+                self.teo_given = True
+
+        super().save(*args, **kwargs)
+
+        # Trigger stock reduction if marked for the first time
+        self._handle_stock_reduction(old_instance)
+
+    def _handle_stock_reduction(self, old_instance):
+        """Automated stock reduction from Mini Pharmacy"""
+        from inventory.models import InventoryItem, StockRecord, StockAdjustment, DispensedItem
+        from home.models import Departments
+        from django.db import transaction
+        from django.db.models import Sum
+
+        medications = [
+            ('chlorhexidine_given', 'Chlorhexidine gel 7.1%'),
+            ('vitamin_k1_given', 'Vitamin K1 injection/oral (Vit K1) 2mg/0.2ml'),
+            ('teo_given', 'Tetracycline eye ointment 1%3.5gm'),
+        ]
+
+        for field, item_name in medications:
+            # If newly marked (either new record or changed from False to True)
+            is_newly_marked = False
+            if getattr(self, field):
+                if not old_instance or not getattr(old_instance, field):
+                    is_newly_marked = True
+
+            if is_newly_marked:
+                try:
+                    with transaction.atomic():
+                        # 1. Resolve Item & Department
+                        item = InventoryItem.objects.filter(name__icontains=item_name).first()
+                        dept = Departments.objects.filter(name='Mini Pharmacy').first()
+                        
+                        if not item or not dept:
+                            continue
+
+                        # 2. Check and Deduct Stock (FIFO/FEFO)
+                        quantity = 1
+                        batches = StockRecord.objects.filter(
+                            item=item, 
+                            current_location=dept, 
+                            quantity__gt=0
+                        ).order_by('expiry_date', 'received_date')
+
+                        remaining_to_deduct = quantity
+                        for batch in batches:
+                            if remaining_to_deduct <= 0: break
+                            deduction = min(batch.quantity, remaining_to_deduct)
+                            batch.quantity -= deduction
+                            batch.save()
+                            remaining_to_deduct -= deduction
+
+                        # 3. Log Adjustment
+                        StockAdjustment.objects.create(
+                            item=item,
+                            quantity=-quantity,
+                            adjustment_type='Usage',
+                            reason=f"Auto-dispensed to newborn baby of {self.delivery.pregnancy.patient.full_name}",
+                            adjusted_by=self.created_by,
+                            adjusted_from=dept
+                        )
+
+                        # 4. Create Dispensed Record
+                        # If the newborn has a patient profile, use it; otherwise use mother's visit
+                        patient = self.patient_profile if self.patient_profile else self.delivery.pregnancy.patient
+                        DispensedItem.objects.create(
+                            item=item,
+                            patient=patient,
+                            quantity=quantity,
+                            department=dept,
+                            dispensed_by=self.created_by
+                        )
+                except Exception:
+                    # Fail silently in save() but maybe log it
+                    pass
+
     def __str__(self):
         return f"Baby {self.baby_number} - {self.delivery.pregnancy.patient.full_name} - {self.get_gender_display()}"
 

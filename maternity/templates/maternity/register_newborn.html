@@ -163,25 +163,58 @@
                 </div>
                 <!-- Care & Immunizations -->
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #0f172a;">Care & Immunizations</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                        <div class="form-check">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #0f172a;">Care & Immunizations</h3>
+                        <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            <i class="fas fa-warehouse"></i> Deducts from Mini Pharmacy
+                        </span>
+                    </div>
+                    
+                    <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                        <p style="margin: 0; font-size: 13px; color: #92400e;">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Note:</strong> Once marked, these items cannot be unmarked. Marking them will automatically dispense them and reduce stock from the <strong>Mini Pharmacy</strong>.
+                        </p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
                             {{ form.breastfeeding_initiated }}
                             <label class="form-check-label" for="{{ form.breastfeeding_initiated.id_for_label }}">
                                 <strong>Breastfeeding Initiated</strong>
                             </label>
                         </div>
-                        <div class="form-check">
-                            {{ form.bcg_given }}
-                            <label class="form-check-label" for="{{ form.bcg_given.id_for_label }}">
-                                <strong>BCG Vaccine Given</strong>
-                            </label>
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
+                            {{ form.chlorhexidine_given }}
+                            <div>
+                                <label class="form-check-label" for="{{ form.chlorhexidine_given.id_for_label }}">
+                                    <strong>Chlorhexidine gel 7.1%</strong>
+                                </label>
+                                {% if form.chlorhexidine_given.help_text %}
+                                    <small style="display: block; color: #16a34a; font-size: 11px;">{{ form.chlorhexidine_given.help_text }}</small>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="form-check">
-                            {{ form.opv_0_given }}
-                            <label class="form-check-label" for="{{ form.opv_0_given.id_for_label }}">
-                                <strong>OPV 0 Given</strong>
-                            </label>
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
+                            {{ form.vitamin_k1_given }}
+                            <div>
+                                <label class="form-check-label" for="{{ form.vitamin_k1_given.id_for_label }}">
+                                    <strong>Vitamin K1 2mg/0.2ml</strong>
+                                </label>
+                                {% if form.vitamin_k1_given.help_text %}
+                                    <small style="display: block; color: #16a34a; font-size: 11px;">{{ form.vitamin_k1_given.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
+                            {{ form.teo_given }}
+                            <div>
+                                <label class="form-check-label" for="{{ form.teo_given.id_for_label }}">
+                                    <strong>Tetracycline eye ointment (TEO)</strong>
+                                </label>
+                                {% if form.teo_given.help_text %}
+                                    <small style="display: block; color: #16a34a; font-size: 11px;">{{ form.teo_given.help_text }}</small>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

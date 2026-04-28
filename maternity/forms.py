@@ -147,8 +147,8 @@ class NewbornForm(forms.ModelForm):
         fields = ['baby_number', 'gender', 'birth_datetime', 'birth_weight', 'birth_length', 
                   'head_circumference', 'apgar_1min', 'apgar_5min', 'apgar_10min',
                   'resuscitation_required', 'resuscitation_details', 'status', 
-                  'congenital_abnormalities', 'breastfeeding_initiated', 'bcg_given', 
-                  'opv_0_given', 'notes']
+                  'congenital_abnormalities', 'breastfeeding_initiated', 'chlorhexidine_given', 
+                  'vitamin_k1_given', 'teo_given', 'notes']
         widgets = {
             'baby_number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
@@ -163,8 +163,9 @@ class NewbornForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
             'congenital_abnormalities': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Any congenital abnormalities noted'}),
             'breastfeeding_initiated': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'bcg_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'opv_0_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'chlorhexidine_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'vitamin_k1_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'teo_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Clinical observations, care plan, etc.'}),
         }
         labels = {
@@ -176,8 +177,10 @@ class NewbornForm(forms.ModelForm):
             'apgar_1min': 'APGAR Score at 1 Minute',
             'apgar_5min': 'APGAR Score at 5 Minutes',
             'apgar_10min': 'APGAR Score at 10 Minutes (if applicable)',
-            'bcg_given': 'BCG Vaccine Given',
-            'opv_0_given': 'OPV 0 Given',
+            'breastfeeding_initiated': 'Breastfeeding Initiated',
+            'chlorhexidine_given': 'Chlorhexidine gel 7.1% Given',
+            'vitamin_k1_given': 'Vitamin K1 2mg/0.2ml Given',
+            'teo_given': 'Tetracycline eye ointment (TEO) 1% 3.5gm Given',
         }
 
     def __init__(self, *args, **kwargs):
@@ -185,6 +188,18 @@ class NewbornForm(forms.ModelForm):
         if self.instance and self.instance.patient_profile:
             self.fields['first_name'].initial = self.instance.patient_profile.first_name
             self.fields['last_name'].initial = self.instance.patient_profile.last_name
+        
+        # Prevent unmarking in the UI if already marked
+        if self.instance and self.instance.pk:
+            if self.instance.chlorhexidine_given:
+                self.fields['chlorhexidine_given'].widget.attrs['onclick'] = "return false;"
+                self.fields['chlorhexidine_given'].help_text = "Already administered and recorded."
+            if self.instance.vitamin_k1_given:
+                self.fields['vitamin_k1_given'].widget.attrs['onclick'] = "return false;"
+                self.fields['vitamin_k1_given'].help_text = "Already administered and recorded."
+            if self.instance.teo_given:
+                self.fields['teo_given'].widget.attrs['onclick'] = "return false;"
+                self.fields['teo_given'].help_text = "Already administered and recorded."
 
 class PostnatalBabyVisitForm(forms.ModelForm):
     class Meta:
