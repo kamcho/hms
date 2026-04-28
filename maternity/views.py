@@ -1839,6 +1839,11 @@ def record_vaccination(request, newborn_id):
 def vaccination_dashboard(request):
     """Dashboard for tracking due/overdue vaccinations"""
     today = timezone.now().date()
+    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+    
+    search_query = request.GET.get('q', '').strip()
+
     # Simplified logic: show newborns born in the last 15 months
     recent_newborns = Newborn.objects.select_related('delivery__pregnancy__patient').filter(
         birth_datetime__gte=timezone.now() - timedelta(days=450)
@@ -1872,12 +1877,27 @@ def vaccination_dashboard(request):
     recent_records = ImmunizationRecord.objects.select_related('newborn__delivery__pregnancy__patient', 'vaccine').order_by('-date_administered')[:10]
     
     # --- CWC Queue Logic ---
-    # Get Queued Patients for CWC
+    # Get Queued Patients for CWC or MCH (Fallthrough)
     cwc_queue = PatientQue.objects.filter(
-        sent_to__name='CWC',
-        visit__visit_date__date=today,
+        sent_to__name__in=['CWC', 'MCH', 'Maternity'],
+        visit__visit_date__range=(start_of_day, end_of_day),
         status='PENDING'
     ).select_related('visit__patient').order_by('created_at')
+
+    if search_query:
+        if search_query.isdigit():
+            cwc_queue = cwc_queue.filter(
+                Q(visit__patient__id=int(search_query)) |
+                Q(visit__patient__first_name__icontains=search_query) |
+                Q(visit__patient__last_name__icontains=search_query) |
+                Q(visit__patient__id_number__icontains=search_query)
+            )
+        else:
+            cwc_queue = cwc_queue.filter(
+                Q(visit__patient__first_name__icontains=search_query) |
+                Q(visit__patient__last_name__icontains=search_query) |
+                Q(visit__patient__id_number__icontains=search_query)
+            )
 
     # Resolve Pregnancy/Newborn context for each queue item
     # This ensures we direct them to the right Pregnancy Detail page
@@ -1911,6 +1931,7 @@ def vaccination_dashboard(request):
         'recent_records': recent_records,
         'today': today,
         'cwc_queue': processed_queue,
+        'search_query': search_query,
     }
     return render(request, 'maternity/vaccination_dashboard.html', context)
 

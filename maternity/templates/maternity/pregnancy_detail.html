@@ -690,11 +690,23 @@
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
             <i class="fas fa-baby-carriage text-pink-600"></i> Labour & Delivery
         </h2>
-        {% if not delivery or not delivery.delivery_datetime %}
-            <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
-                <i class="fas fa-{% if delivery %}edit{% else %}plus{% endif %}"></i> {% if delivery %}Complete Delivery Record{% else %}Record Delivery{% endif %}
-            </a>
-        {% endif %}
+        <div class="flex items-center gap-2">
+            {% if delivery %}
+                {% if not delivery.delivery_datetime %}
+                    <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
+                        <i class="fas fa-edit"></i> Complete Delivery Record
+                    </a>
+                {% else %}
+                    <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">
+                        <i class="fas fa-edit"></i> Edit Delivery
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'maternity:record_delivery' pregnancy.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm font-bold shadow-md shadow-pink-100 hover:bg-pink-700 transition-all">
+                    <i class="fas fa-plus"></i> Record Delivery
+                </a>
+            {% endif %}
+        </div>
     </div>
     <div class="p-6">
         {% if delivery %}
