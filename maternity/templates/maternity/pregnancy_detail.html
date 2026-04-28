@@ -410,7 +410,9 @@
                                 <i class="fas fa-stethoscope"></i> Refer to Doctor
                             </a>
                             {% if latest_visit %}
-                                <a href="{% url 'home:create_prescription' latest_visit.pk %}" class="preg-action-btn bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-200"><i class="fas fa-prescription"></i> Write Prescription</a>
+                                <button onclick="openMaternityPrescriptionModal()" class="preg-action-btn bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-200">
+                                    <i class="fas fa-prescription"></i> Write Prescription
+                                </button>
                             {% endif %}
                         </div>
                     </div>
@@ -1647,5 +1649,142 @@ function proceedWithExtendToIPD(invoiceId) {
     window.location.href = `/inpatient/patients/{{ pregnancy.patient.id }}/admit/?invoice_id=${invoiceId}`;
 }
 
+function openMaternityPrescriptionModal() {
+    const modal = document.createElement('div');
+    modal.id = 'maternityPrescriptionModal';
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center';
+    modal.style.zIndex = '9999';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.background = 'rgba(15, 23, 42, 0.6)';
+    modal.style.backdropFilter = 'blur(4px)';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-[2rem] shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200" style="background: white; border-radius: 2rem; max-width: 32rem; width: 100%; margin: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div style="background: linear-gradient(135deg, #9333ea, #4f46e5); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: white; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-prescription-bottle-alt"></i> Maternal Supplements
+                </h3>
+                <button onclick="document.getElementById('maternityPrescriptionModal').remove()" style="background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.2rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 1.5rem; background: #f8fafc;">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- IFAS Row -->
+                    <div style="background: white; padding: 1.25rem; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #f5f3ff; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">Ferrous/Folic Acid (IFAS)</div>
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">350mg Tablets</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Free?</span>
+                                <input type="checkbox" id="ifas_free" checked style="width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: #10b981;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <input type="number" id="ifas_qty" placeholder="Qty" style="width: 5rem; padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; font-size: 0.9rem; outline: none;" min="0">
+                            <button onclick="dispenseMaternityItem(208, 'ifas_qty', 'ifas_free')" style="flex: 1; padding: 0.6rem; background: #7c3aed; color: white; border: none; border-radius: 0.75rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <i class="fas fa-plus-circle"></i> Dispense
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lessos Row -->
+                    <div style="background: white; padding: 1.25rem; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                                    <i class="fas fa-shirt"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">Lessos</div>
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em;">Always Free</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <input type="number" id="lesso_qty" placeholder="Qty" style="width: 5rem; padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; font-size: 0.9rem; outline: none;" min="0">
+                            <button onclick="dispenseMaternityItem(233, 'lesso_qty', true)" style="flex: 1; padding: 0.6rem; background: #2563eb; color: white; border: none; border-radius: 0.75rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <i class="fas fa-plus-circle"></i> Dispense
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('maternityPrescriptionModal').remove()" style="width: 100%; padding: 1rem; border: none; background: transparent; color: #94a3b8; font-weight: 700; cursor: pointer; border-top: 1px solid #f1f5f9;">
+                Close Window
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function dispenseMaternityItem(itemId, qtyInputId, freeToggleId) {
+    const qty = document.getElementById(qtyInputId).value;
+    if (!qty || qty <= 0) {
+        alert('Please enter a valid quantity.');
+        return;
+    }
+
+    let isFree = false;
+    if (typeof freeToggleId === 'boolean') {
+        isFree = freeToggleId;
+    } else {
+        isFree = document.getElementById(freeToggleId).checked;
+    }
+
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+
+    const formData = new FormData();
+    formData.append('item_id', itemId);
+    formData.append('patient_id', '{{ pregnancy.patient.id }}');
+    formData.append('visit_id', '{{ latest_visit.id }}');
+    formData.append('department_id', '42'); // Mini Pharmacy
+    formData.append('quantity', qty);
+    formData.append('free_dispense', isFree ? 'true' : 'false');
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch('{% url "inventory:dispense_item" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            document.getElementById(qtyInputId).value = '';
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An unexpected error occurred.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
 </script>
 {% endblock %}

@@ -6,14 +6,17 @@ from .models import (
     Admission, Ward, Bed, InpatientDischarge, MedicationChart, 
     ServiceAdmissionLink, PatientVitals, ClinicalNote, 
     FluidBalance, WardTransfer, DoctorInstruction, NutritionOrder,
-    GatePass
+    GatePass, MedicationAdministrationRecord, InpatientConsumable
 )
 from .forms import (
     AdmissionForm, MedicationChartForm, ServiceAdmissionLinkForm, 
     InpatientDischargeForm, PatientVitalsForm, ClinicalNoteForm, 
     FluidBalanceForm, WardTransferForm, DoctorInstructionForm, NutritionOrderForm
 )
-from home.models import Patient, Visit, Departments, Prescription, PrescriptionItem
+from home.models import (
+    Patient, Visit, Departments, Prescription, PrescriptionItem,
+    Symptoms, Consultation, ConsultationNotes
+)
 from home.forms import PrescriptionItemForm
 from django.forms import inlineformset_factory
 from django.db.models import Count, Q, Sum, F
@@ -305,7 +308,6 @@ def patient_case_folder(request, admission_id):
         })
 
     # 8. Consumables (New requested/dispensed items)
-    from inpatient.models import InpatientConsumable
     for c in admission.consumables.all():
         activity_log.append({
             'time': c.prescribed_at,
@@ -388,7 +390,6 @@ def patient_case_folder(request, admission_id):
 
     # 8. Consumables History (Unified UI list)
     from inventory.models import DispensedItem
-    from inpatient.models import InpatientConsumable
     
     # Get all tracking records (Pending + Dispensed via new flow)
     consumable_reqs = InpatientConsumable.objects.filter(admission=admission).select_related('item', 'prescribed_by', 'dispensed_by')
@@ -650,7 +651,6 @@ def add_medication(request, admission_id):
             
             # Auto-generate MAR grid ONLY if administered in sessions
             if med.administration_type == 'Sessions':
-                from .models import MedicationAdministrationRecord
                 
                 mar_entries = []
                 for day in range(1, med.duration_days + 1):
@@ -682,7 +682,6 @@ def discontinue_medication(request, medication_id):
         messages.error(request, "Only doctors and nurses can discontinue inpatient medications.")
         return redirect('inpatient:dashboard')
         
-    from .models import MedicationChart
     medication = get_object_or_404(MedicationChart, id=medication_id)
     admission = medication.admission
     
@@ -743,7 +742,6 @@ def add_service(request, admission_id):
 
 @login_required
 def administer_medication(request, medication_id):
-    from .models import MedicationAdministrationRecord
     
     # In the new flow, the ID passed is actually the MedicationAdministrationRecord ID
     try:
@@ -1012,7 +1010,6 @@ def discharge_patient(request, admission_id):
                 admission.visit.save()
 
             # --- Cleanup unbilled/undispensed medications & consumables ---
-            from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
 
             # Deactivate all active MedicationChart entries that are not fully dispensed
             pending_meds = MedicationChart.objects.filter(admission=admission, is_active=True, is_dispensed=False)
@@ -1065,11 +1062,54 @@ def discharge_patient(request, admission_id):
                 performed_list.append(f"- {l.service.name}")
                 
         initial_ops = "\n".join(performed_list)
+        
+        # --- NEW: Pull OPD and IPD History for pre-filling ---
+        admission_date = admission.admitted_at.date()
+        
+        # 1. Find OPD visit on same day as admission
+        opd_visit = Visit.objects.filter(
+            patient=admission.patient,
+            visit_date__date=admission_date,
+            visit_type='OUT-PATIENT'
+        ).order_by('-visit_date').first()
+        
+        # 2. Get Symptoms from that OPD visit
+        symptoms_text = ""
+        if opd_visit:
+            symptoms = Symptoms.objects.filter(visit=opd_visit).first()
+            if symptoms:
+                symptoms_text = symptoms.data
+        
+        # 3. Get Clinical Notes from that OPD visit
+        opd_notes_text = ""
+        if opd_visit:
+            opd_consultations = Consultation.objects.filter(visit=opd_visit)
+            opd_notes = ConsultationNotes.objects.filter(consultation__in=opd_consultations)
+            if opd_notes.exists():
+                opd_notes_text = "\n".join([n.notes for n in opd_notes])
+        
+        # 4. Generate IPD Medication Chart Summary
+        med_chart_text = "IPD MEDICATION CHART / TREATMENT GIVEN:\n"
+        ipd_meds = MedicationChart.objects.filter(admission=admission).select_related('item')
+        if ipd_meds.exists():
+            for m in ipd_meds:
+                status = " (Discontinued)" if not m.is_active else ""
+                med_chart_text += f"- {m.item.name} {m.dose_count or m.dose_per_session} x {m.frequency} for {m.duration_days} days{status}\n"
+        else:
+            med_chart_text += "No medication recorded in IPD chart.\n"
+            
+        # 5. Combine into Clinical Management Summary
+        management_summary = ""
+        if opd_notes_text:
+            management_summary += f"OPD CLINICAL NOTES:\n{opd_notes_text}\n\n"
+        management_summary += med_chart_text
 
         # Pre-fill provisional diagnosis from admission and autogenerated procedures
         form = InpatientDischargeForm(instance=discharge_instance, initial={
             'provisional_diagnosis': admission.provisional_diagnosis,
-            'operations_procedures': initial_ops
+            'operations_procedures': initial_ops,
+            'presenting_complaints': symptoms_text,
+            'clinical_management_summary': management_summary
         })
         formset = PrescriptionItemFormSet(prefix='meds')
 
@@ -1307,7 +1347,6 @@ def move_to_morgue(request, admission_id):
             admission.visit.save()
 
         # --- Cleanup unbilled/undispensed medications & consumables ---
-        from .models import MedicationChart, MedicationAdministrationRecord, InpatientConsumable
 
         # Deactivate all active MedicationChart entries that are not fully dispensed
         pending_meds_qs = MedicationChart.objects.filter(admission=admission, is_active=True, is_dispensed=False)
