@@ -2253,10 +2253,9 @@ def pharmacy_dashboard(request):
     from accounts.models import Invoice, InvoiceItem
     from inpatient.models import Admission
 
-    # Consumable InvoiceItems: have inventory_item set, but are NOT medications - Limited to today's visits
+    # Consumable InvoiceItems: have inventory_item set - Limited to today's visits
     pending_consumables = InvoiceItem.objects.filter(
         inventory_item__isnull=False,
-        inventory_item__medication__isnull=True,  # Structural check for consumables (non-drugs)
         invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
         invoice__visit__visit_date__range=(start_of_day, end_of_day)
     ).select_related(
@@ -2328,17 +2327,23 @@ def pharmacy_dashboard(request):
             group['prescribed_by'] = item.prescription.prescribed_by
 
     for ci in pending_consumable_list:
-        visit = ci.invoice.visit
-        if not visit:
-            continue
-        vkey = visit.id
+        vkey = ci.invoice.visit_id
         group = opd_visit_groups[vkey]
-        group['patient'] = ci.invoice.patient
-        group['visit'] = visit
-        group['consumables'].append(ci)
-        if not group['invoice']:
-            group['invoice'] = ci.invoice
-            group['invoice_status'] = ci.invoice.status
+        
+        # Avoid duplicates: If this medication is already in prescriptions group, skip it here.
+        is_duplicate = False
+        for p_item in group['prescriptions']:
+            if p_item.medication_id == ci.inventory_item_id and p_item.quantity == ci.quantity:
+                is_duplicate = True
+                break
+        
+        if not is_duplicate:
+            group['patient'] = ci.invoice.patient
+            group['visit'] = ci.invoice.visit
+            group['consumables'].append(ci)
+            if not group['invoice']:
+                group['invoice'] = ci.invoice
+                group['invoice_status'] = ci.invoice.status
 
     # Convert to list and sort
     opd_groups = sorted(
@@ -2491,21 +2496,23 @@ def dispense_all_visit_items(request, visit_id):
             is_dispensed=False
         ).select_related('item', 'admission')
 
-        # Scenario B: InvoiceItems marked as Consumable (Legacy IPD or Modern OPD immediate billing)
+        # Scenario B: InvoiceItems marked as Consumable or Direct-Billed Meds (not from prescription)
         pending_consumable_items = InvoiceItem.objects.filter(
             invoice__visit=visit,
             inventory_item__isnull=False,
-            inventory_item__medication__isnull=True, # Ensure it is a consumable (not a linked medication)
         ).select_related('inventory_item', 'invoice')
 
         # Filter out already-dispensed consumables for Scenario B
-        dispensed_keys = set(
-            DispensedItem.objects.filter(visit=visit).values_list('item_id', 'quantity')
-        )
-        pending_consumables = [
-            ci for ci in pending_consumable_items
-            if (ci.inventory_item_id, ci.quantity) not in dispensed_keys
-        ]
+        pending_consumables = []
+        for ci in pending_consumable_items:
+            if (ci.inventory_item_id, ci.quantity) in dispensed_keys:
+                continue
+                
+            # De-duplicate: skip if already covered by a prescription item in the same visit
+            if any(pm.medication_id == ci.inventory_item_id and pm.quantity == ci.quantity for pm in pending_meds):
+                continue
+                
+            pending_consumables.append(ci)
 
         total_pending = pending_meds.count() + len(pending_consumables) + pending_ipd_consumable_reqs.count()
         if total_pending == 0:

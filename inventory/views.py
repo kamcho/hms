@@ -525,22 +525,22 @@ def dispense_item(request):
             # All other departments (including Mini Pharmacy) bill and adjust stock immediately.
             is_pharmacy = department and department.name == 'Pharmacy'
             
-            
+            # 1. Stock Check (Required for both immediate and deferred dispensing)
+            if department:
+                available_stock = StockRecord.objects.filter(
+                    item=item, 
+                    current_location=department
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+                
+                if available_stock < quantity:
+                    return JsonResponse({
+                        'status': 'error', 
+                        'message': f'Insufficient stock in {department.name}. Available: {available_stock}'
+                    }, status=400)
+
             if not is_pharmacy:
-                # Check absolute stock before recording anything
+                # Deduct Stock immediately for non-pharmacy departments (FEFO/FIFO)
                 if department:
-                    available_stock = StockRecord.objects.filter(
-                        item=item, 
-                        current_location=department
-                    ).aggregate(total=Sum('quantity'))['total'] or 0
-                    
-                    if available_stock < quantity:
-                        return JsonResponse({
-                            'status': 'error', 
-                            'message': f'Insufficient stock in {department.name}. Available: {available_stock}'
-                        }, status=400)
-                    
-                    # Deduct Stock immediately for non-pharmacy departments (FEFO/FIFO)
                     remaining_to_deduct = quantity
                     batches = StockRecord.objects.filter(
                         item=item, 
@@ -567,7 +567,7 @@ def dispense_item(request):
                         adjusted_from=department
                     )
 
-                # 1. Physical Stock Movement (Audit Trail)
+                # Record Physical Dispensing (Inventory Stock Movement)
                 DispensedItem.objects.create(
                     item=item,
                     patient=patient,

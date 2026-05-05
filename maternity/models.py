@@ -372,6 +372,8 @@ class Newborn(models.Model):
             ('chlorhexidine_given', 'Chlorhexidine gel 7.1%'),
             ('vitamin_k1_given', 'Vitamin K1 injection/oral (Vit K1) 2mg/0.2ml'),
             ('teo_given', 'Tetracycline eye ointment 1%3.5gm'),
+            ('bcg_given', 'BCG Vaccine'),
+            ('opv_0_given', 'OPV Vaccine'),
         ]
 
         for field, item_name in medications:
