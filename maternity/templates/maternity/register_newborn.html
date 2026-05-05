@@ -216,6 +216,28 @@
                                 {% endif %}
                             </div>
                         </div>
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
+                            {{ form.bcg_given }}
+                            <div>
+                                <label class="form-check-label" for="{{ form.bcg_given.id_for_label }}">
+                                    <strong>BCG Vaccine</strong>
+                                </label>
+                                {% if form.bcg_given.help_text %}
+                                    <small style="display: block; color: #16a34a; font-size: 11px;">{{ form.bcg_given.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-check" style="display: flex; align-items: flex-start; gap: 10px;">
+                            {{ form.opv_0_given }}
+                            <div>
+                                <label class="form-check-label" for="{{ form.opv_0_given.id_for_label }}">
+                                    <strong>OPV 0 Vaccine</strong>
+                                </label>
+                                {% if form.opv_0_given.help_text %}
+                                    <small style="display: block; color: #16a34a; font-size: 11px;">{{ form.opv_0_given.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <!-- Clinical Notes -->
