@@ -1082,6 +1082,8 @@ def pregnancy_detail(request, pregnancy_id):
         status='Admitted'
     ).order_by('-admitted_at').first()
     
+    pharmacy_dept = Departments.objects.filter(name='Pharmacy').first()
+    
     context = {
         'pregnancy': pregnancy,
         'anc_visits': anc_visits,
@@ -1102,6 +1104,7 @@ def pregnancy_detail(request, pregnancy_id):
         'dispensed_items': dispensed_items,
         'latest_visit': latest_visit,
         'current_ipd_admission': current_ipd_admission,
+        'pharmacy_dept_id': pharmacy_dept.id if pharmacy_dept else None,
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)

@@ -1764,7 +1764,7 @@ function dispenseMaternityItem(itemId, qtyInputId, freeToggleId) {
     formData.append('item_id', itemId);
     formData.append('patient_id', '{{ pregnancy.patient.id }}');
     formData.append('visit_id', window.currentMaternityVisitId || '{{ latest_visit.id }}');
-    formData.append('department_id', '23'); // Pharmacy (Pick up at counter)
+    formData.append('department_id', '{{ pharmacy_dept_id|default:23 }}'); // Pharmacy (Pick up at counter)
     formData.append('quantity', qty);
     formData.append('free_dispense', isFree ? 'true' : 'false');
     formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
