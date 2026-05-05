@@ -1532,6 +1532,21 @@ def stock_activity(request):
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
     from django.db.models import Sum, Q
+    from datetime import datetime, time
+
+    # Convert date strings to timezone-aware datetimes (avoids __date lookup issues on MySQL)
+    from_dt = None
+    to_dt = None
+    if from_date:
+        try:
+            from_dt = timezone.make_aware(datetime.combine(datetime.strptime(from_date, '%Y-%m-%d').date(), time.min))
+        except (ValueError, TypeError):
+            from_dt = None
+    if to_date:
+        try:
+            to_dt = timezone.make_aware(datetime.combine(datetime.strptime(to_date, '%Y-%m-%d').date(), time.max))
+        except (ValueError, TypeError):
+            to_dt = None
 
     # --- 1. DispensedItem records (patient-linked dispensing) ---
     dispensed_qs = DispensedItem.objects.all().select_related(
@@ -1541,10 +1556,10 @@ def stock_activity(request):
         dispensed_qs = dispensed_qs.filter(item_id=item_id)
     elif item_search:
         dispensed_qs = dispensed_qs.filter(item__name__icontains=item_search)
-    if from_date:
-        dispensed_qs = dispensed_qs.filter(dispensed_at__date__gte=from_date)
-    if to_date:
-        dispensed_qs = dispensed_qs.filter(dispensed_at__date__lte=to_date)
+    if from_dt:
+        dispensed_qs = dispensed_qs.filter(dispensed_at__gte=from_dt)
+    if to_dt:
+        dispensed_qs = dispensed_qs.filter(dispensed_at__lte=to_dt)
 
     # --- 2. StockAdjustment records (all stock movements) ---
     adjustments_qs = StockAdjustment.objects.all().select_related(
@@ -1554,10 +1569,10 @@ def stock_activity(request):
         adjustments_qs = adjustments_qs.filter(item_id=item_id)
     elif item_search:
         adjustments_qs = adjustments_qs.filter(item__name__icontains=item_search)
-    if from_date:
-        adjustments_qs = adjustments_qs.filter(adjusted_at__date__gte=from_date)
-    if to_date:
-        adjustments_qs = adjustments_qs.filter(adjusted_at__date__lte=to_date)
+    if from_dt:
+        adjustments_qs = adjustments_qs.filter(adjusted_at__gte=from_dt)
+    if to_dt:
+        adjustments_qs = adjustments_qs.filter(adjusted_at__lte=to_dt)
 
     # --- 3. Merge into a unified activity list ---
     activities = []
