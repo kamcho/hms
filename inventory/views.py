@@ -1528,9 +1528,10 @@ def stock_activity(request):
     Includes filtering by item and date.
     """
     item_id = request.GET.get('item_id')
+    item_search = request.GET.get('item_search', '').strip()
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
-    from django.db.models import Sum
+    from django.db.models import Sum, Q
 
     # --- 1. DispensedItem records (patient-linked dispensing) ---
     dispensed_qs = DispensedItem.objects.all().select_related(
@@ -1538,6 +1539,8 @@ def stock_activity(request):
     )
     if item_id:
         dispensed_qs = dispensed_qs.filter(item_id=item_id)
+    elif item_search:
+        dispensed_qs = dispensed_qs.filter(item__name__icontains=item_search)
     if from_date:
         dispensed_qs = dispensed_qs.filter(dispensed_at__date__gte=from_date)
     if to_date:
@@ -1549,6 +1552,8 @@ def stock_activity(request):
     )
     if item_id:
         adjustments_qs = adjustments_qs.filter(item_id=item_id)
+    elif item_search:
+        adjustments_qs = adjustments_qs.filter(item__name__icontains=item_search)
     if from_date:
         adjustments_qs = adjustments_qs.filter(adjusted_at__date__gte=from_date)
     if to_date:
@@ -1592,7 +1597,7 @@ def stock_activity(request):
 
     # Calculate Total Quantity if filtered by item
     total_quantity = 0
-    if item_id:
+    if item_id or item_search:
         dispensed_total = dispensed_qs.aggregate(total=Sum('quantity'))['total'] or 0
         adjustment_total = adjustments_qs.filter(quantity__lt=0).aggregate(total=Sum('quantity'))['total'] or 0
         total_quantity = dispensed_total + abs(adjustment_total)
@@ -1602,6 +1607,7 @@ def stock_activity(request):
         'total_quantity': total_quantity,
         'items': items,
         'selected_item_id': int(item_id) if item_id and item_id.isdigit() else None,
+        'item_search': item_search,
         'from_date': from_date,
         'to_date': to_date,
         'title': 'Stock Activity'
