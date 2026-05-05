@@ -148,7 +148,7 @@ class NewbornForm(forms.ModelForm):
                   'head_circumference', 'apgar_1min', 'apgar_5min', 'apgar_10min',
                   'resuscitation_required', 'resuscitation_details', 'status', 
                   'congenital_abnormalities', 'breastfeeding_initiated', 'chlorhexidine_given', 
-                  'vitamin_k1_given', 'teo_given', 'notes']
+                  'vitamin_k1_given', 'teo_given', 'bcg_given', 'opv_0_given', 'notes']
         widgets = {
             'baby_number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
@@ -166,6 +166,8 @@ class NewbornForm(forms.ModelForm):
             'chlorhexidine_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'vitamin_k1_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'teo_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'bcg_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'opv_0_given': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Clinical observations, care plan, etc.'}),
         }
         labels = {
@@ -181,6 +183,8 @@ class NewbornForm(forms.ModelForm):
             'chlorhexidine_given': 'Chlorhexidine gel 7.1% Given',
             'vitamin_k1_given': 'Vitamin K1 2mg/0.2ml Given',
             'teo_given': 'Tetracycline eye ointment (TEO) 1% 3.5gm Given',
+            'bcg_given': 'BCG Vaccine Given',
+            'opv_0_given': 'OPV 0 Vaccine Given',
         }
 
     def __init__(self, *args, **kwargs):
@@ -200,6 +204,12 @@ class NewbornForm(forms.ModelForm):
             if self.instance.teo_given:
                 self.fields['teo_given'].widget.attrs['onclick'] = "return false;"
                 self.fields['teo_given'].help_text = "Already administered and recorded."
+            if self.instance.bcg_given:
+                self.fields['bcg_given'].widget.attrs['onclick'] = "return false;"
+                self.fields['bcg_given'].help_text = "Already administered and recorded."
+            if self.instance.opv_0_given:
+                self.fields['opv_0_given'].widget.attrs['onclick'] = "return false;"
+                self.fields['opv_0_given'].help_text = "Already administered and recorded."
 
 class PostnatalBabyVisitForm(forms.ModelForm):
     class Meta:

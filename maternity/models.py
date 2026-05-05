@@ -324,6 +324,10 @@ class Newborn(models.Model):
     vitamin_k1_given = models.BooleanField(default=False, verbose_name="Vitamin K1 2mg/0.2ml Given")
     teo_given = models.BooleanField(default=False, verbose_name="Tetracycline eye ointment (TEO) 1% 3.5gm Given")
     
+    # Birth Vaccinations (KEPI)
+    bcg_given = models.BooleanField(default=False, verbose_name="BCG Vaccine Given")
+    opv_0_given = models.BooleanField(default=False, verbose_name="OPV 0 Vaccine Given")
+    
     # Notes
     notes = models.TextField(blank=True, null=True)
     
@@ -347,6 +351,10 @@ class Newborn(models.Model):
                 self.vitamin_k1_given = True
             if old_instance.teo_given and not self.teo_given:
                 self.teo_given = True
+            if old_instance.bcg_given and not self.bcg_given:
+                self.bcg_given = True
+            if old_instance.opv_0_given and not self.opv_0_given:
+                self.opv_0_given = True
 
         super().save(*args, **kwargs)
 
