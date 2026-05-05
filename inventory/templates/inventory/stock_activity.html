@@ -359,10 +359,11 @@
         <table class="activity-table">
             <thead>
                 <tr>
-                    <th>Patient</th>
+                    <th>Patient / Reason</th>
                     <th>Inventory Item</th>
+                    <th>Type</th>
                     <th>Quantity</th>
-                    <th>Dispensed By</th>
+                    <th>By</th>
                     <th>Date & Time</th>
                     <th>Location</th>
                 </tr>
@@ -371,15 +372,17 @@
                 {% for activity in activities %}
                 <tr>
                     <td>
+                        {% if activity.patient %}
                         <div class="patient-cell">
-                            <div class="patient-avatar">
-                                {{ activity.patient.full_name|slice:":1"|upper }}
-                            </div>
+                            <div class="patient-avatar">{{ activity.patient.full_name|slice:":1"|upper }}</div>
                             <div class="patient-info">
                                 <span class="name">{{ activity.patient.full_name }}</span>
-                                <span class="id">VISIT-{{ activity.visit.id }}</span>
+                                {% if activity.visit %}<span class="id">VISIT-{{ activity.visit.id }}</span>{% endif %}
                             </div>
                         </div>
+                        {% else %}
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ activity.reason }}">{{ activity.reason|truncatechars:60 }}</div>
+                        {% endif %}
                     </td>
                     <td>
                         <div class="item-badge">
@@ -388,27 +391,36 @@
                         </div>
                     </td>
                     <td>
+                        {% if activity.type == 'Dispensed' %}
+                            <span style="background: rgba(16, 185, 129, 0.1); color: #059669; padding: 0.3rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">{{ activity.type }}</span>
+                        {% elif activity.type == 'Usage' %}
+                            <span style="background: rgba(99, 102, 241, 0.1); color: #6366f1; padding: 0.3rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">{{ activity.type }}</span>
+                        {% elif activity.type == 'Damage' or activity.type == 'Disposal' %}
+                            <span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.3rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">{{ activity.type }}</span>
+                        {% else %}
+                            <span style="background: rgba(234, 179, 8, 0.1); color: #d97706; padding: 0.3rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase;">{{ activity.type }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         <span class="qty-badge">{{ activity.quantity }} {{ activity.item.dispensing_unit }}</span>
                     </td>
                     <td>
                         <div class="dispensed-by">
                             <i class="fas fa-user-md"></i>
-                            {{ activity.dispensed_by.get_full_name|default:activity.dispensed_by.username }}
+                            {{ activity.user.get_full_name|default:activity.user.username }}
                         </div>
                     </td>
                     <td class="date-column">
-                        {{ activity.dispensed_at|date:"M d, Y" }}
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ activity.dispensed_at|time:"H:i" }}</div>
+                        {{ activity.timestamp|date:"M d, Y" }}
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ activity.timestamp|time:"H:i" }}</div>
                     </td>
                     <td>
-                        <span style="font-weight: 500; font-size: 0.875rem;">
-                            {{ activity.department.name|default:"General Pharmacy" }}
-                        </span>
+                        <span style="font-weight: 500; font-size: 0.875rem;">{{ activity.department.name|default:"General Pharmacy" }}</span>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         <div class="empty-state">
                             <i class="fas fa-box-open"></i>
                             <h2>No stock activity found</h2>
@@ -421,11 +433,9 @@
             {% if total_quantity > 0 %}
             <tfoot>
                 <tr style="background: #f8fafc; border-top: 2px solid #e2e8f0;">
-                    <td colspan="2" style="text-align: right; padding: 1.5rem; font-weight: 800; color: var(--text-primary); font-size: 1.1rem; text-transform: uppercase;">Total Dispensed Quantity:</td>
+                    <td colspan="3" style="text-align: right; padding: 1.5rem; font-weight: 800; color: var(--text-primary); font-size: 1.1rem; text-transform: uppercase;">Total Used Quantity:</td>
                     <td colspan="4" style="padding: 1.5rem;">
-                        <span class="qty-badge" style="font-size: 1.25rem; padding: 0.5rem 1.5rem; background: var(--primary-gradient); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
-                            {{ total_quantity }}
-                        </span>
+                        <span class="qty-badge" style="font-size: 1.25rem; padding: 0.5rem 1.5rem; background: var(--primary-gradient); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">{{ total_quantity }}</span>
                     </td>
                 </tr>
             </tfoot>

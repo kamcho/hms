@@ -1524,37 +1524,81 @@ def confirm_ipd_fulfillment(request):
 def stock_activity(request):
     """
     View to track how inventory has been used by patients.
+    Combines data from DispensedItem and StockAdjustment for a complete picture.
     Includes filtering by item and date.
     """
     item_id = request.GET.get('item_id')
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
+    from django.db.models import Sum
 
-    # Base queryset for activities
-    activities = DispensedItem.objects.all().select_related(
+    # --- 1. DispensedItem records (patient-linked dispensing) ---
+    dispensed_qs = DispensedItem.objects.all().select_related(
         'item', 'patient', 'dispensed_by', 'department', 'visit'
     )
-
-    # Apply filters
     if item_id:
-        activities = activities.filter(item_id=item_id)
-    
+        dispensed_qs = dispensed_qs.filter(item_id=item_id)
     if from_date:
-        activities = activities.filter(dispensed_at__date__gte=from_date)
+        dispensed_qs = dispensed_qs.filter(dispensed_at__date__gte=from_date)
     if to_date:
-        activities = activities.filter(dispensed_at__date__lte=to_date)
+        dispensed_qs = dispensed_qs.filter(dispensed_at__date__lte=to_date)
 
-    # All items for the filter search (or use the JSON search API)
+    # --- 2. StockAdjustment records (all stock movements) ---
+    adjustments_qs = StockAdjustment.objects.all().select_related(
+        'item', 'adjusted_by', 'adjusted_from'
+    )
+    if item_id:
+        adjustments_qs = adjustments_qs.filter(item_id=item_id)
+    if from_date:
+        adjustments_qs = adjustments_qs.filter(adjusted_at__date__gte=from_date)
+    if to_date:
+        adjustments_qs = adjustments_qs.filter(adjusted_at__date__lte=to_date)
+
+    # --- 3. Merge into a unified activity list ---
+    activities = []
+
+    for d in dispensed_qs[:300]:
+        activities.append({
+            'timestamp': d.dispensed_at,
+            'item': d.item,
+            'quantity': d.quantity,
+            'type': 'Dispensed',
+            'patient': d.patient,
+            'department': d.department,
+            'user': d.dispensed_by,
+            'reason': f'Dispensed to {d.patient.full_name}' if d.patient else 'Dispensed',
+            'visit': d.visit,
+        })
+
+    for a in adjustments_qs[:300]:
+        activities.append({
+            'timestamp': a.adjusted_at,
+            'item': a.item,
+            'quantity': abs(a.quantity),
+            'type': a.adjustment_type,
+            'patient': None,
+            'department': a.adjusted_from,
+            'user': a.adjusted_by,
+            'reason': a.reason,
+            'visit': None,
+        })
+
+    # Sort by timestamp descending
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    activities = activities[:200]
+
+    # All items for the filter search
     items = InventoryItem.objects.all().order_by('name')
 
     # Calculate Total Quantity if filtered by item
     total_quantity = 0
     if item_id:
-        from django.db.models import Sum
-        total_quantity = activities.aggregate(total=Sum('quantity'))['total'] or 0
+        dispensed_total = dispensed_qs.aggregate(total=Sum('quantity'))['total'] or 0
+        adjustment_total = adjustments_qs.filter(quantity__lt=0).aggregate(total=Sum('quantity'))['total'] or 0
+        total_quantity = dispensed_total + abs(adjustment_total)
 
     context = {
-        'activities': activities[:200],  # Limit to 200 for performance
+        'activities': activities,
         'total_quantity': total_quantity,
         'items': items,
         'selected_item_id': int(item_id) if item_id and item_id.isdigit() else None,
@@ -1563,3 +1607,4 @@ def stock_activity(request):
         'title': 'Stock Activity'
     }
     return render(request, 'inventory/stock_activity.html', context)
+

@@ -2503,6 +2503,9 @@ def dispense_all_visit_items(request, visit_id):
         ).select_related('inventory_item', 'invoice')
 
         # Filter out already-dispensed consumables for Scenario B
+        dispensed_keys = set(
+            DispensedItem.objects.filter(visit=visit).values_list('item_id', 'quantity')
+        )
         pending_consumables = []
         for ci in pending_consumable_items:
             if (ci.inventory_item_id, ci.quantity) in dispensed_keys:
