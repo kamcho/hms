@@ -1,0 +1,225 @@
+5: Paracetamol 500mg
+7: Oxyl
+8: Test Syringe
+9: Test Med
+11: Test Drug
+12: Salbutamol tablets (Ventolin) 4mg
+13: Saline nasal drops 0.9%
+14: Secnidazole tablets 500mg
+15: Silver sulphadiazine cream (Burns cream) 1%
+16: Spironolactone tabs (Aldactone) 25mg
+17: Sodium bicarbonate injection (NaHCO3) 8.4
+18: Tetracycline eye ointment 1%3.5gm
+19: Tetracycline skin ointment 15gm
+20: Tinidazole tablets 500mg
+21: Tramadol caps 50mg
+22: Tramadol injection 100mg
+23: Vitamin B Complex tablets (Tribex)
+24: Vitamin B Complex injection
+25: Vitamin B Compound tablets
+26: Vitamin B12 injection (Vit B12)
+27: Vitamin K1 injection (Vit K) 10mg/ml
+28: Vitamin K1 injection/oral (Vit K1) 2mg/0.2ml
+29: Zinc oxide ointment 15%
+30: Zinc tablets (Znso4) 20mg
+31: Metroinidazole/Diloxamide (Dyrade M) 250:200mg
+32: Metformin tabs 500mg
+33: Metformin tablets 850mg
+34: Multivitamin syrup (M/vit)
+35: Multivitamin tablets (M/vit)
+36: Nalidixic acid tablets 500mg
+37: Nifedipine retard tablets (Adalat) 20mg
+38: Nitrofurantoin tablets 100mg
+39: Norfloxacin tablets 400mg
+40: Nystatin oral drops
+41: Omeprazole capsules 20mg
+42: Oral rehydration salts (ORS) 500ml
+43: Oxytocin injection (Syntocinon) 10iu/ml
+44: Paracetamol injection (PCM) 150mg/ml
+45: Paracetamol junior tablets (PCM) 100mg
+46: Paracetamol suppositories (PCM) 250mg
+47: Paracetamol suppositories (PCM) 125mg
+48: Paracetamol syrup (PCM) 120mg/5ml
+49: Paracetamol tablets (PCM) 500mg
+50: Penicillin benzathine injection (Benzathine) 2.4mu
+51: Penicillin benzyl injection (x-pen) 1mu
+52: Penicillin procaine fortified inj (PPF) 4mu
+53: Penicillin V. suspension (Pen-V) 125mg/5ml
+54: Penicillin V. tablets 250mg
+55: Pethidine injection 50mg/ml
+56: Pethidine injection 100mg/2ml
+57: Phenobarbitone tablets 30mg
+58: Phenobarbitone tablets 200mg
+59: Phenobarbitone inj.
+60: Potassium chloride injection 15%
+61: Povidone-iodine mouth wash 1%w/v
+62: Prednisolone eye drops 1%
+63: Prednisolone tablets 5mg
+64: Progesterone (Susten) 200mg
+65: Promethazine injection 50mg/2ml
+66: Promethazine syrup 5mg/5ml
+67: Promethazine tablets 25mg
+68: Quinine drops 20%w/v
+69: Quinine injection 600mg/2ml
+70: Quinine tabs 600mg
+71: Quinine tablets 300mg
+72: Ranitidine injection (Zantac) 50mg/2ml
+73: Ranitidine tablets (Zantac) 300mg
+74: Ranitidine tablets (zantac) 150mg
+75: Salbutamol inhaler (Ventolin) 100mg
+76: Salbutamol syrup (Ventolin) 2mg/5ml
+77: Flucloxacillin capsules (Fluxapen) 500mg
+78: Flucloxacillin injection (Fluzapen) 500mg
+79: Fluconazole tablets 50mg
+80: Fluconazole tablets 200mg
+81: Fluphenazine decanoate injection 25mg/ml
+82: Fluoxetine tabs (Modicate) 20mg
+83: Folic acid tabs 5mg
+84: Frusemide injection (Lasix) 20mg/2ml
+85: Frusemide tablets (Lasix) 40mg
+86: Gentamycin eye drops 0.3%
+87: Gentamycin Adult inj 80mg/2ml
+88: Gentamycin Paeds inj 20mg/2ml
+89: Glibenclamide tablets 5mg
+90: Griseofulvin tablets 250mg
+91: H Pylori kit
+92: Haematinic capsules (Ranferon)
+93: Haematinic syrup (Ranferon) 200ml
+94: Heparin injection 5,000iu/ml
+95: Hydralazine injection (Apresoline) 20mg/ml
+96: Hydrochlorthiazide tablets (HCT) 50mg
+97: Hydrochlorthiazide tablets (HCT) 25mg
+98: Hydrocortisone cream 1%
+99: Hydrocortisone injection 100mg
+100: Hyoscine Butylbromide injection (Buscopan) 20mg/ml
+101: Hyoscine Butylbromide tablets (Buscopan) 10mg
+102: Ibuprofen suspension (Bruffen) 100mg/5ml
+103: Ibuprofen tablets (Bruffen) 200mg
+104: Ibuprofen tablets (Bruffen) 400mg
+105: Indomethacin capsules (Indocid) 25mg
+106: Insulin (Actrapid) injection 100iu/ml
+107: Insulin (Mixtard) injection 30/70 100iu/ml
+108: Ketamine injection 50mg/ml
+109: Ketoconazole tablets 200mg
+110: Levofloxacin tablets (L-floxacin) 500mg
+111: Loperamide tablets (Immodium) 2mg
+112: Magnesium sulfate injection (Mgs04) 50%
+113: Mebendazole syrup (Vermox) 100mg/5ml
+114: Mebendazole tabs
+115: Meloxicam tablets 7.5mg
+116: Methyldopa tablets (Aldomet) 250mg
+117: Metoclopramide injection (Plasil) 10mg/2ml
+118: Metoclopramide tablets (Plasil) 10mg
+119: Metronidazole injection (Flagyl) 500mg/100ml
+120: Metronidazole suspension (Flagyl) 200mg/5ml
+121: Metronidazole tablets (Flagyl) 200mg
+122: Metronidazole tablets (Flagyl) 400mg
+123: Misoprostol (Cytotec) 200mcg
+125: Aspirin Cardiac tablets (Ascard) 75mg
+126: Aspirin tablets (ASA) 300mg
+127: Atenolol tablets 50mg
+128: Atropine injection 1mg/ml
+129: Azithromycin suspension 200mg/5ml
+130: Azithromycin tablets 250mg
+131: Azithromycin tablets 500mg
+132: Artovastatin tablets 10mg
+134: Benzhexol tablets (Artane) 5mg
+135: Benzyl Benzoat emulsion
+136: Betamethasone cream 0.1%
+137: Betamethasone/Neomycin drops 0.1/035%w/v
+138: Bisacodyl tabs 5mg
+139: Boric Acid Ear Drops 1.83%w/v
+140: Bromocriptine tablets 2.5mg
+141: Bronchodilator with mucolytic (Trimex)
+142: Calamine lotion
+143: Calcium gluconate injection 10%
+144: Carbamazepine tablets 200mg
+145: Carvedilol tablets 6.25mg
+146: Cefixine tablets 200mg
+147: Cefixine tablets 400mg
+148: Cefriaxone injection (Generic) IV/IM 250mg
+149: Cefriaxone injection (Generic) IV/IM 1gm
+150: Cefriaxone injection (Rocephine) IV (Original) 1gm
+151: Cefriaxone injection (Rocephine) IV (Original) 250mg
+152: Cefuroxime tabs (Zinnat) 250mg
+153: Cefuroxime tabs (Zinnat) 500mg
+154: Cephalexin capsules 250mg
+155: Cephalexin capsules 500mg
+156: Cephalexin suspension 125mg/5ml
+157: Cetrizine syrup 5mg/5ml
+158: Cetrizine tablets 10mg
+159: Chloramphenicol eye drops (CAF) 0.5%
+160: Chloramphenicol injection (CAF) 1gm
+161: Chloramphenicol suspension (CAF) 125mg/5ml
+162: Chlopheniramine injection (Piriton) 10mg/ml
+163: Chlopheniramine tablets (Piriton) 4mg
+164: Chlopheniramine suspension (Piriton) 2mg/5ml
+165: Chlorpromazine tablets (Largactil) 25mg
+166: Ciprofloxacin capsules (Cipro) 500mg
+167: Cimetidine tabs 400mg
+168: Clotrimazole cream 1%
+169: Clotrimazole pessaries 200mg
+170: Clotrimazole/Betamethasone cream 1%/0.1%w/w
+171: Cloxacillin 500mg
+172: Cloxacillin 250mg
+173: Cloxacillin syrup
+174: Cold capsules
+175: Cotton wool 50g
+176: Cotton wool 100g
+177: Cotton woo 400g
+178: Co-otrimaxazole suspension (Septrine) 200/40mg
+179: Co-otrimaxazole tablets (Septrine) 400/80mg
+180: Cotrimoxazole tabs 800/160mg
+181: Cough expectorant mixture (C/Exp)
+182: Cough suppressant mixture (C/Supp)
+183: Dexamethasone/Gentamycin eye drops (Gendex) 0.1/0.3%w/v
+184: Dexamethasone injection 4mg
+185: Dextrose injection 50%, 10%, 5%
+186: Dextrose 5% in normal saline 5%/0.09%W/V
+187: Diazepam injection (Valium) 10mg/2ml
+188: Diazepam suppositories 2.5mg
+189: Diazepam tablets 5mg
+190: Diclofenac sodium tablets 50mg
+191: Diclofenac/paracetamol/chlorzoxanone tablets (Flamoryl/Flamchek) 50/325/250mg
+192: Diclofenac Gel 1%w/w
+193: Diclofenac injection 25mg/ml
+194: Digoxin tablets 0.25mg
+195: Doxycycline capsule (Doxy) 100mg
+196: Dopamine injection 40mg/ml
+197: Domperidone (Deflux) 100ml
+198: Domperidone tablet (Deflux) 10mg
+199: Enalapril tablets 5mg
+200: Ephedrine nasal drops 0.5%
+201: Ephedrine nasal drops 1.0%
+202: Erthromycin suspension 125mg/5ml
+203: Erthromycin tablets 250mg
+204: Erthromycin tablets 500mg
+205: Esomeprazole 20mg
+206: Ferrous sulphate tablets (Feso4) 200mg
+207: Ferrous sulphate/VitB comp syrup (Feso4) 100/1.5/1/0/2.0/5.0mg per 5ml
+208: Ferrous/Folic acid tablets 350mg
+209: Flucloxacillin capsules (Fluxapen) 250mg
+210: Crepe bandages All sizes
+211: Speculum vaginal disposable All sizes
+212: Plaster of Paris bandage (POP) All sizes
+213: Catheters All sizes
+214: Chest drainage tube All sizes
+215: Endotrachael tubes All sizes
+216: Naso-gastric tubes (NGT) All sizes
+217: Sunction tubes All sizes
+218: Surgical blades All sizes
+219: Blood giving set Set
+220: Maternity pads 1 pkt
+221: Thermometer (Centigrade) Piece
+222: Umbilical cord clamps Piece
+223: Urine bags with outlet Piece
+224: Gloves sterile/surgical All sizes
+225: IV cannula All sizes
+226: IV giving set All sizes
+227: Syringe + Needles (2 - 20cc) Piece
+228: Syringes 50/60cc
+229: Syringes disposable (Insulin) Piece
+230: Chromic catcut All sizes
+231: Vicryl suture All sizes
+232: Chlorhexidine gel 7.1%
+233: Lessos

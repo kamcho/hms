@@ -2219,11 +2219,10 @@ def pharmacy_dashboard(request):
         messages.error(request, "Access denied. Only pharmacists and nurses can access the pharmacy dashboard.")
         return redirect('home:reception_dashboard')
 
-    # Determine department based on role
-    dept_name = 'Pharmacy' if request.user.role == 'Pharmacist' else 'mini pharmacy'
+    # Always use the main Pharmacy department for this dashboard
     pharmacy_dept, created = Departments.objects.get_or_create(
-        name=dept_name,
-        defaults={'abbreviation': 'PHR' if dept_name == 'Pharmacy' else 'MPHR'}
+        name='Pharmacy',
+        defaults={'abbreviation': 'PHR'}
     )
 
     # Search functionality
@@ -2264,20 +2263,41 @@ def pharmacy_dashboard(request):
         'inventory_item',
     ).order_by('-created_at')
 
-    # Filter out consumables that already have a DispensedItem
-    # (match by visit + inventory_item + quantity)
-    dispensed_consumable_keys = set()
-    for d in DispensedItem.objects.all().values_list('visit_id', 'item_id', 'quantity'):
-        dispensed_consumable_keys.add(d)
+    # Group DispensedItem quantities by (visit_id, item_id) to calculate net pending
+    from django.db.models import Sum
+    dispensed_map = {}
+    dispensed_qs = DispensedItem.objects.filter(
+        visit__visit_date__range=(start_of_day, end_of_day)
+    ).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
+    
+    for d in dispensed_qs:
+        dispensed_map[(d['visit_id'], d['item_id'])] = d['total_qty']
 
     pending_consumable_list = []
+    # Track usage of dispensed pool to handle multiple InvoiceItems for the same item in one visit
+    pool_usage = dispensed_map.copy()
+
     for ci in pending_consumables:
-        key = (ci.invoice.visit_id, ci.inventory_item_id, ci.quantity)
-        if key not in dispensed_consumable_keys:
-            # Skip IPD consumables — those are handled by the IPD Pharmacy dashboard
-            is_ipd = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
-            if not is_ipd:
-                pending_consumable_list.append(ci)
+        visit_id = ci.invoice.visit_id
+        item_id = ci.inventory_item_id
+        qty_invoiced = ci.quantity
+        
+        # Calculate how much of this specific invoice item is actually pending
+        already_dispensed = pool_usage.get((visit_id, item_id), 0)
+        
+        if already_dispensed >= qty_invoiced:
+            # Fully covered by previous dispense records
+            pool_usage[(visit_id, item_id)] -= qty_invoiced
+            continue
+        elif already_dispensed > 0:
+            # Partially covered
+            ci.quantity -= already_dispensed
+            pool_usage[(visit_id, item_id)] = 0
+
+        # Skip IPD consumables — those are handled by the IPD Pharmacy dashboard
+        is_ipd = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
+        if not is_ipd:
+            pending_consumable_list.append(ci)
 
     if search_query:
         pending_items = pending_items.filter(
@@ -2477,9 +2497,8 @@ def dispense_all_visit_items(request, visit_id):
         if not is_ipd and request.user.role not in ['Pharmacist', 'Admin']:
             return JsonResponse({'success': False, 'error': 'Only pharmacists can dispense OPD medications.'})
 
-        # Determine department based on role
-        dept_name = 'Pharmacy' if request.user.role == 'Pharmacist' else 'Mini Pharmacy'
-        pharmacy_dept = Departments.objects.get(name=dept_name)
+        # Always use Pharmacy department for stock deduction
+        pharmacy_dept = Departments.objects.get(name='Pharmacy')
 
         # ---- Gather pending items ----
         # 1. Prescription medications (PrescriptionItem)
@@ -2502,18 +2521,36 @@ def dispense_all_visit_items(request, visit_id):
             inventory_item__isnull=False,
         ).select_related('inventory_item', 'invoice')
 
-        # Filter out already-dispensed consumables for Scenario B
-        dispensed_keys = set(
-            DispensedItem.objects.filter(visit=visit).values_list('item_id', 'quantity')
-        )
+        # Robust De-duplication for Consumables:
+        # Calculate total quantity already dispensed for each item in this visit
+        from django.db.models import Sum
+        dispensed_totals = {
+            item_id: total_qty for item_id, total_qty in 
+            DispensedItem.objects.filter(visit=visit).values_list('item_id').annotate(total=Sum('quantity'))
+        }
+
         pending_consumables = []
+        # Track what we've already accounted for in this loop to handle multiple InvoiceItems for same item
+        accounted_for_dispensed = dispensed_totals.copy()
+
         for ci in pending_consumable_items:
-            if (ci.inventory_item_id, ci.quantity) in dispensed_keys:
+            item_id = ci.inventory_item_id
+            qty_needed = ci.quantity
+            
+            # 1. Skip if already covered by a prescription item (to prevent double billing/dispensing)
+            if any(pm.medication_id == item_id and pm.quantity == qty_needed for pm in pending_meds):
                 continue
-                
-            # De-duplicate: skip if already covered by a prescription item in the same visit
-            if any(pm.medication_id == ci.inventory_item_id and pm.quantity == ci.quantity for pm in pending_meds):
+            
+            # 2. Check if this specific quantity has already been dispensed
+            already_dispensed = accounted_for_dispensed.get(item_id, 0)
+            if already_dispensed >= qty_needed:
+                # This item was already dispensed, subtract from pool and skip
+                accounted_for_dispensed[item_id] -= qty_needed
                 continue
+            elif already_dispensed > 0:
+                # Partially dispensed? Adjust quantity to only dispense the remainder
+                ci.quantity -= already_dispensed
+                accounted_for_dispensed[item_id] = 0
                 
             pending_consumables.append(ci)
 
