@@ -529,22 +529,37 @@ def dispense_item(request):
             if department:
                 if is_pharmacy:
                     # For Pharmacy (deferred dispensing): check total stock across ALL locations
-                    # because the pharmacist will pick from wherever stock is available at fulfillment time
                     available_stock = StockRecord.objects.filter(
                         item=item
                     ).aggregate(total=Sum('quantity'))['total'] or 0
+                    
+                    # Build per-location breakdown for debugging
+                    stock_breakdown = list(StockRecord.objects.filter(
+                        item=item, quantity__gt=0
+                    ).values('current_location__name', 'current_location__id').annotate(
+                        loc_total=Sum('quantity')
+                    ))
                 else:
                     # For other departments: check stock at their specific location
                     available_stock = StockRecord.objects.filter(
                         item=item, 
                         current_location=department
                     ).aggregate(total=Sum('quantity'))['total'] or 0
+                    stock_breakdown = None
                 
                 if available_stock < quantity:
-                    location_label = 'system-wide' if is_pharmacy else department.name
+                    debug_msg = (
+                        f'Insufficient stock. '
+                        f'Item: {item.name} (ID:{item.id}), '
+                        f'Dept: {department.name} (ID:{department.id}), '
+                        f'Requested: {quantity}, Available: {available_stock}'
+                    )
+                    if stock_breakdown:
+                        locations = ', '.join([f"{s['current_location__name']}(ID:{s['current_location__id']})={s['loc_total']}" for s in stock_breakdown])
+                        debug_msg += f' | Breakdown: [{locations}]' if locations else ' | No stock anywhere'
                     return JsonResponse({
                         'status': 'error', 
-                        'message': f'Insufficient stock ({location_label}). Available: {available_stock}'
+                        'message': debug_msg
                     }, status=400)
 
             if not is_pharmacy:
