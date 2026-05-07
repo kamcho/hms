@@ -2299,7 +2299,7 @@ def pharmacy_dashboard(request):
         already_dispensed = pool_usage.get((visit_id, item_id), 0)
         
         if already_dispensed >= qty_invoiced:
-            pool_usage[(visit_id, item_id)] -= qty_invoiced
+            pool_usage[(visit_id, item_id)] = already_dispensed - qty_invoiced
             continue
         elif already_dispensed > 0:
             ci.quantity -= already_dispensed
