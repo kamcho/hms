@@ -2,7 +2,11 @@
 {% load static %}
 {% load custom_filters %}
 {% block title %}Pharmacy Operations - HMS{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
 {% block content %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
     :root {
         --pharm-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
