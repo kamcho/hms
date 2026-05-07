@@ -2342,6 +2342,7 @@ def pharmacy_dashboard(request):
             'prescribed_at': None,
             'prescribed_by': None,
             'prescription_id': None,
+            'diagnosis': '',
         }
 
     opd_visit_groups = defaultdict(create_group)
@@ -2366,6 +2367,7 @@ def pharmacy_dashboard(request):
         if not group['prescribed_at'] or item.prescription.prescribed_at > group['prescribed_at']:
             group['prescribed_at'] = item.prescription.prescribed_at
             group['prescribed_by'] = item.prescription.prescribed_by
+            group['diagnosis'] = item.prescription.diagnosis
 
     for ci in pending_consumable_list:
         visit = ci.invoice.visit

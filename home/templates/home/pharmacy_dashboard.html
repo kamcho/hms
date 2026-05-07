@@ -414,12 +414,12 @@
                                             {{ group.invoice_status }}
                                         </span>
                                         <div class="flex items-center gap-2">
-                                            {% if group.prescription_id %}
-                                            <!-- <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
-                                               style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #6366f1; color: #6366f1; text-decoration: none;"
-                                               title="Edit Prescription">
-                                                <i class="fas fa-edit"></i>
-                                            </a> -->
+                                            {% if group.diagnosis %}
+                                            <button class="btn btn-outline-info" 
+                                                    style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #0ea5e9; color: #0ea5e9; background: transparent;"
+                                                    onclick="Swal.fire({title: 'Prescription Diagnosis', text: '{{ group.diagnosis|escapejs }}', icon: 'info', confirmButtonColor: '#6366f1'})">
+                                                <i class="fas fa-stethoscope"></i> Diagnosis
+                                            </button>
                                             {% endif %}
                                             <button class="dispense-all-btn btn btn-success"
                                                     style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
@@ -510,12 +510,12 @@
                                             {{ group.invoice_status }}
                                         </span>
                                         <div class="flex items-center gap-2">
-                                            {% if group.prescription_id %}
-                                            <!-- <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
-                                               style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #6366f1; color: #6366f1; text-decoration: none;"
-                                               title="Edit Prescription">
-                                                <i class="fas fa-edit"></i>
-                                            </a> -->
+                                            {% if group.diagnosis %}
+                                            <button class="btn btn-outline-info" 
+                                                    style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #0ea5e9; color: #0ea5e9; background: transparent;"
+                                                    onclick="Swal.fire({title: 'Prescription Diagnosis', text: '{{ group.diagnosis|escapejs }}', icon: 'info', confirmButtonColor: '#6366f1'})">
+                                                <i class="fas fa-stethoscope"></i> Diagnosis
+                                            </button>
                                             {% endif %}
                                             <button class="dispense-all-btn btn btn-success"
                                                     style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
