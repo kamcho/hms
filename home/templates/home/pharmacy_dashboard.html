@@ -370,8 +370,8 @@
         {% if user.role == 'Admin' or user.role == 'Pharmacist' or user.role == 'Nurse' %}
         <div style="background: #1e293b; color: #94a3b8; padding: 1rem; border-radius: 12px; margin-bottom: 2rem; font-family: monospace; font-size: 0.8rem; border: 1px solid #334155;">
             <div style="color: #60a5fa; margin-bottom: 0.5rem; font-weight: bold;">SYSTEM DEBUG (Visible to Pharmacy Staff):</div>
-            <div>• Found Pending (Selected Date): <span style="color: #f8fafc;">{{ debug_info.pending_items_count }}</span></div>
-            <div>• Found Pending (ALL DATES): <span style="color: #fbbf24;">{{ debug_info.total_pending_all_dates }}</span></div>
+            <div>• DB Total Pending (All Dates): <span style="color: #fbbf24;">{{ debug_info.total_pending_all_dates }}</span></div>
+            <div>• After Python Date Filter: <span style="color: #f8fafc;">{{ debug_info.after_python_date_filter }}</span></div>
             <div>• Found Consumables: <span style="color: #f8fafc;">{{ debug_info.consumables_count }}</span></div>
             <div>• Filter Date: <span style="color: #f8fafc;">{{ debug_info.filter_date }}</span></div>
             <div>• Groups Generated: <span style="color: #f8fafc;">OPD: {{ opd_groups|length }} | IPD: {{ ipd_groups|length }}</span></div>

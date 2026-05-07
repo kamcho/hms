@@ -2245,8 +2245,7 @@ def pharmacy_dashboard(request):
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
 
-    # Get pending prescriptions (not dispensed) - Filtered by date
-    # We use __date as it is the standard Django way, falling back to all pending if count is 0 just for debugging
+    # Get ALL pending prescriptions and filter in Python to avoid DB-specific date issues
     pending_items_all = PrescriptionItem.objects.filter(dispensed=False).select_related(
         'prescription__patient',
         'prescription__prescribed_by',
@@ -2255,9 +2254,13 @@ def pharmacy_dashboard(request):
         'medication'
     ).order_by('-prescription__prescribed_at')
     
-    pending_items = pending_items_all.filter(prescription__prescribed_at__date=filter_date)
+    # Python-side filtering for reliability
+    pending_items = [
+        item for item in pending_items_all 
+        if item.prescription and item.prescription.prescribed_at and timezone.localdate(item.prescription.prescribed_at) == filter_date
+    ]
 
-    # Get pending consumables — Filtered by InvoiceItem creation date
+    # Get ALL pending consumables and filter in Python
     from accounts.models import Invoice, InvoiceItem
     from inpatient.models import Admission
 
@@ -2270,7 +2273,10 @@ def pharmacy_dashboard(request):
         'inventory_item',
     ).order_by('-created_at')
     
-    pending_consumables = pending_consumables_all.filter(created_at__date=filter_date)
+    pending_consumables_list_raw = [
+        ci for ci in pending_consumables_all
+        if ci.created_at and timezone.localdate(ci.created_at) == filter_date
+    ]
 
     # Group DispensedItem quantities to calculate net pending
     from django.db.models import Sum
@@ -2285,7 +2291,7 @@ def pharmacy_dashboard(request):
     pending_consumable_list = []
     pool_usage = dispensed_map.copy()
 
-    for ci in pending_consumables:
+    for ci in pending_consumables_list_raw:
         visit_id = ci.invoice.visit_id
         item_id = ci.inventory_item_id
         qty_invoiced = ci.quantity
@@ -2306,11 +2312,13 @@ def pharmacy_dashboard(request):
             pending_consumable_list.append(ci)
 
     if search_query and search_query.strip():
-        pending_items = pending_items.filter(
-            Q(prescription__patient__first_name__icontains=search_query) |
-            Q(prescription__patient__last_name__icontains=search_query) |
-            Q(medication__name__icontains=search_query)
-        )
+        search_query = search_query.lower().strip()
+        pending_items = [
+            item for item in pending_items
+            if search_query in (item.prescription.patient.first_name or '').lower()
+            or search_query in (item.prescription.patient.last_name or '').lower()
+            or search_query in (item.medication.name or '').lower()
+        ]
         # Filter pending consumable list
         pending_consumable_list = [
             ci for ci in pending_consumable_list
@@ -2461,7 +2469,7 @@ def pharmacy_dashboard(request):
 
     # Statistics
     stats = {
-        'pending_prescriptions': pending_items.count() + len(pending_consumable_list),
+        'pending_prescriptions': len(pending_items) + len(pending_consumable_list),
         'opd_count': len(opd_groups),
         'ipd_count': len(ipd_groups),
         'low_stock_count': len(low_stock_items),
@@ -2488,10 +2496,9 @@ def pharmacy_dashboard(request):
         'filter_date': filter_date,
         'debug_info': {
             'total_pending_all_dates': pending_items_all.count(),
-            'pending_items_count': pending_items.count(),
+            'after_python_date_filter': len(pending_items),
             'consumables_count': len(pending_consumable_list),
             'filter_date': filter_date,
-            'user_role': request.user.role,
             'tz_now': timezone.now(),
             'local_date': timezone.localdate(),
         },
