@@ -367,7 +367,18 @@
         </div>
 
         <!-- Main Grid Area -->
-        <div style="display: gri; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        {% if user.role == 'Admin' or user.role == 'Pharmacist' or user.role == 'Nurse' %}
+        <div style="background: #1e293b; color: #94a3b8; padding: 1rem; border-radius: 12px; margin-bottom: 2rem; font-family: monospace; font-size: 0.8rem; border: 1px solid #334155;">
+            <div style="color: #60a5fa; margin-bottom: 0.5rem; font-weight: bold;">SYSTEM DEBUG (Visible to Pharmacy Staff):</div>
+            <div>• Found Pending (Selected Date): <span style="color: #f8fafc;">{{ debug_info.pending_items_count }}</span></div>
+            <div>• Found Pending (ALL DATES): <span style="color: #fbbf24;">{{ debug_info.total_pending_all_dates }}</span></div>
+            <div>• Found Consumables: <span style="color: #f8fafc;">{{ debug_info.consumables_count }}</span></div>
+            <div>• Filter Date: <span style="color: #f8fafc;">{{ debug_info.filter_date }}</span></div>
+            <div>• Groups Generated: <span style="color: #f8fafc;">OPD: {{ opd_groups|length }} | IPD: {{ ipd_groups|length }}</span></div>
+            <div>• TZ Now: <span style="color: #f8fafc;">{{ debug_info.tz_now }}</span> | Local Date: <span style="color: #f8fafc;">{{ debug_info.local_date }}</span></div>
+        </div>
+        {% endif %}
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
             <div>
                 {% if user.role == 'Pharmacist' or user.role == 'Admin' or user.role == 'Nurse' %}
                     <!-- OPD Pending Items -->
