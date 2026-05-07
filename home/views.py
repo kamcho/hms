@@ -2213,10 +2213,10 @@ from home.models import Departments
 
 @login_required
 def pharmacy_dashboard(request):
-    """Pharmacy dashboard showing OPD prescriptions, consumables, stock, and requests"""
+    """Pharmacy dashboard showing OPD and IPD prescriptions, consumables, stock, and requests"""
     # Role-based access control
-    if request.user.role not in ['Pharmacist', 'Nurse']:
-        messages.error(request, "Access denied. Only pharmacists and nurses can access the pharmacy dashboard.")
+    if request.user.role not in ['Pharmacist', 'Nurse', 'Admin']:
+        messages.error(request, "Access denied. Only pharmacists, nurses and admins can access the pharmacy dashboard.")
         return redirect('home:reception_dashboard')
 
     # Always use the main Pharmacy department for this dashboard
@@ -2225,21 +2225,30 @@ def pharmacy_dashboard(request):
         defaults={'abbreviation': 'PHR'}
     )
 
+    # Date filter
+    from datetime import datetime, time
+    filter_date_str = request.GET.get('date')
+    if filter_date_str:
+        try:
+            filter_date = datetime.strptime(filter_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            filter_date = timezone.localdate()
+    else:
+        filter_date = timezone.localdate()
+
+    start_of_day = timezone.make_aware(datetime.combine(filter_date, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(filter_date, time.max))
+
     # Search functionality
     search_query = request.GET.get('search', '')
     stock_search = request.GET.get('stock_search', '')
     dispensed_search = request.GET.get('dispensed_search', '')
     request_search = request.GET.get('request_search', '')
 
-    today = timezone.localdate()
-    from datetime import datetime, time
-    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
-    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-
-    # Get pending OPD prescriptions (not dispensed) - Limited to today's visits
+    # Get pending prescriptions (not dispensed) - Filtered by prescribed_at__date
     pending_items = PrescriptionItem.objects.filter(
         dispensed=False,
-        prescription__visit__visit_date__range=(start_of_day, end_of_day)
+        prescription__prescribed_at__date=filter_date
     ).select_related(
         'prescription__patient',
         'prescription__prescribed_by',
@@ -2248,33 +2257,31 @@ def pharmacy_dashboard(request):
         'medication'
     ).order_by('-prescription__prescribed_at')
 
-    # Get pending OPD consumables — InvoiceItems with inventory_item that have NOT been dispensed yet
+    # Get pending consumables — Filtered by InvoiceItem creation date
     from accounts.models import Invoice, InvoiceItem
     from inpatient.models import Admission
 
-    # Consumable InvoiceItems: have inventory_item set - Limited to today's visits
     pending_consumables = InvoiceItem.objects.filter(
         inventory_item__isnull=False,
         invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial'],
-        invoice__visit__visit_date__range=(start_of_day, end_of_day)
+        created_at__date=filter_date
     ).select_related(
         'invoice__patient',
         'invoice__visit',
         'inventory_item',
     ).order_by('-created_at')
 
-    # Group DispensedItem quantities by (visit_id, item_id) to calculate net pending
+    # Group DispensedItem quantities to calculate net pending
     from django.db.models import Sum
     dispensed_map = {}
     dispensed_qs = DispensedItem.objects.filter(
-        visit__visit_date__range=(start_of_day, end_of_day)
+        dispensed_at__range=(start_of_day, end_of_day)
     ).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
     
     for d in dispensed_qs:
         dispensed_map[(d['visit_id'], d['item_id'])] = d['total_qty']
 
     pending_consumable_list = []
-    # Track usage of dispensed pool to handle multiple InvoiceItems for the same item in one visit
     pool_usage = dispensed_map.copy()
 
     for ci in pending_consumables:
@@ -2282,21 +2289,19 @@ def pharmacy_dashboard(request):
         item_id = ci.inventory_item_id
         qty_invoiced = ci.quantity
         
-        # Calculate how much of this specific invoice item is actually pending
         already_dispensed = pool_usage.get((visit_id, item_id), 0)
         
         if already_dispensed >= qty_invoiced:
-            # Fully covered by previous dispense records
             pool_usage[(visit_id, item_id)] -= qty_invoiced
             continue
         elif already_dispensed > 0:
-            # Partially covered
             ci.quantity -= already_dispensed
             pool_usage[(visit_id, item_id)] = 0
 
-        # Skip IPD consumables — those are handled by the IPD Pharmacy dashboard
-        is_ipd = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
-        if not is_ipd:
+        # Skip IPD consumables only if the patient is currently admitted (handled by IPD dashboard)
+        # However, at discharge, the status is 'Discharged', so they should show up here.
+        is_admitted = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
+        if not is_admitted:
             pending_consumable_list.append(ci)
 
     if search_query:
@@ -2313,27 +2318,34 @@ def pharmacy_dashboard(request):
             or search_query.lower() in (ci.inventory_item.name or '').lower()
         ]
 
-    # ---- Build OPD grouped data: group prescriptions + consumables by visit ----
+    # ---- Build grouped data: separate OPD and IPD ----
     from collections import defaultdict
+    from collections import OrderedDict
 
-    opd_visit_groups = defaultdict(lambda: {
-        'patient': None,
-        'visit': None,
-        'prescriptions': [],
-        'consumables': [],
-        'invoice': None,
-        'invoice_status': 'No Invoice',
-        'prescribed_at': None,
-        'prescribed_by': None,
-        'prescription_id': None,
-    })
+    def create_group():
+        return {
+            'patient': None,
+            'visit': None,
+            'prescriptions': [],
+            'consumables': [],
+            'invoice': None,
+            'invoice_status': 'No Invoice',
+            'prescribed_at': None,
+            'prescribed_by': None,
+            'prescription_id': None,
+        }
+
+    opd_visit_groups = defaultdict(create_group)
+    ipd_visit_groups = defaultdict(create_group)
 
     for item in pending_items:
         visit = item.prescription.visit
         if not visit:
             continue
-        vkey = visit.id
-        group = opd_visit_groups[vkey]
+        
+        is_ipd = str(visit.visit_type).upper() == 'IN-PATIENT'
+        group = ipd_visit_groups[visit.id] if is_ipd else opd_visit_groups[visit.id]
+        
         group['patient'] = item.prescription.patient
         group['visit'] = visit
         group['prescriptions'].append(item)
@@ -2347,10 +2359,14 @@ def pharmacy_dashboard(request):
             group['prescribed_by'] = item.prescription.prescribed_by
 
     for ci in pending_consumable_list:
-        vkey = ci.invoice.visit_id
-        group = opd_visit_groups[vkey]
+        visit = ci.invoice.visit
+        if not visit:
+            continue
+            
+        is_ipd = str(visit.visit_type).upper() == 'IN-PATIENT'
+        group = ipd_visit_groups[visit.id] if is_ipd else opd_visit_groups[visit.id]
         
-        # Avoid duplicates: If this medication is already in prescriptions group, skip it here.
+        # Avoid duplicates
         is_duplicate = False
         for p_item in group['prescriptions']:
             if p_item.medication_id == ci.inventory_item_id and p_item.quantity == ci.quantity:
@@ -2359,18 +2375,23 @@ def pharmacy_dashboard(request):
         
         if not is_duplicate:
             group['patient'] = ci.invoice.patient
-            group['visit'] = ci.invoice.visit
+            group['visit'] = visit
             group['consumables'].append(ci)
             if not group['invoice']:
                 group['invoice'] = ci.invoice
                 group['invoice_status'] = ci.invoice.status
 
+
     # Convert to list and sort
-    opd_groups = sorted(
-        [g for g in opd_visit_groups.values() if g['patient']],
-        key=lambda g: g['prescribed_at'] or timezone.now(),
-        reverse=True
-    )
+    def sort_groups(groups_dict):
+        return sorted(
+            [g for g in groups_dict.values() if g['patient']],
+            key=lambda g: g['prescribed_at'] or timezone.now(),
+            reverse=True
+        )
+
+    opd_groups = sort_groups(opd_visit_groups)
+    ipd_groups = sort_groups(ipd_visit_groups)
 
     # Get recently dispensed items (last 30 days)
     thirty_days_ago = timezone.now() - timedelta(days=30)
@@ -2440,6 +2461,8 @@ def pharmacy_dashboard(request):
     # Statistics
     stats = {
         'pending_prescriptions': pending_items.count() + len(pending_consumable_list),
+        'opd_count': len(opd_groups),
+        'ipd_count': len(ipd_groups),
         'low_stock_count': len(low_stock_items),
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
@@ -2449,6 +2472,7 @@ def pharmacy_dashboard(request):
 
     context = {
         'opd_groups': opd_groups,
+        'ipd_groups': ipd_groups,
         'pending_items': pending_items,
         'dispensed_items': dispensed_items,
         'pharmacy_stock': pharmacy_stock,
@@ -2460,6 +2484,7 @@ def pharmacy_dashboard(request):
         'stock_search': stock_search,
         'dispensed_search': dispensed_search,
         'request_search': request_search,
+        'filter_date': filter_date,
         'pharmacy_dept': pharmacy_dept,
         'today_plus_30': today + timedelta(days=30),
     }

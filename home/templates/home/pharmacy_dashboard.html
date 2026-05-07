@@ -304,35 +304,52 @@
     <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
         <!-- Hero Header -->
         <div class="pharmacy-hero">
-            <h1>
-                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
-                    Hospital Pharmacy Operations
-                {% else %}
-                    IPD Medication Management
-                {% endif %}
-            </h1>
-            <p>
-                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
-                    Dispensing medications and consumables for Out-Patient and In-Patient visits from <strong>{{ pharmacy_dept.name }}</strong>.
-                {% else %}
-                    Managing medication charts and consumables for In-Patient admissions from <strong>{{ pharmacy_dept.name }}</strong>.
-                {% endif %}
-            </p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1>
+                        {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
+                            Hospital Pharmacy Operations
+                        {% else %}
+                            IPD Medication Management
+                        {% endif %}
+                    </h1>
+                    <p>
+                        {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
+                            Dispensing medications and consumables for Out-Patient and In-Patient visits from <strong>{{ pharmacy_dept.name }}</strong>.
+                        {% else %}
+                            Managing medication charts and consumables for In-Patient admissions from <strong>{{ pharmacy_dept.name }}</strong>.
+                        {% endif %}
+                    </p>
+                </div>
+                <!-- Date Filter -->
+                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                    <form method="GET" style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="display: flex; flex-direction: column;">
+                            <label style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: rgba(255,255,255,0.7);">Filter By Date</label>
+                            <input type="date" name="date" value="{{ filter_date|date:'Y-m-d' }}" 
+                                   style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; outline: none;"
+                                   onchange="this.form.submit()">
+                        </div>
+                        {% if search_query %}
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Statistics Dashboard -->
         <div class="stats-grid">
-            {% if user.role == 'Pharmacist' %}
+            {% if user.role == 'Pharmacist' or user.role == 'Admin' or user.role == 'Nurse' %}
                 <div class="stat-card" style="--gradient: var(--pharm-gradient-1)">
                     <div class="stat-icon"><i class="fas fa-clock"></i></div>
                     <div class="stat-label">Pending OPD</div>
-                    <div class="stat-value">{{ stats.pending_prescriptions }}</div>
+                    <div class="stat-value">{{ stats.opd_count }}</div>
                 </div>
-            {% else %}
                 <div class="stat-card" style="--gradient: var(--pharm-gradient-2)">
                     <div class="stat-icon"><i class="fas fa-procedures"></i></div>
-                    <div class="stat-label">Pending IPD</div>
-                    <div class="stat-value">{{ stats.pending_ipd_count }}</div>
+                    <div class="stat-label">Pending IPD (Take Home)</div>
+                    <div class="stat-value">{{ stats.ipd_count }}</div>
                 </div>
             {% endif %}
             
@@ -350,9 +367,9 @@
         </div>
 
         <!-- Main Grid Area -->
-        <div style="display: gid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <div style="display: gri; grid-template-columns: 2fr 1fr; gap: 2rem;">
             <div>
-                {% if user.role == 'Pharmacist' or user.role == 'Admin' %}
+                {% if user.role == 'Pharmacist' or user.role == 'Admin' or user.role == 'Nurse' %}
                     <!-- OPD Pending Items -->
                     <div class="section-card" id="opd-queue">
                         <div class="section-header">
@@ -362,6 +379,7 @@
                         
                         <div class="search-box">
                             <form method="GET" action="#opd-queue">
+                                <input type="hidden" name="date" value="{{ filter_date|date:'Y-m-d' }}">
                                 <i class="fas fa-search"></i>
                                 <input type="text" name="search" placeholder="Search patient name or medication..." value="{{ search_query }}">
                             </form>
@@ -386,11 +404,11 @@
                                         </span>
                                         <div class="flex items-center gap-2">
                                             {% if group.prescription_id %}
-                                            <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
+                                            <!-- <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
                                                style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #6366f1; color: #6366f1; text-decoration: none;"
                                                title="Edit Prescription">
                                                 <i class="fas fa-edit"></i>
-                                            </a>
+                                            </a> -->
                                             {% endif %}
                                             <button class="dispense-all-btn btn btn-success"
                                                     style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
@@ -445,11 +463,104 @@
                                     </tbody>
                                 </table>
                             </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- IPD Pending Items (Take Home Meds) -->
+                    <div class="section-card" id="ipd-queue">
+                        <div class="section-header">
+                            <h2 style="color: #fb7185;"><i class="fas fa-hospital-user"></i> IPD Dispensing Queue (Discharge Meds)</h2>
+                            <span class="badge badge-danger">{{ ipd_groups|length }} Visits</span>
+                        </div>
+                        
+                        <div class="search-box">
+                            <form method="GET" action="#ipd-queue">
+                                <input type="hidden" name="date" value="{{ filter_date|date:'Y-m-d' }}">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" placeholder="Search patient name or medication..." value="{{ search_query }}">
+                            </form>
+                        </div>
+
+                        {% for group in ipd_groups %}
+                            <div class="prescription-group" style="border-left: 4px solid #f43f5e;">
+                                <div class="patient-header">
+                                    <div class="patient-info">
+                                        <div class="patient-avatar" style="background: var(--pharm-gradient-2);">{{ group.patient.first_name|first }}{{ group.patient.last_name|first }}</div>
+                                        <div class="patient-details">
+                                            <h3><a href="{% url 'home:patient_detail' group.patient.id %}">{{ group.patient.full_name }}</a> <span class="badge badge-info" style="margin-left: 10px;">IPD / Take Home</span></h3>
+                                            <div class="patient-meta">
+                                                <span><i class="far fa-calendar"></i> {{ group.prescribed_at|date:"M d, H:i" }}</span>
+                                                <span><i class="far fa-user"></i> {{ group.prescribed_by.username }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span class="badge {% if group.invoice_status == 'Paid' %}badge-success{% else %}badge-warning{% endif %}">
+                                            {{ group.invoice_status }}
+                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            {% if group.prescription_id %}
+                                            <!-- <a href="{% url 'home:edit_prescription' group.prescription_id %}" class="btn btn-outline-primary" 
+                                               style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #6366f1; color: #6366f1; text-decoration: none;"
+                                               title="Edit Prescription">
+                                                <i class="fas fa-edit"></i>
+                                            </a> -->
+                                            {% endif %}
+                                            <button class="dispense-all-btn btn btn-success"
+                                                    style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
+                                                    data-visit-id="{{ group.visit.id }}"
+                                                    data-patient="{{ group.patient.full_name }}"
+                                                    {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
+                                                Dispense All
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <table class="med-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Dose</th>
+                                            <th>Frequency</th>
+                                            <th>Duration</th>
+                                            <th>Qty</th>
+                                            <th>Instructions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in group.prescriptions %}
+                                            <tr>
+                                                <td class="font-black whitespace-nowrap" style="color: #f87171;">{{ item.medication.name }}</td>
+                                                <td class="font-black" style="color: #fbbf24;">{{ item.dose_count }} {% if item.dose_unit %}{{ item.dose_unit }}{% else %}units{% endif %}</td>
+                                                <td class="font-black uppercase tracking-wider" style="color: #34d399;">{{ item.frequency }}</td>
+                                                <td class="font-black" style="color: #f472b6;">{{ item.number_of_days }} Days</td>
+                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="italic font-medium" style="color: #e2e8f0;">
+                                                    {{ item.instructions|default:"No instructions" }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                        {% for item in group.consumables %}
+                                            <tr>
+                                                <td class="font-black whitespace-nowrap" style="color: #f472b6;">{{ item.inventory_item.name }}</td>
+                                                <td class="text-slate-400">-</td>
+                                                <td class="text-slate-400">-</td>
+                                                <td class="text-slate-400">-</td>
+                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="italic font-medium" style="color: #e2e8f0;">
+                                                    {{ item.instructions|default:"-" }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         {% empty %}
                             <div class="empty-state" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
                                 <i class="fas fa-check-circle" style="font-size: 3rem; opacity: 0.2; margin-bottom: 1rem;"></i>
                                 <h4>All Clear</h4>
-                                <p>No pending OPD prescriptions.</p>
+                                <p>No pending IPD discharge medications for this date.</p>
                             </div>
                         {% endfor %}
                     </div>
@@ -496,6 +607,7 @@
             
             <div class="search-box">
                 <form method="GET" action="#stock-requests">
+                    <input type="hidden" name="date" value="{{ filter_date|date:'Y-m-d' }}">
                     <i class="fas fa-search"></i>
                     <input type="text" name="request_search" placeholder="Search item or requester..." value="{{ request_search }}">
                 </form>
@@ -554,6 +666,7 @@
 
             <div class="search-box">
                 <form method="GET" action="#available-stock">
+                    <input type="hidden" name="date" value="{{ filter_date|date:'Y-m-d' }}">
                     <i class="fas fa-search"></i>
                     <input type="text" name="stock_search" placeholder="Search stock by name or batch..." value="{{ stock_search }}">
                 </form>
