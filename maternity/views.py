@@ -1084,6 +1084,12 @@ def pregnancy_detail(request, pregnancy_id):
     
     pharmacy_dept = Departments.objects.filter(name__iexact='Pharmacy').first()
     
+    # Fetch maternity supplement items dynamically from DB
+    from inventory.models import InventoryItem
+    mat_item_ids = [418, 197, 270]
+    mat_items_qs = InventoryItem.objects.filter(id__in=mat_item_ids)
+    mat_items = {item.id: item for item in mat_items_qs}
+    
     context = {
         'pregnancy': pregnancy,
         'anc_visits': anc_visits,
@@ -1105,6 +1111,9 @@ def pregnancy_detail(request, pregnancy_id):
         'latest_visit': latest_visit,
         'current_ipd_admission': current_ipd_admission,
         'pharmacy_dept_id': pharmacy_dept.id if pharmacy_dept else None,
+        'mat_item_418': mat_items.get(418),
+        'mat_item_197': mat_items.get(197),
+        'mat_item_270': mat_items.get(270),
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)
