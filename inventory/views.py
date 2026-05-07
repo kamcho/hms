@@ -523,19 +523,28 @@ def dispense_item(request):
             # because those two are handled at pickup.
             # Strict check: only the main 'Pharmacy' handles deferred dispensing/billing.
             # All other departments (including Mini Pharmacy) bill and adjust stock immediately.
-            is_pharmacy = department and department.name == 'Pharmacy'
-            
             # 1. Stock Check (Required for both immediate and deferred dispensing)
+            is_pharmacy = department and department.name.lower() == 'pharmacy'
+
             if department:
-                available_stock = StockRecord.objects.filter(
-                    item=item, 
-                    current_location=department
-                ).aggregate(total=Sum('quantity'))['total'] or 0
+                if is_pharmacy:
+                    # For Pharmacy (deferred dispensing): check total stock across ALL locations
+                    # because the pharmacist will pick from wherever stock is available at fulfillment time
+                    available_stock = StockRecord.objects.filter(
+                        item=item
+                    ).aggregate(total=Sum('quantity'))['total'] or 0
+                else:
+                    # For other departments: check stock at their specific location
+                    available_stock = StockRecord.objects.filter(
+                        item=item, 
+                        current_location=department
+                    ).aggregate(total=Sum('quantity'))['total'] or 0
                 
                 if available_stock < quantity:
+                    location_label = 'system-wide' if is_pharmacy else department.name
                     return JsonResponse({
                         'status': 'error', 
-                        'message': f'Insufficient stock in {department.name}. Available: {available_stock}'
+                        'message': f'Insufficient stock ({location_label}). Available: {available_stock}'
                     }, status=400)
 
             if not is_pharmacy:
@@ -930,8 +939,8 @@ def inventory_distribution(request, item_id):
     med_form = MedicationForm(instance=getattr(item, 'medication', None))
     con_form = ConsumableDetailForm(instance=getattr(item, 'consumable_detail', None))
     
-    # Aggregate stock by location
-    distribution = StockRecord.objects.filter(
+    # Aggregate stock by location (only locations with stock > 0)
+    distribution_qs = StockRecord.objects.filter(
         item=item, 
         quantity__gt=0
     ).values(
@@ -941,6 +950,21 @@ def inventory_distribution(request, item_id):
         total_quantity=Sum('quantity'),
         batch_count=Count('id')
     ).order_by('-total_quantity')
+    
+    distribution = list(distribution_qs)
+    
+    # Always ensure Pharmacy and Main Store appear in the list
+    pinned_depts = Departments.objects.filter(name__iexact='Pharmacy') | Departments.objects.filter(name__iexact='Main Store')
+    existing_dept_ids = {d['current_location__id'] for d in distribution}
+    
+    for dept in pinned_depts:
+        if dept.id not in existing_dept_ids:
+            distribution.append({
+                'current_location__name': dept.name,
+                'current_location__id': dept.id,
+                'total_quantity': 0,
+                'batch_count': 0,
+            })
     
     # Get total stock across all locations
     total_stock = sum(d['total_quantity'] for d in distribution)

@@ -1082,7 +1082,7 @@ def pregnancy_detail(request, pregnancy_id):
         status='Admitted'
     ).order_by('-admitted_at').first()
     
-    pharmacy_dept = Departments.objects.filter(name='Pharmacy').first()
+    pharmacy_dept = Departments.objects.filter(name__iexact='Pharmacy').first()
     
     context = {
         'pregnancy': pregnancy,
