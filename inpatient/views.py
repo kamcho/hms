@@ -477,6 +477,37 @@ def patient_case_folder(request, admission_id):
     })
 
 @login_required
+def edit_admission_date(request, admission_id):
+    admission = get_object_or_404(Admission, id=admission_id)
+    if request.method == 'POST':
+        admitted_at_str = request.POST.get('admitted_at')
+        if admitted_at_str:
+            try:
+                from django.utils.dateparse import parse_datetime
+                from django.utils import timezone
+                new_date = parse_datetime(admitted_at_str)
+                if new_date:
+                    if timezone.is_naive(new_date):
+                        new_date = timezone.make_aware(new_date, timezone.get_current_timezone())
+                    
+                    admission.admitted_at = new_date
+                    admission.save()
+                    
+                    if admission.visit:
+                        admission.visit.visit_date = new_date
+                        admission.visit.save()
+                    
+                    messages.success(request, f"Admission date successfully backdated to {new_date.strftime('%Y-%m-%d %H:%M')}.")
+                else:
+                    messages.error(request, "Invalid datetime format provided.")
+            except Exception as e:
+                messages.error(request, f"Failed to backdate admission date: {str(e)}")
+        else:
+            messages.error(request, "Admission date cannot be empty.")
+            
+    return redirect('inpatient:patient_case_folder', admission_id=admission.id)
+
+@login_required
 def add_vitals(request, admission_id):
     admission = get_object_or_404(Admission, id=admission_id)
     

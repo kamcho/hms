@@ -7,6 +7,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('patients/<int:patient_id>/admit/', views.admit_patient, name='admit_patient'),
     path('admissions/<int:admission_id>/case-folder/', views.patient_case_folder, name='patient_case_folder'),
+    path('admissions/<int:admission_id>/edit-date/', views.edit_admission_date, name='edit_admission_date'),
     path('admissions/<int:admission_id>/add-vitals/', views.add_vitals, name='add_vitals'),
     path('admissions/<int:admission_id>/add-note/', views.add_clinical_note, name='add_clinical_note'),
     path('admissions/<int:admission_id>/add-fluid/', views.add_fluid_balance, name='add_fluid'),
