@@ -45,7 +45,7 @@ class Admission(models.Model):
     patient = models.ForeignKey('home.Patient', on_delete=models.CASCADE, related_name='admissions')
     visit = models.ForeignKey('home.Visit', on_delete=models.CASCADE, related_name='admissions')
     bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True, blank=True, related_name='admissions')
-    admitted_at = models.DateTimeField(auto_now_add=True)
+    admitted_at = models.DateTimeField(auto_now_add=True, editable=True)
     admitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='admissions_processed')
     provisional_diagnosis = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
