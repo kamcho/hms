@@ -232,13 +232,15 @@
             </aside>
             <!-- RIGHT COLUMN: Pregnancy Clinical Details -->
             <div>
-                <!-- Pregnancy Overview Card -->
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6" x-data="{}">
                     <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-violet-50 flex justify-between items-center flex-wrap gap-3">
                         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2.5">
                             <i class="fas fa-baby-carriage text-indigo-500"></i> Pregnancy Overview
                         </h2>
                         <div class="flex items-center gap-2">
+                            <button @click="$dispatch('open-edit-modal')" class="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-1.5 border border-transparent cursor-pointer">
+                                <i class="fas fa-edit text-xs"></i> Edit Details
+                            </button>
                             <span class="px-3 py-1 bg-white text-indigo-700 rounded-lg text-sm font-black border border-indigo-100 shadow-sm">{{ pregnancy.para_code }}</span>
                             <span class="px-3 py-1 bg-white rounded-lg text-sm font-bold border border-slate-100 shadow-sm text-slate-600"><i class="fas fa-calendar-alt text-slate-400 mr-1"></i> Reg: {{ pregnancy.registration_date|date:"d M Y" }}</span>
                         </div>
@@ -1825,5 +1827,197 @@ function dispenseMaternityItem(itemId, qtyInputId, freeToggleId) {
         btn.innerHTML = originalText;
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const editLmpInput = document.getElementById('edit_id_lmp');
+    const editEddInput = document.getElementById('edit_id_edd');
+
+    if (editLmpInput && editEddInput) {
+        editLmpInput.addEventListener('change', function () {
+            if (this.value) {
+                const lmpDate = new Date(this.value);
+                const eddDate = new Date(lmpDate.getTime() + (280 * 24 * 60 * 60 * 1000));
+
+                const year = eddDate.getFullYear();
+                const month = String(eddDate.getMonth() + 1).padStart(2, '0');
+                const day = String(eddDate.getDate()).padStart(2, '0');
+
+                editEddInput.value = `${year}-${month}-${day}`;
+                editEddInput.removeAttribute('readonly');
+                editEddInput.classList.remove('bg-slate-50/50');
+            }
+        });
+
+        editEddInput.addEventListener('focus', function () {
+            this.removeAttribute('readonly');
+            this.classList.remove('bg-slate-50/50');
+        });
+    }
+});
 </script>
 {% endblock %}
+
+{% block modals %}
+    {{ block.super }}
+    <!-- Edit Pregnancy Details Modal -->
+    <div x-data="{ showEditModal: {% if open_edit_modal %}true{% else %}false{% endif %} }" 
+         x-show="showEditModal" 
+         @open-edit-modal.window="showEditModal = true"
+         class="fixed inset-0 z-[9999] overflow-y-auto" 
+         style="display: none;" 
+         @keydown.escape.window="showEditModal = false">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showEditModal = false"></div>
+
+        <!-- Modal Content Wrapper -->
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-3xl transform overflow-hidden rounded-[2rem] bg-white p-8 shadow-2xl border border-slate-200 transition-all animate-in fade-in zoom-in duration-200">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                    <h3 class="text-xl font-extrabold text-slate-900 flex items-center gap-2.5">
+                        <i class="fas fa-edit text-indigo-500"></i> Edit Pregnancy Details
+                    </h3>
+                    <button type="button" @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 transition-colors border-none bg-transparent cursor-pointer">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Form -->
+                <form method="POST" id="edit-pregnancy-form" class="space-y-6">
+                    {% csrf_token %}
+                    <input type="hidden" name="edit_pregnancy" value="1">
+
+                    <!-- Dates Section -->
+                    <div class="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 text-left">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900">Pregnancy Dates</h4>
+                                <p class="text-[10px] text-slate-500">Milestones and expected delivery date.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Last Menstrual Period (LMP) *</label>
+                                {{ edit_form.lmp }}
+                                {% if edit_form.lmp.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.lmp.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Expected Delivery Date (EDD)</label>
+                                {{ edit_form.edd }}
+                                <p class="text-[10px] text-slate-400 italic mt-1.5"><i class="fas fa-magic text-blue-400 mr-1"></i>Auto-calculated from LMP</p>
+                                {% if edit_form.edd.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.edd.errors|striptags }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Obstetric History (GPAL) -->
+                    <div class="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50 text-left">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                                <i class="fas fa-history"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900">Obstetric History (GPAL)</h4>
+                                <p class="text-[10px] text-slate-500">GPAL values from previous pregnancies.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Gravida (G)</label>
+                                {{ edit_form.gravida }}
+                                {% if edit_form.gravida.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.gravida.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Para (P)</label>
+                                {{ edit_form.para }}
+                                {% if edit_form.para.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.para.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Abortion (A)</label>
+                                {{ edit_form.abortion }}
+                                {% if edit_form.abortion.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.abortion.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Living (L)</label>
+                                {{ edit_form.living }}
+                                {% if edit_form.living.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.living.errors|striptags }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical History & Risks -->
+                    <div class="bg-rose-50/30 p-5 rounded-2xl border border-rose-100/50 text-left">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center">
+                                <i class="fas fa-notes-medical"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900">Health & Risks</h4>
+                                <p class="text-[10px] text-slate-500">Known conditions, allergies, and classifications.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-left">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Blood Group</label>
+                                {{ edit_form.blood_group }}
+                                {% if edit_form.blood_group.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.blood_group.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Risk Level</label>
+                                {{ edit_form.risk_level }}
+                                {% if edit_form.risk_level.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.risk_level.errors|striptags }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-left">
+                            <div class="flex items-center gap-3 py-2">
+                                {{ edit_form.previous_cs }}
+                                <label class="text-xs font-bold text-slate-700 cursor-pointer">Previous C-Section</label>
+                                {% if edit_form.previous_cs.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.previous_cs.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div class="flex items-center gap-3 py-2">
+                                {{ edit_form.is_multiple_gestation }}
+                                <label class="text-xs font-bold text-slate-700 cursor-pointer">Multiple Gestation</label>
+                                {% if edit_form.is_multiple_gestation.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.is_multiple_gestation.errors|striptags }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Known Allergies</label>
+                                {{ edit_form.allergies }}
+                                {% if edit_form.allergies.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.allergies.errors|striptags }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Chronic Conditions</label>
+                                {{ edit_form.chronic_conditions }}
+                                {% if edit_form.chronic_conditions.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.chronic_conditions.errors|striptags }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5">Pregnancy Status</label>
+                            {{ edit_form.status }}
+                            {% if edit_form.status.errors %}<p class="text-rose-500 text-xs mt-1 font-semibold">{{ edit_form.status.errors|striptags }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
+                        <button type="button" @click="showEditModal = false" class="px-6 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors border-none cursor-pointer">Cancel</button>
+                        <button type="submit" class="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-100 border-none cursor-pointer">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+{% endblock %}
+

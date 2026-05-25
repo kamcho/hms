@@ -36,8 +36,3 @@ class SignUpForm(forms.ModelForm):
             raise forms.ValidationError("Passwords do not match")
         return cleaned_data
 
-    def clean_id_number(self):
-        id_number = self.cleaned_data.get('id_number')
-        if User.objects.filter(id_number=id_number).exists():
-            raise forms.ValidationError("A user with this ID Number already exists.")
-        return id_number

@@ -955,10 +955,28 @@ def pregnancy_detail(request, pregnancy_id):
     dispensed_history.sort(key=lambda x: x['at'], reverse=True)
     dispensed_items = dispensed_history[:30] # Limit to 30 items
 
+    # Handle Edit Pregnancy
+    from .forms import PregnancyEditForm
+    
+    open_edit_modal = False
+    edit_form = None
+    
     # Handle Dispense Medication (Widget)
     from home.forms import DispenseInventoryForm
     
-    if request.method == 'POST' and 'dispense_medication' in request.POST:
+    if request.method == 'POST' and 'edit_pregnancy' in request.POST:
+        edit_form = PregnancyEditForm(request.POST, instance=pregnancy)
+        if edit_form.is_valid():
+            edit_form.save()
+            messages.success(request, "Pregnancy details updated successfully.")
+            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+        else:
+            messages.error(request, "Error updating pregnancy details. Please check the form.")
+            open_edit_modal = True
+            dispense_form = PrescriptionItemForm()
+            inventory_form = DispenseInventoryForm()
+            
+    elif request.method == 'POST' and 'dispense_medication' in request.POST:
         dispense_form = PrescriptionItemForm(request.POST)
         if dispense_form.is_valid():
             p_item = dispense_form.save(commit=False)
@@ -1075,6 +1093,9 @@ def pregnancy_detail(request, pregnancy_id):
         dispense_form = PrescriptionItemForm()
         inventory_form = DispenseInventoryForm()
 
+    if not edit_form:
+        edit_form = PregnancyEditForm(instance=pregnancy)
+
     # Check if patient is currently admitted to IPD
     from inpatient.models import Admission
     current_ipd_admission = Admission.objects.filter(
@@ -1104,6 +1125,8 @@ def pregnancy_detail(request, pregnancy_id):
         'maternity_services': maternity_services,
         'dispense_form': dispense_form,
         'inventory_form': inventory_form,
+        'edit_form': edit_form,
+        'open_edit_modal': open_edit_modal,
         'medical_tests_data': medical_tests_data,
         'lab_results': lab_results,
         'lab_reports': lab_reports,

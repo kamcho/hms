@@ -34,6 +34,33 @@ class PregnancyRegistrationForm(forms.ModelForm):
         self.fields['blood_group'].required = False
 
 
+class PregnancyEditForm(forms.ModelForm):
+    class Meta:
+        model = Pregnancy
+        fields = ['lmp', 'edd', 'gravida', 'para', 'abortion', 'living', 
+                  'blood_group', 'allergies', 'previous_cs', 'is_multiple_gestation', 'chronic_conditions', 'risk_level', 'status']
+        widgets = {
+            'lmp': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'edit_id_lmp'}),
+            'edd': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'edit_id_edd', 'readonly': 'readonly'}),
+            'gravida': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '1'}),
+            'para': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
+            'abortion': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
+            'living': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
+            'blood_group': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}),
+            'allergies': forms.Textarea(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'rows': 2}),
+            'previous_cs': forms.CheckboxInput(attrs={'class': 'w-5 h-5 border-slate-300 rounded text-blue-600 focus:ring-blue-500 transition-all cursor-pointer'}),
+            'is_multiple_gestation': forms.CheckboxInput(attrs={'class': 'w-5 h-5 border-slate-300 rounded text-blue-600 focus:ring-blue-500 transition-all cursor-pointer'}),
+            'chronic_conditions': forms.Textarea(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'rows': 2}),
+            'risk_level': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}),
+            'status': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['edd'].required = False
+        self.fields['blood_group'].required = False
+
+
 class AntenatalVisitForm(forms.ModelForm):
     class Meta:
         model = AntenatalVisit
