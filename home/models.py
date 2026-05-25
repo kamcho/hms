@@ -30,9 +30,6 @@ class Patient(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='patients_created')
     
-    class Meta:
-        unique_together = ('id_number', 'phone')
-        
     def save(self, *args, **kwargs):
         # Calculate age based on date of birth
         today = timezone.now().date()

@@ -46,6 +46,16 @@
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50%;
         filter: blur(80px);
+        pointer-events: none;
+    }
+
+    .pharmacy-hero input[type="date"] {
+        cursor: pointer;
+    }
+
+    .pharmacy-hero input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
     }
 
     .pharmacy-hero h1 {
@@ -326,12 +336,13 @@
                     </p>
                 </div>
                 <!-- Date Filter -->
-                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 10;">
                     <form method="GET" style="display: flex; align-items: center; gap: 1rem;">
                         <div style="display: flex; flex-direction: column;">
                             <label style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: rgba(255,255,255,0.7);">Filter By Date</label>
                             <input type="date" name="date" value="{{ filter_date|date:'Y-m-d' }}" 
-                                   style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; outline: none;"
+                                   style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; outline: none; cursor: pointer;"
+                                   onclick="this.showPicker()"
                                    onchange="this.form.submit()">
                         </div>
                         {% if search_query %}
