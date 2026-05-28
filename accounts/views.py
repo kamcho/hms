@@ -982,13 +982,89 @@ def add_supplier(request):
 @login_required
 @user_passes_test(is_billing_staff)
 def discharge_billing_dashboard(request):
-    """Dashboard showing active IPD and Morgue admissions for billing"""
-    ipd_admissions = Admission.objects.filter(status='Admitted').select_related('patient', 'bed', 'bed__ward')
+    """Dashboard showing IPD and Maternity invoices: discharged with pending bills + active admissions"""
+    from maternity.models import LaborDelivery, MaternityDischarge
+    
+    search_query = request.GET.get('search', '')
+    
+    def apply_invoice_search(queryset, query):
+        if not query:
+            return queryset
+        search_terms = query.split()
+        q_objects = Q()
+        for term in search_terms:
+            term_q = Q(
+                Q(patient__first_name__icontains=term) |
+                Q(patient__last_name__icontains=term) |
+                Q(patient__id_number__icontains=term) |
+                Q(patient__phone__icontains=term) |
+                Q(id__icontains=term)
+            )
+            q_objects &= term_q
+        return queryset.filter(q_objects)
+    
+    # --- IPD INVOICES ---
+    # All IN-PATIENT invoices that are NOT maternity (no labor_delivery link)
+    ipd_base = Invoice.objects.filter(
+        visit__visit_type='IN-PATIENT',
+        visit__labor_delivery__isnull=True,
+        status__in=['Pending', 'Partial', 'Draft']
+    ).annotate(
+        balance_check=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+    ).filter(balance_check__gt=0.01).select_related('patient', 'visit').order_by('-created_at')
+    
+    ipd_base = apply_invoice_search(ipd_base, search_query)
+    
+    # Split: discharged vs active
+    ipd_discharged_invoices = ipd_base.filter(
+        visit__admissions__status='Discharged'
+    ).distinct()
+    
+    ipd_active_invoices = ipd_base.filter(
+        visit__admissions__status='Admitted'
+    ).distinct()
+    
+    # --- MATERNITY INVOICES ---
+    # All IN-PATIENT invoices that ARE maternity (have labor_delivery link)
+    mat_base = Invoice.objects.filter(
+        visit__visit_type='IN-PATIENT',
+        visit__labor_delivery__isnull=False,
+        status__in=['Pending', 'Partial', 'Draft']
+    ).annotate(
+        balance_check=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+    ).filter(balance_check__gt=0.01).select_related(
+        'patient', 'visit', 'visit__labor_delivery', 'visit__labor_delivery__pregnancy'
+    ).order_by('-created_at')
+    
+    mat_base = apply_invoice_search(mat_base, search_query)
+    
+    # Split: discharged (MaternityDischarge exists) vs active
+    discharged_pregnancy_ids = MaternityDischarge.objects.values_list('pregnancy_id', flat=True)
+    
+    mat_discharged_invoices = mat_base.filter(
+        visit__labor_delivery__pregnancy_id__in=discharged_pregnancy_ids
+    ).distinct()
+    
+    mat_active_invoices = mat_base.exclude(
+        visit__labor_delivery__pregnancy_id__in=discharged_pregnancy_ids
+    ).distinct()
+    
+    # --- MORGUE (keep existing) ---
     morgue_admissions = MorgueAdmission.objects.filter(status='ADMITTED').select_related('deceased')
     
+    # Summary counts
+    total_discharged_pending = ipd_discharged_invoices.count() + mat_discharged_invoices.count()
+    total_active = ipd_active_invoices.count() + mat_active_invoices.count()
+    
     context = {
-        'ipd_admissions': ipd_admissions,
+        'ipd_discharged_invoices': ipd_discharged_invoices,
+        'ipd_active_invoices': ipd_active_invoices,
+        'mat_discharged_invoices': mat_discharged_invoices,
+        'mat_active_invoices': mat_active_invoices,
         'morgue_admissions': morgue_admissions,
+        'search_query': search_query,
+        'total_discharged_pending': total_discharged_pending,
+        'total_active': total_active,
     }
     return render(request, 'accounts/discharge_dashboard.html', context)
 

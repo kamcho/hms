@@ -37,4 +37,5 @@ urlpatterns = [
     path('api/cwc-create-visit/', views.api_cwc_create_visit, name='api_cwc_create_visit'),
     path('referral/<int:referral_id>/print/', views.generate_referral_letter, name='generate_referral_letter'),
     path('pregnancy/<int:pregnancy_id>/discharge/print/', views.generate_discharge_summary, name='generate_discharge_summary'),
+    path('vaccination/record/<int:record_id>/edit/', views.edit_vaccination_record, name='edit_vaccination_record'),
 ]

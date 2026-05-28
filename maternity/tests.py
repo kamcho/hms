@@ -72,7 +72,7 @@ class PregnancyEditTestCase(TestCase):
         # Check that pregnancy has been updated
         self.pregnancy.refresh_from_db()
         self.assertEqual(self.pregnancy.gravida, 3)
-        self.assertEqual(self.pregnancy.para, 2)
+        self.assertEqual(self.pregnancy.para, '2')
         self.assertEqual(self.pregnancy.living, 2)
         self.assertEqual(self.pregnancy.blood_group, 'A+')
         self.assertTrue(self.pregnancy.previous_cs)

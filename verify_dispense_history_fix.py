@@ -8,6 +8,10 @@ from django.urls import reverse
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hms.settings')
 django.setup()
+from django.conf import settings
+settings.ALLOWED_HOSTS.append('testserver')
+from django.test.utils import setup_test_environment
+setup_test_environment()
 
 from home.models import Patient, Visit, Departments
 from inventory.models import InventoryItem, InventoryCategory, DispensedItem, StockRecord
@@ -55,6 +59,16 @@ def verify_fix():
         visit_date=timezone.now(),
         is_active=True,
         visit_type='Maternity'
+    )
+    from maternity.models import AntenatalVisit
+    AntenatalVisit.objects.filter(pregnancy=pregnancy).delete()
+    AntenatalVisit.objects.create(
+        pregnancy=pregnancy,
+        visit=visit,
+        visit_date=timezone.now().date(),
+        visit_number=1,
+        gestational_age=12,
+        service_received=True
     )
     
     # 2. Test Billed Item (Doctor's Request)

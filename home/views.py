@@ -1875,7 +1875,7 @@ def _get_normalized_history(visit, patient):
             'quantity': b.quantity,
             'at': b.created_at,
             'by': b.invoice.created_by if b.invoice else b.created_by,
-            'status': 'Requested',
+            'status': 'Billed/Pending',
             'status_class': 'bg-amber-50 text-amber-700'
         })
 

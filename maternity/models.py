@@ -35,7 +35,7 @@ class Pregnancy(models.Model):
     lmp = models.DateField(verbose_name="Last Menstrual Period")
     edd = models.DateField(verbose_name="Expected Delivery Date")
     gravida = models.PositiveIntegerField(help_text="Total number of pregnancies")
-    para = models.PositiveIntegerField(help_text="Number of deliveries after 28 weeks")
+    para = models.CharField(max_length=20, default='0', help_text="Number of deliveries after 28 weeks")
     abortion = models.PositiveIntegerField(default=0, help_text="Number of abortions/miscarriages")
     living = models.PositiveIntegerField(default=0, help_text="Number of living children")
     

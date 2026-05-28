@@ -129,10 +129,17 @@
                     </div>
                     <div class="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
                         {% for record in history %}
-                            <div class="p-6 hover:bg-slate-50 transition-colors">
+                            <div class="p-6 hover:bg-slate-50 transition-colors relative group">
                                 <div class="flex justify-between items-start mb-2">
                                     <span class="font-bold text-slate-900 text-sm">{{ record.vaccine.name }}</span>
-                                    <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase">{{ record.date_administered|date:"d M Y" }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase">{{ record.date_administered|date:"d M Y" }}</span>
+                                        {% if record.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}
+                                        <button type="button" onclick="openEditVaccineModal({{ record.id }})" class="text-slate-400 hover:text-blue-600 transition-colors" title="Edit Record">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 <div class="flex gap-4 text-xs text-slate-500">
                                     <span><i class="fas fa-hashtag mr-1"></i> Dose {{ record.dose_number }}</span>
@@ -166,6 +173,134 @@
             </div>
         </div>
     </div>
+    
+    <!-- Edit Vaccine Modal -->
+    <div id="editVaccineModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden" style="z-index: 9999;">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl mx-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-edit text-blue-600"></i> Edit Vaccination Record
+                </h3>
+                <button onclick="closeEditVaccineModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="editVaccineForm" onsubmit="submitEditVaccine(event)">
+                {% csrf_token %}
+                <input type="hidden" id="edit_record_id">
+                
+                <div class="space-y-4 mb-6">
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Vaccine</label>
+                        <select id="edit_vaccine" name="vaccine" required></select>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Dose Number</label>
+                        <input type="number" id="edit_dose_number" name="dose_number" min="1" required>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Date Administered</label>
+                        <input type="date" id="edit_date_administered" name="date_administered" required>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Batch Number</label>
+                        <input type="text" id="edit_batch_number" name="batch_number" placeholder="e.g. B12345">
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Next Dose Due</label>
+                        <input type="date" id="edit_next_dose_due" name="next_dose_due">
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Facility</label>
+                        <input type="text" id="edit_facility" name="facility" placeholder="Facility name if given elsewhere">
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Reaction / Notes</label>
+                        <textarea id="edit_reaction_observed" name="reaction_observed" rows="2"></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="button" onclick="closeEditVaccineModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openEditVaccineModal(recordId) {
+        // Clone the original vaccine select options
+        const originalSelect = document.querySelector('select[name="vaccine"]');
+        const modalSelect = document.getElementById('edit_vaccine');
+        modalSelect.innerHTML = originalSelect.innerHTML;
+        
+        // Fetch current record data
+        fetch(`/maternity/vaccination/record/${recordId}/edit/`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('edit_record_id').value = data.data.id;
+                    document.getElementById('edit_vaccine').value = data.data.vaccine_id;
+                    document.getElementById('edit_dose_number').value = data.data.dose_number;
+                    document.getElementById('edit_date_administered').value = data.data.date_administered;
+                    document.getElementById('edit_batch_number').value = data.data.batch_number;
+                    document.getElementById('edit_next_dose_due').value = data.data.next_dose_due;
+                    document.getElementById('edit_facility').value = data.data.facility;
+                    document.getElementById('edit_reaction_observed').value = data.data.reaction_observed;
+                    
+                    // Show modal
+                    document.getElementById('editVaccineModal').classList.remove('hidden');
+                } else {
+                    alert('Error loading record: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('System error loading vaccination details.');
+            });
+    }
+    
+    function closeEditVaccineModal() {
+        document.getElementById('editVaccineModal').classList.add('hidden');
+    }
+    
+    function submitEditVaccine(e) {
+        e.preventDefault();
+        const recordId = document.getElementById('edit_record_id').value;
+        const form = document.getElementById('editVaccineForm');
+        const formData = new FormData(form);
+        
+        fetch(`/maternity/vaccination/record/${recordId}/edit/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error updating record: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('System error saving vaccination details.');
+        });
+    }
+    </script>
+
     <style>
     /* Form Styles Override */
     select,

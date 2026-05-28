@@ -45,10 +45,11 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         return get_dashboard_url(self.request.user)
 
+@login_required
 def signup_view(request):
-    """View for user registration."""
-    if request.user.is_authenticated:
-        return redirect(get_dashboard_url(request.user))
+    """View for user registration (accessible only by superusers)."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
         
     if request.method == 'POST':
         form = SignUpForm(request.POST)
@@ -58,10 +59,8 @@ def signup_view(request):
             user.is_staff = True  # All current roles require staff permissions
             user.save()
             
-            # Log the user in
-            login(request, user)
-            messages.success(request, f'Welcome, {user.first_name}! Your account has been created successfully.')
-            return redirect(get_dashboard_url(user))
+            messages.success(request, f'User {user.username} (ID: {user.id_number}) has been created successfully.')
+            return redirect('users:signup')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:

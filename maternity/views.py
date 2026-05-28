@@ -886,41 +886,43 @@ def pregnancy_detail(request, pregnancy_id):
     
     today = timezone.now().date()
     
-    # Check if patient has an active inpatient admission (IPD visits span multiple days)
-    from inpatient.models import Admission
-    active_admission = Admission.objects.filter(
+    # Look for the latest active visit (can span multiple days for IPD admissions)
+    latest_visit = Visit.objects.filter(
         patient=pregnancy.patient,
-        status='Admitted'
-    ).first()
-    
-    if active_admission and active_admission.visit and active_admission.visit.is_active:
-        # For IPD patients, use the admission visit (spans multiple days)
-        latest_visit = active_admission.visit
-    else:
-        # For OPD patients, only look for today's active visit
-        latest_visit = Visit.objects.filter(
-            patient=pregnancy.patient,
-            visit_date__date=today,
-            is_active=True
-        ).last()
-    
-    # 1. Fetch physical dispensations (Stock deducted)
+        is_active=True
+    ).last()
+
+    # Verify the latest active visit has a maternity (ANC or PNC) record created/active today
     if latest_visit:
-        d_items = DispensedItem.objects.filter(visit=latest_visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+        has_anc = AntenatalVisit.objects.filter(visit=latest_visit, visit_date=today).exists()
+        has_pnc = PostnatalMotherVisit.objects.filter(visit=latest_visit, visit_date=today).exists() or \
+                  PostnatalBabyVisit.objects.filter(visit=latest_visit, visit_date=today).exists()
+        print(f"[DEBUG DISPENSE] latest_visit={latest_visit.id}, date={latest_visit.visit_date}, is_active={latest_visit.is_active}, has_anc={has_anc}, has_pnc={has_pnc}")
+        if not (has_anc or has_pnc):
+            latest_visit = None
     else:
-        d_items = DispensedItem.objects.filter(patient=pregnancy.patient).order_by('-dispensed_at')[:20]
+        print(f"[DEBUG DISPENSE] latest_visit=None")
+    
+    # 1. Fetch physical dispensations (Stock deducted, filtered to today only)
+    if latest_visit:
+        d_items = DispensedItem.objects.filter(
+            visit=latest_visit,
+            dispensed_at__date=today
+        ).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+        print(f"[DEBUG DISPENSE] d_items count={d_items.count()}")
+    else:
+        d_items = DispensedItem.objects.none()
+        print(f"[DEBUG DISPENSE] No latest_visit -> empty d_items")
         
-    # 2. Fetch billed items (Requested by doctor but might not be dispensed yet)
+    # 2. Fetch billed items (Requested by doctor but might not be dispensed yet, filtered to today only)
     if latest_visit:
         billed_items = InvoiceItem.objects.filter(
             invoice__visit=latest_visit,
-            inventory_item__isnull=False
+            inventory_item__isnull=False,
+            created_at__date=today
         ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')
     else:
-        billed_items = InvoiceItem.objects.filter(
-            invoice__patient=pregnancy.patient,
-            inventory_item__isnull=False
-        ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')[:20]
+        billed_items = InvoiceItem.objects.none()
         
     # 3. Combine and Normalize
     dispensed_history = []
@@ -985,7 +987,7 @@ def pregnancy_detail(request, pregnancy_id):
             visit = latest_visit
             
             if not visit:
-                messages.error(request, "No active visit found for today. Please create a new visit before dispensing medication.")
+                messages.error(request, "No active ANC or PNC visit record found for the latest active visit. Please ensure the patient is received for ANC/PNC before dispensing medication.")
                 return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
                 
             # 2. Find or create active prescription for this visit
@@ -1030,7 +1032,7 @@ def pregnancy_detail(request, pregnancy_id):
             visit = latest_visit
             
             if not visit:
-                messages.error(request, "No active visit found for today. Please create a new visit before dispensing items.")
+                messages.error(request, "No active ANC or PNC visit record found for the latest active visit. Please ensure the patient is received for ANC/PNC before dispensing items.")
                 return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
             d_item.visit = visit
             
@@ -2111,6 +2113,7 @@ def administer_vaccine(request, que_id):
         'history': history,
         'dispensed_items': dispensed_items,
         'que': que,
+        'today': timezone.now().date(),
     }
     
     return render(request, 'maternity/administer_vaccine.html', context)
@@ -2636,4 +2639,59 @@ def maternity_dispensing_report(request):
         'title': 'Maternity Consumables Report'
     }
     return render(request, 'maternity/dispensing_report.html', context)
+
+
+@login_required
+def edit_vaccination_record(request, record_id):
+    """AJAX view to update or retrieve an ImmunizationRecord"""
+    record = get_object_or_404(ImmunizationRecord, id=record_id)
+    
+    # Restrict editing to records created today only
+    record_date = timezone.localtime(record.created_at).date()
+    if record_date != timezone.now().date():
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Editing restricted. Vaccination records can only be edited on the day they were created.'
+        }, status=403)
+    
+    if request.method == 'GET':
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'id': record.id,
+                'vaccine_id': record.vaccine.id,
+                'dose_number': record.dose_number,
+                'date_administered': record.date_administered.strftime('%Y-%m-%d') if record.date_administered else '',
+                'batch_number': record.batch_number,
+                'reaction_observed': record.reaction_observed,
+                'next_dose_due': record.next_dose_due.strftime('%Y-%m-%d') if record.next_dose_due else '',
+                'facility': record.facility,
+            }
+        })
+        
+    elif request.method == 'POST':
+        form = ImmunizationRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            updated_record = form.save(commit=False)
+            newborn = record.newborn
+            if newborn:
+                if updated_record.vaccine.abbreviation == 'BCG':
+                    newborn.bcg_given = True
+                    newborn.save()
+                elif updated_record.vaccine.abbreviation == 'OPV' and updated_record.dose_number == 0:
+                    newborn.opv_0_given = True
+                    newborn.save()
+            updated_record.save()
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Updated record for {updated_record.vaccine.name} successfully.'
+            })
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Validation failed.',
+                'errors': form.errors.as_json()
+            }, status=400)
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 

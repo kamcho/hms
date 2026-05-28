@@ -17,7 +17,7 @@ class PregnancyRegistrationForm(forms.ModelForm):
             'lmp': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'id_lmp'}),
             'edd': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'id_edd', 'readonly': 'readonly'}),
             'gravida': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '1'}),
-            'para': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
+            'para': forms.TextInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'placeholder': 'e.g., 2+1'}),
             'abortion': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
             'living': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
             'blood_group': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}),
@@ -43,7 +43,7 @@ class PregnancyEditForm(forms.ModelForm):
             'lmp': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'edit_id_lmp'}),
             'edd': forms.DateInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'type': 'date', 'id': 'edit_id_edd', 'readonly': 'readonly'}),
             'gravida': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '1'}),
-            'para': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
+            'para': forms.TextInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'placeholder': 'e.g., 2+1'}),
             'abortion': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
             'living': forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'min': '0'}),
             'blood_group': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}),
@@ -382,7 +382,7 @@ class ExternalDeliveryForm(forms.Form):
     
     # Pregnancy Info (Essential for history)
     gravida = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}))
-    para = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}))
+    para = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all', 'placeholder': 'e.g., 2+1'}))
     abortion = forms.IntegerField(min_value=0, initial=0, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}))
     living = forms.IntegerField(min_value=0, initial=1, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all'}))
     

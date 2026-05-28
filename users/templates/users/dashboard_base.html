@@ -112,6 +112,12 @@
                         <i class="fas fa-plus-circle"></i>
                         <span>Request Stock</span>
                     </a>
+                    {% if user.is_superuser %}
+                    <a href="{% url 'users:signup' %}" class="menu-item {% if request.resolver_match.url_name == 'signup' %}active{% endif %}">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Register User</span>
+                    </a>
+                    {% endif %}
                     {% if user.role == 'Admin' or user.role == 'Pharmacist' or user.role == 'Nurse' or user.role == 'Triage Nurse' or user.is_superuser %}
                     <a href="{% url 'inventory:record_usage' %}" 
                        class="menu-item {% if request.resolver_match.url_name == 'record_usage' %}active{% endif %}">

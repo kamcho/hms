@@ -1,127 +1,599 @@
 {% extends 'users/dashboard_base.html' %}
-{% load static %}
+{% load static custom_filters %}
 {% block title %}Discharge Billing Dashboard{% endblock %}
 {% block content %}
-    <div class="p-6 bg-slate-50 min-h-screen">
-        <div class="max-w-7xl mx-auto">
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-slate-900">Discharge Billing</h1>
-                    <p class="text-slate-500 mt-1">Manage final billing and discharge for IPD and Morgue</p>
-                </div>
-                <div class="flex gap-4">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                        <div class="p-3 bg-blue-100 rounded-lg">
-                            <i class="fas fa-bed text-blue-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-slate-500 font-medium">IPD Admissions</p>
-                            <p class="text-2xl font-bold text-slate-900">{{ ipd_admissions.count }}</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                        <div class="p-3 bg-purple-100 rounded-lg">
-                            <i class="fas fa-box text-purple-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-slate-500 font-medium">Morgue Cases</p>
-                            <p class="text-2xl font-bold text-slate-900">{{ morgue_admissions.count }}</p>
-                        </div>
-                    </div>
-                </div>
+<style>
+    :root {
+        --dash-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-light: #f1f5f9;
+    }
+
+    .discharge-container {
+        background: #fdfdfd;
+        min-height: 100vh;
+        padding: 2rem 2rem 4rem;
+    }
+
+    .glass-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .section-header {
+        padding: 1.25rem 1.75rem;
+        background: white;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .theme-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        background: var(--theme-bg);
+        color: var(--theme-primary);
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    }
+
+    .ipd-theme { --theme-primary: #3b82f6; --theme-bg: #eff6ff; border-color: #dbeafe !important; }
+    .mat-theme { --theme-primary: #ec4899; --theme-bg: #fdf2f8; border-color: #fce7f3 !important; }
+    .morgue-theme { --theme-primary: #8b5cf6; --theme-bg: #f5f3ff; border-color: #ede9fe !important; }
+    .discharged-theme { --theme-primary: #f59e0b; --theme-bg: #fffbeb; border-color: #fef3c7 !important; }
+    .active-theme { --theme-primary: #10b981; --theme-bg: #f0fdf4; border-color: #dcfce7 !important; }
+
+    .badge-count {
+        background: var(--theme-primary, #64748b);
+        color: white;
+        padding: 0.125rem 0.625rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        background: #f8fafc;
+        padding: 0.85rem 1.25rem;
+        text-align: left;
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    .custom-table td {
+        padding: 1rem 1.25rem;
+        font-size: 0.8rem;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border-light);
+        transition: background-color 0.2s;
+    }
+
+    .custom-table tr:hover td { background-color: #f8fafc; }
+    .custom-table tr:last-child td { border-bottom: none; }
+
+    .patient-cell { display: flex; flex-direction: column; }
+    .patient-name { font-weight: 700; color: var(--text-main); }
+    .invoice-id { font-size: 0.65rem; font-weight: 600; color: #6366f1; }
+    .amount-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.8rem; }
+
+    .balance-tag {
+        padding: 0.35rem 0.75rem;
+        border-radius: 10px;
+        font-size: 0.6rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .tag-pending { background: rgba(245,158,11,0.1); color: #d97706; }
+    .tag-partial { background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.1); }
+    .tag-discharged { background: rgba(239,68,68,0.08); color: #dc2626; }
+    .tag-active { background: rgba(16,185,129,0.08); color: #059669; }
+
+    .action-btn {
+        padding: 0.4rem 0.85rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        text-decoration: none;
+    }
+    .btn-view { background: white; border: 1px solid var(--border-light); color: var(--text-muted); }
+    .btn-view:hover { border-color: #6366f1; color: #6366f1; background: rgba(99,102,241,0.02); transform: translateY(-1px); }
+    .btn-process { background: #3b82f6; border: none; color: white; }
+    .btn-process:hover { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(59,130,246,0.25); }
+
+    .search-input {
+        background: white;
+        border: 1px solid var(--border-light);
+        border-radius: 14px;
+        padding: 0.65rem 1.1rem 0.65rem 2.5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        width: 320px;
+        transition: all 0.2s;
+        outline: none;
+    }
+    .search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99,102,241,0.08); }
+
+    .empty-state {
+        padding: 3rem 2rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid var(--border-light);
+        border-radius: 20px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .sub-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 1rem 1.25rem 0;
+    }
+
+    .sub-label i { font-size: 0.6rem; }
+
+    .ward-badge {
+        font-weight: 700;
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        background: #f1f5f9;
+        border-radius: 6px;
+        color: #475569;
+    }
+
+    .delivery-badge {
+        font-weight: 700;
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        background: #fdf2f8;
+        border-radius: 6px;
+        color: #be185d;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .glass-card { animation: fadeIn 0.4s ease; }
+</style>
+
+<div class="discharge-container">
+    <!-- Header -->
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-1">Discharge Billing</h1>
+            <p class="text-slate-500 font-medium text-sm">IPD &amp; Maternity invoices — discharged patients with pending bills and active admissions</p>
+        </div>
+        <form method="GET" class="flex items-center gap-3">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient name, ID, phone or invoice..." class="search-input">
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Inpatient Admissions -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-bottom border-slate-100 bg-slate-50 flex items-center justify-between">
-                        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-procedures text-blue-500"></i>
-                            Active IPD Admissions
-                        </h2>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                    <th class="px-6 py-4 font-semibold">Patient</th>
-                                    <th class="px-6 py-4 font-semibold">Ward/Bed</th>
-                                    <th class="px-6 py-4 font-semibold">Admitted At</th>
-                                    <th class="px-6 py-4 font-semibold text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                {% for admission in ipd_admissions %}
-                                    <tr class="hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="font-semibold text-slate-900">{{ admission.patient.full_name }}</div>
-                                            <div class="text-xs text-slate-400">ID: {{ admission.patient.id }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-slate-600">{{ admission.bed.ward.name|default:"N/A" }} - {{ admission.bed.bed_number|default:"N/A" }}</td>
-                                        <td class="px-6 py-4 text-sm text-slate-600">{{ admission.admitted_at|date:"M d, Y" }}</td>
-                                        <td class="px-6 py-4 text-right">
-                                            <a href="{% url 'accounts:discharge_detail' 'ipd' admission.id %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm">Process Billing</a>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="px-6 py-12 text-center text-slate-400">
-                                            <i class="fas fa-inbox text-4xl mb-3 block"></i>
-                                            No active IPD admissions found.
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Morgue Admissions -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-bottom border-slate-100 bg-slate-50 flex items-center justify-between">
-                        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-mortuary text-purple-500"></i>
-                            Active Morgue Cases
-                        </h2>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                    <th class="px-6 py-4 font-semibold">Deceased</th>
-                                    <th class="px-6 py-4 font-semibold">Tag</th>
-                                    <th class="px-6 py-4 font-semibold">Admission Date</th>
-                                    <th class="px-6 py-4 font-semibold text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                {% for admission in morgue_admissions %}
-                                    <tr class="hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="font-semibold text-slate-900">{{ admission.deceased.full_name }}</div>
-                                            <div class="text-xs text-slate-400">S/N: {{ admission.admission_number }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-slate-600">
-                                            <span class="px-2 py-1 bg-slate-100 rounded text-xs font-mono">{{
-                                            admission.deceased.tag }}</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-slate-600">{{ admission.admission_datetime|date:"M d, Y" }}</td>
-                                        <td class="px-6 py-4 text-right">
-                                            <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}" class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm">Process Billing</a>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="px-6 py-12 text-center text-slate-400">
-                                            <i class="fas fa-box-open text-4xl mb-3 block"></i>
-                                            No active morgue cases found.
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <button type="submit" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors">Search</button>
+            {% if search_query %}
+                <a href="{% url 'accounts:discharge_dashboard' %}" class="text-slate-400 hover:text-slate-600 font-bold text-xs">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="stat-card">
+            <div class="stat-icon bg-amber-100 text-amber-600"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div>
+                <p class="text-xs text-slate-500 font-semibold">Discharged — Pending Bills</p>
+                <p class="text-2xl font-black text-slate-900">{{ total_discharged_pending }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-emerald-100 text-emerald-600"><i class="fas fa-procedures"></i></div>
+            <div>
+                <p class="text-xs text-slate-500 font-semibold">Active Admissions</p>
+                <p class="text-2xl font-black text-slate-900">{{ total_active }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-100 text-blue-600"><i class="fas fa-bed"></i></div>
+            <div>
+                <p class="text-xs text-slate-500 font-semibold">IPD Invoices</p>
+                <p class="text-2xl font-black text-slate-900">{{ ipd_discharged_invoices.count|add:ipd_active_invoices.count }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-pink-100 text-pink-600"><i class="fas fa-baby-carriage"></i></div>
+            <div>
+                <p class="text-xs text-slate-500 font-semibold">Maternity Invoices</p>
+                <p class="text-2xl font-black text-slate-900">{{ mat_discharged_invoices.count|add:mat_active_invoices.count }}</p>
             </div>
         </div>
     </div>
+
+    <div class="space-y-8">
+        <!-- ========== IPD SECTION ========== -->
+        <section>
+            <div class="glass-card ipd-theme">
+                <div class="section-header" style="background: rgba(219,234,254,0.15);">
+                    <h2 class="section-title">
+                        <span class="theme-icon"><i class="fas fa-procedures"></i></span>
+                        In-Patient (IPD) Billing
+                        <span class="badge-count" style="background:#3b82f6;">{{ ipd_discharged_invoices.count|add:ipd_active_invoices.count }}</span>
+                    </h2>
+                </div>
+
+                {% if ipd_discharged_invoices %}
+                <!-- Discharged Sub-section -->
+                <div class="sub-label" style="color:#d97706;">
+                    <i class="fas fa-sign-out-alt"></i> Discharged — Pending Bills
+                    <span class="badge-count" style="background:#f59e0b; font-size:0.6rem;">{{ ipd_discharged_invoices.count }}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>Admission</th>
+                                <th>Discharged</th>
+                                <th>Total Bill</th>
+                                <th>Paid</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in ipd_discharged_invoices %}
+                            <tr>
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% with adm=inv.visit.admissions.first %}
+                                    {% if adm and adm.bed %}
+                                        <span class="ward-badge">{{ adm.bed.ward.name }} / {{ adm.bed.bed_number }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% with adm=inv.visit.admissions.first %}
+                                    {% if adm.discharged_at %}
+                                        <span class="text-xs font-bold text-slate-600">{{ adm.discharged_at|date:"d M, Y" }}</span>
+                                    {% else %}
+                                        <span class="text-xs text-slate-400">—</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span class="balance-tag tag-discharged">Discharged</span>
+                                    <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}" style="margin-left:4px;">{{ inv.get_status_display }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view"><i class="fas fa-eye text-[9px]"></i> Invoice</a>
+                                    <a href="{% url 'accounts:discharge_detail' 'ipd' inv.visit.admissions.first.id %}" class="action-btn btn-process"><i class="fas fa-file-invoice text-[9px]"></i> Billing</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if ipd_active_invoices %}
+                <!-- Active Sub-section -->
+                <div class="sub-label" style="color:#059669;">
+                    <i class="fas fa-heartbeat"></i> Active Admissions
+                    <span class="badge-count" style="background:#10b981; font-size:0.6rem;">{{ ipd_active_invoices.count }}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>Ward / Bed</th>
+                                <th>Admitted</th>
+                                <th>Current Bill</th>
+                                <th>Paid</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in ipd_active_invoices %}
+                            <tr>
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% with adm=inv.visit.admissions.first %}
+                                    {% if adm and adm.bed %}
+                                        <span class="ward-badge">{{ adm.bed.ward.name }} / {{ adm.bed.bed_number }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="text-xs font-bold text-slate-600">{{ inv.visit.admissions.first.admitted_at|date:"d M, Y" }}</td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span class="balance-tag tag-active">Admitted</span>
+                                    <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}" style="margin-left:4px;">{{ inv.get_status_display }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view"><i class="fas fa-eye text-[9px]"></i> Invoice</a>
+                                    <a href="{% url 'accounts:discharge_detail' 'ipd' inv.visit.admissions.first.id %}" class="action-btn btn-process"><i class="fas fa-file-invoice text-[9px]"></i> Billing</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if not ipd_discharged_invoices and not ipd_active_invoices %}
+                <div class="empty-state">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-200 text-2xl mb-1"><i class="fas fa-check-circle"></i></div>
+                        <p class="font-bold text-slate-400 text-sm">No pending IPD invoices</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- ========== MATERNITY SECTION ========== -->
+        <section>
+            <div class="glass-card mat-theme">
+                <div class="section-header" style="background: rgba(252,231,243,0.15);">
+                    <h2 class="section-title">
+                        <span class="theme-icon"><i class="fas fa-baby-carriage"></i></span>
+                        Maternity Billing
+                        <span class="badge-count" style="background:#ec4899;">{{ mat_discharged_invoices.count|add:mat_active_invoices.count }}</span>
+                    </h2>
+                </div>
+
+                {% if mat_discharged_invoices %}
+                <!-- Discharged Sub-section -->
+                <div class="sub-label" style="color:#d97706;">
+                    <i class="fas fa-sign-out-alt"></i> Discharged — Pending Bills
+                    <span class="badge-count" style="background:#f59e0b; font-size:0.6rem;">{{ mat_discharged_invoices.count }}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>L&amp;D Record</th>
+                                <th>Delivery Mode</th>
+                                <th>Total Bill</th>
+                                <th>Paid</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in mat_discharged_invoices %}
+                            <tr>
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if inv.visit.labor_delivery %}
+                                        <span class="delivery-badge">L&amp;D #{{ inv.visit.labor_delivery.id }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-xs font-bold text-slate-600">{{ inv.visit.labor_delivery.get_delivery_mode_display|default:"—" }}</td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span class="balance-tag tag-discharged">Discharged</span>
+                                    <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}" style="margin-left:4px;">{{ inv.get_status_display }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view"><i class="fas fa-eye text-[9px]"></i> Invoice</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if mat_active_invoices %}
+                <!-- Active Sub-section -->
+                <div class="sub-label" style="color:#059669;">
+                    <i class="fas fa-heartbeat"></i> Active Maternity Admissions
+                    <span class="badge-count" style="background:#10b981; font-size:0.6rem;">{{ mat_active_invoices.count }}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Details</th>
+                                <th>L&amp;D Record</th>
+                                <th>Delivery Mode</th>
+                                <th>Current Bill</th>
+                                <th>Paid</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in mat_active_invoices %}
+                            <tr>
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                        <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if inv.visit.labor_delivery %}
+                                        <span class="delivery-badge">L&amp;D #{{ inv.visit.labor_delivery.id }}</span>
+                                    {% else %}
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-xs font-bold text-slate-600">{{ inv.visit.labor_delivery.get_delivery_mode_display|default:"—" }}</td>
+                                <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-emerald-600">Ksh {{ inv.paid_amount|format_number:2 }}</td>
+                                <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
+                                <td>
+                                    <span class="balance-tag tag-active">Active</span>
+                                    <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}" style="margin-left:4px;">{{ inv.get_status_display }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view"><i class="fas fa-eye text-[9px]"></i> Invoice</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if not mat_discharged_invoices and not mat_active_invoices %}
+                <div class="empty-state">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-200 text-2xl mb-1"><i class="fas fa-baby-carriage"></i></div>
+                        <p class="font-bold text-slate-400 text-sm">No pending maternity invoices</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- ========== MORGUE SECTION ========== -->
+        <section>
+            <div class="glass-card morgue-theme">
+                <div class="section-header" style="background: rgba(237,233,254,0.15);">
+                    <h2 class="section-title">
+                        <span class="theme-icon"><i class="fas fa-archive"></i></span>
+                        Morgue Cases
+                        <span class="badge-count" style="background:#8b5cf6;">{{ morgue_admissions.count }}</span>
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Deceased</th>
+                                <th>Tag</th>
+                                <th>Admission Date</th>
+                                <th class="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for admission in morgue_admissions %}
+                            <tr>
+                                <td>
+                                    <div class="patient-cell">
+                                        <span class="patient-name">{{ admission.deceased.full_name }}</span>
+                                        <span class="invoice-id">S/N: {{ admission.admission_number }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="ward-badge">{{ admission.deceased.tag }}</span></td>
+                                <td class="text-xs font-bold text-slate-600">{{ admission.admission_datetime|date:"d M, Y" }}</td>
+                                <td class="text-right">
+                                    <a href="{% url 'accounts:discharge_detail' 'morgue' admission.id %}" class="action-btn btn-process" style="background:#8b5cf6;"><i class="fas fa-file-invoice text-[9px]"></i> Process</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="empty-state">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-200 text-2xl mb-1"><i class="fas fa-archive"></i></div>
+                                        <p class="font-bold text-slate-400 text-sm">No active morgue cases</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 {% endblock %}

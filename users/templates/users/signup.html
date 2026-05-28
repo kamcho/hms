@@ -80,8 +80,8 @@
                 <div class="mb-6 inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 text-white text-2xl">
                     <i class="fas fa-user-plus"></i>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">Create Account</h1>
-                <p class="text-slate-500 font-medium">Join the HMS Platinum medical team</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">Register Personnel</h1>
+                <p class="text-slate-500 font-medium">Create a new user account for the medical team</p>
             </div>
 
             <!-- Form -->
@@ -197,8 +197,7 @@
             <!-- Footer Links -->
             <div class="mt-10 pt-8 border-t border-slate-100 text-center">
                 <p class="text-slate-500 text-xs font-medium">
-                    Already registered? 
-                    <a href="{% url 'users:login' %}" class="auth-link">Sign In Now</a>
+                    <a href="{% url 'users:dashboard' %}" class="auth-link">Back to Dashboard</a>
                 </p>
             </div>
         </div>
