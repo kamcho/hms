@@ -175,6 +175,11 @@ class GeneralUsageForm(forms.ModelForm):
         ('Stationery & Office', 'Stationery & Office'),
         ('Laboratory Operations', 'Laboratory Operations'),
         ('Internal Staff Use', 'Internal Staff Use'),
+        ('Kitchen Use', 'Kitchen Use'),
+        ('Security Use', 'Security Use'),
+        ('Maintenance Use', 'Maintenance Use'),
+        ('Laundry Use', 'Laundry Use'),
+        ('Housekeeping Use', 'Housekeeping Use'),
     ]
     
     reason_type = forms.ChoiceField(

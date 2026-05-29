@@ -1567,12 +1567,13 @@ def stock_activity(request):
     """
     View to track how inventory has been used by patients.
     Combines data from DispensedItem and StockAdjustment for a complete picture.
-    Includes filtering by item and date.
+    Includes filtering by item, date, and visit type.
     """
     item_id = request.GET.get('item_id')
     item_search = request.GET.get('item_search', '').strip()
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
+    visit_type = request.GET.get('visit_type', '').strip()
     from django.db.models import Sum, Q
     from datetime import datetime, time
 
@@ -1602,6 +1603,11 @@ def stock_activity(request):
         dispensed_qs = dispensed_qs.filter(dispensed_at__gte=from_dt)
     if to_dt:
         dispensed_qs = dispensed_qs.filter(dispensed_at__lte=to_dt)
+    
+    if visit_type == 'OPD':
+        dispensed_qs = dispensed_qs.filter(visit__visit_type='OUT-PATIENT')
+    elif visit_type == 'IPD':
+        dispensed_qs = dispensed_qs.filter(visit__visit_type='IN-PATIENT')
 
     # --- 2. StockAdjustment records (all stock movements) ---
     adjustments_qs = StockAdjustment.objects.all().select_related(
@@ -1615,6 +1621,11 @@ def stock_activity(request):
         adjustments_qs = adjustments_qs.filter(adjusted_at__gte=from_dt)
     if to_dt:
         adjustments_qs = adjustments_qs.filter(adjusted_at__lte=to_dt)
+    
+    if visit_type in ['OPD', 'IPD']:
+        adjustments_qs = adjustments_qs.none()
+    else:
+        adjustments_qs = adjustments_qs.exclude(adjustment_type='Usage', reason__icontains='dispensed')
 
     # --- 3. Merge into a unified activity list ---
     activities = []
@@ -1667,6 +1678,7 @@ def stock_activity(request):
         'item_search': item_search,
         'from_date': from_date,
         'to_date': to_date,
+        'visit_type': visit_type,
         'title': 'Stock Activity'
     }
     return render(request, 'inventory/stock_activity.html', context)

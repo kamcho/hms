@@ -1863,8 +1863,8 @@ document.addEventListener('DOMContentLoaded', function () {
     <div x-data="{ showEditModal: {% if open_edit_modal %}true{% else %}false{% endif %} }" 
          x-show="showEditModal" 
          @open-edit-modal.window="showEditModal = true"
-         class="fixed inset-0 z-[9999] overflow-y-auto" 
-         style="display: none;" 
+         class="fixed inset-0 overflow-y-auto" 
+         style="display: none; z-index: 9999;" 
          @keydown.escape.window="showEditModal = false">
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showEditModal = false"></div>

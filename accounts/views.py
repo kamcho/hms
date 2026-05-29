@@ -380,11 +380,30 @@ def process_insurance_claim(request):
         claim_amount = Decimal(str(custom_amount)) if custom_amount is not None else selected_total
         
         if claim_amount <= 0:
-            return JsonResponse({'success': False, 'error': 'Claim amount must be greater than zero.'})
+            error_msg = (
+                f"Claim amount must be greater than zero. "
+                f"Received: Ksh {claim_amount}. "
+                f"Custom amount parameter: {custom_amount}. "
+                f"Selected items total: Ksh {selected_total}. "
+                f"Selected item IDs: {item_ids}."
+            )
+            return JsonResponse({'success': False, 'error': error_msg})
             
         # Re-check balance after adjustment application
         if claim_amount > invoice.balance:
-            return JsonResponse({'success': False, 'error': f'Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}). If this is a per-diem profit, the adjustment should have handled it.'})
+            error_msg = (
+                f"Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}).\n\n"
+                f"DEBUG DETAILS:\n"
+                f"- Invoice ID: {invoice_id}\n"
+                f"- Invoice Total Amount: Ksh {invoice.total_amount}\n"
+                f"- Paid Amount: Ksh {invoice.paid_amount}\n"
+                f"- Insurance Adjustment: Ksh {invoice.insurance_adjustment}\n"
+                f"- Selected Items Total: Ksh {selected_total}\n"
+                f"- User Input Claim Amount: Ksh {custom_amount}\n"
+                f"- Computed Claim Amount: Ksh {claim_amount}\n\n"
+                f"If this is an Inpatient per-diem profit/loss, verify if the adjustment value is calculated correctly."
+            )
+            return JsonResponse({'success': False, 'error': error_msg})
 
         # Create Payment
         payment = Payment.objects.create(
@@ -403,7 +422,14 @@ def process_insurance_claim(request):
             'adjustment': float(invoice.insurance_adjustment)
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        import traceback
+        tb = traceback.format_exc()
+        error_msg = (
+            f"An internal server error occurred:\n"
+            f"Error message: {str(e)}\n\n"
+            f"Traceback:\n{tb}"
+        )
+        return JsonResponse({'success': False, 'error': error_msg})
 
 def export_accountant_csv(payments, invoices, total_revenue, total_expenses, payment_methods):
     response = HttpResponse(content_type='text/csv')
