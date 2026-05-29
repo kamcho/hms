@@ -45,6 +45,8 @@ urlpatterns = [
     # Pharmacy URLs
     path('pharmacy/dashboard/', views.pharmacy_dashboard, name='pharmacy_dashboard'),
     path('pharmacy/dispense-all/<int:visit_id>/', views.dispense_all_visit_items, name='dispense_all_visit_items'),
+    path('pharmacy/night-dashboard/', views.night_pharmacy_dashboard, name='night_pharmacy_dashboard'),
+    path('pharmacy/night-dispense-all/<int:visit_id>/', views.dispense_night_opd_items, name='dispense_night_opd_items'),
     
     # Health Records
     path('health-records/', views.health_records_view, name='health_records'),

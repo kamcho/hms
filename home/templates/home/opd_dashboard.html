@@ -98,11 +98,15 @@
                     <div class="toolbar-right">
                         <form method="GET" class="search-form-premium">
                             <div class="search-input-wrapper">
+                                <i class="far fa-calendar-alt"></i>
+                                <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" onchange="this.form.submit()" style="width: 185px; padding-left: 3rem;">
+                            </div>
+                            <div class="search-input-wrapper">
                                 <i class="fas fa-search"></i>
                                 <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search by name or ID...">
                             </div>
                             <button type="submit" class="btn-search-premium">Filter</button>
-                            {% if request.GET.q %}
+                            {% if request.GET.q or request.GET.date %}
                                 <a href="{% url 'home:opd_dashboard' %}" class="btn-clear-search"><i class="fas fa-times"></i></a>
                             {% endif %}
                         </form>

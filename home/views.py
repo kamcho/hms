@@ -969,7 +969,7 @@ def reception_dashboard(request):
         visits_with_triage = Visit.objects.filter(triage_entries__isnull=False).values_list('pk', flat=True)
         visits_without_triage = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
-            visit_date__date=today,
+            # visit_date__date=today,
             patient_queue__sent_to__name='Triage', # Ensuring we only show patients actually queued for Triage
             patient_queue__status='PENDING'
         ).select_related('patient').prefetch_related('invoice__items__service').distinct()
@@ -1777,10 +1777,12 @@ def create_prescription(request, visit_id):
     from django.db.models import Sum, Q 
     from inventory.models import StockRecord
 
-    # Determine eligible departments for stock check (Pharmacy only for outpatient, include Mini Pharmacy for inpatient)
-    departments = ['Pharmacy'] 
-    if visit.visit_type == 'IN-PATIENT':
-        departments.append('Mini Pharmacy')
+    # Determine eligible departments for stock check
+    if request.user.role == 'Nurse':
+        departments = ['Mini Pharmacy']
+
+    else:
+        departments = ['Pharmacy']
     
     med_metadata = {}
     for item in medications:
@@ -2895,6 +2897,514 @@ def dispense_all_visit_items(request, visit_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+
+@login_required
+def night_pharmacy_dashboard(request):
+    """Night Pharmacy dashboard showing OPD prescriptions, consumables, stock, and requests for Mini Pharmacy"""
+    # Role-based access control
+    if request.user.role not in ['Nurse', 'Admin', 'Pharmacist']:
+        messages.error(request, "Access denied. Only nurses, pharmacists and admins can access the night pharmacy dashboard.")
+        return redirect('home:reception_dashboard')
+
+    # Always use the Mini Pharmacy department for this dashboard
+    pharmacy_dept, created = Departments.objects.get_or_create(
+        name='Mini Pharmacy',
+        defaults={'abbreviation': 'MINI'}
+    )
+
+    # Date filter
+    from datetime import datetime, time
+    filter_date_str = request.GET.get('date')
+    if filter_date_str:
+        try:
+            filter_date = datetime.strptime(filter_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            filter_date = timezone.localdate()
+    else:
+        filter_date = timezone.localdate()
+
+    start_of_day = timezone.make_aware(datetime.combine(filter_date, time.min))
+    end_of_day = timezone.make_aware(datetime.combine(filter_date, time.max))
+
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    stock_search = request.GET.get('stock_search', '')
+    dispensed_search = request.GET.get('dispensed_search', '')
+    request_search = request.GET.get('request_search', '')
+
+    # Get ALL pending prescriptions and filter in Python
+    pending_items_all = PrescriptionItem.objects.filter(dispensed=False).select_related(
+        'prescription__patient',
+        'prescription__prescribed_by',
+        'prescription__invoice',
+        'prescription__visit',
+        'medication'
+    ).order_by('-prescription__prescribed_at')
+    
+    # Python-side filtering for reliability
+    pending_items = [
+        item for item in pending_items_all 
+        if item.prescription and item.prescription.prescribed_at and timezone.localdate(item.prescription.prescribed_at) == filter_date
+    ]
+
+    # Get ALL pending consumables and filter in Python
+    from accounts.models import Invoice, InvoiceItem
+    from inpatient.models import Admission
+
+    pending_consumables_all = InvoiceItem.objects.filter(
+        inventory_item__isnull=False,
+        invoice__status__in=['Draft', 'Pending', 'Paid', 'Partial']
+    ).select_related(
+        'invoice__patient',
+        'invoice__visit',
+        'inventory_item',
+    ).order_by('-created_at')
+    
+    pending_consumables_list_raw = [
+        ci for ci in pending_consumables_all
+        if ci.created_at and timezone.localdate(ci.created_at) == filter_date
+    ]
+
+    # Group DispensedItem quantities to calculate net pending (filtered by Mini Pharmacy department)
+    from django.db.models import Sum
+    dispensed_map = {}
+    dispensed_qs = DispensedItem.objects.filter(
+        department=pharmacy_dept,
+        dispensed_at__range=(start_of_day, end_of_day)
+    ).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
+    
+    for d in dispensed_qs:
+        dispensed_map[(d['visit_id'], d['item_id'])] = d['total_qty']
+
+    pending_consumable_list = []
+    pool_usage = dispensed_map.copy()
+
+    for ci in pending_consumables_list_raw:
+        visit_id = ci.invoice.visit_id
+        item_id = ci.inventory_item_id
+        qty_invoiced = ci.quantity
+        
+        already_dispensed = pool_usage.get((visit_id, item_id), 0)
+        
+        if already_dispensed >= qty_invoiced:
+            pool_usage[(visit_id, item_id)] = already_dispensed - qty_invoiced
+            continue
+        elif already_dispensed > 0:
+            ci.quantity -= already_dispensed
+            pool_usage[(visit_id, item_id)] = 0
+
+        # Skip IPD consumables (only OPD for Night Pharmacy)
+        is_admitted = Admission.objects.filter(visit=ci.invoice.visit, status='Admitted').exists()
+        is_ipd = str(ci.invoice.visit.visit_type).upper() == 'IN-PATIENT' if ci.invoice.visit else False
+        if not is_admitted and not is_ipd:
+            pending_consumable_list.append(ci)
+
+    if search_query and search_query.strip():
+        search_query = search_query.lower().strip()
+        pending_items = [
+            item for item in pending_items
+            if search_query in (item.prescription.patient.first_name or '').lower()
+            or search_query in (item.prescription.patient.last_name or '').lower()
+            or search_query in (item.medication.name or '').lower()
+        ]
+        # Filter pending consumable list
+        pending_consumable_list = [
+            ci for ci in pending_consumable_list
+            if search_query.lower() in (ci.invoice.patient.first_name or '').lower()
+            or search_query.lower() in (ci.invoice.patient.last_name or '').lower()
+            or search_query.lower() in (ci.inventory_item.name or '').lower()
+        ]
+
+    # ---- Build grouped data: OPD only ----
+    from collections import defaultdict
+    def create_group():
+        return {
+            'patient': None,
+            'visit': None,
+            'prescriptions': [],
+            'consumables': [],
+            'invoice': None,
+            'invoice_status': 'No Invoice',
+            'prescribed_at': None,
+            'prescribed_by': None,
+            'prescription_id': None,
+            'diagnosis': '',
+        }
+
+    opd_visit_groups = defaultdict(create_group)
+
+    for item in pending_items:
+        visit = item.prescription.visit
+        if not visit:
+            continue
+        
+        is_ipd = str(visit.visit_type).upper() == 'IN-PATIENT'
+        if is_ipd:
+            continue
+            
+        group = opd_visit_groups[visit.id]
+        group['patient'] = item.prescription.patient
+        group['visit'] = visit
+        group['prescriptions'].append(item)
+        if not group['prescription_id']:
+            group['prescription_id'] = item.prescription.id
+        if item.prescription.invoice:
+            group['invoice'] = item.prescription.invoice
+            group['invoice_status'] = item.prescription.invoice.status
+        if not group['prescribed_at'] or item.prescription.prescribed_at > group['prescribed_at']:
+            group['prescribed_at'] = item.prescription.prescribed_at
+            group['prescribed_by'] = item.prescription.prescribed_by
+            group['diagnosis'] = item.prescription.diagnosis
+
+    for ci in pending_consumable_list:
+        visit = ci.invoice.visit
+        if not visit:
+            continue
+            
+        is_ipd = str(visit.visit_type).upper() == 'IN-PATIENT'
+        if is_ipd:
+            continue
+            
+        group = opd_visit_groups[visit.id]
+        
+        # Avoid duplicates
+        is_duplicate = False
+        for p_item in group['prescriptions']:
+            if p_item.medication_id == ci.inventory_item_id and p_item.quantity == ci.quantity:
+                is_duplicate = True
+                break
+        
+        if not is_duplicate:
+            group['patient'] = ci.invoice.patient
+            group['visit'] = visit
+            group['consumables'].append(ci)
+            if not group['invoice']:
+                group['invoice'] = ci.invoice
+                group['invoice_status'] = ci.invoice.status
+
+    # Convert to list and sort
+    def sort_groups(groups_dict):
+        return sorted(
+            [g for g in groups_dict.values() if g['patient']],
+            key=lambda g: g['prescribed_at'] or timezone.now(),
+            reverse=True
+        )
+
+    opd_groups = sort_groups(opd_visit_groups)
+
+    # Get recently dispensed items from Mini Pharmacy (last 30 days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    dispensed_items = DispensedItem.objects.filter(
+        department=pharmacy_dept,
+        dispensed_at__gte=thirty_days_ago
+    ).select_related(
+        'patient',
+        'item',
+        'dispensed_by'
+    ).order_by('-dispensed_at')[:50]
+
+    # Apply dispensed search filter
+    if dispensed_search:
+        dispensed_items = dispensed_items.filter(
+            Q(patient__first_name__icontains=dispensed_search) |
+            Q(patient__last_name__icontains=dispensed_search) |
+            Q(item__name__icontains=dispensed_search)
+        )
+
+    # Get Mini Pharmacy stock
+    pharmacy_stock = StockRecord.objects.filter(
+        current_location=pharmacy_dept,
+        quantity__gt=0
+    ).select_related('item', 'supplier').order_by('item__name')
+
+    # Apply stock search filter
+    if stock_search:
+        pharmacy_stock = pharmacy_stock.filter(
+            Q(item__name__icontains=stock_search) |
+            Q(batch_number__icontains=stock_search)
+        )
+
+    # Identify low stock items (below reorder level)
+    low_stock_items = []
+    expiring_soon_items = []
+    today = timezone.localdate()
+    thirty_days_later = today + timedelta(days=30)
+
+    for stock in pharmacy_stock:
+        total_qty = StockRecord.objects.filter(
+            current_location=pharmacy_dept,
+            item=stock.item
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+
+        if total_qty <= stock.item.reorder_level:
+            if stock not in low_stock_items:
+                low_stock_items.append(stock)
+
+        if stock.expiry_date and stock.expiry_date <= thirty_days_later:
+            expiring_soon_items.append(stock)
+
+    # Get inventory requests for Mini Pharmacy
+    inventory_requests_all = InventoryRequest.objects.filter(
+        location=pharmacy_dept
+    ).select_related('item', 'requested_by').order_by('-requested_at')
+
+    if request_search:
+        inventory_requests_all = inventory_requests_all.filter(
+            Q(item__name__icontains=request_search) |
+            Q(requested_by__first_name__icontains=request_search) |
+            Q(requested_by__last_name__icontains=request_search)
+        )
+
+    pending_requests_count = inventory_requests_all.filter(status='Pending').count()
+    inventory_requests = inventory_requests_all[:20]
+
+    # Statistics
+    stats = {
+        'pending_prescriptions': len(pending_items) + len(pending_consumable_list),
+        'opd_count': len(opd_groups),
+        'low_stock_count': len(low_stock_items),
+        'pending_requests': pending_requests_count,
+        'dispensed_today': DispensedItem.objects.filter(
+            department=pharmacy_dept,
+            dispensed_at__range=(start_of_day, end_of_day)
+        ).count(),
+    }
+
+    context = {
+        'opd_groups': opd_groups,
+        'pending_items': pending_items,
+        'dispensed_items': dispensed_items,
+        'pharmacy_stock': pharmacy_stock,
+        'low_stock_items': low_stock_items,
+        'expiring_soon_items': expiring_soon_items,
+        'inventory_requests': inventory_requests,
+        'stats': stats,
+        'search_query': search_query,
+        'stock_search': stock_search,
+        'dispensed_search': dispensed_search,
+        'request_search': request_search,
+        'filter_date': filter_date,
+        'debug_info': {
+            'total_pending_all_dates': pending_items_all.count(),
+            'after_python_date_filter': len(pending_items),
+            'consumables_count': len(pending_consumable_list),
+            'filter_date': filter_date,
+            'tz_now': timezone.now(),
+            'local_date': timezone.localdate(),
+        },
+        'pharmacy_dept': pharmacy_dept,
+        'today_plus_30': today + timedelta(days=30),
+    }
+
+    return render(request, 'home/night_pharmacy_dashboard.html', context)
+
+
+@login_required
+@transaction.atomic
+@require_http_methods(["POST"])
+def dispense_night_opd_items(request, visit_id):
+    """
+    Dispense ALL pending items (medications + consumables) for a visit at night.
+    Deducts stock from Mini Pharmacy.
+    """
+    from accounts.models import Invoice, InvoiceItem
+    from inventory.models import StockAdjustment, DispensedItem
+    from inpatient.models import Admission
+
+    try:
+        visit = get_object_or_404(Visit, pk=visit_id)
+        patient = visit.patient
+        
+        # Role-based validation
+        if request.user.role not in ['Nurse', 'Admin', 'Pharmacist']:
+            return JsonResponse({'success': False, 'error': 'Unauthorized role.'})
+            
+        # Determine if IPD or OPD
+        is_ipd = Admission.objects.filter(visit=visit, status='Admitted').exists()
+        if is_ipd:
+            return JsonResponse({'success': False, 'error': 'This page only handles OPD dispensing.'})
+
+        # Use Mini Pharmacy department for stock deduction
+        pharmacy_dept = get_object_or_404(Departments, name='Mini Pharmacy')
+
+        # ---- Gather pending items ----
+        # 1. Prescription medications (PrescriptionItem)
+        pending_meds = PrescriptionItem.objects.filter(
+            prescription__visit=visit,
+            dispensed=False,
+        ).select_related('medication', 'prescription__invoice', 'prescription__patient')
+
+        # 2. Pending consumables
+        pending_consumable_items = InvoiceItem.objects.filter(
+            invoice__visit=visit,
+            inventory_item__isnull=False,
+        ).select_related('inventory_item', 'invoice')
+
+        # Robust De-duplication for Consumables:
+        # Calculate total quantity already dispensed for each item in this visit
+        from django.db.models import Sum
+        dispensed_totals = {
+            item_id: total_qty for item_id, total_qty in 
+            DispensedItem.objects.filter(visit=visit).values_list('item_id').annotate(total=Sum('quantity'))
+        }
+
+        pending_consumables = []
+        accounted_for_dispensed = dispensed_totals.copy()
+
+        for ci in pending_consumable_items:
+            item_id = ci.inventory_item_id
+            qty_needed = ci.quantity
+            
+            # 1. Skip if already covered by a prescription item (to prevent double billing/dispensing)
+            if any(pm.medication_id == item_id and pm.quantity == qty_needed for pm in pending_meds):
+                continue
+            
+            # 2. Check if this specific quantity has already been dispensed
+            already_dispensed = accounted_for_dispensed.get(item_id, 0)
+            if already_dispensed >= qty_needed:
+                accounted_for_dispensed[item_id] -= qty_needed
+                continue
+            elif already_dispensed > 0:
+                ci.quantity -= already_dispensed
+                accounted_for_dispensed[item_id] = 0
+                
+            pending_consumables.append(ci)
+
+        total_pending = pending_meds.count() + len(pending_consumables)
+        if total_pending == 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'No pending items found for this visit.'
+            })
+
+        # ---- OPD: Check payment ----
+        invoices = Invoice.objects.filter(visit=visit).exclude(status='Cancelled')
+        unpaid = invoices.exclude(status='Paid')
+        if unpaid.exists():
+            inv_ids = ', '.join([f'INV-{inv.id}' for inv in unpaid])
+            return JsonResponse({
+                'success': False,
+                'error': f'Payment required. Unpaid invoices: {inv_ids}'
+            })
+
+        dispensed_count = 0
+        errors = []
+
+        # ---- Dispense medications ----
+        for med in pending_meds:
+            # Check stock (FEFO)
+            stock_records = StockRecord.objects.filter(
+                current_location=pharmacy_dept,
+                item=med.medication,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(r.quantity for r in stock_records)
+            if total_available < med.quantity:
+                errors.append(f'Insufficient stock for {med.medication.name} (need {med.quantity}, have {total_available})')
+                continue
+
+            # Deduct stock FEFO
+            remaining = med.quantity
+            for record in stock_records:
+                if remaining <= 0:
+                    break
+                take = min(record.quantity, remaining)
+                record.quantity -= take
+                record.save()
+                StockAdjustment.objects.create(
+                    item=med.medication,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Dispensed to {patient.full_name} (Visit {visit.id}) via Night Pharmacy',
+                    adjusted_by=request.user,
+                    adjusted_from=pharmacy_dept,
+                )
+                remaining -= take
+
+            # Mark as dispensed
+            med.dispensed = True
+            med.dispensed_at = timezone.now()
+            med.dispensed_by = request.user
+            med.save()
+
+            DispensedItem.objects.create(
+                item=med.medication,
+                patient=patient,
+                visit=visit,
+                quantity=med.quantity,
+                dispensed_by=request.user,
+                department=pharmacy_dept,
+            )
+            dispensed_count += 1
+
+        # ---- Dispense consumables ----
+        for ci in pending_consumables:
+            item = ci.inventory_item
+            qty = ci.quantity
+
+            # Check stock (FEFO)
+            stock_records = StockRecord.objects.filter(
+                current_location=pharmacy_dept,
+                item=item,
+                quantity__gt=0
+            ).order_by('expiry_date').select_for_update()
+
+            total_available = sum(r.quantity for r in stock_records)
+            if total_available < qty:
+                errors.append(f'Insufficient stock for {item.name} (need {qty}, have {total_available})')
+                continue
+
+            # Deduct stock FEFO
+            remaining = qty
+            for record in stock_records:
+                if remaining <= 0:
+                    break
+                take = min(record.quantity, remaining)
+                record.quantity -= take
+                record.save()
+                StockAdjustment.objects.create(
+                    item=item,
+                    quantity=-take,
+                    adjustment_type='Usage',
+                    reason=f'Consumable dispensed to {patient.full_name} (Visit {visit.id}) via Night Pharmacy',
+                    adjusted_by=request.user,
+                    adjusted_from=pharmacy_dept,
+                )
+                remaining -= take
+
+            DispensedItem.objects.create(
+                item=item,
+                patient=patient,
+                visit=visit,
+                quantity=qty,
+                dispensed_by=request.user,
+                department=pharmacy_dept,
+            )
+            dispensed_count += 1
+
+        if dispensed_count == 0:
+            return JsonResponse({
+                'success': False,
+                'error': '; '.join(errors) if errors else 'No items could be dispensed'
+            })
+
+        message = f'Successfully dispensed {dispensed_count} items.'
+        if errors:
+            message += f' Warnings: {"; ".join(errors)}'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'dispensed_count': dispensed_count
+        })
+
+    except Departments.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Mini Pharmacy department not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
 @login_required
 def appointments_dashboard(request):
     """
@@ -2994,9 +3504,17 @@ def opd_dashboard(request):
     Dashboard for Outpatient Department (Doctors)
     Shows analytics and waiting patient queue
     """
-    today = timezone.localdate()
-    
     from datetime import datetime, time
+    
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            today = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            today = timezone.localdate()
+    else:
+        today = timezone.localdate()
+    
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
     
