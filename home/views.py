@@ -951,7 +951,7 @@ def reception_dashboard(request):
             'services': services,
         })
         
-    elif user_role == 'Triage Nurse':
+    elif user_role == 'Triage Nurse' or user_role == 'Nurse':
         # Triage Nurse sees triage entries and visits without triage
         # Get recent triage entries
         triage_entries = TriageEntry.objects.select_related('visit__patient', 'triage_nurse')
@@ -969,6 +969,7 @@ def reception_dashboard(request):
         visits_with_triage = Visit.objects.filter(triage_entries__isnull=False).values_list('pk', flat=True)
         visits_without_triage = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
+            visit_date__date=today,
             patient_queue__sent_to__name='Triage', # Ensuring we only show patients actually queued for Triage
             patient_queue__status='PENDING'
         ).select_related('patient').prefetch_related('invoice__items__service').distinct()

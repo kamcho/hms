@@ -529,7 +529,7 @@
                         {% endif %}
                         
                         {% if selected_visit == latest_visit or not selected_visit %}
-                            {% if user.role == 'Doctor' %}
+                            {% if user.role == 'Doctor' or user.role == 'Nurse' %}
                                 {% if active_admission %}
                                     <a href="{% url 'inpatient:discharge_patient' active_admission.id %}" class="modern-btn btn-danger" style="width: 100%;">
                                         <i class="fas fa-sign-out-alt"></i> Discharge Patient

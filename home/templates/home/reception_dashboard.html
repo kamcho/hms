@@ -685,7 +685,7 @@
                         <div class="number">{{ unpaid_invoices }}</div>
                     </div>
                 </div>
-            {% elif user_role == 'Triage Nurse' %}
+            {% elif user_role == 'Triage Nurse' or user_role == 'Nurse' %}
                 <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
                     <div class="stat-icon">
                         <i class="fas fa-clipboard-check"></i>
@@ -809,7 +809,7 @@
                         </table>
                     </div>
                 </div>
-            {% elif user_role == 'Triage Nurse' %}
+            {% elif user_role == 'Triage Nurse' or user_role == 'Nurse' %}
              <div class="section">
                     <div class="section-header">
                         <h3>

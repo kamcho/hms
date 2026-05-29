@@ -188,7 +188,7 @@
                 </a>
             </div>
 
-                <!-- Dispense Consumables Section -->
+                 <!-- Dispense Consumables Section -->
                 <div class="premium-card">
                     <div class="flex items-center gap-4 mb-8">
                         <div class="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
@@ -626,25 +626,6 @@
         }
     });
 
-    // Form submission cleanup and validation
-    document.querySelector('form').addEventListener('submit', function (e) {
-        const medSelects = document.querySelectorAll('select[name$="-medication"]');
-        let hasMedication = false;
-        
-        medSelects.forEach(select => {
-            if (select.value && select.closest('.medication-entry').style.display !== 'none') {
-                hasMedication = true;
-            }
-        });
-
-        if (!hasMedication) {
-            e.preventDefault();
-            alert('Please select at least one medication before prescribing.');
-            return false;
-        }
-        
-        // No specific cleanup needed for duration_days with the new frequency field
-    });
 
     // Initial load
     document.querySelectorAll('.medication-entry').forEach(entry => {

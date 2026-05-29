@@ -320,6 +320,25 @@
                         </div>
                     {% endif %}
                     {% if user.role == 'Nurse' or user.role == 'Admin' %}
+                    <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.url_name == 'patient_list' or request.resolver_match.url_name == 'reception_dashboard' or request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}" id="nightOpdMenu">
+                        <i class="fas fa-moon"></i>
+                        <span>Night OPD</span>
+                        <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
+                    </a>
+                    <div class="submenu" id="nightOpdSubmenu">
+                        <a href="{% url 'home:patient_list' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}">
+                            <i class="fas fa-procedures"></i>
+                            <span>Patients</span>
+                        </a>
+                        <a href="{% url 'home:reception_dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'reception_dashboard' %}active{% endif %}">
+                            <i class="fas fa-heartbeat"></i>
+                            <span>Triage Dashboard</span>
+                        </a>
+                        <a href="{% url 'home:opd_dashboard' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'opd_dashboard' %}active{% endif %}">
+                            <i class="fas fa-stethoscope"></i>
+                            <span>OPD Dashboard</span>
+                        </a>
+                    </div>
                     <a href="{% url 'inventory:ipd_pharmacy_dashboard' %}" 
                            class="menu-item {% if request.resolver_match.url_name == 'ipd_pharmacy_dashboard' %}active{% endif %}">
                             <i class="fas fa-truck-medical"></i>
