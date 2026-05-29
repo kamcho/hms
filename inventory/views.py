@@ -416,7 +416,8 @@ def search_inventory(request):
     JSON API for searching inventory items.
     """
     from django.db.models import Sum
-    from .models import StockRecord, Departments
+    from .models import StockRecord
+    from home.models import Departments
     query = request.GET.get('q', '')
     department_id = request.GET.get('department_id')
     exclude_pharmaceuticals = request.GET.get('exclude_pharmaceuticals') == 'true'
