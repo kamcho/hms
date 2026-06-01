@@ -104,7 +104,8 @@ class Invoice(models.Model):
         total_paid = self.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
         self.paid_amount = total_paid
         
-        remaining_pool = total_paid
+        # Include insurance adjustment in the distribution pool so that adjustment write-offs/gains settle items
+        remaining_pool = total_paid + self.insurance_adjustment
         items = self.items.all().order_by('created_at')
         
         for item in items:

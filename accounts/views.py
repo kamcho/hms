@@ -371,7 +371,7 @@ def process_insurance_claim(request):
         if adjustment is not None:
             invoice.insurance_adjustment = Decimal(str(adjustment))
             invoice.save()
-            invoice.update_totals()
+            invoice.distribute_payments()
         
         # Calculate selected items total as a sanity check
         selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or 0
