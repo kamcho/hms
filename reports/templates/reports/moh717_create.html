@@ -1,0 +1,18 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto p-6">
+    <a href="{% url 'reports:moh717_list' %}" class="text-xs font-bold text-violet-600 uppercase"><i class="fas fa-arrow-left"></i> MOH 717</a>
+    <h1 class="text-2xl font-black text-slate-800 mt-2 mb-6">{{ title }}</h1>
+    <form method="post" class="bg-white rounded-2xl border p-6 space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">{{ field.label }}</label>
+            {{ field }}
+        </div>
+        {% endfor %}
+        <button type="submit" class="w-full py-3 bg-violet-600 text-white rounded-xl font-black uppercase text-xs">Create &amp; open grid</button>
+    </form>
+</div>
+{% endblock %}

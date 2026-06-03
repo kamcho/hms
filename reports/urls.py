@@ -17,4 +17,9 @@ urlpatterns = [
     path('moh705b/<int:pk>/', views.moh705b_report_edit, name='moh705b_edit'),
     path('moh705b/<int:pk>/save/', views.moh705b_report_save, name='moh705b_save'),
     path('moh705b/<int:pk>/print/', views.moh705b_report_print, name='moh705b_print'),
+    path('moh717/', views.moh717_report_list, name='moh717_list'),
+    path('moh717/new/', views.moh717_report_create, name='moh717_create'),
+    path('moh717/<int:pk>/', views.moh717_report_edit, name='moh717_edit'),
+    path('moh717/<int:pk>/save/', views.moh717_report_save, name='moh717_save'),
+    path('moh717/<int:pk>/print/', views.moh717_report_print, name='moh717_print'),
 ]

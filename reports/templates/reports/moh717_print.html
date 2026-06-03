@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOH 717 — {{ report.facility_name }} {{ report.month_name }} {{ report.year }}</title>
+    <style>
+        @page { size: A4 portrait; margin: 10mm; }
+        body { font-family: Arial, sans-serif; font-size: 8pt; margin: 0; }
+        h1 { font-size: 11pt; text-align: center; margin: 0 0 4px; }
+        .sub { text-align: center; font-size: 8pt; margin-bottom: 6px; }
+        .meta { border: 1px solid #000; padding: 6px; margin-bottom: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 7pt; }
+        .note { font-size: 6pt; margin-bottom: 6px; font-style: italic; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #333; padding: 2px 4px; }
+        th { background: #eee; font-size: 7pt; text-align: center; }
+        .lbl { text-align: left; }
+        .sec { background: #ddd; font-weight: bold; text-transform: uppercase; }
+        .tot { background: #fff9c4; font-weight: bold; }
+        .sum { background: #e3f2fd; font-weight: bold; }
+        .num { text-align: center; width: 48px; }
+        .footer { margin-top: 12px; font-size: 8pt; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <p class="no-print"><button onclick="window.print()">Print</button></p>
+    <h1>MINISTRY OF HEALTH — MOH 717</h1>
+    <p class="sub">Monthly Service Workload Report for Health Facilities — A. OUTPATIENT SERVICES</p>
+    <div class="meta">
+        <div><b>County:</b> {{ report.county|default:"" }}</div>
+        <div><b>Sub-County:</b> {{ report.sub_county|default:"" }}</div>
+        <div><b>Health Facility:</b> {{ report.facility_name }}</div>
+        <div><b>KMHFL Code:</b> {{ report.kmhfl_code|default:"" }}</div>
+        <div><b>Month:</b> {{ report.month_name }}</div>
+        <div><b>Year:</b> {{ report.year }}</div>
+    </div>
+    <p class="note">{{ form_note }}</p>
+    <table>
+        <thead>
+            <tr><th>Code</th><th class="lbl">Service</th><th class="num">NEW</th><th class="num">RE-ATT</th><th class="num">TOTAL</th></tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr class="{% if row.def.category == 'section' %}sec{% elif row.def.category == 'total' %}tot{% elif row.def.category == 'summary' %}sum{% endif %}">
+                <td>{{ row.def.code }}</td>
+                <td class="lbl">{{ row.def.description }}</td>
+                {% if row.def.category == 'section' %}
+                <td colspan="3"></td>
+                {% else %}
+                <td class="num">{{ row.new }}</td>
+                <td class="num">{{ row.re_att }}</td>
+                <td class="num"><b>{{ row.total }}</b></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" style="text-align:right;font-weight:bold;">Totals</td>
+                <td class="num">{{ col_totals.new }}</td>
+                <td class="num">{{ col_totals.re_att }}</td>
+                <td class="num"><b>{{ col_totals.total }}</b></td>
+            </tr>
+        </tfoot>
+    </table>
+    <div class="footer">
+        <div><b>Compiled by:</b> {{ report.compiled_by|default:"________________" }}</div>
+        <div><b>Designation:</b> {{ report.compiled_designation|default:"________________" }}</div>
+        <div><b>Date:</b> {{ report.compiled_date|date:"d M Y"|default:"________________" }}</div>
+    </div>
+</body>
+</html>

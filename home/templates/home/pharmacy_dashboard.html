@@ -2,11 +2,8 @@
 {% load static %}
 {% load custom_filters %}
 {% block title %}Pharmacy Operations - HMS{% endblock %}
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-{% endblock %}
+{% block extra_head %}{% endblock %}
 {% block content %}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
     :root {
         --pharm-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -313,6 +310,181 @@
     .badge-warning { background: rgba(254, 225, 64, 0.1); color: #fee140; }
     .badge-danger { background: rgba(245, 87, 108, 0.1); color: #f5576c; }
     .badge-info { background: rgba(79, 172, 254, 0.1); color: #4facfe; }
+
+    /* Native modals (no external CDN — works offline on LAN) */
+    .ph-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    .ph-modal-overlay.is-open {
+        display: flex;
+    }
+
+    .ph-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.75);
+    }
+
+    .ph-modal-panel {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 480px;
+        background: #1e293b;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+    }
+
+    .ph-modal-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ph-modal-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    .ph-modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 1.25rem;
+        padding: 0.25rem;
+    }
+
+    .ph-modal-body {
+        padding: 1.25rem;
+        color: #e2e8f0;
+    }
+
+    .ph-modal-body label {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+        margin-bottom: 0.35rem;
+    }
+
+    .ph-modal-body input[type="text"],
+    .ph-modal-body input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.6rem 0.75rem;
+        background: #0f172a;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        color: #f1f5f9;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .ph-modal-hint {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin: 0 0 1rem;
+        line-height: 1.45;
+    }
+
+    .ph-modal-error {
+        display: none;
+        padding: 0.5rem 0.75rem;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid #f87171;
+        border-radius: 8px;
+        color: #fecaca;
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .ph-modal-error.is-visible {
+        display: block;
+    }
+
+    #consumableSearchResults {
+        max-height: 140px;
+        overflow-y: auto;
+        margin-top: -0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        display: none;
+    }
+
+    #consumableSearchResults button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        border: none;
+        background: transparent;
+        color: #e2e8f0;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    #consumableSearchResults button:hover {
+        background: rgba(99, 102, 241, 0.2);
+    }
+
+    .ph-modal-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    .ph-modal-btn {
+        padding: 0.65rem 1.35rem;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        color: #fff;
+    }
+
+    .ph-modal-btn-cancel {
+        background: #64748b;
+    }
+
+    .ph-modal-btn-cancel:hover {
+        background: #475569;
+    }
+
+    .ph-modal-btn-save {
+        background: #6366f1;
+    }
+
+    .ph-modal-btn-save:hover {
+        background: #4f46e5;
+    }
+
+    .ph-modal-btn-save:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
     </style>
 
     <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
@@ -432,7 +604,7 @@
                                             {% if group.diagnosis %}
                                             <button class="btn btn-outline-info" 
                                                     style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #0ea5e9; color: #0ea5e9; background: transparent;"
-                                                    onclick="Swal.fire({title: 'Prescription Diagnosis', text: '{{ group.diagnosis|escapejs }}', icon: 'info', confirmButtonColor: '#6366f1'})">
+                                                    onclick="showDiagnosis('{{ group.diagnosis|escapejs }}')"
                                                 <i class="fas fa-stethoscope"></i> Diagnosis
                                             </button>
                                             {% endif %}
@@ -543,7 +715,7 @@
                                             {% if group.diagnosis %}
                                             <button class="btn btn-outline-info" 
                                                     style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #0ea5e9; color: #0ea5e9; background: transparent;"
-                                                    onclick="Swal.fire({title: 'Prescription Diagnosis', text: '{{ group.diagnosis|escapejs }}', icon: 'info', confirmButtonColor: '#6366f1'})">
+                                                    onclick="showDiagnosis('{{ group.diagnosis|escapejs }}')"
                                                 <i class="fas fa-stethoscope"></i> Diagnosis
                                             </button>
                                             {% endif %}
@@ -824,151 +996,228 @@
     </div>
 
     <!-- Instruction Modal -->
-    <div id="instructionModal" style="display: none; position: fixed; inset: 0; z-index: 2147483647; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
-        <div style="position: fixed; inset: 0; background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(8px);" onclick="hideInstruction()"></div>
-        <div style="position: relative; z-index: 10; width: 100%; max-width: 500px; background: #1e293b; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: white;">Instructions: <span id="instructionItemName" style="color: #667eea;"></span></h3>
-                <button onclick="hideInstruction()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.25rem;"><i class="fas fa-times"></i></button>
+    <div id="instructionModal" class="ph-modal-overlay">
+        <div class="ph-modal-backdrop" onclick="hideInstruction()"></div>
+        <div class="ph-modal-panel">
+            <div class="ph-modal-header">
+                <h3>Instructions: <span id="instructionItemName" style="color: #667eea;"></span></h3>
+                <button type="button" class="ph-modal-close" onclick="hideInstruction()" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
-            <div style="padding: 2rem;">
-                <div style="padding: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                    <p id="instructionText" style="margin: 0; line-height: 1.6; color: #f1f5f9; white-space: pre-wrap;"></p>
-                </div>
+            <div class="ph-modal-body">
+                <p id="instructionText" style="margin: 0; line-height: 1.6; white-space: pre-wrap;"></p>
             </div>
-            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
-                <button onclick="hideInstruction()" class="btn btn-primary" style="padding: 0.75rem 2rem; border-radius: 12px; font-weight: 800; text-transform: uppercase; font-size: 10px;">Close</button>
+            <div class="ph-modal-footer">
+                <button type="button" class="ph-modal-btn ph-modal-btn-save" onclick="hideInstruction()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagnosis Modal -->
+    <div id="diagnosisModal" class="ph-modal-overlay">
+        <div class="ph-modal-backdrop" onclick="hideDiagnosis()"></div>
+        <div class="ph-modal-panel">
+            <div class="ph-modal-header">
+                <h3>Prescription diagnosis</h3>
+                <button type="button" class="ph-modal-close" onclick="hideDiagnosis()" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="ph-modal-body">
+                <p id="diagnosisText" style="margin: 0; line-height: 1.6; white-space: pre-wrap;"></p>
+            </div>
+            <div class="ph-modal-footer">
+                <button type="button" class="ph-modal-btn ph-modal-btn-save" onclick="hideDiagnosis()">Close</button>
             </div>
         </div>
     </div>
 
     {% if can_edit_consumables %}
-    <script>
-    const PHARMACY_DEPT_ID = {{ pharmacy_dept.id }};
-
-    function openEditConsumableModal(btn) {
-        const itemId = btn.dataset.itemId;
-        const itemName = btn.dataset.itemName;
-        const inventoryItemId = btn.dataset.inventoryItemId;
-        const quantity = btn.dataset.quantity;
-
-        Swal.fire({
-            title: 'Edit consumable',
-            html: `<p style="font-size:0.8rem; color:#94a3b8; margin:0 0 1rem; text-align:left;">Change item or quantity. Price updates automatically from the selected item (not edited separately).</p>
-                <div style="text-align:left; margin-bottom:1rem;">
-                    <label style="display:block; font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:0.35rem; text-transform:uppercase;">Item</label>
-                    <input type="text" id="swal-consumable-search" class="swal2-input" placeholder="Search consumable..." value="${itemName.replace(/"/g, '&quot;')}" style="margin:0; width:100%; box-sizing:border-box;">
-                    <input type="hidden" id="swal-consumable-item-id" value="${inventoryItemId}">
-                    <div id="swal-consumable-results" style="max-height:140px; overflow-y:auto; margin-top:0.5rem; border:1px solid #334155; border-radius:8px; display:none;"></div>
-                </div>
-                <div style="text-align:left;">
-                    <label style="display:block; font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:0.35rem; text-transform:uppercase;">Quantity</label>
-                    <input type="number" id="swal-consumable-qty" class="swal2-input" min="1" value="${quantity}" style="margin:0; width:100%; box-sizing:border-box;">
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Save',
-            confirmButtonColor: '#6366f1',
-            cancelButtonColor: '#64748b',
-            focusConfirm: false,
-            didOpen: () => {
-                const searchInput = document.getElementById('swal-consumable-search');
-                const resultsBox = document.getElementById('swal-consumable-results');
-                const hiddenId = document.getElementById('swal-consumable-item-id');
-                let searchTimer = null;
-
-                function renderResults(results) {
-                    if (!results.length) {
-                        resultsBox.style.display = 'none';
-                        resultsBox.innerHTML = '';
-                        return;
-                    }
-                    resultsBox.style.display = 'block';
-                    resultsBox.innerHTML = results.map(r => `
-                        <button type="button" data-id="${r.id}" data-name="${r.name.replace(/"/g, '&quot;')}"
-                            style="display:block; width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:transparent; color:#e2e8f0; cursor:pointer; font-size:0.85rem;">
-                            ${r.text} <span style="color:#64748b;">(stock: ${r.stock}${r.selling_price ? ', KES ' + r.selling_price : ''})</span>
-                        </button>
-                    `).join('');
-                    resultsBox.querySelectorAll('button').forEach(b => {
-                        b.addEventListener('click', () => {
-                            hiddenId.value = b.dataset.id;
-                            searchInput.value = b.dataset.name;
-                            resultsBox.style.display = 'none';
-                        });
-                    });
-                }
-
-                searchInput.addEventListener('input', () => {
-                    clearTimeout(searchTimer);
-                    const q = searchInput.value.trim();
-                    if (q.length < 2) {
-                        resultsBox.style.display = 'none';
-                        return;
-                    }
-                    searchTimer = setTimeout(() => {
-                        fetch(`/inventory/api/search/?q=${encodeURIComponent(q)}&department_id=${PHARMACY_DEPT_ID}&exclude_pharmaceuticals=true`)
-                            .then(r => r.json())
-                            .then(data => renderResults(data.results || []))
-                            .catch(() => { resultsBox.style.display = 'none'; });
-                    }, 300);
-                });
-            },
-            preConfirm: () => {
-                const invId = document.getElementById('swal-consumable-item-id').value;
-                const qty = parseInt(document.getElementById('swal-consumable-qty').value, 10);
-                if (!invId) {
-                    Swal.showValidationMessage('Select a consumable item.');
-                    return false;
-                }
-                if (!qty || qty < 1) {
-                    Swal.showValidationMessage('Enter a valid quantity (at least 1).');
-                    return false;
-                }
-                return { inventory_item_id: parseInt(invId, 10), quantity: qty };
-            }
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            Swal.showLoading();
-            fetch("{% url 'home:api_pharmacy_update_consumable' item_id=0 %}".replace('/0/', `/${itemId}/`), {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(result.value),
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Saved', text: data.message, timer: 1500, showConfirmButton: false })
-                            .then(() => location.reload());
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Could not save.' });
-                    }
-                })
-                .catch(err => Swal.fire({ icon: 'error', title: 'Error', text: String(err) }));
-        });
-    }
-    </script>
+    <!-- Edit consumable modal (built-in — no internet required) -->
+    <div id="editConsumableModal" class="ph-modal-overlay">
+        <div class="ph-modal-backdrop" onclick="closeEditConsumableModal()"></div>
+        <div class="ph-modal-panel">
+            <div class="ph-modal-header">
+                <h3>Edit consumable</h3>
+                <button type="button" class="ph-modal-close" onclick="closeEditConsumableModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="ph-modal-body">
+                <p class="ph-modal-hint">Change item or quantity. Price updates from the selected item’s selling price.</p>
+                <div id="editConsumableError" class="ph-modal-error" role="alert"></div>
+                <label for="consumableSearch">Item</label>
+                <input type="text" id="consumableSearch" placeholder="Search consumable (type 2+ letters)..." autocomplete="off">
+                <input type="hidden" id="consumableItemId" value="">
+                <div id="consumableSearchResults"></div>
+                <label for="consumableQty">Quantity</label>
+                <input type="number" id="consumableQty" min="1" value="1">
+            </div>
+            <div class="ph-modal-footer">
+                <button type="button" class="ph-modal-btn ph-modal-btn-cancel" onclick="closeEditConsumableModal()">Cancel</button>
+                <button type="button" class="ph-modal-btn ph-modal-btn-save" id="consumableSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     <script>
-    function showInstruction(itemName, text) {
-        document.getElementById('instructionItemName').innerText = itemName;
-        document.getElementById('instructionText').innerText = text;
-        const modal = document.getElementById('instructionModal');
-        modal.style.setProperty('display', 'flex', 'important');
+    const PHARMACY_DEPT_ID = {{ pharmacy_dept.id }};
+    const CONSUMABLE_UPDATE_URL_TEMPLATE = "{% url 'home:api_pharmacy_update_consumable' item_id=0 %}";
+    let editConsumableInvoiceItemId = null;
+    let consumableSearchTimer = null;
+
+    function openPhModal(id) {
+        document.getElementById(id).classList.add('is-open');
         document.body.style.overflow = 'hidden';
     }
 
-    function hideInstruction() {
-        const modal = document.getElementById('instructionModal');
-        modal.style.setProperty('display', 'none', 'important');
+    function closePhModal(id) {
+        document.getElementById(id).classList.remove('is-open');
         document.body.style.overflow = '';
     }
 
+    function showInstruction(itemName, text) {
+        document.getElementById('instructionItemName').innerText = itemName;
+        document.getElementById('instructionText').innerText = text;
+        openPhModal('instructionModal');
+    }
+
+    function hideInstruction() {
+        closePhModal('instructionModal');
+    }
+
+    function showDiagnosis(text) {
+        document.getElementById('diagnosisText').innerText = text || 'No diagnosis recorded.';
+        openPhModal('diagnosisModal');
+    }
+
+    function hideDiagnosis() {
+        closePhModal('diagnosisModal');
+    }
+
+    function showEditConsumableError(msg) {
+        const el = document.getElementById('editConsumableError');
+        if (!el) return;
+        if (msg) {
+            el.textContent = msg;
+            el.classList.add('is-visible');
+        } else {
+            el.textContent = '';
+            el.classList.remove('is-visible');
+        }
+    }
+
+    function closeEditConsumableModal() {
+        closePhModal('editConsumableModal');
+        showEditConsumableError('');
+        editConsumableInvoiceItemId = null;
+    }
+
+    function openEditConsumableModal(btn) {
+        editConsumableInvoiceItemId = btn.dataset.itemId;
+        document.getElementById('consumableSearch').value = btn.dataset.itemName || '';
+        document.getElementById('consumableItemId').value = btn.dataset.inventoryItemId || '';
+        document.getElementById('consumableQty').value = btn.dataset.quantity || '1';
+        document.getElementById('consumableSearchResults').style.display = 'none';
+        document.getElementById('consumableSearchResults').innerHTML = '';
+        showEditConsumableError('');
+        openPhModal('editConsumableModal');
+    }
+
+    function initConsumableSearch() {
+        const searchInput = document.getElementById('consumableSearch');
+        const resultsBox = document.getElementById('consumableSearchResults');
+        const hiddenId = document.getElementById('consumableItemId');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(consumableSearchTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) {
+                resultsBox.style.display = 'none';
+                resultsBox.innerHTML = '';
+                return;
+            }
+            consumableSearchTimer = setTimeout(() => {
+                fetch(`/inventory/api/search/?q=${encodeURIComponent(q)}&department_id=${PHARMACY_DEPT_ID}&exclude_pharmaceuticals=true`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const results = data.results || [];
+                        if (!results.length) {
+                            resultsBox.style.display = 'none';
+                            resultsBox.innerHTML = '';
+                            return;
+                        }
+                        resultsBox.style.display = 'block';
+                        resultsBox.innerHTML = results.map(r => {
+                            const stock = r.stock != null ? r.stock : 0;
+                            const price = r.selling_price ? ', KES ' + r.selling_price : '';
+                            return `<button type="button" data-id="${r.id}" data-name="${escapeHtml(r.name)}">${escapeHtml(r.text)} <span style="color:#64748b;">(stock: ${stock}${price})</span></button>`;
+                        }).join('');
+                        resultsBox.querySelectorAll('button').forEach(b => {
+                            b.addEventListener('click', () => {
+                                hiddenId.value = b.dataset.id;
+                                searchInput.value = b.dataset.name;
+                                resultsBox.style.display = 'none';
+                            });
+                        });
+                    })
+                    .catch(() => { resultsBox.style.display = 'none'; });
+            }, 300);
+        });
+    }
+
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function saveEditConsumable() {
+        const invId = document.getElementById('consumableItemId').value;
+        const qty = parseInt(document.getElementById('consumableQty').value, 10);
+        if (!invId) {
+            showEditConsumableError('Select a consumable from the search results.');
+            return;
+        }
+        if (!qty || qty < 1) {
+            showEditConsumableError('Enter a valid quantity (at least 1).');
+            return;
+        }
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving…';
+
+        fetch(CONSUMABLE_UPDATE_URL_TEMPLATE.replace('/0/', '/' + editConsumableInvoiceItemId + '/'), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                inventory_item_id: parseInt(invId, 10),
+                quantity: qty,
+            }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Saved.');
+                    location.reload();
+                } else {
+                    showEditConsumableError(data.error || 'Could not save.');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            })
+            .catch(err => {
+                showEditConsumableError(String(err));
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        initConsumableSearch();
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        if (saveBtn) saveBtn.addEventListener('click', saveEditConsumable);
+
         document.querySelectorAll('.btn-edit-consumable').forEach(button => {
             button.addEventListener('click', function () {
                 openEditConsumableModal(this);

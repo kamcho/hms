@@ -248,3 +248,104 @@ class Moh705bReportLine(models.Model):
     @property
     def row_total(self) -> int:
         return sum(self.col_count(c) for c in range(1, 17))
+
+
+class Moh717LineDefinition(models.Model):
+    """MOH 717 outpatient service row."""
+    CATEGORY_CHOICES = [
+        ('section', 'Section header'),
+        ('data', 'Data row'),
+        ('total', 'Section total'),
+        ('summary', 'Summary total'),
+    ]
+
+    row_key = models.CharField(max_length=32, unique=True)
+    code = models.CharField(max_length=20, blank=True)
+    description = models.CharField(max_length=255)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='data')
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['sort_order']
+
+    def __str__(self):
+        return f'{self.code} {self.description}'.strip()
+
+
+class Moh717MonthlyReport(models.Model):
+    """MOH 717 Monthly Service Workload Report."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+    ]
+    MONTH_CHOICES = [(i, i) for i in range(1, 13)]
+
+    facility_name = models.CharField(max_length=200)
+    kmhfl_code = models.CharField(max_length=50, blank=True, verbose_name='KMHFL Code')
+    month = models.PositiveSmallIntegerField(choices=MONTH_CHOICES)
+    year = models.PositiveIntegerField()
+    sub_county = models.CharField(max_length=120, blank=True)
+    county = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    notes = models.TextField(blank=True)
+
+    compiled_by = models.CharField(max_length=200, blank=True)
+    compiled_designation = models.CharField(max_length=120, blank=True)
+    compiled_date = models.DateField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='moh717_reports_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-year', '-month']
+        verbose_name = 'MOH 717 Monthly Report'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['facility_name', 'month', 'year'],
+                name='unique_moh717_report_facility_month',
+            ),
+        ]
+
+    def __str__(self):
+        return f'MOH 717 {self.facility_name} — {self.month}/{self.year}'
+
+    @property
+    def month_name(self):
+        import calendar
+        return calendar.month_name[self.month]
+
+
+class Moh717ReportLine(models.Model):
+    """NEW / RE-ATT counts per service line; total = new + re_att."""
+
+    report = models.ForeignKey(
+        Moh717MonthlyReport,
+        on_delete=models.CASCADE,
+        related_name='lines',
+    )
+    line_definition = models.ForeignKey(
+        Moh717LineDefinition,
+        on_delete=models.PROTECT,
+        related_name='report_lines',
+    )
+    new_count = models.PositiveIntegerField(default=0)
+    re_att_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = [['report', 'line_definition']]
+        ordering = ['line_definition__sort_order']
+
+    def __str__(self):
+        return f'{self.report} — {self.line_definition}'
+
+    @property
+    def total_count(self) -> int:
+        return self.new_count + self.re_att_count

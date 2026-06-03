@@ -1,0 +1,164 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block extra_css %}
+<style>
+.m717-page { padding: 1.25rem 1.5rem 2rem; font-family: 'Segoe UI', Tahoma, sans-serif; }
+.m717-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.m717-toolbar h1 { margin: 0.35rem 0 0; font-size: 1.35rem; font-weight: 800; color: #2c3e50; }
+.m717-back { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #7c3aed; text-decoration: none; }
+.m717-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; border: none; border-radius: 8px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; cursor: pointer; text-decoration: none; color: #fff; }
+.m717-btn-violet { background: #7c3aed; } .m717-btn-primary { background: #3498db; } .m717-btn-dark { background: #2c3e50; }
+.m717-btn-outline { background: #fff; color: #2c3e50; border: 1px solid #cbd5e1; }
+.m717-sheet { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; }
+.m717-header { background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%); color: #fff; padding: 1.25rem 1.5rem; text-align: center; }
+.m717-header .gov { font-size: 0.65rem; letter-spacing: 0.12em; font-weight: 700; }
+.m717-header .title { font-size: 0.95rem; font-weight: 800; text-transform: uppercase; margin-top: 0.25rem; }
+.m717-header .subtitle { font-size: 0.75rem; margin-top: 0.35rem; opacity: 0.9; }
+.m717-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 1rem; text-align: left; font-size: 0.75rem; }
+.m717-note { padding: 0.65rem 1rem; background: #f5f3ff; border-bottom: 1px solid #ddd6fe; font-size: 0.72rem; color: #5b21b6; }
+.m717-wrap { overflow: auto; max-height: calc(100vh - 300px); }
+.m717-table { border-collapse: collapse; width: 100%; font-size: 10px; min-width: 720px; }
+.m717-table th, .m717-table td { border: 1px solid #cbd5e1; padding: 5px 8px; vertical-align: middle; }
+.m717-table thead th { background: #ecf0f1; color: #2c3e50; font-weight: 800; text-transform: uppercase; font-size: 9px; position: sticky; top: 0; z-index: 3; }
+.m717-table .code-col { width: 56px; font-weight: 700; color: #64748b; white-space: nowrap; }
+.m717-table .desc-col { text-align: left; min-width: 280px; position: sticky; left: 0; background: inherit; z-index: 1; box-shadow: 2px 0 4px rgba(0,0,0,0.04); }
+.m717-table thead .desc-col { background: #ecf0f1; z-index: 4; }
+.m717-table tr.row-section td { background: #e2e8f0; font-weight: 800; text-transform: uppercase; font-size: 9px; color: #1e293b; }
+.m717-table tr.row-section input { display: none; }
+.m717-table tr.row-total td { background: #fef3c7; font-weight: 800; }
+.m717-table tr.row-summary td { background: #dbeafe; font-weight: 800; }
+.m717-table tbody tr:nth-child(even):not(.row-section) { background: #f8fafc; }
+.m717-table input.cnt-inp { width: 56px; padding: 4px; text-align: center; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 10px; }
+.m717-table input.cnt-inp:focus { border-color: #7c3aed; outline: none; box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
+.m717-table .total-cell { font-weight: 800; background: #f5f3ff; text-align: center; min-width: 52px; }
+.m717-table tfoot td { background: #e2e8f0; font-weight: 800; border-top: 2px solid #94a3b8; }
+.m717-footer-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+.m717-footer-fields label { display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.25rem; }
+.m717-footer-fields input { width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="m717-page">
+    <div class="m717-toolbar">
+        <div>
+            <a href="{% url 'reports:moh717_list' %}?year={{ report.year }}" class="m717-back"><i class="fas fa-arrow-left"></i> MOH 717 list</a>
+            <h1>{{ title }}</h1>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+            {% if report.status != 'submitted' %}
+            <button type="button" id="btnSave" class="m717-btn m717-btn-primary"><i class="fas fa-save"></i> Save</button>
+            <button type="button" id="btnSubmit" class="m717-btn m717-btn-dark"><i class="fas fa-check"></i> Submit</button>
+            {% endif %}
+            <a href="{% url 'reports:moh717_print' report.pk %}" target="_blank" class="m717-btn m717-btn-outline"><i class="fas fa-print"></i> Print</a>
+        </div>
+    </div>
+    <div class="m717-sheet">
+        <div class="m717-header">
+            <div class="gov">Republic of Kenya — Ministry of Health</div>
+            <div class="title">MOH 717 — Monthly Service Workload Report</div>
+            <div class="subtitle">A. OUTPATIENT SERVICES (Revised April 2019)</div>
+            <div class="m717-meta">
+                <div><span>County: </span><strong>{{ report.county|default:"—" }}</strong></div>
+                <div><span>Sub-County: </span><strong>{{ report.sub_county|default:"—" }}</strong></div>
+                <div><span>Facility: </span><strong>{{ report.facility_name }}</strong></div>
+                <div><span>KMHFL: </span><strong>{{ report.kmhfl_code|default:"—" }}</strong></div>
+                <div><span>Month/Year: </span><strong>{{ report.month_name }} {{ report.year }}</strong></div>
+            </div>
+        </div>
+        <div class="m717-note"><i class="fas fa-info-circle"></i> {{ form_note }}</div>
+        <div class="m717-wrap">
+            <table class="m717-table">
+                <thead>
+                    <tr>
+                        <th class="code-col">Code</th>
+                        <th class="desc-col">Service</th>
+                        <th>NEW</th>
+                        <th>RE-ATT</th>
+                        <th>TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in grid %}
+                    <tr data-line-id="{{ row.line.id }}"
+                        class="{% if row.def.category == 'section' %}row-section{% elif row.def.category == 'total' %}row-total{% elif row.def.category == 'summary' %}row-summary{% endif %}">
+                        <td class="code-col">{{ row.def.code }}</td>
+                        <td class="desc-col">{{ row.def.description }}</td>
+                        {% if row.def.category == 'section' %}
+                        <td colspan="3"></td>
+                        {% else %}
+                        <td><input type="number" min="0" class="cnt-inp inp-new" value="{{ row.new }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" min="0" class="cnt-inp inp-reatt" value="{{ row.re_att }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td class="total-cell row-total-cell">{{ row.total }}</td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" style="text-align:right;text-transform:uppercase;font-size:9px;">Grand totals (data rows)</td>
+                        <td style="text-align:center">{{ col_totals.new }}</td>
+                        <td style="text-align:center">{{ col_totals.re_att }}</td>
+                        <td style="text-align:center">{{ col_totals.total }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="m717-footer-fields">
+            <div><label>Report compiled by</label><input type="text" id="compiledBy" value="{{ report.compiled_by }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div><label>Designation</label><input type="text" id="compiledDesignation" value="{{ report.compiled_designation }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div><label>Date</label><input type="date" id="compiledDate" value="{{ report.compiled_date|date:'Y-m-d' }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if report.status != 'submitted' %}
+<script>
+(function() {
+    const saveUrl = "{% url 'reports:moh717_save' report.pk %}";
+    const csrf = '{{ csrf_token }}';
+    function collectLines() {
+        const lines = {};
+        document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+            const inpNew = tr.querySelector('.inp-new');
+            if (!inpNew) return;
+            lines[tr.dataset.lineId] = {
+                new: parseInt(inpNew.value, 10) || 0,
+                re_att: parseInt(tr.querySelector('.inp-reatt').value, 10) || 0,
+            };
+        });
+        return lines;
+    }
+    function recalcRow(tr) {
+        const n = parseInt(tr.querySelector('.inp-new')?.value, 10) || 0;
+        const r = parseInt(tr.querySelector('.inp-reatt')?.value, 10) || 0;
+        const cell = tr.querySelector('.row-total-cell');
+        if (cell) cell.textContent = n + r;
+    }
+    document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+        tr.querySelectorAll('.cnt-inp').forEach(inp => inp.addEventListener('input', () => recalcRow(tr)));
+    });
+    function postData(submit) {
+        return fetch(saveUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({
+                lines: collectLines(),
+                compiled_by: document.getElementById('compiledBy').value,
+                compiled_designation: document.getElementById('compiledDesignation').value,
+                compiled_date: document.getElementById('compiledDate').value,
+                submit: submit,
+            }),
+        }).then(r => r.json());
+    }
+    document.getElementById('btnSave').addEventListener('click', () => {
+        postData(false).then(d => { if (d.success) alert('Saved.'); else alert(d.error || 'Failed'); });
+    });
+    document.getElementById('btnSubmit').addEventListener('click', () => {
+        if (!confirm('Submit and lock this MOH 717 report?')) return;
+        postData(true).then(d => { if (d.success) location.reload(); else alert(d.error || 'Failed'); });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -8,16 +8,20 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import Moh705bReportHeaderForm, NvipReportHeaderForm
+from .forms import Moh705bReportHeaderForm, Moh717ReportHeaderForm, NvipReportHeaderForm
 from .models import (
     Moh705bColumnDefinition,
     Moh705bLineDefinition,
     Moh705bMonthlyReport,
     Moh705bReportLine,
+    Moh717LineDefinition,
+    Moh717MonthlyReport,
+    Moh717ReportLine,
     NvipLineDefinition,
     NvipMonthlyReport,
     NvipReportLine,
 )
+from .moh717_lines import MOH717_FORM_NOTE
 from .services import apply_immunization_counts_to_report
 
 
@@ -384,4 +388,144 @@ def moh705b_report_print(request, pk):
         'grid': grid,
         'col_totals': col_totals,
         'grand_total': sum(col_totals),
+    })
+
+
+def _ensure_moh717_lines(report):
+    for line_def in Moh717LineDefinition.objects.filter(is_active=True):
+        Moh717ReportLine.objects.get_or_create(
+            report=report,
+            line_definition=line_def,
+            defaults={'new_count': 0, 're_att_count': 0},
+        )
+
+
+def _moh717_grid(report):
+    lines = list(
+        report.lines.select_related('line_definition').order_by('line_definition__sort_order')
+    )
+    grid = []
+    sum_new = sum_re = 0
+    for line in lines:
+        cat = line.line_definition.category
+        entry = {
+            'line': line,
+            'def': line.line_definition,
+            'new': line.new_count,
+            're_att': line.re_att_count,
+            'total': line.total_count,
+        }
+        grid.append(entry)
+        if cat in ('data', 'total', 'summary'):
+            sum_new += line.new_count
+            sum_re += line.re_att_count
+    return grid, {'new': sum_new, 're_att': sum_re, 'total': sum_new + sum_re}
+
+
+@login_required
+def moh717_report_list(request):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    year = request.GET.get('year')
+    try:
+        year = int(year) if year else timezone.localdate().year
+    except ValueError:
+        year = timezone.localdate().year
+    reports = Moh717MonthlyReport.objects.filter(year=year).order_by('-month')
+    return render(request, 'reports/moh717_list.html', {
+        'reports': reports,
+        'year': year,
+        'years': range(timezone.localdate().year, timezone.localdate().year - 5, -1),
+        'title': 'MOH 717 — Service Workload',
+    })
+
+
+@login_required
+def moh717_report_create(request):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    if request.method == 'POST':
+        form = Moh717ReportHeaderForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_by = request.user
+            report.save()
+            _ensure_moh717_lines(report)
+            messages.success(request, 'MOH 717 report created.')
+            return redirect('reports:moh717_edit', pk=report.pk)
+    else:
+        today = timezone.localdate()
+        form = Moh717ReportHeaderForm(initial={
+            'month': today.month,
+            'year': today.year,
+            'facility_name': 'Health Facility',
+            'compiled_date': today,
+        })
+    return render(request, 'reports/moh717_create.html', {
+        'form': form,
+        'title': 'New MOH 717 Report',
+    })
+
+
+@login_required
+def moh717_report_edit(request, pk):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh717MonthlyReport, pk=pk)
+    _ensure_moh717_lines(report)
+    grid, col_totals = _moh717_grid(report)
+    return render(request, 'reports/moh717_edit.html', {
+        'report': report,
+        'grid': grid,
+        'col_totals': col_totals,
+        'form_note': MOH717_FORM_NOTE,
+        'title': f'MOH 717 — {report.month_name} {report.year}',
+    })
+
+
+@login_required
+@require_POST
+def moh717_report_save(request, pk):
+    if not _can_access_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    report = get_object_or_404(Moh717MonthlyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'})
+    for line_id, cells in (payload.get('lines') or {}).items():
+        try:
+            line = Moh717ReportLine.objects.get(pk=int(line_id), report=report)
+        except (ValueError, Moh717ReportLine.DoesNotExist):
+            continue
+        if line.line_definition.category == 'section':
+            continue
+        line.new_count = max(0, int(cells.get('new') or 0))
+        line.re_att_count = max(0, int(cells.get('re_att') or 0))
+        line.save()
+    if payload.get('compiled_by') is not None:
+        report.compiled_by = str(payload.get('compiled_by', ''))[:200]
+    if payload.get('compiled_designation') is not None:
+        report.compiled_designation = str(payload.get('compiled_designation', ''))[:120]
+    if payload.get('compiled_date'):
+        report.compiled_date = payload.get('compiled_date') or None
+    if payload.get('submit'):
+        report.status = 'submitted'
+    report.save()
+    return JsonResponse({'success': True, 'status': report.status})
+
+
+@login_required
+def moh717_report_print(request, pk):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh717MonthlyReport, pk=pk)
+    grid, col_totals = _moh717_grid(report)
+    return render(request, 'reports/moh717_print.html', {
+        'report': report,
+        'grid': grid,
+        'col_totals': col_totals,
+        'form_note': MOH717_FORM_NOTE,
     })

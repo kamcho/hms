@@ -5,6 +5,9 @@ from .models import (
     Moh705bLineDefinition,
     Moh705bMonthlyReport,
     Moh705bReportLine,
+    Moh717LineDefinition,
+    Moh717MonthlyReport,
+    Moh717ReportLine,
     NvipLineDefinition,
     NvipMonthlyReport,
     NvipReportLine,
@@ -52,3 +55,21 @@ class Moh705bMonthlyReportAdmin(admin.ModelAdmin):
     list_display = ('facility_name', 'month', 'year', 'status', 'updated_at')
     list_filter = ('year', 'month', 'status')
     inlines = [Moh705bReportLineInline]
+
+
+@admin.register(Moh717LineDefinition)
+class Moh717LineDefinitionAdmin(admin.ModelAdmin):
+    list_display = ('code', 'description', 'category', 'sort_order', 'is_active')
+    list_filter = ('category',)
+
+
+class Moh717ReportLineInline(admin.TabularInline):
+    model = Moh717ReportLine
+    extra = 0
+
+
+@admin.register(Moh717MonthlyReport)
+class Moh717MonthlyReportAdmin(admin.ModelAdmin):
+    list_display = ('facility_name', 'month', 'year', 'county', 'status', 'updated_at')
+    list_filter = ('year', 'month', 'status')
+    inlines = [Moh717ReportLineInline]
