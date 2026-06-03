@@ -9,12 +9,12 @@ from django.contrib import messages
 from .models import (
     Pregnancy, AntenatalVisit, LaborDelivery, Newborn, 
     PostnatalMotherVisit, PostnatalBabyVisit, MaternityDischarge, MaternityReferral,
-    Vaccine, ImmunizationRecord
+    Vaccine, ImmunizationRecord, CwcGrowthRecord,
 )
 from .forms import (
     PregnancyRegistrationForm, AntenatalVisitForm, LaborDeliveryForm, NewbornForm,
     PostnatalMotherVisitForm, PostnatalBabyVisitForm, MaternityDischargeForm, 
-    MaternityReferralForm, ImmunizationRecordForm
+    MaternityReferralForm, ImmunizationRecordForm, CwcGrowthRecordForm,
 )
 from accounts.models import InvoiceItem, Service, Invoice
 from accounts.utils import get_or_create_invoice
@@ -26,6 +26,65 @@ from django.db import transaction
 
 def is_pharmacist_or_admin(user):
     return user.is_authenticated and (user.role in ['Admin', 'Pharmacist'] or user.is_superuser)
+
+
+def _get_pharmacy_department():
+    return Departments.objects.filter(name__iexact='Pharmacy').first()
+
+
+def _pharmacy_stock_for_item(item, pharmacy_dept=None):
+    """Total quantity on hand at the main Pharmacy location."""
+    from django.db.models import Sum
+    from inventory.models import StockRecord
+
+    pharmacy_dept = pharmacy_dept or _get_pharmacy_department()
+    if not pharmacy_dept or not item:
+        return 0
+    return (
+        StockRecord.objects.filter(item=item, current_location=pharmacy_dept)
+        .aggregate(total=Sum('quantity'))['total']
+        or 0
+    )
+
+
+def _validate_pharmacy_stock_for_lines(lines, pharmacy_dept=None):
+    """
+    Validate requested quantities against Pharmacy stock.
+    lines: iterable of dicts with inventory_item_id/id and quantity.
+    Returns (ok, error_message).
+    """
+    from inventory.models import InventoryItem
+
+    pharmacy_dept = pharmacy_dept or _get_pharmacy_department()
+    if not pharmacy_dept:
+        return False, 'Pharmacy department is not configured in the system.'
+
+    totals_by_item = {}
+    for line in lines:
+        item_id = line.get('inventory_item_id') or line.get('id')
+        try:
+            quantity = int(line.get('quantity', 0))
+        except (TypeError, ValueError):
+            quantity = 0
+        if quantity <= 0 or not item_id:
+            continue
+        totals_by_item[item_id] = totals_by_item.get(item_id, 0) + quantity
+
+    if not totals_by_item:
+        return False, 'Add at least one item with a valid quantity.'
+
+    for item_id, needed in totals_by_item.items():
+        inv_item = InventoryItem.objects.filter(id=item_id).first()
+        if not inv_item:
+            return False, f'Item #{item_id} was not found.'
+        available = _pharmacy_stock_for_item(inv_item, pharmacy_dept)
+        if needed > available:
+            return (
+                False,
+                f'Insufficient Pharmacy stock for {inv_item.name}. '
+                f'Requested: {needed}, available: {available}.',
+            )
+    return True, ''
 
 
 @login_required
@@ -316,6 +375,47 @@ def pnc_dashboard(request):
     return render(request, 'maternity/pnc_dashboard.html', context)
 
 
+def _pnc_context_for_patient(patient):
+    """Delivered pregnancy and newborn list for PNC actions from the queue center."""
+    import json
+
+    delivered_pregnancy = (
+        Pregnancy.objects.filter(patient=patient, status='Delivered')
+        .select_related('delivery')
+        .order_by('-created_at')
+        .first()
+    )
+    delivered_pregnancy_id = None
+    newborns = []
+    seen_ids = set()
+
+    def add_nb(nb):
+        if nb and nb.id not in seen_ids:
+            seen_ids.add(nb.id)
+            newborns.append({'id': nb.id, 'baby_number': nb.baby_number})
+
+    if delivered_pregnancy and hasattr(delivered_pregnancy, 'delivery'):
+        delivered_pregnancy_id = delivered_pregnancy.id
+        for nb in Newborn.objects.filter(delivery=delivered_pregnancy.delivery):
+            add_nb(nb)
+
+    for nb in Newborn.objects.filter(patient_profile=patient):
+        add_nb(nb)
+
+    if not newborns:
+        for nb in Newborn.objects.filter(
+            delivery__pregnancy__patient__last_name__iexact=patient.last_name,
+            birth_datetime__date=patient.date_of_birth,
+        ):
+            add_nb(nb)
+
+    return {
+        'delivered_pregnancy_id': delivered_pregnancy_id,
+        'newborns': newborns,
+        'newborns_json': json.dumps(newborns),
+    }
+
+
 @login_required
 def visit_queue_center(request):
     """Refined Clinical Queue Center for MCH Department with Search Capabilities"""
@@ -416,6 +516,12 @@ def visit_queue_center(request):
                     ).first()
                 if que.linked_newborn:
                     que.linked_pregnancy = que.linked_newborn.delivery.pregnancy
+
+            pnc_ctx = _pnc_context_for_patient(patient)
+            que.delivered_pregnancy_id = pnc_ctx['delivered_pregnancy_id']
+            if not que.delivered_pregnancy_id and que.linked_pregnancy and que.linked_pregnancy.status == 'Delivered':
+                que.delivered_pregnancy_id = que.linked_pregnancy.id
+            que.pnc_newborns_json = pnc_ctx['newborns_json']
 
             processed.append(que)
         return processed
@@ -528,12 +634,15 @@ def visit_queue_center(request):
                 # Process the active que for this patient to get maternity context
                 active_que = process_maternity_queue([active_que])[0]
 
+            pnc_ctx = _pnc_context_for_patient(patient)
             search_results.append({
                 'patient': patient,
                 'que': active_que,
-                'category': 'Search Result',
+                'category': active_que.category if active_que else 'Search Result',
                 'pregnancies': pregnancies_list,
                 'linked_newborn': linked_newborn,
+                'delivered_pregnancy_id': pnc_ctx['delivered_pregnancy_id'],
+                'pnc_newborns_json': pnc_ctx['newborns_json'],
             })
 
     # 3. Stats for the Queue Center (Based on the clinical MCH queue)
@@ -1112,6 +1221,9 @@ def pregnancy_detail(request, pregnancy_id):
     mat_item_ids = [418, 197, 270]
     mat_items_qs = InventoryItem.objects.filter(id__in=mat_item_ids)
     mat_items = {item.id: item for item in mat_items_qs}
+    mat_item_418_stock = _pharmacy_stock_for_item(mat_items.get(418), pharmacy_dept)
+    mat_item_197_stock = _pharmacy_stock_for_item(mat_items.get(197), pharmacy_dept)
+    mat_item_270_stock = _pharmacy_stock_for_item(mat_items.get(270), pharmacy_dept)
     
     context = {
         'pregnancy': pregnancy,
@@ -1139,6 +1251,9 @@ def pregnancy_detail(request, pregnancy_id):
         'mat_item_418': mat_items.get(418),
         'mat_item_197': mat_items.get(197),
         'mat_item_270': mat_items.get(270),
+        'mat_item_418_stock': mat_item_418_stock,
+        'mat_item_197_stock': mat_item_197_stock,
+        'mat_item_270_stock': mat_item_270_stock,
     }
     
     return render(request, 'maternity/pregnancy_detail.html', context)
@@ -1157,6 +1272,155 @@ def update_pregnancy_blood_group(request, pregnancy_id):
             return JsonResponse({'status': 'success', 'blood_group': pregnancy.blood_group})
             
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def api_pregnancy_prescription_search(request, pregnancy_id):
+    """Hybrid search for inventory items when writing a maternity prescription."""
+    from inventory.models import InventoryItem
+
+    get_object_or_404(Pregnancy, id=pregnancy_id)
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    pharmacy_dept = _get_pharmacy_department()
+    items = (
+        InventoryItem.objects.filter(name__icontains=query)
+        .select_related('category')
+        .order_by('name')[:25]
+    )
+
+    results = []
+    for item in items:
+        stock = _pharmacy_stock_for_item(item, pharmacy_dept)
+        results.append({
+            'id': item.id,
+            'name': item.name,
+            'text': f"{item.name} ({item.dispensing_unit})",
+            'category': item.category.name if item.category else 'General',
+            'pharmacy_stock': stock,
+            'stock_quantity': stock,
+            'in_stock': stock > 0,
+            'selling_price': str(item.selling_price or 0),
+        })
+    return JsonResponse({
+        'results': results,
+        'pharmacy_name': pharmacy_dept.name if pharmacy_dept else 'Pharmacy',
+    })
+
+
+@login_required
+def api_pregnancy_bulk_prescription(request, pregnancy_id):
+    """
+    Create a prescription with multiple items and invoice lines.
+    Free items are billed at KES 0 on the visit invoice.
+    """
+    import json
+    from inventory.models import InventoryItem
+
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)
+
+    pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    visit_id = payload.get('visit_id')
+    diagnosis = (payload.get('diagnosis') or 'Maternity prescription').strip()
+    lines = payload.get('items') or []
+
+    if not visit_id:
+        return JsonResponse({'status': 'error', 'message': 'Visit is required'}, status=400)
+    if not lines:
+        return JsonResponse({'status': 'error', 'message': 'Add at least one item'}, status=400)
+
+    visit = Visit.objects.filter(id=visit_id, patient=pregnancy.patient).first()
+    if not visit:
+        return JsonResponse({'status': 'error', 'message': 'Visit not found for this patient'}, status=400)
+    if not visit.is_active:
+        return JsonResponse({'status': 'error', 'message': 'This visit is closed. Open a new visit first.'}, status=400)
+
+    from inpatient.models import Admission
+    if Admission.objects.filter(visit=visit, status='Admitted').exists():
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Patient is admitted. Prescribe from the inpatient case folder.',
+        }, status=400)
+
+    stock_ok, stock_msg = _validate_pharmacy_stock_for_lines(lines)
+    if not stock_ok:
+        return JsonResponse({'status': 'error', 'message': stock_msg}, status=400)
+
+    try:
+        with transaction.atomic():
+            prescription = Prescription.objects.create(
+                patient=pregnancy.patient,
+                visit=visit,
+                prescribed_by=request.user,
+                diagnosis=diagnosis,
+                status='Active',
+            )
+            invoice = get_or_create_invoice(visit=visit, user=request.user)
+            prescription.invoice = invoice
+            prescription.save()
+
+            added = []
+            for line in lines:
+                item_id = line.get('inventory_item_id') or line.get('id')
+                try:
+                    quantity = int(line.get('quantity', 0))
+                except (TypeError, ValueError):
+                    quantity = 0
+                if quantity <= 0:
+                    continue
+
+                inv_item = get_object_or_404(InventoryItem, id=item_id)
+                is_free = bool(line.get('is_free', False))
+                instructions = (line.get('instructions') or '').strip()
+
+                PrescriptionItem.objects.create(
+                    prescription=prescription,
+                    medication=inv_item,
+                    quantity=quantity,
+                    frequency=line.get('frequency') or 'Once Daily',
+                    number_of_days=line.get('number_of_days') or 1,
+                    instructions=instructions,
+                )
+
+                unit_price = 0 if is_free else (inv_item.selling_price or 0)
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    inventory_item=inv_item,
+                    name=inv_item.name,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    created_by=request.user,
+                )
+                added.append(inv_item.name)
+
+            if not added:
+                prescription.delete()
+                return JsonResponse({'status': 'error', 'message': 'No valid line items'}, status=400)
+
+            note = f"\nMaternity Rx: {', '.join(added)}"
+            invoice.notes = (invoice.notes or '') + note
+            invoice.save()
+            invoice.update_totals()
+            if invoice.total_amount == 0 and invoice.status != 'Paid':
+                invoice.status = 'Paid'
+                invoice.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Prescription saved ({len(added)} item(s)). Pharmacy will dispense when ready.',
+            'prescription_id': prescription.id,
+            'invoice_id': invoice.id,
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @login_required
@@ -1874,97 +2138,46 @@ def record_vaccination(request, newborn_id):
 
 @login_required
 def vaccination_dashboard(request):
-    """Dashboard for tracking due/overdue vaccinations"""
-    today = timezone.now().date()
-    start_of_day = timezone.make_aware(datetime.combine(today, time.min))
-    end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-    
+    """Today's pending CWC / MCH / Maternity immunization queue only."""
+    today = timezone.localdate()
     search_query = request.GET.get('q', '').strip()
 
-    # Simplified logic: show newborns born in the last 15 months
-    recent_newborns = Newborn.objects.select_related('delivery__pregnancy__patient').filter(
-        birth_datetime__gte=timezone.now() - timedelta(days=450)
+    # Queue row must be created today (local hospital day)
+    cwc_queue = (
+        PatientQue.objects.filter(
+            Q(sent_to__name__iexact='CWC')
+            | Q(sent_to__name__iexact='MCH')
+            | Q(sent_to__name__iexact='Maternity'),
+            visit__is_active=True,
+            status='PENDING',
+            created_at__date=today,
+        )
+        .select_related('visit__patient', 'sent_to', 'visit')
+        .order_by('-created_at')
     )
-    
-    # We want to find newborns who are "Due" for something
-    # This is a bit complex for a single query, so we'll do some Python-side filtering
-    # for a more robust enterprise app, we'd have a 'ScheduledVaccine' model
-    
-    overdue = []
-    due_today = []
-    
-    for baby in recent_newborns:
-        # Birth doses (BCG, OPV 0) - should be given in first week
-        if not baby.bcg_given or not baby.opv_0_given:
-            age_days = (timezone.now() - baby.birth_datetime).days
-            if age_days > 7:
-                overdue.append(baby)
-            else:
-                due_today.append(baby)
-        
-        # Check next_dose_due in ImmunizationRecord
-        pending = baby.vaccinations.filter(next_dose_due__isnull=False).order_by('next_dose_due')
-        for record in pending:
-            if record.next_dose_due < today:
-                if baby not in overdue: overdue.append(baby)
-            elif record.next_dose_due == today:
-                if baby not in due_today and baby not in overdue: due_today.append(baby)
-
-    # Recent activity
-    recent_records = ImmunizationRecord.objects.select_related('newborn__delivery__pregnancy__patient', 'vaccine').order_by('-date_administered')[:10]
-    
-    # --- CWC Queue Logic ---
-    # Get Queued Patients for CWC or MCH (Fallthrough)
-    cwc_queue = PatientQue.objects.filter(
-        sent_to__name__in=['CWC', 'MCH', 'Maternity'],
-        visit__visit_date__range=(start_of_day, end_of_day),
-        status='PENDING'
-    ).select_related('visit__patient').order_by('created_at')
 
     if search_query:
         if search_query.isdigit():
             cwc_queue = cwc_queue.filter(
-                Q(visit__patient__id=int(search_query)) |
-                Q(visit__patient__first_name__icontains=search_query) |
-                Q(visit__patient__last_name__icontains=search_query) |
-                Q(visit__patient__id_number__icontains=search_query)
+                Q(visit__patient__id=int(search_query))
+                | Q(visit__patient__first_name__icontains=search_query)
+                | Q(visit__patient__last_name__icontains=search_query)
+                | Q(visit__patient__id_number__icontains=search_query)
             )
         else:
             cwc_queue = cwc_queue.filter(
-                Q(visit__patient__first_name__icontains=search_query) |
-                Q(visit__patient__last_name__icontains=search_query) |
-                Q(visit__patient__id_number__icontains=search_query)
+                Q(visit__patient__first_name__icontains=search_query)
+                | Q(visit__patient__last_name__icontains=search_query)
+                | Q(visit__patient__id_number__icontains=search_query)
             )
 
-    # Resolve Pregnancy/Newborn context for each queue item
-    # This ensures we direct them to the right Pregnancy Detail page
-    processed_queue = []
-    
-    for que in cwc_queue:
-        patient = que.visit.patient
-        linked_pregnancy = None
-        
-        # Case 1: Patient is a Baby (linked via Newborn profile)
-        # Note: We use hasattr because of OneToOne reverse relation default name or related_name
-        if hasattr(patient, 'newborn_clinical_record'):
-            linked_pregnancy = patient.newborn_clinical_record.delivery.pregnancy
-            
-        # Case 2: Patient is the Mother
-        else:
-            # Try to find a recent pregnancy (Active or Delivered)
-            linked_pregnancy = Pregnancy.objects.filter(patient=patient).order_by('-created_at').first()
-            
-        if linked_pregnancy:
-            que.linked_pregnancy = linked_pregnancy
-            processed_queue.append(que)
-        else:
-            # Fallback: Still show them but maybe link to generic profile or show warning?
-            # For now, we'll just include them and handle None in template if needed
-            processed_queue.append(que)
+    processed_queue = list(cwc_queue)
+
+    recent_records = ImmunizationRecord.objects.select_related(
+        'newborn', 'vaccine', 'patient'
+    ).order_by('-date_administered')[:10]
 
     context = {
-        'overdue': overdue,
-        'due_today': due_today,
         'recent_records': recent_records,
         'today': today,
         'cwc_queue': processed_queue,
@@ -1978,9 +2191,8 @@ def administer_vaccine(request, que_id):
     Consolidated view for administering vaccines and dispensing consumables.
     This replaces the simple 'record_vaccination' view for queue processing.
     """
-    from home.forms import DispenseInventoryForm, PrescriptionItemForm
-    from inventory.models import StockRecord, StockAdjustment, DispensedItem
     from home.models import PatientQue
+    from home.views import _get_normalized_history
     
     que = get_object_or_404(PatientQue, id=que_id)
     patient = que.visit.patient
@@ -2017,18 +2229,20 @@ def administer_vaccine(request, que_id):
                 messages.success(request, f"Administered {vaccination.vaccine.name}")
 
                 return redirect('maternity:administer_vaccine', que_id=que_id)
-                
-        elif 'dispense_item' in request.POST:
-            inventory_form = DispenseInventoryForm(request.POST)
-            if inventory_form.is_valid():
-                d_item = inventory_form.save(commit=False)
-                d_item.patient = patient
-                d_item.visit = visit
-                d_item.dispensed_by = request.user
-                d_item.department = que.sent_to # CWC
-                
-                d_item.save()
-                messages.success(request, f"Recorded use of {d_item.item.name}")
+
+        elif 'record_cwc_growth' in request.POST:
+            growth = CwcGrowthRecord.objects.filter(visit=visit, patient=patient).first()
+            form = CwcGrowthRecordForm(request.POST, instance=growth)
+            if form.is_valid():
+                record = form.save(commit=False)
+                record.patient = patient
+                record.visit = visit
+                record.newborn = newborn
+                record.recorded_by = request.user
+                record.save()
+                messages.success(request, 'Growth measurements saved for this visit.')
+            else:
+                messages.error(request, 'Please check weight and other growth fields.')
             return redirect('maternity:administer_vaccine', que_id=que_id)
 
         elif 'finish_visit' in request.POST:
@@ -2045,7 +2259,6 @@ def administer_vaccine(request, que_id):
 
     # GET
     vaccine_form = ImmunizationRecordForm(initial={'date_administered': timezone.now().date()})
-    inventory_form = DispenseInventoryForm()
     
     # Calculate Due Vaccines (Simple logic based on age)
     due_vaccines = []
@@ -2101,19 +2314,40 @@ def administer_vaccine(request, que_id):
                 if not history.filter(vaccine__abbreviation__icontains='Measles', dose_number=1).exists(): due_vaccines.append("Measles 1")
                 if not history.filter(vaccine__abbreviation__icontains='Yellow').exists(): due_vaccines.append("Yellow Fever")
                  
-    # Get dispensed items for this visit
-    dispensed_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by')
+    dispensed_items = _get_normalized_history(visit, patient)
+    preferred_dept = que.sent_to.name if que.sent_to else ''
+
+    today = timezone.localdate()
+    visit_growth = CwcGrowthRecord.objects.filter(visit=visit, patient=patient).first()
+    if visit_growth:
+        growth_form = CwcGrowthRecordForm(instance=visit_growth)
+    else:
+        growth_form = CwcGrowthRecordForm(
+            initial={'measured_date': today},
+        )
+
+    growth_history = (
+        CwcGrowthRecord.objects.filter(patient=patient)
+        .select_related('visit', 'recorded_by')
+        .order_by('-measured_date')[:12]
+    )
 
     context = {
         'patient': patient,
         'newborn': newborn,
+        'visit': visit,
         'vaccine_form': vaccine_form,
-        'inventory_form': inventory_form,
+        'growth_form': growth_form,
+        'visit_growth': visit_growth,
+        'growth_history': growth_history,
         'due_vaccines': due_vaccines,
         'history': history,
         'dispensed_items': dispensed_items,
+        'dispensing_departments': Departments.objects.all().order_by('name'),
+        'preferred_department': preferred_dept,
         'que': que,
-        'today': timezone.now().date(),
+        'today': today,
+        'birth_date': birth_date if birth_date else None,
     }
     
     return render(request, 'maternity/administer_vaccine.html', context)
@@ -2356,42 +2590,144 @@ def api_cwc_create_visit(request):
     
     try:
         patient = get_object_or_404(Patient, id=patient_id)
-        
-        # 1. Create Visit
-        visit = Visit.objects.create(
-            patient=patient,
-            visit_type='OUT-PATIENT',
-            visit_mode='Walk In',
-            payment_method='CASH',
-            is_active=True
-        )
-        
-        # 2. Get CWC Department
+
         cwc_dept, _ = Departments.objects.get_or_create(
-            name='CWC', 
-            defaults={'abbreviation': 'CWC'}
+            name='CWC',
+            defaults={'abbreviation': 'CWC'},
         )
-        
-        # 3. Get Room/Source Dept (using current user's location or fallback)
         source_dept = Departments.objects.filter(name='Reception').first()
-        
-        # 4. Create Queue Entry
-        que = PatientQue.objects.create(
-            visit=visit,
-            qued_from=source_dept,
-            sent_to=cwc_dept,
-            created_by=request.user,
-            status='PENDING'
+
+        today = timezone.localdate()
+
+        # Only reuse a visit opened today — otherwise start a fresh visit for today
+        visit = (
+            Visit.objects.filter(
+                patient=patient,
+                is_active=True,
+                visit_date__date=today,
+            )
+            .order_by('-visit_date')
+            .first()
         )
+        if not visit:
+            visit = Visit.objects.create(
+                patient=patient,
+                visit_type='OUT-PATIENT',
+                visit_mode='Walk In',
+                payment_method='CASH',
+                is_active=True,
+            )
+
+        # One pending CWC queue entry per visit for today
+        que = PatientQue.objects.filter(
+            visit=visit,
+            sent_to=cwc_dept,
+            status='PENDING',
+            created_at__date=today,
+        ).first()
+        if not que:
+            que = PatientQue.objects.create(
+                visit=visit,
+                qued_from=source_dept,
+                sent_to=cwc_dept,
+                created_by=request.user,
+                status='PENDING',
+            )
         
         return JsonResponse({
-            'success': True, 
+            'success': True,
             'message': f'Visit created for {patient.full_name} and routed to CWC.',
-            'que_id': que.id
+            'que_id': que.id,
+            'redirect_url': reverse('maternity:administer_vaccine', args=[que.id]),
         })
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_pnc_create_visit(request):
+    """Create an active visit routed to PNC, then open the correct PNC record form."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+    patient_id = request.POST.get('patient_id')
+    pnc_target = request.POST.get('pnc_target', 'auto')  # mother | baby | auto
+    newborn_id = request.POST.get('newborn_id')
+
+    if not patient_id:
+        return JsonResponse({'success': False, 'error': 'Patient ID is required'})
+
+    try:
+        patient = get_object_or_404(Patient, id=patient_id)
+        pnc_ctx = _pnc_context_for_patient(patient)
+
+        visit = Visit.objects.filter(
+            patient=patient,
+            is_active=True,
+            visit_date__date=timezone.now().date(),
+        ).order_by('-visit_date').first()
+
+        if not visit:
+            visit = Visit.objects.create(
+                patient=patient,
+                visit_type='OUT-PATIENT',
+                visit_mode='Walk In',
+                payment_method='CASH',
+                is_active=True,
+            )
+
+        pnc_dept, _ = Departments.objects.get_or_create(
+            name='PNC',
+            defaults={'abbreviation': 'PNC'},
+        )
+        source_dept = Departments.objects.filter(name='Reception').first()
+
+        existing_que = PatientQue.objects.filter(
+            visit=visit,
+            sent_to=pnc_dept,
+            status='PENDING',
+        ).first()
+        if not existing_que:
+            PatientQue.objects.create(
+                visit=visit,
+                qued_from=source_dept,
+                sent_to=pnc_dept,
+                created_by=request.user,
+                status='PENDING',
+            )
+
+        redirect_url = None
+        if pnc_target == 'baby' or (pnc_target == 'auto' and int(patient.age or 0) <= 5):
+            nb_id = newborn_id
+            if not nb_id and pnc_ctx['newborns']:
+                nb_id = pnc_ctx['newborns'][0]['id']
+            if nb_id:
+                redirect_url = reverse('maternity:record_baby_pnc_visit', args=[nb_id])
+            else:
+                redirect_url = (
+                    reverse('maternity:register_external_delivery')
+                    + f'?child_patient_id={patient.id}'
+                )
+        elif pnc_ctx['delivered_pregnancy_id']:
+            redirect_url = reverse(
+                'maternity:record_mother_pnc_visit',
+                args=[pnc_ctx['delivered_pregnancy_id']],
+            )
+        else:
+            redirect_url = (
+                reverse('maternity:register_external_delivery')
+                + f'?patient_id={patient.id}'
+            )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Visit ready for {patient.full_name}. Opening PNC form.',
+            'redirect_url': redirect_url,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 @login_required
 @user_passes_test(is_pharmacist_or_admin)

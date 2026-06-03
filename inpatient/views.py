@@ -350,15 +350,46 @@ def patient_case_folder(request, admission_id):
         })
     import json
 
-    # Serialize vitals for Chart.js
+    # Serialize vitals for Chart.js (chronological, up to 30 readings)
+    vitals_history_list = list(
+        admission.vitals.all().order_by('recorded_at')[:30]
+    )
+
+    def _vital_chart_label(dt):
+        local_dt = timezone.localtime(dt) if timezone.is_aware(dt) else dt
+        return local_dt.strftime('%d %b, %H:%M')
+
     vitals_data = {
-        'times': [v.recorded_at.strftime('%H:%M') for v in vitals_history],
-        'temp': [float(v.temperature) if v.temperature else None for v in vitals_history],
-        'pulse': [v.pulse_rate for v in vitals_history],
-        'systolic': [v.systolic_bp for v in vitals_history],
-        'diastolic': [v.diastolic_bp for v in vitals_history],
-        'spo2': [v.spo2 for v in vitals_history],
+        'labels': [_vital_chart_label(v.recorded_at) for v in vitals_history_list],
+        'temp': [float(v.temperature) if v.temperature is not None else None for v in vitals_history_list],
+        'pulse': [v.pulse_rate for v in vitals_history_list],
+        'systolic': [v.systolic_bp for v in vitals_history_list],
+        'diastolic': [v.diastolic_bp for v in vitals_history_list],
+        'spo2': [v.spo2 for v in vitals_history_list],
+        'respiratory': [v.respiratory_rate for v in vitals_history_list],
+        'count': len(vitals_history_list),
     }
+    vitals_count = admission.vitals.count()
+
+    def _vital_delta(current, previous):
+        if current is None or previous is None:
+            return None
+        try:
+            return round(float(current) - float(previous), 1)
+        except (TypeError, ValueError):
+            return None
+
+    prev = vitals[1] if len(vitals) > 1 else None
+    vital_deltas = {}
+    if latest_vitals and prev:
+        vital_deltas = {
+            'temp': _vital_delta(latest_vitals.temperature, prev.temperature),
+            'pulse': _vital_delta(latest_vitals.pulse_rate, prev.pulse_rate),
+            'systolic': _vital_delta(latest_vitals.systolic_bp, prev.systolic_bp),
+            'diastolic': _vital_delta(latest_vitals.diastolic_bp, prev.diastolic_bp),
+            'spo2': _vital_delta(latest_vitals.spo2, prev.spo2),
+            'respiratory': _vital_delta(latest_vitals.respiratory_rate, prev.respiratory_rate),
+        }
 
     # Check if invoice is paid for discharge button restriction
     from accounts.models import Invoice
@@ -452,6 +483,9 @@ def patient_case_folder(request, admission_id):
         'vitals_history': vitals_history,
         'vitals_data': vitals_data,
         'latest_vitals': latest_vitals,
+        'vitals_count': vitals_count,
+        'previous_vitals': prev if latest_vitals else None,
+        'vital_deltas': vital_deltas,
         'notes': notes,
         'fluid_intake': fluid_intake,
         'fluid_output': fluid_output,

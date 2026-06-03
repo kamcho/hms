@@ -10,6 +10,8 @@ urlpatterns = [
     path('pregnancy/<int:pregnancy_id>/', views.pregnancy_detail, name='pregnancy_detail'),
     path('pregnancy/<int:pregnancy_id>/refer-to-doctor/', views.refer_pregnancy_to_doctor, name='refer_pregnancy_to_doctor'),
     path('pregnancy/<int:pregnancy_id>/update-blood-group/', views.update_pregnancy_blood_group, name='update_pregnancy_blood_group'),
+    path('pregnancy/<int:pregnancy_id>/prescription/search/', views.api_pregnancy_prescription_search, name='api_pregnancy_prescription_search'),
+    path('pregnancy/<int:pregnancy_id>/prescription/bulk/', views.api_pregnancy_bulk_prescription, name='api_pregnancy_bulk_prescription'),
     path('pregnancy/<int:pregnancy_id>/anc/add/', views.record_anc_visit, name='record_anc_visit'),
     path('pregnancy/<int:pregnancy_id>/anc/<int:visit_id>/edit/', views.record_anc_visit, name='edit_anc_visit'),
     path('anc/visit/<int:visit_id>/close/', views.close_anc_visit, name='close_anc_visit'),
@@ -35,6 +37,7 @@ urlpatterns = [
 
     path('api/search-patients/', views.api_search_patients, name='api_search_patients'),
     path('api/cwc-create-visit/', views.api_cwc_create_visit, name='api_cwc_create_visit'),
+    path('api/pnc-create-visit/', views.api_pnc_create_visit, name='api_pnc_create_visit'),
     path('referral/<int:referral_id>/print/', views.generate_referral_letter, name='generate_referral_letter'),
     path('pregnancy/<int:pregnancy_id>/discharge/print/', views.generate_discharge_summary, name='generate_discharge_summary'),
     path('vaccination/record/<int:record_id>/edit/', views.edit_vaccination_record, name='edit_vaccination_record'),

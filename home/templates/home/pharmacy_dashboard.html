@@ -457,6 +457,7 @@
                                             <th>Qty</th>
                                             <th>Instructions</th>
                                             <th>Category</th>
+                                            {% if can_edit_consumables %}<th>Actions</th>{% endif %}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -471,6 +472,7 @@
                                                     {{ item.instructions|default:"No instructions" }}
                                                 </td>
                                                 <td><span class="badge badge-primary" style="font-size: 12px; padding: 0.5rem 1rem;">Medication</span></td>
+                                                {% if can_edit_consumables %}<td></td>{% endif %}
                                             </tr>
                                         {% endfor %}
                                         {% for item in group.consumables %}
@@ -479,11 +481,24 @@
                                                 <td class="text-slate-400">-</td>
                                                 <td class="text-slate-400">-</td>
                                                 <td class="text-slate-400">-</td>
-                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="font-black consumable-qty-{{ item.id }}">{{ item.quantity }}</td>
                                                 <td class="italic font-medium" style="color: #e2e8f0;">
                                                     {{ item.instructions|default:"-" }}
                                                 </td>
                                                 <td><span class="badge badge-warning" style="font-size: 12px; padding: 0.5rem 1rem;">Consumable</span></td>
+                                                {% if can_edit_consumables %}
+                                                <td>
+                                                    <button type="button"
+                                                            class="btn-edit-consumable"
+                                                            style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f472b6; color: #f472b6; background: transparent; cursor: pointer;"
+                                                            data-item-id="{{ item.id }}"
+                                                            data-item-name="{{ item.inventory_item.name|escape }}"
+                                                            data-inventory-item-id="{{ item.inventory_item.id }}"
+                                                            data-quantity="{{ item.quantity }}">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                </td>
+                                                {% endif %}
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -552,6 +567,7 @@
                                             <th>Duration</th>
                                             <th>Qty</th>
                                             <th>Instructions</th>
+                                            {% if can_edit_consumables %}<th>Actions</th>{% endif %}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -565,6 +581,7 @@
                                                 <td class="italic font-medium" style="color: #e2e8f0;">
                                                     {{ item.instructions|default:"No instructions" }}
                                                 </td>
+                                                {% if can_edit_consumables %}<td></td>{% endif %}
                                             </tr>
                                         {% endfor %}
                                         {% for item in group.consumables %}
@@ -573,10 +590,23 @@
                                                 <td class="text-slate-400">-</td>
                                                 <td class="text-slate-400">-</td>
                                                 <td class="text-slate-400">-</td>
-                                                <td class="font-black">{{ item.quantity }}</td>
+                                                <td class="font-black consumable-qty-{{ item.id }}">{{ item.quantity }}</td>
                                                 <td class="italic font-medium" style="color: #e2e8f0;">
                                                     {{ item.instructions|default:"-" }}
                                                 </td>
+                                                {% if can_edit_consumables %}
+                                                <td>
+                                                    <button type="button"
+                                                            class="btn-edit-consumable"
+                                                            style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f472b6; color: #f472b6; background: transparent; cursor: pointer;"
+                                                            data-item-id="{{ item.id }}"
+                                                            data-item-name="{{ item.inventory_item.name|escape }}"
+                                                            data-inventory-item-id="{{ item.inventory_item.id }}"
+                                                            data-quantity="{{ item.quantity }}">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                </td>
+                                                {% endif %}
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -812,6 +842,117 @@
         </div>
     </div>
 
+    {% if can_edit_consumables %}
+    <script>
+    const PHARMACY_DEPT_ID = {{ pharmacy_dept.id }};
+
+    function openEditConsumableModal(btn) {
+        const itemId = btn.dataset.itemId;
+        const itemName = btn.dataset.itemName;
+        const inventoryItemId = btn.dataset.inventoryItemId;
+        const quantity = btn.dataset.quantity;
+
+        Swal.fire({
+            title: 'Edit consumable',
+            html: `<p style="font-size:0.8rem; color:#94a3b8; margin:0 0 1rem; text-align:left;">Change item or quantity. Price updates automatically from the selected item (not edited separately).</p>
+                <div style="text-align:left; margin-bottom:1rem;">
+                    <label style="display:block; font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:0.35rem; text-transform:uppercase;">Item</label>
+                    <input type="text" id="swal-consumable-search" class="swal2-input" placeholder="Search consumable..." value="${itemName.replace(/"/g, '&quot;')}" style="margin:0; width:100%; box-sizing:border-box;">
+                    <input type="hidden" id="swal-consumable-item-id" value="${inventoryItemId}">
+                    <div id="swal-consumable-results" style="max-height:140px; overflow-y:auto; margin-top:0.5rem; border:1px solid #334155; border-radius:8px; display:none;"></div>
+                </div>
+                <div style="text-align:left;">
+                    <label style="display:block; font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:0.35rem; text-transform:uppercase;">Quantity</label>
+                    <input type="number" id="swal-consumable-qty" class="swal2-input" min="1" value="${quantity}" style="margin:0; width:100%; box-sizing:border-box;">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Save',
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#64748b',
+            focusConfirm: false,
+            didOpen: () => {
+                const searchInput = document.getElementById('swal-consumable-search');
+                const resultsBox = document.getElementById('swal-consumable-results');
+                const hiddenId = document.getElementById('swal-consumable-item-id');
+                let searchTimer = null;
+
+                function renderResults(results) {
+                    if (!results.length) {
+                        resultsBox.style.display = 'none';
+                        resultsBox.innerHTML = '';
+                        return;
+                    }
+                    resultsBox.style.display = 'block';
+                    resultsBox.innerHTML = results.map(r => `
+                        <button type="button" data-id="${r.id}" data-name="${r.name.replace(/"/g, '&quot;')}"
+                            style="display:block; width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:transparent; color:#e2e8f0; cursor:pointer; font-size:0.85rem;">
+                            ${r.text} <span style="color:#64748b;">(stock: ${r.stock}${r.selling_price ? ', KES ' + r.selling_price : ''})</span>
+                        </button>
+                    `).join('');
+                    resultsBox.querySelectorAll('button').forEach(b => {
+                        b.addEventListener('click', () => {
+                            hiddenId.value = b.dataset.id;
+                            searchInput.value = b.dataset.name;
+                            resultsBox.style.display = 'none';
+                        });
+                    });
+                }
+
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimer);
+                    const q = searchInput.value.trim();
+                    if (q.length < 2) {
+                        resultsBox.style.display = 'none';
+                        return;
+                    }
+                    searchTimer = setTimeout(() => {
+                        fetch(`/inventory/api/search/?q=${encodeURIComponent(q)}&department_id=${PHARMACY_DEPT_ID}&exclude_pharmaceuticals=true`)
+                            .then(r => r.json())
+                            .then(data => renderResults(data.results || []))
+                            .catch(() => { resultsBox.style.display = 'none'; });
+                    }, 300);
+                });
+            },
+            preConfirm: () => {
+                const invId = document.getElementById('swal-consumable-item-id').value;
+                const qty = parseInt(document.getElementById('swal-consumable-qty').value, 10);
+                if (!invId) {
+                    Swal.showValidationMessage('Select a consumable item.');
+                    return false;
+                }
+                if (!qty || qty < 1) {
+                    Swal.showValidationMessage('Enter a valid quantity (at least 1).');
+                    return false;
+                }
+                return { inventory_item_id: parseInt(invId, 10), quantity: qty };
+            }
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            Swal.showLoading();
+            fetch("{% url 'home:api_pharmacy_update_consumable' item_id=0 %}".replace('/0/', `/${itemId}/`), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(result.value),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({ icon: 'success', title: 'Saved', text: data.message, timer: 1500, showConfirmButton: false })
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Could not save.' });
+                    }
+                })
+                .catch(err => Swal.fire({ icon: 'error', title: 'Error', text: String(err) }));
+        });
+    }
+    </script>
+    {% endif %}
+
     <script>
     function showInstruction(itemName, text) {
         document.getElementById('instructionItemName').innerText = itemName;
@@ -828,6 +969,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-edit-consumable').forEach(button => {
+            button.addEventListener('click', function () {
+                openEditConsumableModal(this);
+            });
+        });
+
         document.querySelectorAll('.dispense-all-btn').forEach(button => {
             button.addEventListener('click', function () {
                 const visitId = this.dataset.visitId;

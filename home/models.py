@@ -55,6 +55,7 @@ class Visit(models.Model):
     visit_mode = models.CharField(max_length=20, choices=[('Appointment', 'Appointment'), ('Walk In', 'Walk In')])
     payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='CASH')
     is_active = models.BooleanField(default=True)
+    by_nurse = models.BooleanField(default=False, help_text='Visit created or managed via nurse workflow')
     def __str__(self):
         return f"Visit - {self.patient} ({self.visit_type})"
 

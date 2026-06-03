@@ -44,8 +44,10 @@ urlpatterns = [
     
     # Pharmacy URLs
     path('pharmacy/dashboard/', views.pharmacy_dashboard, name='pharmacy_dashboard'),
+    path('pharmacy/consumable/<int:item_id>/update/', views.api_pharmacy_update_consumable, name='api_pharmacy_update_consumable'),
     path('pharmacy/dispense-all/<int:visit_id>/', views.dispense_all_visit_items, name='dispense_all_visit_items'),
     path('pharmacy/night-dashboard/', views.night_pharmacy_dashboard, name='night_pharmacy_dashboard'),
+    path('pharmacy/night-payment/<int:invoice_id>/', views.night_pharmacy_record_payment, name='night_pharmacy_record_payment'),
     path('pharmacy/night-dispense-all/<int:visit_id>/', views.dispense_night_opd_items, name='dispense_night_opd_items'),
     
     # Health Records

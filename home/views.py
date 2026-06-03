@@ -22,6 +22,42 @@ from morgue.models import MorgueAdmission
 from .forms import EmergencyContactForm, PatientForm, ReferralForm, AppointmentForm
 from django.db.models import Q
 from inventory.models import DispensedItem, InventoryRequest
+
+
+def _is_nurse_user(user):
+    return user.is_authenticated and getattr(user, 'role', None) == 'Nurse'
+
+
+def _nurse_visit_q(user, prefix=''):
+    """When viewer is Nurse, restrict to visits with by_nurse=True."""
+    if _is_nurse_user(user):
+        key = f'{prefix}by_nurse' if prefix else 'by_nurse'
+        return Q(**{key: True})
+    return Q()
+
+
+def _visit_ok_for_user(visit, user):
+    if not visit:
+        return False
+    if _is_nurse_user(user):
+        return visit.by_nurse
+    return True
+
+
+def _can_edit_pharmacy_consumable(user):
+    return user.is_superuser or getattr(user, 'role', None) in ('Pharmacist', 'Admin')
+
+
+def _consumable_dispensed_qty(visit, inventory_item_id):
+    if not visit or not inventory_item_id:
+        return 0
+    return (
+        DispensedItem.objects.filter(visit=visit, item_id=inventory_item_id)
+        .aggregate(t=Sum('quantity'))['t']
+        or 0
+    )
+
+
 class PatientListView(LoginRequiredMixin, ListView):
     model = Patient
     template_name = 'home/patient_list.html'
@@ -151,7 +187,8 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
                 patient=self.object,
                 visit_type='OUT-PATIENT',
                 visit_mode='Walk In',
-                payment_method='SHA' if payment_method == 'Insurance' else 'CASH'
+                payment_method='SHA' if payment_method == 'Insurance' else 'CASH',
+                by_nurse=_is_nurse_user(self.request.user),
             )
             
             if selected_service and payment_method:
@@ -891,7 +928,9 @@ def reception_dashboard(request):
     today = timezone.localdate()
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-    today_visits = Visit.objects.filter(visit_date__range=(start_of_day, end_of_day)).count()
+    today_visits = Visit.objects.filter(
+        visit_date__range=(start_of_day, end_of_day),
+    ).filter(_nurse_visit_q(request.user)).count()
     
     # Get total patients count
     total_patients = Patient.objects.count()
@@ -908,15 +947,15 @@ def reception_dashboard(request):
     }
     
     if user_role == 'Receptionist' or user_role == 'Admin':
-        # Receptionist (and Admin) sees invoices
-        # Get patient service invoices with search functionality
+        # Receptionist (and Admin) sees invoices for today's visits only
         invoices = Invoice.objects.annotate(
             balance_due=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
         ).filter(
             Q(status__in=['Pending', 'Partial', 'Draft']) & 
             (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True)) &
-            Q(balance_due__gt=0)
-        ).select_related('patient', 'deceased').prefetch_related(
+            Q(balance_due__gt=0) &
+            Q(visit__visit_date__range=(start_of_day, end_of_day))
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related('patient', 'deceased').prefetch_related(
             Prefetch('items', queryset=InvoiceItem.objects.filter(paid_amount__lt=F('amount')).select_related('service'))
         )
         
@@ -932,14 +971,15 @@ def reception_dashboard(request):
         
         invoices = invoices.order_by('-created_at')
         
-        # Get unpaid invoices count
+        # Get unpaid invoices count (today's visits only)
         unpaid_invoices = Invoice.objects.annotate(
             balance_due=F('total_amount') - F('insurance_adjustment') - F('paid_amount')
         ).filter(
             Q(status__in=['Pending', 'Partial', 'Draft']) & 
             (Q(visit__visit_type='OUT-PATIENT') | Q(visit__visit_type='IN-PATIENT', visit__admissions__isnull=True)) &
-            Q(balance_due__gt=0)
-        ).count()
+            Q(balance_due__gt=0) &
+            Q(visit__visit_date__range=(start_of_day, end_of_day))
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).count()
         
         # Get active services grouped by department for quick invoicing
         services = Service.objects.filter(is_active=True).select_related('department').order_by('department__name', 'name')
@@ -952,9 +992,10 @@ def reception_dashboard(request):
         })
         
     elif user_role == 'Triage Nurse' or user_role == 'Nurse':
-        # Triage Nurse sees triage entries and visits without triage
-        # Get recent triage entries
-        triage_entries = TriageEntry.objects.select_related('visit__patient', 'triage_nurse')
+        # Triage Nurse sees triage entries and visits without triage (today only)
+        triage_entries = TriageEntry.objects.filter(
+            visit__visit_date__range=(start_of_day, end_of_day),
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related('visit__patient', 'triage_nurse')
         
         if triage_search:
             triage_entries = triage_entries.filter(
@@ -965,14 +1006,17 @@ def reception_dashboard(request):
             
         triage_entries = triage_entries.order_by('-entry_date')[:10]
         
-        # Get visits without triage entries
-        visits_with_triage = Visit.objects.filter(triage_entries__isnull=False).values_list('pk', flat=True)
+        # Get today's visits without triage entries
+        visits_with_triage = Visit.objects.filter(
+            triage_entries__isnull=False,
+            visit_date__range=(start_of_day, end_of_day),
+        ).filter(_nurse_visit_q(request.user)).values_list('pk', flat=True)
         visits_without_triage = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
-            # visit_date__date=today,
-            patient_queue__sent_to__name='Triage', # Ensuring we only show patients actually queued for Triage
-            patient_queue__status='PENDING'
-        ).select_related('patient').prefetch_related('invoice__items__service').distinct()
+            visit_date__range=(start_of_day, end_of_day),
+            patient_queue__sent_to__name='Triage',
+            patient_queue__status='PENDING',
+        ).filter(_nurse_visit_q(request.user)).select_related('patient').prefetch_related('invoice__items__service').distinct()
         
         if pending_search:
             visits_without_triage = visits_without_triage.filter(
@@ -997,16 +1041,18 @@ def reception_dashboard(request):
                             visit.is_maternity = True
             visit.services_summary = ", ".join(visit.services_list[:3])
         
-        # Get triage entries count for today
-        today_triage_entries = TriageEntry.objects.filter(entry_date__range=(start_of_day, end_of_day)).count()
+        # Get triage entries count for today's visits
+        today_triage_entries = TriageEntry.objects.filter(
+            visit__visit_date__range=(start_of_day, end_of_day),
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).count()
         
         # Get pending triage count (visits without triage)
         pending_triage_count = Visit.objects.filter(
             ~Q(pk__in=visits_with_triage),
             visit_date__range=(start_of_day, end_of_day),
             patient_queue__sent_to__name='Triage',
-            patient_queue__status='PENDING'
-        ).distinct().count()
+            patient_queue__status='PENDING',
+        ).filter(_nurse_visit_q(request.user)).distinct().count()
         
         context.update({
             'triage_entries': triage_entries,
@@ -1532,7 +1578,8 @@ def admit_patient_visit(request):
                 patient=patient,
                 visit_type='OUT-PATIENT',
                 visit_mode='Walk In',
-                payment_method='SHA' if payment_method == 'Insurance' else 'CASH'
+                payment_method='SHA' if payment_method == 'Insurance' else 'CASH',
+                by_nurse=_is_nurse_user(request.user),
             )
 
             # Departments
@@ -2255,12 +2302,16 @@ def pharmacy_dashboard(request):
         'prescription__invoice',
         'prescription__visit',
         'medication'
-    ).order_by('-prescription__prescribed_at')
+    )
+    if _is_nurse_user(request.user):
+        pending_items_all = pending_items_all.filter(prescription__visit__by_nurse=True)
+    pending_items_all = pending_items_all.order_by('-prescription__prescribed_at')
     
     # Python-side filtering for reliability
     pending_items = [
         item for item in pending_items_all 
         if item.prescription and item.prescription.prescribed_at and timezone.localdate(item.prescription.prescribed_at) == filter_date
+        and _visit_ok_for_user(item.prescription.visit, request.user)
     ]
 
     # Get ALL pending consumables and filter in Python
@@ -2274,11 +2325,15 @@ def pharmacy_dashboard(request):
         'invoice__patient',
         'invoice__visit',
         'inventory_item',
-    ).order_by('-created_at')
+    )
+    if _is_nurse_user(request.user):
+        pending_consumables_all = pending_consumables_all.filter(invoice__visit__by_nurse=True)
+    pending_consumables_all = pending_consumables_all.order_by('-created_at')
     
     pending_consumables_list_raw = [
         ci for ci in pending_consumables_all
         if ci.created_at and timezone.localdate(ci.created_at) == filter_date
+        and _visit_ok_for_user(ci.invoice.visit, request.user)
     ]
 
     # Group DispensedItem quantities to calculate net pending
@@ -2286,7 +2341,7 @@ def pharmacy_dashboard(request):
     dispensed_map = {}
     dispensed_qs = DispensedItem.objects.filter(
         dispensed_at__range=(start_of_day, end_of_day)
-    ).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
     
     for d in dispensed_qs:
         dispensed_map[(d['visit_id'], d['item_id'])] = d['total_qty']
@@ -2411,7 +2466,7 @@ def pharmacy_dashboard(request):
     thirty_days_ago = timezone.now() - timedelta(days=30)
     dispensed_items = DispensedItem.objects.filter(
         dispensed_at__gte=thirty_days_ago
-    ).select_related(
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related(
         'patient',
         'item',
         'dispensed_by'
@@ -2481,7 +2536,7 @@ def pharmacy_dashboard(request):
         'pending_requests': pending_requests_count,
         'dispensed_today': DispensedItem.objects.filter(
             dispensed_at__range=(start_of_day, end_of_day)
-        ).count(),
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).count(),
     }
 
     context = {
@@ -2509,9 +2564,107 @@ def pharmacy_dashboard(request):
         },
         'pharmacy_dept': pharmacy_dept,
         'today_plus_30': today + timedelta(days=30),
+        'can_edit_consumables': _can_edit_pharmacy_consumable(request.user),
     }
 
     return render(request, 'home/pharmacy_dashboard.html', context)
+
+
+@login_required
+@transaction.atomic
+@require_http_methods(["POST"])
+def api_pharmacy_update_consumable(request, item_id):
+    """Update pending consumable item and/or quantity. Unit price follows the selected item (not editable separately)."""
+    if not _can_edit_pharmacy_consumable(request.user):
+        return JsonResponse({'success': False, 'error': 'Only pharmacists and admins can edit consumables.'})
+
+    from inventory.models import InventoryItem
+    from accounts.models import PatientCredit
+    from decimal import Decimal
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request data.'})
+
+    if 'unit_price' in payload or 'price' in payload:
+        return JsonResponse({'success': False, 'error': 'Price cannot be changed from the pharmacy dashboard.'})
+
+    quantity = payload.get('quantity')
+    inventory_item_id = payload.get('inventory_item_id')
+
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Quantity must be a whole number.'})
+    if quantity < 1:
+        return JsonResponse({'success': False, 'error': 'Quantity must be at least 1.'})
+
+    invoice_item = get_object_or_404(
+        InvoiceItem.objects.select_related('invoice__visit', 'invoice__patient', 'inventory_item'),
+        pk=item_id,
+        inventory_item__isnull=False,
+    )
+
+    if invoice_item.invoice.status == 'Cancelled':
+        return JsonResponse({'success': False, 'error': 'Cannot edit items on a cancelled invoice.'})
+
+    visit = invoice_item.invoice.visit
+    if not visit:
+        return JsonResponse({'success': False, 'error': 'This item is not linked to a visit.'})
+
+    dispensed = _consumable_dispensed_qty(visit, invoice_item.inventory_item_id)
+    if dispensed > 0:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot edit: dispensing has already started for this item on this visit.',
+        })
+
+    old_paid = invoice_item.invoice.paid_amount
+    patient = invoice_item.invoice.patient
+
+    if inventory_item_id is not None:
+        try:
+            inventory_item_id = int(inventory_item_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Invalid item selected.'})
+
+        new_item = get_object_or_404(InventoryItem, pk=inventory_item_id)
+        if hasattr(new_item, 'medication'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Selected item is a medication. Choose a consumable from stock.',
+            })
+        invoice_item.inventory_item = new_item
+        invoice_item.name = new_item.name
+        invoice_item.unit_price = new_item.selling_price or Decimal('0')
+
+    invoice_item.quantity = quantity
+    invoice_item.save()
+
+    invoice = invoice_item.invoice
+    invoice.update_totals()
+    if patient and invoice.total_amount < old_paid:
+        overpaid = old_paid - invoice.total_amount
+        if overpaid > 0:
+            PatientCredit.objects.create(
+                patient=patient,
+                invoice=invoice,
+                amount=overpaid,
+                reason=f'Adjustment due to consumable edit (line #{invoice_item.id})',
+                created_by=request.user,
+            )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Updated {invoice_item.name} × {invoice_item.quantity}.',
+        'item': {
+            'id': invoice_item.id,
+            'name': invoice_item.name,
+            'quantity': invoice_item.quantity,
+            'inventory_item_id': invoice_item.inventory_item_id,
+        },
+    })
 
 
 @login_required
@@ -2939,12 +3092,16 @@ def night_pharmacy_dashboard(request):
         'prescription__invoice',
         'prescription__visit',
         'medication'
-    ).order_by('-prescription__prescribed_at')
+    )
+    if _is_nurse_user(request.user):
+        pending_items_all = pending_items_all.filter(prescription__visit__by_nurse=True)
+    pending_items_all = pending_items_all.order_by('-prescription__prescribed_at')
     
     # Python-side filtering for reliability
     pending_items = [
         item for item in pending_items_all 
         if item.prescription and item.prescription.prescribed_at and timezone.localdate(item.prescription.prescribed_at) == filter_date
+        and _visit_ok_for_user(item.prescription.visit, request.user)
     ]
 
     # Get ALL pending consumables and filter in Python
@@ -2958,11 +3115,15 @@ def night_pharmacy_dashboard(request):
         'invoice__patient',
         'invoice__visit',
         'inventory_item',
-    ).order_by('-created_at')
+    )
+    if _is_nurse_user(request.user):
+        pending_consumables_all = pending_consumables_all.filter(invoice__visit__by_nurse=True)
+    pending_consumables_all = pending_consumables_all.order_by('-created_at')
     
     pending_consumables_list_raw = [
         ci for ci in pending_consumables_all
         if ci.created_at and timezone.localdate(ci.created_at) == filter_date
+        and _visit_ok_for_user(ci.invoice.visit, request.user)
     ]
 
     # Group DispensedItem quantities to calculate net pending (filtered by Mini Pharmacy department)
@@ -2971,7 +3132,7 @@ def night_pharmacy_dashboard(request):
     dispensed_qs = DispensedItem.objects.filter(
         department=pharmacy_dept,
         dispensed_at__range=(start_of_day, end_of_day)
-    ).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).values('visit_id', 'item_id').annotate(total_qty=Sum('quantity'))
     
     for d in dispensed_qs:
         dispensed_map[(d['visit_id'], d['item_id'])] = d['total_qty']
@@ -3097,7 +3258,7 @@ def night_pharmacy_dashboard(request):
     dispensed_items = DispensedItem.objects.filter(
         department=pharmacy_dept,
         dispensed_at__gte=thirty_days_ago
-    ).select_related(
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related(
         'patient',
         'item',
         'dispensed_by'
@@ -3167,7 +3328,7 @@ def night_pharmacy_dashboard(request):
         'dispensed_today': DispensedItem.objects.filter(
             department=pharmacy_dept,
             dispensed_at__range=(start_of_day, end_of_day)
-        ).count(),
+        ).filter(_nurse_visit_q(request.user, prefix='visit__')).count(),
     }
 
     context = {
@@ -3197,6 +3358,119 @@ def night_pharmacy_dashboard(request):
     }
 
     return render(request, 'home/night_pharmacy_dashboard.html', context)
+
+
+def _normalize_night_payment_method(method):
+    """Night shift accepts Cash and M-Pesa only."""
+    key = (method or '').strip().lower().replace('_', '-')
+    if key == 'cash':
+        return 'Cash'
+    if key in ('mpesa', 'm-pesa'):
+        return 'M-Pesa'
+    return None
+
+
+@login_required
+@transaction.atomic
+@require_http_methods(["POST"])
+def night_pharmacy_record_payment(request, invoice_id):
+    """Record Cash / M-Pesa payment from the night pharmacy dashboard."""
+    from decimal import Decimal
+
+    if request.user.role not in ['Nurse', 'Admin', 'Pharmacist']:
+        return JsonResponse({'success': False, 'error': 'Unauthorized role.'})
+
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    if invoice.status == 'Cancelled':
+        return JsonResponse({'success': False, 'error': 'This invoice has been cancelled.'})
+    if not invoice.visit:
+        return JsonResponse({'success': False, 'error': 'Invoice is not linked to a visit.'})
+    if str(invoice.visit.visit_type).upper() == 'IN-PATIENT':
+        return JsonResponse({'success': False, 'error': 'Night pharmacy only handles OPD visits.'})
+
+    if invoice.status == 'Paid' or invoice.balance <= Decimal('0.01'):
+        return JsonResponse({
+            'success': True,
+            'message': 'Invoice is already fully paid.',
+            'invoice_status': invoice.status,
+            'all_payment_ids': [],
+        })
+
+    try:
+        data = json.loads(request.body)
+        payments_data = data.get('payments', [])
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'success': False, 'error': 'Invalid payment data.'})
+
+    if not payments_data:
+        return JsonResponse({'success': False, 'error': 'No payment amounts provided.'})
+
+    balance_due = invoice.balance
+    parsed_payments = []
+    total_paid = Decimal('0')
+
+    try:
+        for p_data in payments_data:
+            amount_val = p_data.get('amount')
+            if amount_val is None or Decimal(str(amount_val)) <= 0:
+                continue
+
+            method = _normalize_night_payment_method(
+                p_data.get('method') or p_data.get('payment_method')
+            )
+            if not method:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Night pharmacy only accepts Cash and M-Pesa payments.',
+                })
+
+            amount = Decimal(str(amount_val))
+            total_paid += amount
+            parsed_payments.append({
+                'amount': amount,
+                'method': method,
+                'reference': p_data.get('reference') or '',
+            })
+
+        if not parsed_payments:
+            return JsonResponse({'success': False, 'error': 'No valid payment amounts provided.'})
+
+        if total_paid + Decimal('0.01') < balance_due:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    f'Payment incomplete. Received Ksh {total_paid:,.2f}; '
+                    f'balance due Ksh {balance_due:,.2f}.'
+                ),
+            })
+
+        payment_objs = [
+            Payment(
+                invoice=invoice,
+                amount=p['amount'],
+                payment_method=p['method'],
+                transaction_reference=p['reference'],
+                notes='Night pharmacy payment',
+                created_by=request.user,
+            )
+            for p in parsed_payments
+        ]
+        created_payments = Payment.objects.bulk_create(payment_objs)
+        invoice.distribute_payments()
+        invoice.refresh_from_db()
+
+        payment_ids = [p.id for p in created_payments if p.id]
+        return JsonResponse({
+            'success': True,
+            'message': 'Payment recorded successfully.',
+            'invoice_status': invoice.status,
+            'invoice_id': invoice.id,
+            'visit_id': invoice.visit_id,
+            'payment_id': payment_ids[0] if payment_ids else None,
+            'all_payment_ids': payment_ids,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -3521,8 +3795,8 @@ def opd_dashboard(request):
     # Total "Walk In" or "Appointment" visits today
     todays_visits_count = Visit.objects.filter(
         visit_date__range=(start_of_day, end_of_day),
-        visit_type='OUT-PATIENT'
-    ).count()
+        visit_type='OUT-PATIENT',
+    ).filter(_nurse_visit_q(request.user)).count()
     
     # Waiting Patients (In queue for Consultation rooms)
     # Filter departments that look like consultation rooms and are PENDING
@@ -3532,8 +3806,8 @@ def opd_dashboard(request):
         status='PENDING',
         visit__is_active=True,
         visit__visit_type='OUT-PATIENT',
-        visit__visit_date__range=(start_of_day, end_of_day)
-    ).select_related('visit__patient', 'sent_to', 'qued_from')
+        visit__visit_date__range=(start_of_day, end_of_day),
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related('visit__patient', 'sent_to', 'qued_from')
 
     # Apply Search Filter
     search_query = request.GET.get('q')
@@ -3549,7 +3823,9 @@ def opd_dashboard(request):
 
     
     # Priority Distribution from Triage Entries linked to today's visits
-    triage_today = TriageEntry.objects.filter(visit__visit_date__range=(start_of_day, end_of_day))
+    triage_today = TriageEntry.objects.filter(
+        visit__visit_date__range=(start_of_day, end_of_day),
+    ).filter(_nurse_visit_q(request.user, prefix='visit__'))
     critical_count = triage_today.filter(priority__in=['URGENT', 'CRITICAL']).count()
     
     # 2. The Queue Data
@@ -3606,8 +3882,8 @@ def opd_dashboard(request):
     # Get recent consultations for history list
     recent_consultations = Consultation.objects.filter(
         doctor=request.user,
-        visit__visit_date__range=(start_of_day, end_of_day)
-    ).select_related('visit__patient').order_by('-checkin_date')[:5]
+        visit__visit_date__range=(start_of_day, end_of_day),
+    ).filter(_nurse_visit_q(request.user, prefix='visit__')).select_related('visit__patient').order_by('-checkin_date')[:5]
     context['recent_consultations'] = recent_consultations
     
     return render(request, 'home/opd_dashboard.html', context)

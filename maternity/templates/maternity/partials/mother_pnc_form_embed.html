@@ -1,0 +1,99 @@
+<form method="POST" class="space-y-6">
+    {% csrf_token %}
+    <input type="hidden" name="record_mother_pnc" value="true">
+    <input type="hidden" name="pregnancy_id" value="{{ block.pregnancy.id }}">
+    {{ block.form.visit }}
+
+    {% if block.already_recorded_today %}
+    <div class="p-4 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-sm font-bold">
+        <i class="fas fa-info-circle"></i> A mother PNC entry for today already exists. Saving again will add another record.
+    </div>
+    {% endif %}
+
+    <p class="text-sm font-bold text-slate-600">
+        Mother: <span class="text-slate-900">{{ block.mother_name }}</span>
+        · Delivered {{ block.delivery.delivery_datetime|date:"d M Y" }}
+    </p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="space-y-1">
+            <label class="av-field-label">Visit date</label>
+            {{ block.form.visit_date }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Day post-delivery</label>
+            {{ block.form.visit_day }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Systolic BP</label>
+            {{ block.form.bp_systolic }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Diastolic BP</label>
+            {{ block.form.bp_diastolic }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Temp (°C)</label>
+            {{ block.form.temperature }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Pulse</label>
+            {{ block.form.pulse }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Uterus</label>
+            {{ block.form.uterus_involution }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Lochia</label>
+            {{ block.form.lochia }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Perineum</label>
+            {{ block.form.perineum_wound }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">C-section wound</label>
+            {{ block.form.cs_wound }}
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label class="av-field-label">Breastfeeding</label>
+            {{ block.form.breastfeeding_status }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Mood</label>
+            {{ block.form.mood_assessment }}
+        </div>
+        <div class="space-y-1 flex items-end gap-2">
+            {{ block.form.family_planning_counseling }}
+            <label class="text-xs font-bold text-slate-600">FP counseling</label>
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label class="av-field-label">Contraception</label>
+            {{ block.form.contraception_method }}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4">
+        <div class="space-y-1">
+            <label class="av-field-label">Complaints</label>
+            {{ block.form.complaints }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Findings</label>
+            {{ block.form.findings }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Plan</label>
+            {{ block.form.plan }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Next visit</label>
+            {{ block.form.next_visit_date }}
+        </div>
+    </div>
+
+    <button type="submit" class="w-full py-3 bg-rose-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-rose-700 transition-all">
+        <i class="fas fa-user-nurse"></i> Save mother PNC
+    </button>
+</form>

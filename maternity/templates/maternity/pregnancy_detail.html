@@ -1656,176 +1656,442 @@ function proceedWithExtendToIPD(invoiceId) {
     window.location.href = `/inpatient/patients/{{ pregnancy.patient.id }}/admit/?invoice_id=${invoiceId}`;
 }
 
-function openMaternityPrescriptionModal(visitId) {
-    // Store visitId globally for use in dispenseMaternityItem
-    window.currentMaternityVisitId = visitId || '{{ latest_visit.id }}';
-    
-    const modal = document.createElement('div');
-    modal.id = 'maternityPrescriptionModal';
-    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center';
-    modal.style.zIndex = '9999';
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100vw';
-    modal.style.height = '100vh';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.background = 'rgba(15, 23, 42, 0.6)';
-    modal.style.backdropFilter = 'blur(4px)';
-    
-    modal.innerHTML = `
-        <div class="bg-white rounded-[2rem] shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200" style="background: white; border-radius: 2rem; max-width: 32rem; width: 100%; margin: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-            <div style="background: linear-gradient(135deg, #9333ea, #4f46e5); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: white; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.75rem;">
-                    <i class="fas fa-prescription-bottle-alt"></i> Maternal Supplements
-                </h3>
-                <button onclick="document.getElementById('maternityPrescriptionModal').remove()" style="background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.2rem;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div style="padding: 1.5rem; background: #f8fafc;">
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <!-- Item 418 Row -->
-                    {% if mat_item_418 %}
-                    <div style="background: white; padding: 1.25rem; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #f5f3ff; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
-                                    <i class="fas fa-pills"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">{{ mat_item_418.name }}</div>
-                                    <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">ID: {{ mat_item_418.id }}</div>
-                                </div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Free?</span>
-                                <input type="checkbox" id="ifas_free" checked style="width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: #10b981;">
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <input type="number" id="ifas_qty" placeholder="Qty" style="width: 5rem; padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; font-size: 0.9rem; outline: none;" min="0">
-                            <button onclick="dispenseMaternityItem({{ mat_item_418.id }}, 'ifas_qty', 'ifas_free')" style="flex: 1; padding: 0.6rem; background: #7c3aed; color: white; border: none; border-radius: 0.75rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                <i class="fas fa-plus-circle"></i> Dispense
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
+const MAT_RX_SEARCH_URL = '{% url "maternity:api_pregnancy_prescription_search" pregnancy.id %}';
+const MAT_RX_BULK_URL = '{% url "maternity:api_pregnancy_bulk_prescription" pregnancy.id %}';
+const MAT_RX_PHARMACY_DEPT_ID = '{{ pharmacy_dept_id|default:"" }}';
+const MAT_RX_QUICK_ITEMS = [
+    {% if mat_item_418 %}{ id: {{ mat_item_418.id }}, name: "{{ mat_item_418.name|escapejs }}", selling_price: "{{ mat_item_418.selling_price|default:0 }}", pharmacy_stock: {{ mat_item_418_stock }}, default_free: true },{% endif %}
+    {% if mat_item_197 %}{ id: {{ mat_item_197.id }}, name: "{{ mat_item_197.name|escapejs }}", selling_price: "0", pharmacy_stock: {{ mat_item_197_stock }}, default_free: true },{% endif %}
+    {% if mat_item_270 %}{ id: {{ mat_item_270.id }}, name: "{{ mat_item_270.name|escapejs }}", selling_price: "{{ mat_item_270.selling_price|default:0 }}", pharmacy_stock: {{ mat_item_270_stock }}, default_free: true },{% endif %}
+];
+let maternityRxCart = [];
+let maternityRxPendingItem = null;
+let maternityRxSearchTimer = null;
 
-                    <!-- Item 197 Row -->
-                    {% if mat_item_197 %}
-                    <div style="background: white; padding: 1.25rem; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
-                                    <i class="fas fa-shirt"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">{{ mat_item_197.name }}</div>
-                                    <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">ID: {{ mat_item_197.id }} · Always Free</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <input type="number" id="lesso_qty" placeholder="Qty" style="width: 5rem; padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; font-size: 0.9rem; outline: none;" min="0">
-                            <button onclick="dispenseMaternityItem({{ mat_item_197.id }}, 'lesso_qty', true)" style="flex: 1; padding: 0.6rem; background: #2563eb; color: white; border: none; border-radius: 0.75rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                <i class="fas fa-plus-circle"></i> Dispense
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Item 270 Row -->
-                    {% if mat_item_270 %}
-                    <div style="background: white; padding: 1.25rem; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #fdf4ff; color: #c026d3; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
-                                    <i class="fas fa-capsules"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">{{ mat_item_270.name }}</div>
-                                    <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">ID: {{ mat_item_270.id }}</div>
-                                </div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Free?</span>
-                                <input type="checkbox" id="item270_free" checked style="width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: #10b981;">
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <input type="number" id="item270_qty" placeholder="Qty" style="width: 5rem; padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; font-size: 0.9rem; outline: none;" min="0">
-                            <button onclick="dispenseMaternityItem({{ mat_item_270.id }}, 'item270_qty', 'item270_free')" style="flex: 1; padding: 0.6rem; background: #c026d3; color: white; border: none; border-radius: 0.75rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                                <i class="fas fa-plus-circle"></i> Dispense
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            <button onclick="document.getElementById('maternityPrescriptionModal').remove()" style="width: 100%; padding: 1rem; border: none; background: transparent; color: #94a3b8; font-weight: 700; cursor: pointer; border-top: 1px solid #f1f5f9;">
-                Close Window
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
+function closeMaternityPrescriptionModal() {
+    const el = document.getElementById('maternityPrescriptionModal');
+    if (el) el.remove();
+    maternityRxCart = [];
+    maternityRxPendingItem = null;
 }
 
-function dispenseMaternityItem(itemId, qtyInputId, freeToggleId) {
-    const qty = document.getElementById(qtyInputId).value;
-    if (!qty || qty <= 0) {
-        alert('Please enter a valid quantity.');
+function openMaternityPrescriptionModal(visitId) {
+    window.currentMaternityVisitId = visitId || '{{ latest_visit.id|default:"" }}';
+    if (!window.currentMaternityVisitId) {
+        alert('No active visit found. Receive the patient for ANC/PNC first.');
         return;
     }
+    closeMaternityPrescriptionModal();
+    maternityRxCart = [];
+    maternityRxPendingItem = null;
 
-    let isFree = false;
-    if (typeof freeToggleId === 'boolean') {
-        isFree = freeToggleId;
-    } else {
-        isFree = document.getElementById(freeToggleId).checked;
+    const modal = document.createElement('div');
+    modal.id = 'maternityPrescriptionModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);padding:1rem;';
+    modal.onclick = function (e) { if (e.target === modal) closeMaternityPrescriptionModal(); };
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;border-radius:1.5rem;max-width:42rem;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);border:1px solid #e2e8f0;';
+    panel.onclick = function (e) { e.stopPropagation(); };
+
+    panel.innerHTML = `
+        <div style="background:linear-gradient(135deg,#9333ea,#4f46e5);padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <h3 style="margin:0;color:#fff;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:0.5rem;">
+                <i class="fas fa-prescription-bottle-alt"></i> Write Prescription
+            </h3>
+            <button type="button" id="matRxCloseBtn" style="background:transparent;border:none;color:rgba(255,255,255,0.8);cursor:pointer;font-size:1.1rem;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1;background:#f8fafc;">
+            <label style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem;">Diagnosis / reason</label>
+            <input type="text" id="matRxDiagnosis" value="Maternity care" style="width:100%;padding:0.55rem 0.75rem;border:1px solid #e2e8f0;border-radius:0.65rem;font-weight:600;font-size:0.85rem;margin-bottom:1rem;box-sizing:border-box;">
+
+            <label style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem;">Search medication or item</label>
+            <div style="position:relative;margin-bottom:0.75rem;">
+                <input type="text" id="matRxSearch" autocomplete="off" placeholder="Type at least 2 characters..." style="width:100%;padding:0.65rem 0.85rem;border:1px solid #cbd5e1;border-radius:0.75rem;font-weight:600;font-size:0.9rem;box-sizing:border-box;">
+                <div id="matRxSearchResults" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #e2e8f0;border-radius:0.75rem;max-height:220px;overflow-y:auto;z-index:10;box-shadow:0 10px 25px rgba(0,0,0,0.1);"></div>
+            </div>
+
+            <div id="matRxQuickRow" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem;"></div>
+
+            <div id="matRxDraft" style="display:none;background:#fff;border:1px solid #ddd6fe;border-radius:1rem;padding:1rem;margin-bottom:1rem;">
+                <div style="font-weight:800;color:#1e293b;font-size:0.9rem;margin-bottom:0.5rem;" id="matRxDraftName"></div>
+                <div style="font-size:0.7rem;color:#64748b;margin-bottom:0.75rem;" id="matRxDraftMeta"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                    <div>
+                        <label style="font-size:0.6rem;font-weight:800;color:#94a3b8;text-transform:uppercase;">Quantity</label>
+                        <input type="number" id="matRxDraftQty" min="1" value="1" style="width:100%;padding:0.5rem;border:1px solid #e2e8f0;border-radius:0.5rem;font-weight:700;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;font-weight:800;color:#94a3b8;text-transform:uppercase;">Billing</label>
+                        <div style="display:flex;gap:0.35rem;margin-top:0.25rem;">
+                            <button type="button" id="matRxBillFree" style="flex:1;padding:0.45rem;border:2px solid #10b981;background:#ecfdf5;color:#047857;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;">Free (KES 0)</button>
+                            <button type="button" id="matRxBillCharge" style="flex:1;padding:0.45rem;border:2px solid #e2e8f0;background:#fff;color:#64748b;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;">Charge</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button type="button" id="matRxAddToCart" style="flex:1;padding:0.55rem;background:#7c3aed;color:#fff;border:none;border-radius:0.65rem;font-weight:900;font-size:0.75rem;cursor:pointer;text-transform:uppercase;"><i class="fas fa-cart-plus"></i> Add to list</button>
+                    <button type="button" id="matRxClearDraft" style="padding:0.55rem 0.85rem;background:#f1f5f9;color:#64748b;border:none;border-radius:0.65rem;font-weight:700;cursor:pointer;">Cancel</button>
+                </div>
+            </div>
+
+            <div id="matRxCartWrap" style="display:none;">
+                <label style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.5rem;">Items to prescribe</label>
+                <div id="matRxCartList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+            </div>
+            <p id="matRxEmptyHint" style="margin:0.5rem 0 0;font-size:0.8rem;color:#94a3b8;text-align:center;">Search Pharmacy stock and add items (quantity cannot exceed available stock).</p>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;background:#fff;flex-shrink:0;display:flex;gap:0.5rem;">
+            <button type="button" id="matRxSubmit" style="flex:1;padding:0.75rem;background:#4f46e5;color:#fff;border:none;border-radius:0.75rem;font-weight:900;font-size:0.8rem;cursor:pointer;text-transform:uppercase;"><i class="fas fa-check"></i> Save prescription</button>
+            <button type="button" id="matRxCancelFooter" style="padding:0.75rem 1.25rem;background:#f1f5f9;color:#64748b;border:none;border-radius:0.75rem;font-weight:700;cursor:pointer;">Close</button>
+        </div>
+    `;
+
+    modal.appendChild(panel);
+    document.body.appendChild(modal);
+
+    document.getElementById('matRxCloseBtn').onclick = closeMaternityPrescriptionModal;
+    document.getElementById('matRxCancelFooter').onclick = closeMaternityPrescriptionModal;
+    document.getElementById('matRxSearch').oninput = function () { debouncedMatRxSearch(this.value); };
+    document.getElementById('matRxAddToCart').onclick = matRxAddToCart;
+    document.getElementById('matRxClearDraft').onclick = matRxClearDraft;
+    document.getElementById('matRxSubmit').onclick = submitMaternityPrescription;
+    document.getElementById('matRxBillFree').onclick = function () { matRxSetBillingMode(true); };
+    document.getElementById('matRxBillCharge').onclick = function () { matRxSetBillingMode(false); };
+
+    const quickRow = document.getElementById('matRxQuickRow');
+    MAT_RX_QUICK_ITEMS.forEach(function (qi) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        const out = (qi.pharmacy_stock || 0) <= 0;
+        b.textContent = qi.name + (out ? ' (out of stock)' : ' (' + qi.pharmacy_stock + ')');
+        b.style.cssText = out
+            ? 'padding:0.35rem 0.65rem;background:#f8fafc;border:1px solid #e2e8f0;color:#94a3b8;border-radius:0.5rem;font-size:0.7rem;font-weight:800;cursor:not-allowed;opacity:0.7;'
+            : 'padding:0.35rem 0.65rem;background:#fff;border:1px solid #c4b5fd;color:#6d28d9;border-radius:0.5rem;font-size:0.7rem;font-weight:800;cursor:pointer;';
+        b.disabled = out;
+        if (!out) {
+            b.onclick = function () {
+                matRxSelectItem({
+                    id: qi.id,
+                    name: qi.name,
+                    selling_price: qi.selling_price,
+                    category: 'Quick',
+                    pharmacy_stock: qi.pharmacy_stock,
+                    stock_quantity: qi.pharmacy_stock,
+                }, qi.default_free);
+            };
+        }
+        quickRow.appendChild(b);
+    });
+
+    const qtyInput = document.getElementById('matRxDraftQty');
+    if (qtyInput) {
+        qtyInput.addEventListener('input', matRxUpdateDraftQtyLimits);
     }
 
-    const btn = event.currentTarget;
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+    document.addEventListener('click', matRxCloseSearchOnOutsideClick);
+}
 
-    const formData = new FormData();
-    formData.append('item_id', itemId);
-    formData.append('patient_id', '{{ pregnancy.patient.id }}');
-    formData.append('visit_id', window.currentMaternityVisitId || '{{ latest_visit.id }}');
-    formData.append('department_id', '{{ pharmacy_dept_id|default:23 }}'); // Pharmacy (Pick up at counter)
-    formData.append('quantity', qty);
-    formData.append('free_dispense', isFree ? 'true' : 'false');
-    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+function matRxCloseSearchOnOutsideClick(e) {
+    const results = document.getElementById('matRxSearchResults');
+    const input = document.getElementById('matRxSearch');
+    if (!results || !input) return;
+    if (!results.contains(e.target) && e.target !== input) {
+        results.style.display = 'none';
+    }
+}
 
-    fetch('{% url "inventory:dispense_item" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert(data.message);
-            document.getElementById(qtyInputId).value = '';
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An unexpected error occurred.');
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+function debouncedMatRxSearch(query) {
+    clearTimeout(maternityRxSearchTimer);
+    maternityRxSearchTimer = setTimeout(function () { matRxRunSearch(query); }, 280);
+}
+
+function matRxRunSearch(query) {
+    const resultsDiv = document.getElementById('matRxSearchResults');
+    if (!resultsDiv) return;
+    if (!query || query.length < 2) {
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+        return;
+    }
+    let url = MAT_RX_SEARCH_URL + '?q=' + encodeURIComponent(query);
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            const results = data.results || [];
+            resultsDiv.innerHTML = '';
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<div style="padding:0.75rem;font-size:0.8rem;color:#94a3b8;text-align:center;">No items found</div>';
+            } else {
+                results.forEach(function (item) {
+                    const stock = matRxPharmacyStock(item);
+                    const inStock = stock > 0;
+                    const row = document.createElement('div');
+                    row.style.cssText = 'padding:0.65rem 0.85rem;border-bottom:1px solid #f1f5f9;' + (inStock ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:0.55;');
+                    if (inStock) {
+                        row.onmouseenter = function () { row.style.background = '#f5f3ff'; };
+                        row.onmouseleave = function () { row.style.background = ''; };
+                    }
+                    const stockColor = inStock ? '#059669' : '#dc2626';
+                    const stockLabel = inStock ? (stock + ' in Pharmacy') : 'Out of stock in Pharmacy';
+                    row.innerHTML = '<div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:flex-start;">'
+                        + '<div><div style="font-weight:700;color:#1e293b;font-size:0.85rem;">' + escapeHtml(item.name) + '</div>'
+                        + '<div style="font-size:0.7rem;color:#64748b;">' + escapeHtml(item.category || '') + ' · KES ' + item.selling_price + '</div></div>'
+                        + '<div style="font-size:0.65rem;font-weight:800;color:' + stockColor + ';white-space:nowrap;">' + stockLabel + '</div></div>';
+                    if (inStock) {
+                        row.onclick = function () {
+                            matRxSelectItem(item, false);
+                            document.getElementById('matRxSearch').value = item.name;
+                            resultsDiv.style.display = 'none';
+                        };
+                    }
+                    resultsDiv.appendChild(row);
+                });
+            }
+            resultsDiv.style.display = 'block';
+        })
+        .catch(function () {
+            resultsDiv.innerHTML = '<div style="padding:0.75rem;color:#dc2626;font-size:0.8rem;">Search failed</div>';
+            resultsDiv.style.display = 'block';
+        });
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text || '';
+    return d.innerHTML;
+}
+
+function matRxPharmacyStock(item) {
+    if (!item) return 0;
+    const n = parseInt(item.pharmacy_stock != null ? item.pharmacy_stock : item.stock_quantity, 10);
+    return isNaN(n) ? 0 : n;
+}
+
+function matRxQtyInCart(itemId) {
+    var total = 0;
+    maternityRxCart.forEach(function (l) {
+        if (l.inventory_item_id === itemId) total += l.quantity;
     });
+    return total;
+}
+
+function matRxMaxAddableQty(itemId, pharmacyStock) {
+    const existing = maternityRxCart.find(function (l) { return l.inventory_item_id === itemId; });
+    const othersInCart = matRxQtyInCart(itemId) - (existing ? existing.quantity : 0);
+    return Math.max(0, pharmacyStock - othersInCart);
+}
+
+function matRxValidateLineQty(itemId, pharmacyStock, newQty) {
+    const maxAllowed = matRxMaxAddableQty(itemId, pharmacyStock);
+    if (maxAllowed <= 0) {
+        alert('This item is out of stock in Pharmacy.');
+        return false;
+    }
+    if (newQty > maxAllowed) {
+        alert('Maximum ' + maxAllowed + ' allowed in Pharmacy for this item.');
+        return false;
+    }
+    return true;
+}
+
+function matRxUpdateDraftQtyLimits() {
+    if (!maternityRxPendingItem) return;
+    const qtyEl = document.getElementById('matRxDraftQty');
+    const addBtn = document.getElementById('matRxAddToCart');
+    const maxQ = matRxMaxAddableQty(maternityRxPendingItem.id, maternityRxPendingItem.pharmacy_stock);
+    qtyEl.max = maxQ;
+    if (maxQ <= 0) {
+        addBtn.disabled = true;
+        addBtn.style.opacity = '0.5';
+    } else {
+        addBtn.disabled = false;
+        addBtn.style.opacity = '1';
+        const v = parseInt(qtyEl.value, 10);
+        if (v > maxQ) qtyEl.value = maxQ;
+    }
+}
+
+function matRxSelectItem(item, defaultFree) {
+    const pharmacyStock = matRxPharmacyStock(item);
+    if (pharmacyStock <= 0) {
+        alert(item.name + ' is out of stock in Pharmacy.');
+        return;
+    }
+    const maxAdd = matRxMaxAddableQty(item.id, pharmacyStock);
+    if (maxAdd <= 0) {
+        alert('All available Pharmacy stock for ' + item.name + ' is already in your list.');
+        return;
+    }
+    maternityRxPendingItem = {
+        id: item.id,
+        name: item.name,
+        selling_price: parseFloat(item.selling_price) || 0,
+        pharmacy_stock: pharmacyStock,
+        is_free: !!defaultFree,
+    };
+    document.getElementById('matRxDraft').style.display = 'block';
+    document.getElementById('matRxDraftName').textContent = item.name;
+    document.getElementById('matRxDraftMeta').textContent =
+        'Pharmacy stock: ' + pharmacyStock + ' · You can add up to ' + maxAdd
+        + ' more · List price: KES ' + (item.selling_price || '0');
+    const qtyEl = document.getElementById('matRxDraftQty');
+    qtyEl.min = 1;
+    qtyEl.max = maxAdd;
+    qtyEl.value = Math.min(1, maxAdd);
+    matRxSetBillingMode(!!defaultFree);
+    matRxUpdateDraftQtyLimits();
+}
+
+function matRxSetBillingMode(isFree) {
+    if (!maternityRxPendingItem) return;
+    maternityRxPendingItem.is_free = isFree;
+    const freeBtn = document.getElementById('matRxBillFree');
+    const chargeBtn = document.getElementById('matRxBillCharge');
+    if (isFree) {
+        freeBtn.style.cssText = 'flex:1;padding:0.45rem;border:2px solid #10b981;background:#ecfdf5;color:#047857;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;';
+        chargeBtn.style.cssText = 'flex:1;padding:0.45rem;border:2px solid #e2e8f0;background:#fff;color:#64748b;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;';
+    } else {
+        chargeBtn.style.cssText = 'flex:1;padding:0.45rem;border:2px solid #4f46e5;background:#eef2ff;color:#3730a3;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;';
+        freeBtn.style.cssText = 'flex:1;padding:0.45rem;border:2px solid #e2e8f0;background:#fff;color:#64748b;border-radius:0.5rem;font-weight:800;font-size:0.65rem;cursor:pointer;text-transform:uppercase;';
+    }
+}
+
+function matRxClearDraft() {
+    maternityRxPendingItem = null;
+    const draft = document.getElementById('matRxDraft');
+    if (draft) draft.style.display = 'none';
+    const search = document.getElementById('matRxSearch');
+    if (search) search.value = '';
+}
+
+function matRxAddToCart() {
+    if (!maternityRxPendingItem) return;
+    const qty = parseInt(document.getElementById('matRxDraftQty').value, 10);
+    if (!qty || qty < 1) {
+        alert('Enter a valid quantity.');
+        return;
+    }
+    if (!matRxValidateLineQty(maternityRxPendingItem.id, maternityRxPendingItem.pharmacy_stock, qty)) {
+        matRxUpdateDraftQtyLimits();
+        return;
+    }
+    const existing = maternityRxCart.find(function (l) { return l.inventory_item_id === maternityRxPendingItem.id; });
+    if (existing) {
+        existing.quantity = qty;
+        existing.is_free = maternityRxPendingItem.is_free;
+        existing.unit_price = maternityRxPendingItem.is_free ? 0 : maternityRxPendingItem.selling_price;
+        existing.pharmacy_stock = maternityRxPendingItem.pharmacy_stock;
+    } else {
+        maternityRxCart.push({
+            inventory_item_id: maternityRxPendingItem.id,
+            name: maternityRxPendingItem.name,
+            quantity: qty,
+            is_free: maternityRxPendingItem.is_free,
+            unit_price: maternityRxPendingItem.is_free ? 0 : maternityRxPendingItem.selling_price,
+            pharmacy_stock: maternityRxPendingItem.pharmacy_stock,
+        });
+    }
+    matRxClearDraft();
+    matRxRenderCart();
+}
+
+function matRxRenderCart() {
+    const wrap = document.getElementById('matRxCartWrap');
+    const list = document.getElementById('matRxCartList');
+    const hint = document.getElementById('matRxEmptyHint');
+    if (!wrap || !list) return;
+
+    if (maternityRxCart.length === 0) {
+        wrap.style.display = 'none';
+        if (hint) hint.style.display = 'block';
+        return;
+    }
+    if (hint) hint.style.display = 'none';
+    wrap.style.display = 'block';
+    list.innerHTML = '';
+
+    maternityRxCart.forEach(function (line, idx) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.75rem;padding:0.65rem 0.75rem;';
+        const billLabel = line.is_free ? '<span style="font-size:0.65rem;font-weight:800;color:#059669;background:#ecfdf5;padding:0.15rem 0.4rem;border-radius:0.35rem;">FREE · KES 0</span>'
+            : '<span style="font-size:0.65rem;font-weight:800;color:#4338ca;background:#eef2ff;padding:0.15rem 0.4rem;border-radius:0.35rem;">KES ' + line.unit_price + ' each</span>';
+        const stockNote = line.pharmacy_stock != null
+            ? '<span style="font-size:0.65rem;color:#64748b;">Pharmacy: ' + line.pharmacy_stock + '</span>' : '';
+        row.innerHTML = '<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:0.85rem;color:#1e293b;">' + escapeHtml(line.name) + '</div>'
+            + '<div style="margin-top:0.2rem;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;"><span style="font-size:0.7rem;color:#64748b;">Qty ' + line.quantity + '</span>' + billLabel + stockNote + '</div></div>'
+            + '<button type="button" data-idx="' + idx + '" class="matRxRemove" style="border:none;background:#fee2e2;color:#b91c1c;width:2rem;height:2rem;border-radius:0.5rem;cursor:pointer;font-weight:900;">×</button>';
+        list.appendChild(row);
+    });
+
+    list.querySelectorAll('.matRxRemove').forEach(function (btn) {
+        btn.onclick = function () {
+            maternityRxCart.splice(parseInt(btn.getAttribute('data-idx'), 10), 1);
+            matRxRenderCart();
+        };
+    });
+}
+
+function getMatRxCsrfToken() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '{{ csrf_token }}';
+}
+
+function submitMaternityPrescription() {
+    if (maternityRxCart.length === 0) {
+        alert('Add at least one item to the prescription.');
+        return;
+    }
+    for (var i = 0; i < maternityRxCart.length; i++) {
+        var line = maternityRxCart[i];
+        if (!matRxValidateLineQty(line.inventory_item_id, line.pharmacy_stock, line.quantity)) {
+            return;
+        }
+    }
+    const btn = document.getElementById('matRxSubmit');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    const payload = {
+        visit_id: window.currentMaternityVisitId,
+        diagnosis: (document.getElementById('matRxDiagnosis') || {}).value || 'Maternity prescription',
+        items: maternityRxCart.map(function (l) {
+            return {
+                inventory_item_id: l.inventory_item_id,
+                quantity: l.quantity,
+                is_free: l.is_free,
+            };
+        }),
+    };
+
+    fetch(MAT_RX_BULK_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getMatRxCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify(payload),
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.status === 'success') {
+                alert(data.message);
+                closeMaternityPrescriptionModal();
+                window.location.reload();
+            } else {
+                alert(data.message || 'Could not save prescription.');
+            }
+        })
+        .catch(function () {
+            alert('An unexpected error occurred.');
+        })
+        .finally(function () {
+            btn.disabled = false;
+            btn.innerHTML = orig;
+        });
 }
 
 document.addEventListener('DOMContentLoaded', function () {

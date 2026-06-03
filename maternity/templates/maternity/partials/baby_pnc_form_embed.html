@@ -1,0 +1,113 @@
+{% if item.already_recorded_today %}
+<div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-bold">
+    <i class="fas fa-check-circle"></i>
+    Baby {% if item.newborn.patient_profile %}{{ item.newborn.patient_profile.full_name }}{% else %}{{ item.newborn.baby_number }}{% endif %}
+    — PNC for today is already recorded.
+</div>
+{% else %}
+<form method="POST" class="space-y-6">
+    {% csrf_token %}
+    <input type="hidden" name="record_baby_pnc" value="true">
+    <input type="hidden" name="newborn_id" value="{{ item.newborn.id }}">
+    {{ item.form.visit }}
+
+    <p class="text-sm font-bold text-slate-600">
+        {% if item.newborn.patient_profile %}
+            {{ item.newborn.patient_profile.full_name }}
+        {% else %}
+            Baby {{ item.newborn.baby_number }}
+        {% endif %}
+        · Born {{ item.newborn.birth_datetime|date:"d M Y" }}
+    </p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="space-y-1">
+            <label class="av-field-label">Visit date</label>
+            {{ item.form.visit_date }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Day post-delivery</label>
+            {{ item.form.visit_day }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Weight (kg)</label>
+            {{ item.form.weight }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Length (cm)</label>
+            {{ item.form.length }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Head circ. (cm)</label>
+            {{ item.form.head_circumference }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Temp (°C)</label>
+            {{ item.form.temperature }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Feeding type</label>
+            {{ item.form.feeding_type }}
+        </div>
+        <div class="space-y-1 flex items-end gap-2">
+            {{ item.form.feeding_well }}
+            <label class="text-xs font-bold text-slate-600">Feeding well</label>
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label class="av-field-label">Feeding difficulties</label>
+            {{ item.form.feeding_difficulties }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Umbilical cord</label>
+            {{ item.form.umbilical_cord }}
+        </div>
+        <div class="space-y-1 flex items-end gap-2">
+            {{ item.form.jaundice }}
+            <label class="text-xs font-bold text-slate-600">Jaundice</label>
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Jaundice level</label>
+            {{ item.form.jaundice_level }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Skin</label>
+            {{ item.form.skin_condition }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Eyes</label>
+            {{ item.form.eyes }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Alertness</label>
+            {{ item.form.alertness }}
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label class="av-field-label">Vaccines given (notes)</label>
+            {{ item.form.vaccines_given }}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4">
+        <div class="space-y-1">
+            <label class="av-field-label">Complaints</label>
+            {{ item.form.complaints }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Findings</label>
+            {{ item.form.findings }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Plan</label>
+            {{ item.form.plan }}
+        </div>
+        <div class="space-y-1">
+            <label class="av-field-label">Next visit</label>
+            {{ item.form.next_visit_date }}
+        </div>
+    </div>
+
+    <button type="submit" class="w-full py-3 bg-rose-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-rose-700 transition-all">
+        <i class="fas fa-baby"></i> Save baby PNC
+    </button>
+</form>
+{% endif %}

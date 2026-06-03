@@ -313,6 +313,443 @@
     .badge-warning { background: rgba(254, 225, 64, 0.1); color: #fee140; }
     .badge-danger { background: rgba(245, 87, 108, 0.1); color: #f5576c; }
     .badge-info { background: rgba(79, 172, 254, 0.1); color: #4facfe; }
+
+    .btn-pay {
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        border: none;
+        cursor: pointer;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #0f172a;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-pay:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
+    }
+
+    .btn-pay:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .night-payment-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(8px);
+    }
+
+    .night-payment-modal.active {
+        display: flex;
+    }
+
+    .night-payment-panel {
+        width: 100%;
+        max-width: 520px;
+        background: #1e293b;
+        border: 1px solid var(--pharm-border);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        animation: nightModalIn 0.25s ease-out;
+    }
+
+    @keyframes nightModalIn {
+        from { opacity: 0; transform: scale(0.96) translateY(8px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .night-payment-header {
+        padding: 1.5rem 1.75rem;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(16, 185, 129, 0.12));
+        border-bottom: 1px solid var(--pharm-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .night-payment-header h3 {
+        margin: 0 0 0.25rem;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: white;
+    }
+
+    .night-payment-header p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .night-payment-close {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+        font-size: 1.25rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .night-payment-body {
+        padding: 1.5rem 1.75rem 1.75rem;
+    }
+
+    .night-payment-summary {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pharm-border);
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .night-payment-summary-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-secondary);
+    }
+
+    .night-payment-summary-row strong {
+        color: white;
+    }
+
+    .night-payment-due {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.75rem;
+        margin-top: 0.75rem;
+        border-top: 1px solid var(--pharm-border);
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .night-payment-due span:last-child {
+        font-size: 1.35rem;
+        color: #10b981;
+    }
+
+    .night-pay-method {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--pharm-border);
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .night-pay-method-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.65rem;
+    }
+
+    .night-pay-method-head span {
+        font-weight: 700;
+        color: white;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .night-pay-full-btn {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.55rem;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .night-pay-input-wrap {
+        position: relative;
+    }
+
+    .night-pay-input-wrap .prefix {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .night-pay-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--pharm-border);
+        border-radius: 10px;
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .night-pay-input:focus {
+        outline: none;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    }
+
+    .night-pay-remaining {
+        margin: 1rem 0;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+    }
+
+    .night-pay-remaining.complete {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.25);
+        color: #34d399;
+    }
+
+    .night-pay-remaining.over {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.25);
+        color: #f87171;
+    }
+
+    .night-pay-mpesa-ref {
+        margin-top: 0.5rem;
+    }
+
+    .night-pay-mpesa-ref input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.55rem 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--pharm-border);
+        border-radius: 8px;
+        color: white;
+        font-size: 0.85rem;
+    }
+
+    .night-pay-submit {
+        width: 100%;
+        padding: 1rem;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        font-weight: 800;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .night-pay-submit:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .night-pay-note {
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-top: 0.75rem;
+    }
+
+    .btn-invoice-link {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        color: #60a5fa;
+        background: rgba(96, 165, 250, 0.08);
+        transition: background 0.15s;
+    }
+
+    .btn-invoice-link:hover {
+        background: rgba(96, 165, 250, 0.18);
+        color: #93c5fd;
+    }
+
+    .night-pay-manage-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #60a5fa;
+        text-decoration: none;
+    }
+
+    .night-pay-manage-link:hover {
+        color: #93c5fd;
+        text-decoration: underline;
+    }
+
+    .night-pharm-swal-toast {
+        z-index: 2147483647 !important;
+    }
+
+    /* SweetAlert2 overrides (custom CSS only — no new Tailwind classes) */
+    body .swal2-container {
+        z-index: 2147483647 !important;
+    }
+
+    body .swal2-popup {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    }
+
+    body .swal2-title {
+        color: #ffffff !important;
+    }
+
+    body .swal2-html-container {
+        color: #cbd5e1 !important;
+    }
+
+    body .swal2-styled.swal2-confirm,
+    body .swal2-styled.swal2-cancel,
+    body .swal2-styled.swal2-deny {
+        opacity: 1 !important;
+        visibility: visible !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        padding: 0.65rem 1.35rem !important;
+        border: none !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    body .swal2-styled.swal2-confirm {
+        background-color: #10b981 !important;
+    }
+
+    body .swal2-styled.swal2-cancel {
+        background-color: #475569 !important;
+    }
+
+    body .swal2-styled.swal2-confirm:focus,
+    body .swal2-styled.swal2-cancel:focus {
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35) !important;
+    }
+
+    /* Dispense confirm — native modal (avoids Swal button conflicts) */
+    .night-dispense-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(8px);
+    }
+
+    .night-dispense-modal.active {
+        display: flex;
+    }
+
+    .night-dispense-panel {
+        width: 100%;
+        max-width: 440px;
+        background: #1e293b;
+        border: 1px solid var(--pharm-border);
+        border-radius: 20px;
+        padding: 1.5rem 1.75rem;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    .night-dispense-panel h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    .night-dispense-panel p {
+        margin: 0 0 1.25rem;
+        color: #cbd5e1;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .night-dispense-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .night-modal-btn {
+        padding: 0.7rem 1.25rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        border: none;
+        cursor: pointer;
+        color: #ffffff;
+    }
+
+    .night-modal-btn-cancel {
+        background: #475569;
+    }
+
+    .night-modal-btn-cancel:hover {
+        background: #64748b;
+    }
+
+    .night-modal-btn-confirm {
+        background: #10b981;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .night-modal-btn-confirm:hover {
+        background: #059669;
+    }
+
+    .night-modal-btn-confirm:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
     </style>
 
     <div style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
@@ -370,7 +807,7 @@
         </div>
         {% endif %}
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <div style="">
             <div>
                 <!-- OPD Pending Items -->
                 <div class="section-card" id="opd-queue">
@@ -388,7 +825,7 @@
                     </div>
 
                     {% for group in opd_groups %}
-                        <div class="prescription-group">
+                        <div class="prescription-group" data-visit-id="{{ group.visit.id }}"{% if group.invoice %} data-invoice-id="{{ group.invoice.id }}"{% endif %}>
                             <div class="patient-header">
                                 <div class="patient-info">
                                     <div class="patient-avatar">{{ group.patient.first_name|first }}{{ group.patient.last_name|first }}</div>
@@ -401,16 +838,35 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-4">
-                                    <span class="badge {% if group.invoice_status == 'Paid' %}badge-success{% else %}badge-warning{% endif %}">
+                                    <span class="badge invoice-status-badge {% if group.invoice_status == 'Paid' %}badge-success{% else %}badge-warning{% endif %}">
                                         {{ group.invoice_status }}
                                     </span>
                                     <div class="flex items-center gap-2">
+                                        {% if group.invoice %}
+                                        <a href="{% url 'accounts:manage_visit_invoices' group.visit.id %}" class="btn-invoice-link" title="View and manage invoice items">
+                                            <i class="fas fa-file-invoice"></i> Manage invoice
+                                        </a>
+                                        {% endif %}
                                         {% if group.diagnosis %}
                                         <button class="btn btn-outline-info" style="padding: 0.75rem 1rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #0ea5e9; color: #0ea5e9; background: transparent;" onclick="Swal.fire({title: 'Prescription Diagnosis', text: '{{ group.diagnosis|escapejs }}', icon: 'info', confirmButtonColor: '#6366f1'})">
                                             <i class="fas fa-stethoscope"></i> Diagnosis
                                         </button>
                                         {% endif %}
-                                        <button class="dispense-all-btn btn btn-success" style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;" data-visit-id="{{ group.visit.id }}" data-patient="{{ group.patient.full_name }}" {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
+                                        {% if group.invoice and group.invoice_status != 'Paid' %}
+                                        <button type="button" class="btn-pay night-pay-btn"
+                                                data-invoice-id="{{ group.invoice.id }}"
+                                                data-visit-id="{{ group.visit.id }}"
+                                                data-patient="{{ group.patient.full_name }}"
+                                                data-balance="{{ group.invoice.balance }}"
+                                                data-invoice-label="#INV-{{ group.invoice.id|stringformat:'05d' }}">
+                                            <i class="fas fa-credit-card"></i> Accept Payment
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="dispense-all-btn btn btn-success" style="padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;"
+                                                data-visit-id="{{ group.visit.id }}"
+                                                data-patient="{{ group.patient.full_name }}"
+                                                data-dispense-dept="{% if group.visit.by_nurse %}Mini Pharmacy{% else %}Pharmacy{% endif %}"
+                                                {% if group.invoice_status != 'Paid' %}disabled title="Invoice must be paid before dispensing"{% endif %}>
                                             Dispense All
                                         </button>
                                     </div>
@@ -465,76 +921,398 @@
                 </div>
             </div>
 
-            <!-- Sidebar -->
-            <div>
-                <div class="side-card">
-                    <h3><i class="fas fa-boxes"></i> Mini Pharmacy Stock</h3>
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <thead>
-                                <tr style="text-align: left; color: var(--text-secondary);">
-                                    <th style="padding-bottom: 0.75rem;">Item</th>
-                                    <th style="padding-bottom: 0.75rem;">Qty</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stock in pharmacy_stock %}
-                                    <tr>
-                                        <td style="padding: 0.5rem 0;">{{ stock.item.name }}</td>
-                                        <td style="padding: 0.5rem 0;" class="font-bold {% if stock.quantity < stock.item.reorder_level %}text-red-400{% else %}text-emerald-400{% endif %}">
-                                            {{ stock.quantity }}
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="2" style="text-align: center; padding: 1rem; color: var(--text-muted);">No stock available</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+          
         </div>
 
        
     </div>
 
+    <!-- Night payment modal (Cash & M-Pesa only) -->
+    <div id="nightPaymentModal" class="night-payment-modal" aria-hidden="true">
+        <div class="night-payment-panel" role="dialog" aria-labelledby="nightPaymentTitle">
+            <div class="night-payment-header">
+                <div>
+                    <h3 id="nightPaymentTitle"><i class="fas fa-moon"></i> Night Shift Payment</h3>
+                    <p>Cash and M-Pesa only</p>
+                </div>
+                <button type="button" class="night-payment-close" id="nightPaymentClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="night-payment-body">
+                <div class="night-payment-summary">
+                    <div class="night-payment-summary-row">
+                        <span>Patient</span>
+                        <strong id="nightPayPatientName">—</strong>
+                    </div>
+                    <div class="night-payment-summary-row">
+                        <span>Invoice</span>
+                        <strong id="nightPayInvoiceLabel">—</strong>
+                    </div>
+                    <a href="#" id="nightPayManageLink" class="night-pay-manage-link" target="_blank" rel="noopener">
+                        <i class="fas fa-external-link-alt"></i> Manage invoice
+                    </a>
+                    <div class="night-payment-due">
+                        <span>Amount due</span>
+                        <span id="nightPayAmountDue">Ksh 0</span>
+                    </div>
+                </div>
+
+                <div class="night-pay-method">
+                    <div class="night-pay-method-head">
+                        <span><i class="fas fa-mobile-screen-button" style="color:#10b981;"></i> M-Pesa</span>
+                        <button type="button" class="night-pay-full-btn" data-target="nightMpesaAmount">Full amount</button>
+                    </div>
+                    <div class="night-pay-input-wrap">
+                        <span class="prefix">Ksh</span>
+                        <input type="number" id="nightMpesaAmount" class="night-pay-input split-amount" value="0" min="0" step="1" inputmode="decimal">
+                    </div>
+                    <div class="night-pay-mpesa-ref">
+                        <input type="text" id="nightMpesaRef" placeholder="M-Pesa receipt / transaction code (optional)">
+                    </div>
+                </div>
+
+                <div class="night-pay-method">
+                    <div class="night-pay-method-head">
+                        <span><i class="fas fa-money-bill-wave" style="color:#6366f1;"></i> Cash</span>
+                        <button type="button" class="night-pay-full-btn" data-target="nightCashAmount">Full amount</button>
+                    </div>
+                    <div class="night-pay-input-wrap">
+                        <span class="prefix">Ksh</span>
+                        <input type="number" id="nightCashAmount" class="night-pay-input split-amount" value="0" min="0" step="1" inputmode="decimal">
+                    </div>
+                </div>
+
+                <div id="nightPayRemainingBar" class="night-pay-remaining">
+                    <span>Remaining</span>
+                    <span id="nightPayRemaining">Ksh 0</span>
+                </div>
+
+                <button type="button" id="nightPaySubmit" class="night-pay-submit" disabled>
+                    <i class="fas fa-check-circle"></i> Confirm payment
+                </button>
+                <p class="night-pay-note">Insurance and other methods are not available during night shift.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dispense confirm modal (custom CSS — no Tailwind / Swal for confirm) -->
+    <div id="nightDispenseModal" class="night-dispense-modal" aria-hidden="true">
+        <div class="night-dispense-panel" role="dialog" aria-labelledby="nightDispenseTitle">
+            <h3 id="nightDispenseTitle"><i class="fas fa-pills"></i> Dispense all?</h3>
+            <p id="nightDispenseMessage">Dispense all pending items for this patient?</p>
+            <div class="night-dispense-actions">
+                <button type="button" class="night-modal-btn night-modal-btn-cancel" id="nightDispenseCancel">Cancel</button>
+                <button type="button" class="night-modal-btn night-modal-btn-confirm" id="nightDispenseConfirm">Yes, dispense</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const nightModal = document.getElementById('nightPaymentModal');
+        const nightMpesaInput = document.getElementById('nightMpesaAmount');
+        const nightCashInput = document.getElementById('nightCashAmount');
+        const nightMpesaRef = document.getElementById('nightMpesaRef');
+        const nightPayRemaining = document.getElementById('nightPayRemaining');
+        const nightPayRemainingBar = document.getElementById('nightPayRemainingBar');
+        const nightPaySubmit = document.getElementById('nightPaySubmit');
+        const nightPaySubmitDefaultHtml = nightPaySubmit.innerHTML;
+        const nightPayManageLink = document.getElementById('nightPayManageLink');
+        let currentNightInvoiceId = null;
+        let currentNightVisitId = null;
+        let currentNightBalance = 0;
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function formatKsh(n) {
+            return 'Ksh ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        function updateNightPaymentBalance() {
+            const mpesa = parseFloat(nightMpesaInput.value) || 0;
+            const cash = parseFloat(nightCashInput.value) || 0;
+            const total = mpesa + cash;
+            const remaining = currentNightBalance - total;
+
+            nightPayRemainingBar.classList.remove('complete', 'over');
+            if (remaining > 0.01) {
+                nightPayRemaining.textContent = formatKsh(remaining) + ' remaining';
+            } else if (remaining < -0.01) {
+                nightPayRemainingBar.classList.add('over');
+                nightPayRemaining.textContent = formatKsh(Math.abs(remaining)) + ' overpaid';
+            } else {
+                nightPayRemainingBar.classList.add('complete');
+                nightPayRemaining.textContent = 'Fully allocated';
+            }
+
+            const valid = total > 0 && total + 0.01 >= currentNightBalance && total <= currentNightBalance + 0.01;
+            nightPaySubmit.disabled = !valid;
+        }
+
+        function resetNightPaySubmit() {
+            nightPaySubmit.disabled = false;
+            nightPaySubmit.innerHTML = nightPaySubmitDefaultHtml;
+            updateNightPaymentBalance();
+        }
+
+        function openNightPaymentModal(btn) {
+            currentNightInvoiceId = btn.dataset.invoiceId;
+            currentNightVisitId = btn.dataset.visitId;
+            currentNightBalance = parseFloat(btn.dataset.balance) || 0;
+            document.getElementById('nightPayPatientName').textContent = btn.dataset.patient;
+            document.getElementById('nightPayInvoiceLabel').textContent = btn.dataset.invoiceLabel;
+            document.getElementById('nightPayAmountDue').textContent = formatKsh(currentNightBalance);
+            if (nightPayManageLink && currentNightVisitId) {
+                nightPayManageLink.href = `/accounts/manage-invoices/${currentNightVisitId}/`;
+                nightPayManageLink.style.display = 'inline-flex';
+            }
+            nightMpesaInput.value = '0';
+            nightCashInput.value = '0';
+            nightMpesaRef.value = '';
+            resetNightPaySubmit();
+            nightModal.classList.add('active');
+            nightModal.setAttribute('aria-hidden', 'false');
+            updateNightPaymentBalance();
+        }
+
+        function closeNightPaymentModal() {
+            nightModal.classList.remove('active');
+            nightModal.setAttribute('aria-hidden', 'true');
+            currentNightInvoiceId = null;
+            currentNightVisitId = null;
+            resetNightPaySubmit();
+        }
+
+        function updateVisitRowAfterPayment(visitId) {
+            const row = document.querySelector(`.prescription-group[data-visit-id="${visitId}"]`);
+            if (!row) return;
+            const badge = row.querySelector('.invoice-status-badge');
+            const payBtn = row.querySelector('.night-pay-btn');
+            const dispenseBtn = row.querySelector('.dispense-all-btn');
+            if (badge) {
+                badge.textContent = 'Paid';
+                badge.classList.remove('badge-warning');
+                badge.classList.add('badge-success');
+            }
+            if (payBtn) payBtn.remove();
+            if (dispenseBtn) {
+                dispenseBtn.disabled = false;
+                dispenseBtn.removeAttribute('title');
+            }
+        }
+
+        function showNightPaymentToast(message, paymentIds) {
+            if (typeof Swal === 'undefined') return;
+            const receiptHint = paymentIds && paymentIds.length
+                ? ' Receipt(s) available from the manage invoice page.'
+                : '';
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: message,
+                text: receiptHint.trim() || undefined,
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true,
+                customClass: { container: 'night-pharm-swal-toast' },
+            });
+        }
+
+        document.querySelectorAll('.night-pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => openNightPaymentModal(btn));
+        });
+
+        document.getElementById('nightPaymentClose').addEventListener('click', closeNightPaymentModal);
+        nightModal.addEventListener('click', (e) => {
+            if (e.target === nightModal) closeNightPaymentModal();
+        });
+
+        document.querySelectorAll('.night-pay-full-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const otherId = targetId === 'nightMpesaAmount' ? 'nightCashAmount' : 'nightMpesaAmount';
+                const otherVal = parseFloat(document.getElementById(otherId).value) || 0;
+                document.getElementById(targetId).value = Math.max(0, currentNightBalance - otherVal);
+                updateNightPaymentBalance();
+            });
+        });
+
+        nightMpesaInput.addEventListener('input', function() {
+            const mpesa = parseFloat(this.value) || 0;
+            nightCashInput.value = Math.max(0, currentNightBalance - mpesa);
+            updateNightPaymentBalance();
+        });
+
+        nightCashInput.addEventListener('input', function() {
+            const cash = parseFloat(this.value) || 0;
+            nightMpesaInput.value = Math.max(0, currentNightBalance - cash);
+            updateNightPaymentBalance();
+        });
+
+        nightPaySubmit.addEventListener('click', function() {
+            if (!currentNightInvoiceId) return;
+            const visitId = currentNightVisitId;
+            const mpesa = parseFloat(nightMpesaInput.value) || 0;
+            const cash = parseFloat(nightCashInput.value) || 0;
+            const payload = { payments: [] };
+            if (mpesa > 0) {
+                payload.payments.push({
+                    amount: mpesa,
+                    method: 'M-Pesa',
+                    reference: nightMpesaRef.value.trim() || 'Night M-Pesa',
+                });
+            }
+            if (cash > 0) {
+                payload.payments.push({
+                    amount: cash,
+                    method: 'Cash',
+                    reference: 'Night cash',
+                });
+            }
+
+            nightPaySubmit.disabled = true;
+            nightPaySubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            fetch(`/home/pharmacy/night-payment/${currentNightInvoiceId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '{{ csrf_token }}',
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+            })
+            .then(async (response) => {
+                clearTimeout(timeoutId);
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    throw new Error('Invalid server response. Please refresh the page to verify payment status.');
+                }
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Payment failed');
+                }
+                return data;
+            })
+            .then((data) => {
+                closeNightPaymentModal();
+                if (visitId) updateVisitRowAfterPayment(visitId);
+                showNightPaymentToast(data.message || 'Payment recorded. You can dispense now.', data.all_payment_ids);
+            })
+            .catch((err) => {
+                clearTimeout(timeoutId);
+                const msg = err.name === 'AbortError'
+                    ? 'Request timed out. Refresh the page to check if payment was recorded.'
+                    : (err.message || 'Payment failed');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Payment failed', text: msg, confirmButtonColor: '#ef4444' });
+                } else {
+                    alert(msg);
+                }
+                resetNightPaySubmit();
+            });
+        });
+
+        const nightDispenseModal = document.getElementById('nightDispenseModal');
+        const nightDispenseMessage = document.getElementById('nightDispenseMessage');
+        const nightDispenseConfirm = document.getElementById('nightDispenseConfirm');
+        const nightDispenseCancel = document.getElementById('nightDispenseCancel');
+        let pendingDispenseBtn = null;
+
+        function closeNightDispenseModal() {
+            nightDispenseModal.classList.remove('active');
+            nightDispenseModal.setAttribute('aria-hidden', 'true');
+            pendingDispenseBtn = null;
+            nightDispenseConfirm.disabled = false;
+            nightDispenseConfirm.textContent = 'Yes, dispense';
+        }
+
+        function openNightDispenseModal(btn) {
+            pendingDispenseBtn = btn;
+            const patient = btn.dataset.patient;
+            const dept = btn.dataset.dispenseDept || 'Mini Pharmacy';
+            nightDispenseMessage.textContent =
+                `Dispense all pending items for ${patient} from ${dept}?`;
+            nightDispenseModal.classList.add('active');
+            nightDispenseModal.setAttribute('aria-hidden', 'false');
+        }
+
+        nightDispenseCancel.addEventListener('click', closeNightDispenseModal);
+        nightDispenseModal.addEventListener('click', (e) => {
+            if (e.target === nightDispenseModal) closeNightDispenseModal();
+        });
+
+        nightDispenseConfirm.addEventListener('click', function () {
+            const btn = pendingDispenseBtn;
+            if (!btn) return;
+            const visitId = btn.dataset.visitId;
+            const deptName = btn.dataset.dispenseDept || 'Mini Pharmacy';
+
+            closeNightDispenseModal();
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
+
+            fetch(`/home/pharmacy/night-dispense-all/${visitId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken') || '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok || !data.success) {
+                    throw new Error(data.error || 'Dispense failed');
+                }
+                const msg = data.message || `Items dispensed from ${data.department || deptName}.`;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: msg,
+                        showConfirmButton: false,
+                        timer: 2800,
+                        timerProgressBar: true,
+                        customClass: { container: 'night-pharm-swal-toast' },
+                    }).then(() => location.reload());
+                } else {
+                    alert(msg);
+                    location.reload();
+                }
+            })
+            .catch((err) => {
+                const msg = err.message || 'Dispense failed';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Cannot dispense',
+                        text: msg,
+                        confirmButtonText: 'OK',
+                        background: '#1e293b',
+                        color: '#f1f5f9',
+                        confirmButtonColor: '#ef4444',
+                    });
+                } else {
+                    alert(msg);
+                }
+                btn.disabled = false;
+                btn.innerHTML = 'Dispense All';
+            });
+        });
+
         document.querySelectorAll('.dispense-all-btn').forEach(button => {
             button.addEventListener('click', function () {
-                const visitId = this.dataset.visitId;
-                const patient = this.dataset.patient;
-
-                if (confirm(`Dispense all pending items for ${patient} from Mini Pharmacy?`)) {
-                    this.disabled = true;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing';
-
-                    fetch(`/home/pharmacy/night-dispense-all/${visitId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message || 'Items dispensed successfully from Mini Pharmacy.');
-                            location.reload();
-                        } else {
-                            alert('Error: ' + data.error);
-                            this.disabled = false;
-                            this.innerHTML = 'Dispense All';
-                        }
-                    })
-                    .catch(error => {
-                        alert('System error: ' + error);
-                        this.disabled = false;
-                        this.innerHTML = 'Dispense All';
-                    });
-                }
+                if (this.disabled) return;
+                openNightDispenseModal(this);
             });
         });
     });

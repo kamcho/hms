@@ -5,255 +5,823 @@
 
     <style>
     :root {
-        --cf-bg: #f8fafc;
-        --cf-card: #ffffff;
-        --cf-text: #0f172a;
-        --cf-muted: #64748b;
-        --cf-primary: #6366f1;
-        --cf-primary-soft: #eef2ff;
-        --cf-border: rgba(226, 232, 240, 0.8);
-        --cf-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-        --cf-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        --cf-radius: 20px;
-        --font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+        --cf-bg: #f0f2f5;
+        --cf-surface: #ffffff;
+        --cf-text: #2c3e50;
+        --cf-muted: #7f8c8d;
+        --cf-primary: #3498db;
+        --cf-primary-hover: #2980b9;
+        --cf-primary-soft: #e8f4fc;
+        --cf-success: #27ae60;
+        --cf-danger: #e74c3c;
+        --cf-border: #dfe6e9;
+        --cf-border-soft: #ecf0f1;
+        --cf-shadow: 0 1px 3px rgba(44, 62, 80, 0.06);
+        --cf-shadow-lg: 0 2px 8px rgba(44, 62, 80, 0.08);
+        --cf-radius: 6px;
+        --cf-radius-lg: 8px;
+        --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
-    .case-folder-root { 
-        background: var(--cf-bg); 
-        font-family: var(--font-family); 
-        color: var(--cf-text); 
+
+    .case-folder-root {
+        font-family: var(--font-family);
+        color: var(--cf-text);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
+        background: var(--cf-bg);
     }
 
-    /* ── Master layout ───────────────────────────────── */
-    .cf-layout { min-height: 100vh; background: var(--cf-bg); }
-    .cf-main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
-    @media(max-width:768px){ .cf-main { padding: 1rem; } }
+    .cf-layout { min-height: 100vh; }
+    .cf-main { padding: 1.5rem 1.75rem 3rem; max-width: 1480px; margin: 0 auto; }
+    @media (max-width: 768px) { .cf-main { padding: 1rem; } }
 
-    /* Patient Header */
-    .cf-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding: 1rem 0; border-bottom: 1px solid var(--cf-border); }
-    .cf-header-avatar { 
-        width: 64px; height: 64px; border-radius: 18px; 
-        background: linear-gradient(135deg, var(--cf-primary) 0%, #818cf8 100%); 
-        color: #fff; display: flex; align-items: center; justify-content: center; 
-        font-weight: 800; font-size: 1.5rem; flex-shrink: 0;
-        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    .cf-page-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
     }
-    .cf-header-name { font-size: 1.75rem; font-weight: 900; letter-spacing: -0.025em; display: flex; align-items: center; gap: 1rem; }
-    .cf-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-    .cf-badge-inpatient { background: #dcfce7; color: #166534; }
-    .cf-badge-discharged { background: #f1f5f9; color: #475569; }
+    .cf-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: var(--cf-radius);
+        background: var(--cf-surface);
+        border: 1px solid var(--cf-border);
+        color: var(--cf-muted);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .cf-back-link:hover { color: var(--cf-primary); border-color: var(--cf-primary); }
+    .cf-eyebrow {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--cf-muted);
+    }
+    .cf-page-meta { font-size: 0.8125rem; font-weight: 400; color: var(--cf-muted); }
 
-    /* ── Dashboard Grid ────────────────── */
-    .dashboard-grid { 
-        display: grid; 
-        grid-template-columns: 2fr 1fr; 
-        gap: 1.5rem; 
-        margin-bottom: 2rem; 
+    /* Patient hero */
+    .cf-patient-card {
+        background: var(--cf-surface);
+        border-radius: var(--cf-radius-lg);
+        border: 1px solid var(--cf-border-soft);
+        box-shadow: var(--cf-shadow-lg);
+        margin-bottom: 1.25rem;
+        overflow: hidden;
     }
-    @media(max-width:1024px){ .dashboard-grid { grid-template-columns: 1fr; } }
-    
-    .cf-card { 
-        background: #fff; 
-        border-radius: var(--cf-radius); 
-        border: 1px solid var(--cf-border); 
-        box-shadow: var(--cf-shadow); 
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    .cf-patient-card::before {
+        content: '';
+        display: block;
+        height: 3px;
+        background: var(--cf-primary);
+    }
+    .cf-patient-card-inner { padding: 1.5rem 1.75rem 1.25rem; }
+    .cf-patient-top-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+    .cf-patient-identity {
+        display: flex;
+        align-items: center;
+        gap: 1.15rem;
+        flex: 1 1 280px;
+    }
+    .cf-patient-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--cf-radius-lg);
+        background: var(--cf-primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1.125rem;
+        flex-shrink: 0;
+    }
+    .cf-patient-name {
+        font-size: 1.375rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        line-height: 1.25;
+        margin: 0;
+    }
+    .cf-patient-name-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+        margin-bottom: 0.35rem;
+    }
+    .cf-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .cf-status-badge--admitted {
+        background: #eafaf1;
+        color: #1e8449;
+        border: 1px solid #abebc6;
+    }
+    .cf-status-badge--admitted::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--cf-success);
+    }
+    .cf-status-badge--discharged {
+        background: #f4f6f7;
+        color: var(--cf-muted);
+        border: 1px solid var(--cf-border);
+    }
+    .cf-status-badge--other {
+        background: #fdebd0;
+        color: #b7950b;
+        border: 1px solid #f9e79f;
+    }
+    .cf-patient-subtitle {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--cf-muted);
+        margin: 0;
+    }
+    .cf-patient-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+    .cf-meta-cell {
+        flex: 1 1 160px;
+        padding: 0.75rem 1rem;
+        background: var(--cf-primary-soft);
+        border: 1px solid var(--cf-border-soft);
+        border-radius: var(--cf-radius);
+    }
+    .cf-meta-label {
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--cf-muted);
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .cf-meta-label i { font-size: 0.65rem; color: var(--cf-primary); }
+    .cf-meta-value {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--cf-text);
+        line-height: 1.35;
+    }
+    .cf-meta-value--link {
+        cursor: pointer;
+        color: var(--cf-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: color 0.15s;
+    }
+    .cf-meta-value--link:hover { color: var(--cf-primary-hover); }
+    .cf-meta-value--muted { font-weight: 600; color: var(--cf-muted); }
+    .cf-patient-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .cf-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        height: 38px;
+        padding: 0 0.9rem;
+        border-radius: var(--cf-radius);
+        border: 1px solid var(--cf-border);
+        background: var(--cf-surface);
+        color: var(--cf-text);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .cf-action-btn:hover { border-color: var(--cf-primary); color: var(--cf-primary); background: var(--cf-primary-soft); }
+    .cf-action-btn--primary { background: var(--cf-primary); border-color: var(--cf-primary); color: #fff; }
+    .cf-action-btn--primary:hover { background: var(--cf-primary-hover); color: #fff; }
+    .cf-action-btn--danger { color: var(--cf-danger); border-color: #f5b7b1; background: #fff; }
+    .cf-action-btn--danger:hover { background: #fdedec; border-color: var(--cf-danger); }
+    .cf-action-btn-label { font-size: 0.6875rem; font-weight: 700; }
+
+    /* KPI strip */
+    .cf-kpi-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.25rem;
+    }
+    @media (max-width: 900px) { .cf-kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .cf-kpi-strip { grid-template-columns: 1fr; } }
+    .cf-kpi-tile {
+        background: var(--cf-surface);
+        border: 1px solid var(--cf-border-soft);
+        border-radius: var(--cf-radius);
+        padding: 1.1rem 1.25rem;
+        box-shadow: var(--cf-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    .cf-kpi-tile::after {
+        content: '';
+        position: absolute;
+        top: 0; right: 0;
+        width: 64px; height: 64px;
+        border-radius: 0 0 0 100%;
+        opacity: 0.06;
+        background: currentColor;
+    }
+    .cf-kpi-tile--primary { color: var(--cf-primary); }
+    .cf-kpi-tile--secondary { color: var(--cf-text); }
+    .cf-kpi-tile--success { color: var(--cf-success); }
+    .cf-kpi-tile--muted { color: var(--cf-muted); }
+    .cf-kpi-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--cf-muted);
+        margin-bottom: 0.35rem;
+    }
+    .cf-kpi-value {
+        font-size: 1.375rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        line-height: 1.2;
+    }
+    .cf-kpi-hint { font-size: 0.6875rem; font-weight: 600; color: var(--cf-muted); margin-top: 0.25rem; }
+
+    /* Bento dashboard */
+    .cf-bento {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 0.85fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1100px) { .cf-bento { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px) { .cf-bento { grid-template-columns: 1fr; } }
+    .cf-bento .cf-panel--wide { grid-column: span 1; }
+    @media (max-width: 1100px) { .cf-bento .cf-panel--actions { grid-column: 1 / -1; } }
+
+    .cf-panel {
+        background: var(--cf-surface);
+        border-radius: var(--cf-radius);
+        border: 1px solid var(--cf-border-soft);
+        box-shadow: var(--cf-shadow);
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        height: 100%;
     }
-    .cf-card:hover { transform: translateY(-4px); box-shadow: var(--cf-shadow-lg); }
-    .cf-card-head { 
-        padding: 1.25rem 1.5rem; 
-        border-bottom: 1px solid var(--cf-border); 
-        display: flex; align-items: center; justify-content: space-between; 
-        flex-shrink: 0; 
+    .cf-panel-head {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--cf-border-soft);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
     }
-    .cf-card-title { font-size: 0.938rem; font-weight: 700; color: var(--cf-text); display: flex; align-items: center; gap: 0.75rem; }
-    .cf-card-body { padding: 1.5rem; flex: 1; overflow-y: auto; max-height: 400px; }
-    
-    .cf-info-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; }
-    .cf-info-row + .cf-info-row { border-top: 1px solid rgba(0,0,0,0.03); }
-    .cf-info-icon { 
-        width: 36px; height: 36px; border-radius: 10px; 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 0.9rem; flex-shrink: 0; 
+    .cf-panel-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
     }
-    .cf-info-label { font-size: 0.65rem; font-weight: 700; color: var(--cf-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-    .cf-info-value { font-size: 0.938rem; font-weight: 800; color: var(--cf-text); }
+    .cf-panel-title i { color: var(--cf-primary); font-size: 0.875rem; }
+    .cf-panel-body { padding: 1.15rem 1.25rem; flex: 1; }
+    .cf-info-row { display: flex; align-items: flex-start; gap: 0.85rem; padding: 0.65rem 0; }
+    .cf-info-row + .cf-info-row { border-top: 1px solid #f1f5f9; }
+    .cf-info-icon {
+        width: 34px; height: 34px; border-radius: var(--cf-radius);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.8rem; flex-shrink: 0;
+    }
+    .cf-info-label { font-size: 0.75rem; font-weight: 600; color: var(--cf-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
+    .cf-info-value { font-size: 0.875rem; font-weight: 400; color: var(--cf-text); line-height: 1.45; }
 
-    /* Accent card */
-    .cf-accent-card { 
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
-        border: none; color: #fff; 
-        position: relative; overflow: hidden;
+    .cf-ward-panel {
+        background: var(--cf-text);
+        border: none;
+        color: #fff;
     }
-    .cf-accent-card .cf-card-head { border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .cf-accent-card .cf-card-title { color: #fff; }
-
-    /* Stats Ring */
-    .cf-stats-ring { width: 120px; height: 120px; border-radius: 50%; border: 8px solid #eef2ff; display: flex; align-items: center; justify-content: center; position: relative; }
-    .cf-stats-ring::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 8px solid var(--cf-primary); border-right-color: transparent; border-bottom-color: transparent; transform: rotate(45deg); }
-
-    /* Vitals mini-cards */
-    .vitals-dashboard-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
-    .vital-mini { background: #fff; padding: 1.25rem; border-radius: 20px; border: 1px solid var(--cf-border); display: flex; align-items: center; gap: 1rem; transition: all 0.3s; }
-    .vital-mini:hover { border-color: var(--cf-primary); transform: translateY(-2px); box-shadow: var(--cf-shadow); }
-    .vital-mini-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-    .vital-mini-val { font-size: 1.25rem; font-weight: 800; color: var(--cf-text); }
-    .vital-mini-label { font-size: 0.65rem; font-weight: 700; color: var(--cf-muted); text-transform: uppercase; margin-bottom: 0.1rem; }
-
-    /* Clinical Tabs */
-    .modern-card { background: #fff; border-radius: 32px; border: 1px solid var(--cf-border); box-shadow: var(--cf-shadow-lg); overflow: hidden; }
-    .clinical-tab-container { background: #fbfcfe; padding: 1rem 1.5rem; border-bottom: 1px solid var(--cf-border); overflow-x: auto; }
-    .clinical-tabs { display: flex; gap: 0.75rem; }
-    .clinical-tab { 
-        padding: 0.75rem 1.5rem; border-radius: 14px; font-size: 0.813rem; font-weight: 700; 
-        color: var(--cf-muted); transition: all 0.2s; cursor: pointer; border: 1px solid transparent; 
+    .cf-ward-panel .cf-panel-head { border-bottom-color: rgba(255,255,255,0.12); }
+    .cf-ward-panel .cf-panel-title { color: #fff; }
+    .cf-ward-panel .cf-panel-title i { color: var(--cf-primary); }
+    .cf-ward-name { font-size: 1.5rem; font-weight: 600; margin: 0 0 1rem; }
+    .cf-ward-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    .cf-ward-stat {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: var(--cf-radius);
+        padding: 0.85rem;
+        text-align: center;
     }
-    .clinical-tab.active { background: #fff; color: var(--cf-primary); border-color: var(--cf-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .cf-ward-stat-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+    .cf-ward-stat-value { font-size: 1rem; font-weight: 600; margin-top: 0.2rem; }
+
+    .cf-actions-panel .cf-panel-body { display: flex; flex-direction: column; gap: 0.5rem; }
+    .cf-dash-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: var(--cf-radius);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        text-decoration: none;
+        border: 1px solid var(--cf-border);
+        background: #f4f6f7;
+        color: var(--cf-text);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .cf-dash-btn:hover { background: var(--cf-primary-soft); border-color: var(--cf-primary); color: var(--cf-primary); }
+    .cf-dash-btn--danger { background: #fff; border-color: #f5b7b1; color: var(--cf-danger); }
+    .cf-dash-btn--danger:hover { background: var(--cf-danger); border-color: var(--cf-danger); color: #fff; }
+    .cf-metric-big { font-size: 2.25rem; font-weight: 600; color: var(--cf-primary); line-height: 1; }
+    .cf-metric-caption { font-size: 0.75rem; font-weight: 600; color: var(--cf-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 0.35rem; }
+
+    /* Vitals & clinical analytics */
+    .cf-vitals-section {
+        background: var(--cf-surface);
+        border-radius: var(--cf-radius-lg);
+        border: 1px solid var(--cf-border-soft);
+        box-shadow: var(--cf-shadow-lg);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    .cf-vitals-head {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--cf-border);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        background: var(--cf-surface);
+    }
+    .cf-vitals-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        margin: 0;
+    }
+    .cf-vitals-subtitle {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--cf-muted);
+        margin: 0.2rem 0 0;
+    }
+    .cf-vitals-record-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--cf-radius);
+        background: var(--cf-primary);
+        color: #fff;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .cf-vitals-record-btn:hover { background: var(--cf-primary-hover); }
+    .cf-vitals-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+        padding: 1.25rem 1.75rem;
+        border-bottom: 1px solid var(--cf-border);
+        background: #f8fafc;
+    }
+    .cf-vitals-kpi {
+        background: #fff;
+        border: 1px solid var(--cf-border);
+        border-radius: var(--cf-radius-lg);
+        padding: 1rem 1.1rem;
+        transition: border-color 0.15s;
+    }
+    .cf-vitals-kpi:hover { border-color: var(--cf-primary); }
+    .cf-vitals-kpi-label {
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+        margin-bottom: 0.35rem;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .cf-vitals-kpi-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        line-height: 1.2;
+    }
+    .cf-vitals-kpi-unit {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--cf-muted);
+        text-transform: uppercase;
+    }
+    .cf-vitals-kpi-delta {
+        font-size: 0.625rem;
+        font-weight: 700;
+        margin-top: 0.35rem;
+    }
+    .cf-vitals-kpi-delta--up { color: #dc2626; }
+    .cf-vitals-kpi-delta--down { color: #059669; }
+    .cf-vitals-kpi-delta--flat { color: #94a3b8; }
+    .cf-vitals-chart-wrap {
+        padding: 1.5rem 1.75rem 1rem;
+    }
+    .cf-vitals-metric-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .cf-vitals-metric-btn {
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border: 1px solid var(--cf-border);
+        background: #fff;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .cf-vitals-metric-btn.is-active {
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.15);
+    }
+    .cf-vitals-metric-btn[data-metric="pulse"].is-active { background: #e11d48; }
+    .cf-vitals-metric-btn[data-metric="bp"].is-active { background: var(--cf-primary); }
+    .cf-vitals-metric-btn[data-metric="temp"].is-active { background: #ea580c; }
+    .cf-vitals-metric-btn[data-metric="spo2"].is-active { background: #0891b2; }
+    .cf-vitals-metric-btn[data-metric="resp"].is-active { background: #7c3aed; }
+    .cf-vitals-chart-panel {
+        position: relative;
+        min-height: 320px;
+        background: var(--cf-primary-soft);
+        border: 1px solid var(--cf-border-soft);
+        border-radius: var(--cf-radius-lg);
+        padding: 1rem;
+    }
+    .cf-vitals-chart-canvas-wrap {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .cf-vitals-empty {
+        min-height: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+    }
+    .cf-vitals-empty-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--cf-radius-lg);
+        background: var(--cf-primary-soft);
+        color: var(--cf-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .cf-vitals-log {
+        border-top: 1px solid var(--cf-border);
+        padding: 0;
+    }
+    .cf-vitals-log-head {
+        padding: 1rem 1.75rem;
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--cf-border);
+    }
+    .cf-vitals-log-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+    .cf-vitals-log-table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-size: 0.625rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        background: #fff;
+        border-bottom: 1px solid var(--cf-border);
+    }
+    .cf-vitals-log-table td {
+        padding: 0.85rem 1rem;
+        font-weight: 600;
+        color: var(--cf-text);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    }
+    .cf-vitals-log-table tr:hover td { background: #f8fafc; }
+    .cf-vitals-log-table tr:last-child td { border-bottom: none; }
+
+    /* Clinical workspace */
+    .cf-workspace {
+        background: var(--cf-surface);
+        border-radius: var(--cf-radius-lg);
+        border: 1px solid var(--cf-border-soft);
+        box-shadow: var(--cf-shadow-lg);
+        overflow: hidden;
+    }
+    .modern-card { background: var(--cf-surface); border-radius: var(--cf-radius-lg); border: 1px solid var(--cf-border-soft); box-shadow: var(--cf-shadow-lg); overflow: hidden; }
+    .cf-workspace-banner {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--cf-border);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: var(--cf-surface);
+    }
+    .cf-workspace-banner h2 {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--cf-text);
+    }
+    .cf-workspace-banner p { margin: 0.15rem 0 0; font-size: 0.8125rem; font-weight: 400; color: var(--cf-muted); }
+    .clinical-tab-container {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--cf-border);
+        overflow-x: auto;
+        background: #f4f6f7;
+    }
+    .clinical-tabs {
+        display: inline-flex;
+        gap: 0.25rem;
+        padding: 0.2rem;
+        background: var(--cf-border);
+        border-radius: var(--cf-radius);
+        min-width: min-content;
+    }
+    .clinical-tab {
+        padding: 0.45rem 0.85rem;
+        border-radius: 4px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--cf-muted);
+        transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        white-space: nowrap;
+    }
+    .clinical-tab:hover { color: var(--cf-text); }
+    .clinical-tab.active {
+        background: var(--cf-surface);
+        color: var(--cf-primary);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+    .modern-card-body, .cf-workspace-body { padding: 1.5rem; }
 
     /* Bottom Activity Log */
-    .activity-section { margin-top: 3rem; border-top: 2px solid #f1f5f9; padding-top: 3rem; margin-bottom: 3rem; }
-    .activity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+    .activity-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--cf-border); margin-bottom: 2rem; }
+    .activity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Align in-tab Tailwind rounding with dashboard tokens */
+    .case-folder-root .rounded-xl,
+    .case-folder-root .rounded-2xl,
+    .case-folder-root .rounded-\[24px\],
+    .case-folder-root .rounded-\[32px\] {
+        border-radius: var(--cf-radius-lg) !important;
+    }
+    .case-folder-root .rounded-lg { border-radius: var(--cf-radius) !important; }
+    .case-folder-root .bg-indigo-600 { background-color: var(--cf-primary) !important; }
+    .case-folder-root .hover\:bg-indigo-700:hover { background-color: var(--cf-primary-hover) !important; }
+    .case-folder-root .text-indigo-600 { color: var(--cf-primary) !important; }
+    .case-folder-root .border-indigo-600 { border-color: var(--cf-primary) !important; }
+    .case-folder-root .bg-indigo-50 { background-color: var(--cf-primary-soft) !important; }
 
     @media print { .cf-sidebar, .no-print { display: none !important; } .cf-layout { display: block; } }
     </style>
 
 <div class="case-folder-root">
     <div class="cf-layout">
-        <!-- ═══ MAIN CONTENT ═══ -->
         <main class="cf-main">
-            <!-- Patient Header Bar -->
-            <div class="cf-header">
-                <div class="cf-header-avatar">
-                   {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
+            <header class="cf-page-header no-print">
+                <a href="{% url 'inpatient:dashboard' %}" class="cf-back-link">
+                    <i class="fas fa-arrow-left"></i> Ward dashboard
+                </a>
+                <div>
+                    <span class="cf-eyebrow">Inpatient case folder</span>
+                    <span class="cf-page-meta">Admission #{{ admission.id }} · {{ admission.patient.full_name }}</span>
                 </div>
-                <div class="cf-header-info">
-                    <div class="cf-header-name">
-                        {{ admission.patient.full_name }}
-                        <span class="cf-badge {% if admission.status == 'Discharged' %}cf-badge-discharged{% else %}cf-badge-inpatient{% endif %}">{{ admission.status|default:"Inpatient" }}</span>
+            </header>
+
+            <section class="cf-patient-card" aria-label="Patient details">
+                <div class="cf-patient-card-inner">
+                    <div class="cf-patient-top-row">
+                        <div class="cf-patient-identity">
+                            <div class="cf-patient-avatar" aria-hidden="true">
+                                {{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}
+                            </div>
+                            <div>
+                                <div class="cf-patient-name-row">
+                                    <h1 class="cf-patient-name">{{ admission.patient.full_name }}</h1>
+                                    {% if admission.status == 'Admitted' %}
+                                    <span class="cf-status-badge cf-status-badge--admitted">{{ admission.status }}</span>
+                                    {% elif admission.status == 'Discharged' %}
+                                    <span class="cf-status-badge cf-status-badge--discharged">{{ admission.status }}</span>
+                                    {% else %}
+                                    <span class="cf-status-badge cf-status-badge--other">{{ admission.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="cf-patient-subtitle">
+                                    {{ admission.patient.get_gender_display }} · {{ admission.patient.age }} yrs
+                                    {% if admission.bed %} · {{ admission.bed.ward.name }}, Bed {{ admission.bed.bed_number }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="cf-patient-actions no-print">
+                            <a href="{% url 'home:patient_detail' pk=admission.patient.pk %}" class="cf-action-btn cf-action-btn--primary">
+                                <i class="fas fa-folder-open"></i><span class="cf-action-btn-label">Record</span>
+                            </a>
+                            {% if admission.patient.phone %}
+                            <a href="tel:{{ admission.patient.phone }}" class="cf-action-btn"><i class="fas fa-phone"></i></a>
+                            {% endif %}
+                            <button type="button" class="cf-action-btn" onclick="window.print()"><i class="fas fa-print"></i></button>
+                            {% if admission.status == 'Admitted' %}
+                            <button type="button" class="cf-action-btn" onclick="showModal('transferModal')"><i class="fas fa-exchange-alt"></i></button>
+                            <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="cf-action-btn cf-action-btn--danger"><i class="fas fa-door-open"></i><span class="cf-action-btn-label">Discharge</span></a>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="cf-header-sub">
-                        <span class="flex items-center gap-1.5 cursor-pointer hover:text-indigo-600 transition-colors" onclick="showModal('editAdmissionDateModal')" title="Click to backdate admission date"><i class="fas fa-calendar-alt text-indigo-500"></i> Admitted: {{ admission.admitted_at|date:"d M Y H:i" }} <i class="fas fa-edit text-xs ml-1 text-slate-400"></i></span>
-                        <span class="text-slate-200">|</span>
-                        <span class="flex items-center gap-1.5"><i class="fas fa-fingerprint text-indigo-500"></i> PID: {{ admission.patient.patient_id }}</span>
+                    <div class="cf-patient-meta">
+                        <div class="cf-meta-cell">
+                            <div class="cf-meta-label"><i class="fas fa-calendar-check"></i> Admitted</div>
+                            <div class="cf-meta-value cf-meta-value--link" onclick="showModal('editAdmissionDateModal')" role="button" tabindex="0">
+                                {{ admission.admitted_at|date:"d M Y, H:i" }} <i class="fas fa-pen text-[10px] text-slate-400"></i>
+                            </div>
+                        </div>
+                        <div class="cf-meta-cell">
+                            <div class="cf-meta-label"><i class="fas fa-hashtag"></i> Hospital ID</div>
+                            <div class="cf-meta-value">#{{ admission.patient.id }}</div>
+                        </div>
+                        <div class="cf-meta-cell">
+                            <div class="cf-meta-label"><i class="fas fa-id-card"></i> National ID</div>
+                            <div class="cf-meta-value {% if not admission.patient.id_number %}cf-meta-value--muted{% endif %}">{{ admission.patient.id_number|default:"Not recorded" }}</div>
+                        </div>
+                        <div class="cf-meta-cell">
+                            <div class="cf-meta-label"><i class="fas fa-phone"></i> Contact</div>
+                            <div class="cf-meta-value {% if not admission.patient.phone %}cf-meta-value--muted{% endif %}">
+                                {% if admission.patient.phone %}<a href="tel:{{ admission.patient.phone }}" style="color:var(--cf-primary)">{{ admission.patient.phone }}</a>{% else %}Not recorded{% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="cf-header-actions no-print">
-                    <a href="{% url 'home:patient_detail' pk=admission.patient.pk %}" class="cf-icon-btn" title="Patient Record"><i class="fas fa-id-card"></i></a>
-                    {% if admission.patient.phone %}<a href="tel:{{ admission.patient.phone }}" class="cf-icon-btn" title="Call"><i class="fas fa-phone"></i></a>{% endif %}
-                    <button class="cf-icon-btn" onclick="window.print()" title="Print"><i class="fas fa-print"></i></button>
-                    {% if admission.status == 'Admitted' %}
-                    <button class="cf-icon-btn" onclick="showModal('transferModal')" title="Transfer"><i class="fas fa-exchange-alt"></i></button>
-                    <button class="cf-icon-btn group" onclick="showModal('morgueModal')" title="Move to Morgue" style="border-color:#fca5a5;color:#ef4444;"><i class="fas fa-skull-crossbones"></i></button>
-                    <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="cf-icon-btn group discharge-btn" title="Discharge" style="border-color:#fca5a5;color:#ef4444;"><i class="fas fa-sign-out-alt"></i></a>
-                    {% endif %}
+            </section>
+
+            <div class="cf-kpi-strip">
+                <div class="cf-kpi-tile cf-kpi-tile--primary">
+                    <div class="cf-kpi-label">Length of stay</div>
+                    <div class="cf-kpi-value">{{ days_admitted }}<span style="font-size:0.9rem;font-weight:700;color:#94a3b8"> d</span></div>
+                    <div class="cf-kpi-hint">Since {{ admission.admitted_at|date:"d M Y" }}</div>
+                </div>
+                <div class="cf-kpi-tile cf-kpi-tile--secondary">
+                    <div class="cf-kpi-label">Ward / bed</div>
+                    <div class="cf-kpi-value" style="font-size:1.1rem">{% if admission.bed %}{{ admission.bed.ward.name }}{% else %}Waitlist{% endif %}</div>
+                    <div class="cf-kpi-hint">{% if admission.bed %}Bed {{ admission.bed.bed_number }}{% else %}Not assigned{% endif %}</div>
+                </div>
+                <div class="cf-kpi-tile cf-kpi-tile--success">
+                    <div class="cf-kpi-label">Vitals logged</div>
+                    <div class="cf-kpi-value">{{ vitals_count }}</div>
+                    <div class="cf-kpi-hint">{% if vitals_count >= 2 %}Trend chart available{% else %}Record 2+ for trends{% endif %}</div>
+                </div>
+                <div class="cf-kpi-tile cf-kpi-tile--muted">
+                    <div class="cf-kpi-label">Admission status</div>
+                    <div class="cf-kpi-value" style="font-size:1rem">{{ admission.status }}</div>
+                    <div class="cf-kpi-hint">{% if admission.visit %}{{ admission.visit.get_visit_type_display }}{% else %}Inpatient{% endif %}</div>
                 </div>
             </div>
 
-            <!-- ══ Dashboard Layout ══ -->
-            <div class="dashboard-grid">
-                <!-- Left: Patient Background & Vitals -->
-                <div class="space-y-6">
-                    <!-- Top Row: Profile + Stats -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                         <!-- Profile Block -->
-                        <div class="cf-card">
-                            <div class="cf-card-head"><span class="cf-card-title"><i class="fas fa-user-circle text-indigo-500"></i> Clinical Profile</span></div>
-                            <div class="cf-card-body">
-                                <div class="cf-info-row">
-                                    <div class="cf-info-icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-venus-mars"></i></div>
-                                    <div><div class="cf-info-label">Gender / Age</div><div class="cf-info-value">{{ admission.patient.get_gender_display }} / {{ admission.patient.age }} yrs</div></div>
-                                </div>
-                                <div class="cf-info-row">
-                                    <div class="cf-info-icon" style="background:#f0f9ff;color:#0ea5e9"><i class="fas fa-id-badge"></i></div>
-                                    <div><div class="cf-info-label">Patient ID</div><div class="cf-info-value">#{{ admission.patient.patient_id }}</div></div>
-                                </div>
-                                <div class="cf-info-row">
-                                    <div class="cf-info-icon" style="background:#fdf2f8;color:#db2777"><i class="fas fa-map-marker-alt"></i></div>
-                                    <div><div class="cf-info-label">Residential Area</div><div class="cf-info-value">{{ admission.patient.location|default:"Not specified" }}</div></div>
-                                </div>
-                            </div>
+            <div class="cf-bento">
+                <article class="cf-panel cf-panel--wide">
+                    <div class="cf-panel-head">
+                        <h3 class="cf-panel-title"><i class="fas fa-circle-info"></i> Clinical context</h3>
+                    </div>
+                    <div class="cf-panel-body">
+                        <div class="cf-info-row">
+                            <div class="cf-info-icon" style="background:#fdf2f8;color:#db2777"><i class="fas fa-home"></i></div>
+                            <div><div class="cf-info-label">Residence</div><div class="cf-info-value">{{ admission.patient.location|default:"Not specified" }}</div></div>
                         </div>
+                        {% if emergency_contact %}
+                        <div class="cf-info-row">
+                            <div class="cf-info-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-user-shield"></i></div>
+                            <div><div class="cf-info-label">Emergency contact</div><div class="cf-info-value">{{ emergency_contact.name }}{% if emergency_contact.phone %} · {{ emergency_contact.phone }}{% endif %}</div></div>
+                        </div>
+                        {% endif %}
+                        <div class="cf-info-row">
+                            <div class="cf-info-icon" style="background:#eef2ff;color:#4f46e5"><i class="fas fa-stethoscope"></i></div>
+                            <div><div class="cf-info-label">Provisional diagnosis</div><div class="cf-info-value">{{ admission.provisional_diagnosis|default:"—" }}</div></div>
+                        </div>
+                    </div>
+                </article>
 
-                        <!-- Ward Block -->
-                        <div class="cf-card cf-accent-card">
-                            <div class="cf-card-head" style="border:none;"><span class="cf-card-title text-white"><i class="fas fa-bed"></i> Current Allocation</span></div>
-                            <div class="cf-card-body flex flex-col justify-center text-center">
-                                <div class="text-[0.7rem] font-bold uppercase tracking-widest opacity-70 mb-2">Ward Floor</div>
-                                <div class="text-2xl font-black mb-6">{% if admission.bed %}{{ admission.bed.ward.name }}{% else %}Waitlist{% endif %}</div>
-                                <div class="flex items-center gap-4">
-                                    <div class="flex-1 bg-white/10 rounded-xl py-3 border border-white/5">
-                                        <div class="text-[0.6rem] font-bold uppercase opacity-60">Bed</div>
-                                        <div class="text-lg font-black mt-1">{% if admission.bed %}#{{ admission.bed.bed_number }}{% else %}—{% endif %}</div>
-                                    </div>
-                                    <div class="flex-1 bg-white/10 rounded-xl py-3 border border-white/5">
-                                        <div class="text-[0.6rem] font-bold uppercase opacity-60">Status</div>
-                                        <div class="text-[0.7rem] font-black mt-1">RESERVED</div>
-                                    </div>
-                                </div>
+                <article class="cf-panel cf-ward-panel">
+                    <div class="cf-panel-head">
+                        <h3 class="cf-panel-title"><i class="fas fa-bed"></i> Current allocation</h3>
+                    </div>
+                    <div class="cf-panel-body">
+                        <p class="cf-ward-name">{% if admission.bed %}{{ admission.bed.ward.name }}{% else %}Awaiting bed{% endif %}</p>
+                        <div class="cf-ward-stats">
+                            <div class="cf-ward-stat">
+                                <div class="cf-ward-stat-label">Bed</div>
+                                <div class="cf-ward-stat-value">{% if admission.bed %}{{ admission.bed.bed_number }}{% else %}—{% endif %}</div>
+                            </div>
+                            <div class="cf-ward-stat">
+                                <div class="cf-ward-stat-label">Status</div>
+                                <div class="cf-ward-stat-value">{{ admission.status }}</div>
                             </div>
                         </div>
                     </div>
+                </article>
 
-                    <!-- Vitals Dashboard Mini-Row -->
-                    <div class="vitals-dashboard-row">
-                        <div class="vital-mini">
-                            <div class="vital-mini-icon" style="background:#fff1f2; color:#e11d48;"><i class="fas fa-heartbeat"></i></div>
-                            <div>
-                                <div class="vital-mini-label">Pulse Rate</div>
-                                <div class="vital-mini-val">{{ latest_vitals.pulse_rate|default:"--" }} <span class="text-[0.6rem] text-slate-400 font-bold uppercase">bpm</span></div>
-                            </div>
-                        </div>
-                        <div class="vital-mini">
-                            <div class="vital-mini-icon" style="background:#eff6ff; color:#2563eb;"><i class="fas fa-gauge-high"></i></div>
-                            <div>
-                                <div class="vital-mini-label">Blood Pressure</div>
-                                <div class="vital-mini-val text-lg">{{ latest_vitals.systolic_bp|default:"-" }}/{{ latest_vitals.diastolic_bp|default:"-" }}</div>
-                            </div>
-                        </div>
-                        <div class="vital-mini group cursor-pointer" onclick="showModal('vitalsModal')">
-                            <div class="vital-mini-icon group-hover:bg-indigo-600 group-hover:text-white transition-colors" style="background:#f8fafc; color:#cbd5e1; border:1px dashed #e2e8f0;"><i class="fas fa-plus"></i></div>
-                            <div class="text-[0.6rem] font-bold uppercase text-slate-400 group-hover:text-indigo-600">Update Vitals</div>
-                        </div>
+                <article class="cf-panel cf-panel--actions cf-actions-panel no-print">
+                    <div class="cf-panel-head">
+                        <h3 class="cf-panel-title"><i class="fas fa-bolt"></i> Quick actions</h3>
                     </div>
-                </div>
-
-                <!-- Right: Admission Stats Ring -->
-                <div class="cf-card">
-                    <div class="cf-card-head"><span class="cf-card-title"><i class="fas fa-chart-line text-indigo-500"></i> Admission Metrics</span></div>
-                    <div class="cf-card-body flex flex-col items-center justify-center py-8">
-                        <div class="cf-stats-ring">
-                            <div class="flex flex-col items-center">
-                                <span class="cf-stats-number text-4xl font-black text-indigo-600">{{ days_admitted }}</span>
-                                <span class="cf-stats-label text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">Days Logged</span>
-                            </div>
-                        </div>
-                        <div class="mt-8 text-center">
-                            <div class="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Admitted On</div>
-                            <div class="text-sm font-black text-slate-700">{{ admission.admitted_at|date:"d M Y" }}</div>
-                        </div>
+                    <div class="cf-panel-body">
+                        <button type="button" class="cf-dash-btn" onclick="showModal('vitalsModal')"><i class="fas fa-heart-pulse"></i> Record vitals</button>
+                        <button type="button" class="cf-dash-btn" onclick="showClinicalTab('notes')"><i class="fas fa-notes-medical"></i> Add note</button>
                         {% if admission.status == 'Admitted' %}
-                        <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="mt-8 w-full py-4 bg-slate-50 text-slate-600 rounded-2xl text-[0.7rem] font-bold uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-slate-100 flex items-center justify-center gap-2 mb-2">
-                           <i class="fas fa-sign-out-alt"></i> Discharge Inpatient
-                        </a>
-                        <button type="button" onclick="showModal('morgueModal')" class="w-full py-4 bg-rose-50 text-rose-600 rounded-2xl text-[0.7rem] font-bold uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100 flex items-center justify-center gap-2">
-                            <i class="fas fa-skull-crossbones"></i> Move to Morgue
-                         </button>
+                        <button type="button" class="cf-dash-btn" onclick="showModal('transferModal')"><i class="fas fa-exchange-alt"></i> Transfer</button>
+                        <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="cf-dash-btn cf-dash-btn--danger"><i class="fas fa-door-open"></i> Discharge</a>
+                        <button type="button" class="cf-dash-btn cf-dash-btn--danger" onclick="showModal('morgueModal')"><i class="fas fa-skull"></i> Morgue</button>
                         {% endif %}
                     </div>
-                </div>
+                </article>
             </div>
 
-            <!-- Tabbed Interface Section -->
-            <div class="modern-card">
+            <div class="modern-card cf-workspace">
+                <div class="cf-workspace-banner">
+                    <div>
+                        <h2>Clinical workspace</h2>
+                        <p>Notes, treatment, billing, diagnostics, and activity timeline</p>
+                    </div>
+                </div>
                 <div class="clinical-tab-container no-scrollbar">
                     <div class="clinical-tabs">
                         <button onclick="showClinicalTab('notes')" id="tab-btn-notes" class="clinical-tab active">Notes</button>
@@ -828,49 +1396,117 @@
             </div> <!-- End modern-card-body -->
         </div> <!-- End modern-card -->
 
-            <!-- Full Width Clinical Trends Section (Moved from Header) -->
-            <div class="w-full">
-                <div class="bg-white rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between">
-                        <div>
-                            <h3 class="text-xl font-bold text-slate-700 tracking-tight">Vitals Trending & Clinical Analytics</h3>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Multi-parameter longitudinal data visualization</p>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <div class="flex items-center gap-6 px-6 py-2 bg-slate-50 rounded-2xl border border-slate-100">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-rose-500"></div>
-                                    <span class="text-[9px] font-bold text-slate-600 uppercase">Pulse Rate</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                    <span class="text-[9px] font-bold text-slate-600 uppercase">Systolic BP</span>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Vitals Trending & Clinical Analytics -->
+            <section class="cf-vitals-section" aria-label="Vitals trending and clinical analytics">
+                <div class="cf-vitals-head">
+                    <div>
+                        <h2 class="cf-vitals-title">Vitals trending &amp; clinical analytics</h2>
+                        <p class="cf-vitals-subtitle">
+                            {{ vitals_count }} reading{{ vitals_count|pluralize }} this admission
+                            {% if vitals_count >= 2 %} · longitudinal chart active{% endif %}
+                        </p>
                     </div>
-                    <div class="p-10">
-                        <div class="bg-indigo-50 rounded-[32px] p-8 relative overflow-hidden shadow-lg shadow-indigo-500/10 min-h-[400px] flex flex-col items-center justify-center">
-                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent opacity-50"></div>
-                            
-                            <div id="vitalsChartContainer" class="w-full h-full relative" style="opacity: 0.9; display: none;">
-                                <canvas id="vitalsChart" style="max-height: 350px;"></canvas>
-                            </div>
+                    <button type="button" class="cf-vitals-record-btn no-print" onclick="showModal('vitalsModal')">
+                        <i class="fas fa-plus"></i> Record vitals
+                    </button>
+                </div>
 
-                            <!-- Empty State Placeholder -->
-                            <div id="vitalsEmptyState" class="relative z-10 flex flex-col items-center justify-center text-center p-12">
-                                <div class="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center text-slate-500 mb-6 shadow-inner">
-                                    <i class="fas fa-chart-line text-3xl"></i>
-                                </div>
-                                <h4 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Insufficient Data for Trending</h4>
-                                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed max-w-xs mx-auto">
-                                    Please record at least two sets of vitals to generate a longitudinal progress graph.
-                                </p>
-                            </div>
+                <div class="cf-vitals-kpi-grid">
+                    {% if not latest_vitals %}
+                    <div class="col-span-full py-4 text-center text-sm font-bold text-slate-500">No vitals recorded yet — use <strong>Record vitals</strong> above.</div>
+                    {% endif %}
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-temperature-high" style="color:#ea580c"></i> Temperature</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals and latest_vitals.temperature %}{{ latest_vitals.temperature }}{% else %}—{% endif %}<span class="cf-vitals-kpi-unit"> °C</span></div>
+                        {% if vital_deltas.temp is not None %}<div class="cf-vitals-kpi-delta {% if vital_deltas.temp > 0 %}cf-vitals-kpi-delta--up{% elif vital_deltas.temp < 0 %}cf-vitals-kpi-delta--down{% else %}cf-vitals-kpi-delta--flat{% endif %}">{% if vital_deltas.temp > 0 %}+{% endif %}{{ vital_deltas.temp }} vs prior</div>{% endif %}
+                    </div>
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-heartbeat" style="color:#e11d48"></i> Pulse</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals and latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }}{% else %}—{% endif %}<span class="cf-vitals-kpi-unit"> bpm</span></div>
+                        {% if vital_deltas.pulse is not None %}<div class="cf-vitals-kpi-delta {% if vital_deltas.pulse > 0 %}cf-vitals-kpi-delta--up{% elif vital_deltas.pulse < 0 %}cf-vitals-kpi-delta--down{% else %}cf-vitals-kpi-delta--flat{% endif %}">{% if vital_deltas.pulse > 0 %}+{% endif %}{{ vital_deltas.pulse }} vs prior</div>{% endif %}
+                    </div>
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-gauge-high" style="color:#4f46e5"></i> Blood pressure</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals %}{% if latest_vitals.systolic_bp or latest_vitals.diastolic_bp %}{{ latest_vitals.systolic_bp|default:"—" }}/{{ latest_vitals.diastolic_bp|default:"—" }}{% else %}—{% endif %}{% else %}—{% endif %}</div>
+                        {% if vital_deltas.systolic is not None %}<div class="cf-vitals-kpi-delta cf-vitals-kpi-delta--flat">Sys {% if vital_deltas.systolic > 0 %}+{% endif %}{{ vital_deltas.systolic }}</div>{% endif %}
+                    </div>
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-lungs" style="color:#0891b2"></i> SpO₂</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals and latest_vitals.spo2 %}{{ latest_vitals.spo2 }}{% else %}—{% endif %}<span class="cf-vitals-kpi-unit"> %</span></div>
+                        {% if vital_deltas.spo2 is not None %}<div class="cf-vitals-kpi-delta {% if vital_deltas.spo2 < 0 %}cf-vitals-kpi-delta--up{% elif vital_deltas.spo2 > 0 %}cf-vitals-kpi-delta--down{% else %}cf-vitals-kpi-delta--flat{% endif %}">{% if vital_deltas.spo2 > 0 %}+{% endif %}{{ vital_deltas.spo2 }} vs prior</div>{% endif %}
+                    </div>
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-wind" style="color:#7c3aed"></i> Resp. rate</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals and latest_vitals.respiratory_rate %}{{ latest_vitals.respiratory_rate }}{% else %}—{% endif %}<span class="cf-vitals-kpi-unit"> /min</span></div>
+                        {% if vital_deltas.respiratory is not None %}<div class="cf-vitals-kpi-delta {% if vital_deltas.respiratory > 0 %}cf-vitals-kpi-delta--up{% elif vital_deltas.respiratory < 0 %}cf-vitals-kpi-delta--down{% else %}cf-vitals-kpi-delta--flat{% endif %}">{% if vital_deltas.respiratory > 0 %}+{% endif %}{{ vital_deltas.respiratory }} vs prior</div>{% endif %}
+                    </div>
+                    <div class="cf-vitals-kpi">
+                        <div class="cf-vitals-kpi-label"><i class="fas fa-weight" style="color:#64748b"></i> Weight</div>
+                        <div class="cf-vitals-kpi-value">{% if latest_vitals and latest_vitals.weight %}{{ latest_vitals.weight }}{% else %}—{% endif %}<span class="cf-vitals-kpi-unit"> kg</span></div>
+                    </div>
+                </div>
+
+                <div class="cf-vitals-chart-wrap">
+                    <div class="cf-vitals-metric-toggles no-print" id="vitalsMetricToggles" role="group" aria-label="Chart metrics">
+                        <button type="button" class="cf-vitals-metric-btn is-active" data-metric="pulse" data-active="1">Pulse</button>
+                        <button type="button" class="cf-vitals-metric-btn is-active" data-metric="bp" data-active="1">Blood pressure</button>
+                        <button type="button" class="cf-vitals-metric-btn" data-metric="temp">Temperature</button>
+                        <button type="button" class="cf-vitals-metric-btn" data-metric="spo2">SpO₂</button>
+                        <button type="button" class="cf-vitals-metric-btn" data-metric="resp">Resp. rate</button>
+                    </div>
+                    <div class="cf-vitals-chart-panel">
+                        <div id="vitalsChartContainer" class="cf-vitals-chart-canvas-wrap" style="display: none;">
+                            <canvas id="vitalsChart"></canvas>
+                        </div>
+                        <div id="vitalsEmptyState" class="cf-vitals-empty">
+                            <div class="cf-vitals-empty-icon"><i class="fas fa-chart-line"></i></div>
+                            <h3 class="text-base font-black text-slate-800 mb-2">Not enough data for a trend chart</h3>
+                            <p class="text-sm font-semibold text-slate-500 max-w-sm mb-4">
+                                Record at least two vitals entries during this admission to plot changes over time.
+                            </p>
+                            <button type="button" class="cf-vitals-record-btn no-print" onclick="showModal('vitalsModal')">
+                                <i class="fas fa-plus"></i> Record first vitals
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="cf-vitals-log">
+                    <div class="cf-vitals-log-head">Recent vitals log</div>
+                    {% if vitals %}
+                    <div class="overflow-x-auto">
+                        <table class="cf-vitals-log-table">
+                            <thead>
+                                <tr>
+                                    <th>Recorded</th>
+                                    <th>Temp</th>
+                                    <th>Pulse</th>
+                                    <th>BP</th>
+                                    <th>SpO₂</th>
+                                    <th>RR</th>
+                                    <th>By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in vitals %}
+                                <tr>
+                                    <td>{{ v.recorded_at|date:"d M Y, H:i" }}</td>
+                                    <td>{% if v.temperature %}{{ v.temperature }}°C{% else %}—{% endif %}</td>
+                                    <td>{% if v.pulse_rate %}{{ v.pulse_rate }}{% else %}—{% endif %}</td>
+                                    <td>{{ v.systolic_bp|default:"—" }}/{{ v.diastolic_bp|default:"—" }}</td>
+                                    <td>{% if v.spo2 %}{{ v.spo2 }}%{% else %}—{% endif %}</td>
+                                    <td>{% if v.respiratory_rate %}{{ v.respiratory_rate }}{% else %}—{% endif %}</td>
+                                    <td class="text-slate-500 text-xs">{% if v.recorded_by %}{{ v.recorded_by.get_full_name|default:v.recorded_by.username }}{% else %}—{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-8 text-center text-sm font-bold text-slate-400">No vitals recorded for this admission yet.</div>
+                    {% endif %}
+                </div>
+            </section>
         </main> <!-- end cf-main -->
     </div> <!-- end cf-layout -->
 </div> <!-- end case-folder-root -->
@@ -1306,23 +1942,202 @@
         const vitalsData = getSafeJSON('vitals-data');
         const medMetadata = getSafeJSON('med-metadata') || {};
 
-        // Vitals Charts
-        const ctx = document.getElementById('vitalsChart');
-        if (ctx && vitalsData && vitalsData.times && vitalsData.times.length >= 2) {
-            document.getElementById('vitalsChartContainer').style.display = 'block';
-            document.getElementById('vitalsEmptyState').style.display = 'none';
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: vitalsData.times,
-                    datasets: [
-                        { label: 'Pulse', data: vitalsData.pulse, borderColor: '#ef4444', tension: 0.4 },
-                        { label: 'Systolic', data: vitalsData.systolic, borderColor: '#6366f1', tension: 0.4 }
-                    ]
+        // Vitals trending chart
+        (function initVitalsChart() {
+            const ctx = document.getElementById('vitalsChart');
+            const container = document.getElementById('vitalsChartContainer');
+            const emptyState = document.getElementById('vitalsEmptyState');
+            const toggleRoot = document.getElementById('vitalsMetricToggles');
+            if (!ctx || !vitalsData || typeof Chart === 'undefined') return;
+
+            const labels = vitalsData.labels || vitalsData.times || [];
+            if (labels.length < 2) return;
+
+            container.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+
+            const metricDefs = {
+                pulse: {
+                    datasets: [{
+                        label: 'Pulse (bpm)',
+                        data: vitalsData.pulse,
+                        borderColor: '#e11d48',
+                        backgroundColor: 'rgba(225, 29, 72, 0.08)',
+                        yAxisID: 'y',
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }],
                 },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
+                bp: {
+                    datasets: [
+                        {
+                            label: 'Systolic',
+                            data: vitalsData.systolic,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.08)',
+                            yAxisID: 'y',
+                            tension: 0.35,
+                            pointRadius: 3,
+                        },
+                        {
+                            label: 'Diastolic',
+                            data: vitalsData.diastolic,
+                            borderColor: '#818cf8',
+                            borderDash: [6, 4],
+                            yAxisID: 'y',
+                            tension: 0.35,
+                            pointRadius: 3,
+                        },
+                    ],
+                },
+                temp: {
+                    datasets: [{
+                        label: 'Temp (°C)',
+                        data: vitalsData.temp,
+                        borderColor: '#ea580c',
+                        backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                        yAxisID: 'yTemp',
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 4,
+                    }],
+                },
+                spo2: {
+                    datasets: [{
+                        label: 'SpO₂ (%)',
+                        data: vitalsData.spo2,
+                        borderColor: '#0891b2',
+                        backgroundColor: 'rgba(8, 145, 178, 0.08)',
+                        yAxisID: 'ySpo2',
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 4,
+                    }],
+                },
+                resp: {
+                    datasets: [{
+                        label: 'Resp. rate (/min)',
+                        data: vitalsData.respiratory,
+                        borderColor: '#7c3aed',
+                        backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                        yAxisID: 'y',
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 4,
+                    }],
+                },
+            };
+
+            function activeMetrics() {
+                if (!toggleRoot) return ['pulse', 'bp'];
+                return Array.from(toggleRoot.querySelectorAll('.cf-vitals-metric-btn.is-active'))
+                    .map(btn => btn.dataset.metric)
+                    .filter(Boolean);
+            }
+
+            function buildDatasets() {
+                const active = activeMetrics();
+                const datasets = [];
+                let useTempAxis = false;
+                let useSpo2Axis = false;
+                active.forEach(key => {
+                    const def = metricDefs[key];
+                    if (!def) return;
+                    datasets.push(...def.datasets);
+                    if (key === 'temp') useTempAxis = true;
+                    if (key === 'spo2') useSpo2Axis = true;
+                });
+                return { datasets, useTempAxis, useSpo2Axis };
+            }
+
+            let vitalsChart = null;
+
+            function renderChart() {
+                const { datasets, useTempAxis, useSpo2Axis } = buildDatasets();
+                const scales = {
+                    x: {
+                        grid: { color: 'rgba(148, 163, 184, 0.2)' },
+                        ticks: { font: { size: 10, weight: '600' }, color: '#64748b', maxRotation: 45 },
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: 'rgba(148, 163, 184, 0.15)' },
+                        ticks: { font: { size: 10 }, color: '#64748b' },
+                        title: { display: true, text: 'Pulse / BP / RR', font: { size: 10, weight: '700' }, color: '#94a3b8' },
+                    },
+                };
+                if (useTempAxis) {
+                    scales.yTemp = {
+                        type: 'linear',
+                        position: 'right',
+                        min: 35,
+                        max: 42,
+                        grid: { drawOnChartArea: false },
+                        ticks: { font: { size: 10 }, color: '#ea580c' },
+                        title: { display: true, text: '°C', color: '#ea580c', font: { size: 10, weight: '700' } },
+                    };
+                }
+                if (useSpo2Axis) {
+                    scales.ySpo2 = {
+                        type: 'linear',
+                        position: 'right',
+                        min: 80,
+                        max: 100,
+                        grid: { drawOnChartArea: false },
+                        ticks: { font: { size: 10 }, color: '#0891b2' },
+                        title: { display: true, text: 'SpO₂ %', color: '#0891b2', font: { size: 10, weight: '700' } },
+                    };
+                }
+
+                const config = {
+                    type: 'line',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 16 },
+                            },
+                            tooltip: {
+                                backgroundColor: '#0f172a',
+                                titleFont: { size: 12, weight: '700' },
+                                bodyFont: { size: 11 },
+                                padding: 12,
+                                cornerRadius: 10,
+                            },
+                        },
+                        scales,
+                    },
+                };
+
+                if (vitalsChart) {
+                    vitalsChart.data = config.data;
+                    vitalsChart.options = config.options;
+                    vitalsChart.update();
+                } else {
+                    vitalsChart = new Chart(ctx, config);
+                }
+            }
+
+            if (toggleRoot) {
+                toggleRoot.addEventListener('click', e => {
+                    const btn = e.target.closest('.cf-vitals-metric-btn');
+                    if (!btn) return;
+                    const activeCount = toggleRoot.querySelectorAll('.cf-vitals-metric-btn.is-active').length;
+                    if (btn.classList.contains('is-active') && activeCount <= 1) return;
+                    btn.classList.toggle('is-active');
+                    renderChart();
+                });
+            }
+
+            renderChart();
+        })();
 
         // Medication Search logic
         const medSearchInput = document.getElementById('med-search-input');

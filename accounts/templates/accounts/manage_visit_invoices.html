@@ -1,7 +1,8 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}{{ title }} - HMS{% endblock %}
-{% block extra_css %}
+{% block content %}
+
 <style>
     .inv-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
     .inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
@@ -45,8 +46,6 @@
     .inv-empty { text-align: center; padding: 3rem; color: #94a3b8; }
     .inv-empty i { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
 </style>
-{% endblock %}
-{% block content %}
 <div class="inv-container">
     <div class="inv-header">
         <div>

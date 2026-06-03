@@ -30,8 +30,57 @@ def is_accountant(user):
 def is_receptionist(user):
     return user.is_authenticated and (user.role == 'Receptionist' or user.is_superuser)
 
+IPD_SHA_PER_DIEM_RATE = Decimal('2240')
+
+
+def _get_ipd_per_diem_info(invoice):
+    """
+    SHA inpatient per-diem: insurance pays days × rate; adjustment records loss/gain.
+    Positive adjustment = billed > per-diem (facility loss).
+    Negative adjustment = billed < per-diem (facility gain).
+    """
+    if not invoice.visit or invoice.visit.visit_type != 'IN-PATIENT':
+        return None
+    admission = Admission.objects.filter(visit=invoice.visit).order_by('-admitted_at').first()
+    if not admission:
+        return None
+
+    if admission.discharged_at:
+        days = max(1, (admission.discharged_at - admission.admitted_at).days)
+    else:
+        days = max(1, (timezone.now() - admission.admitted_at).days)
+
+    per_diem_total = IPD_SHA_PER_DIEM_RATE * days
+    normal_delivery_total = (
+        invoice.items.filter(service__name='Normal Delivery').aggregate(total=Sum('amount'))['total']
+        or Decimal('0')
+    )
+    total_billed_for_per_diem = invoice.total_amount - normal_delivery_total
+    adjustment = total_billed_for_per_diem - per_diem_total
+
+    return {
+        'days': days,
+        'per_diem_rate': IPD_SHA_PER_DIEM_RATE,
+        'per_diem_total': per_diem_total,
+        'total_billed': invoice.total_amount,
+        'normal_delivery_total': normal_delivery_total,
+        'total_billed_for_per_diem': total_billed_for_per_diem,
+        'adjustment': adjustment,
+    }
+
+
 def is_billing_staff(user):
     return user.is_authenticated and (user.role in ['Accountant', 'Receptionist', 'SHA Manager', 'SHA'] or user.is_superuser)
+
+
+def can_view_invoice(user):
+    """View or manage patient invoices (billing desk + night pharmacy staff)."""
+    return user.is_authenticated and (
+        is_billing_staff(user)
+        or user.role in ['Nurse', 'Pharmacist', 'Admin']
+        or user.is_superuser
+    )
+
 
 @login_required
 @user_passes_test(is_accountant)
@@ -279,6 +328,12 @@ def insurance_manager(request):
             visit_date__gte=today_start
         ).order_by('-visit_date')
 
+    balance_expr = F('total_amount') - F('insurance_adjustment') - F('paid_amount')
+
+    def outstanding_total(qs):
+        result = qs.aggregate(total=Sum(balance_expr))
+        return result['total'] or Decimal('0')
+
     context = {
         'opd_invoices': opd_invoices,
         'ipd_invoices': ipd_invoices,
@@ -289,9 +344,20 @@ def insurance_manager(request):
         'search_mat': search_mat,
         'search_sha': search_sha,
         'active_cash_visits': active_cash_visits,
-        'title': 'Insurance & Credit Manager'
+        'title': 'Insurance & Credit Manager',
+        'stats': {
+            'opd_count': opd_invoices.count(),
+            'ipd_count': ipd_invoices.count(),
+            'maternity_count': maternity_invoices.count(),
+            'cash_count': active_cash_visits.count(),
+            'total_claims': opd_invoices.count() + ipd_invoices.count() + maternity_invoices.count(),
+            'opd_balance': outstanding_total(opd_invoices),
+            'ipd_balance': outstanding_total(ipd_invoices),
+            'maternity_balance': outstanding_total(maternity_invoices),
+            'total_balance': outstanding_total(unpaid_invoices),
+        },
     }
-    
+
     return render(request, 'accounts/insurance_manager.html', context)
 
 @login_required
@@ -320,35 +386,20 @@ def get_invoice_items(request, invoice_id):
             'delivery': delivery_id,  # Add delivery info
         })
     
-    # For IPD invoices, include admission days and per-diem info
+    per_diem = _get_ipd_per_diem_info(invoice)
     admission_info = None
-    if invoice.visit and invoice.visit.visit_type == 'IN-PATIENT':
-        admission = Admission.objects.filter(visit=invoice.visit).first()
-        if admission:
-            if admission.discharged_at:
-                days = max(1, (admission.discharged_at - admission.admitted_at).days)
-            else:
-                days = max(1, (timezone.now() - admission.admitted_at).days)
-            per_diem_rate = 2240
-            
-            # Calculate total billed excluding Normal Delivery for per-diem calculation
-            normal_delivery_total = invoice.items.filter(
-                service__name='Normal Delivery'
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
-            # Total billed for per-diem calculation excludes Normal Delivery
-            total_billed_for_per_diem = Decimal(invoice.total_amount) - normal_delivery_total
-            
-            admission_info = {
-                'days': days,
-                'per_diem_rate': per_diem_rate,
-                'per_diem_total': days * per_diem_rate,
-                'total_billed': float(invoice.total_amount),  # Keep full total for display
-                'normal_delivery_total': float(normal_delivery_total),  # Show Normal Delivery separately
-                'total_billed_for_per_diem': total_billed_for_per_diem,  # Used for per-diem calculation
-                'current_adjustment': float(invoice.insurance_adjustment),
-            }
-    
+    if per_diem:
+        admission_info = {
+            'days': per_diem['days'],
+            'per_diem_rate': float(per_diem['per_diem_rate']),
+            'per_diem_total': float(per_diem['per_diem_total']),
+            'total_billed': float(per_diem['total_billed']),
+            'normal_delivery_total': float(per_diem['normal_delivery_total']),
+            'total_billed_for_per_diem': float(per_diem['total_billed_for_per_diem']),
+            'adjustment': float(per_diem['adjustment']),
+            'current_adjustment': float(invoice.insurance_adjustment),
+        }
+
     return JsonResponse({'items': items_data, 'admission_info': admission_info})
 
 @login_required
@@ -365,45 +416,63 @@ def process_insurance_claim(request):
 
         invoice = get_object_or_404(Invoice, id=invoice_id)
         selected_items = invoice.items.filter(id__in=item_ids)
-        
-        # Apply insurance adjustment if provided (per-diem gap/profit)
-        # Note: adjustment can be negative if we claim more than we billed
-        if adjustment is not None:
-            invoice.insurance_adjustment = Decimal(str(adjustment))
+        if not selected_items.exists():
+            return JsonResponse({'success': False, 'error': 'Select at least one invoice item.'})
+
+        per_diem = _get_ipd_per_diem_info(invoice)
+        tol = Decimal('0.01')
+
+        if per_diem:
+            # Server-side per-diem: loss/gain via adjustment, claim = SHA cap (days × 2240)
+            invoice.insurance_adjustment = per_diem['adjustment']
             invoice.save()
             invoice.distribute_payments()
-        
-        # Calculate selected items total as a sanity check
-        selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Use custom amount if provided, otherwise fallback to selected total
-        claim_amount = Decimal(str(custom_amount)) if custom_amount is not None else selected_total
-        
+            invoice.refresh_from_db()
+            claim_amount = per_diem['per_diem_total']
+        else:
+            if adjustment is not None:
+                invoice.insurance_adjustment = Decimal(str(adjustment))
+                invoice.save()
+                invoice.distribute_payments()
+                invoice.refresh_from_db()
+
+            selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            claim_amount = (
+                Decimal(str(custom_amount)) if custom_amount is not None else selected_total
+            )
+
         if claim_amount <= 0:
-            error_msg = (
-                f"Claim amount must be greater than zero. "
-                f"Received: Ksh {claim_amount}. "
-                f"Custom amount parameter: {custom_amount}. "
-                f"Selected items total: Ksh {selected_total}. "
-                f"Selected item IDs: {item_ids}."
-            )
-            return JsonResponse({'success': False, 'error': error_msg})
-            
-        # Re-check balance after adjustment application
-        if claim_amount > invoice.balance:
-            error_msg = (
-                f"Claim amount (Ksh {claim_amount}) exceeds remaining invoice balance (Ksh {invoice.balance}).\n\n"
-                f"DEBUG DETAILS:\n"
-                f"- Invoice ID: {invoice_id}\n"
-                f"- Invoice Total Amount: Ksh {invoice.total_amount}\n"
-                f"- Paid Amount: Ksh {invoice.paid_amount}\n"
-                f"- Insurance Adjustment: Ksh {invoice.insurance_adjustment}\n"
-                f"- Selected Items Total: Ksh {selected_total}\n"
-                f"- User Input Claim Amount: Ksh {custom_amount}\n"
-                f"- Computed Claim Amount: Ksh {claim_amount}\n\n"
-                f"If this is an Inpatient per-diem profit/loss, verify if the adjustment value is calculated correctly."
-            )
-            return JsonResponse({'success': False, 'error': error_msg})
+            return JsonResponse({
+                'success': False,
+                'error': f'Claim amount must be greater than zero (received Ksh {claim_amount}).',
+            })
+
+        if per_diem:
+            # After adjustment, collectible total = effective_amount (per-diem when loss/gain applied)
+            if claim_amount > invoice.effective_amount + tol:
+                loss_gain = 'loss' if per_diem['adjustment'] > 0 else 'gain'
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        f'Claim amount (Ksh {claim_amount}) exceeds effective invoice amount '
+                        f'(Ksh {invoice.effective_amount}) after per-diem {loss_gain} adjustment.'
+                    ),
+                })
+            if claim_amount > invoice.balance + tol:
+                if invoice.balance <= 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Nothing left to collect on this invoice after prior payments.',
+                    })
+                claim_amount = invoice.balance
+        elif claim_amount > invoice.balance + tol:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    f'Claim amount (Ksh {claim_amount}) exceeds remaining balance '
+                    f'(Ksh {invoice.balance}).'
+                ),
+            })
 
         # Create Payment
         payment = Payment.objects.create(
@@ -466,7 +535,7 @@ def export_accountant_csv(payments, invoices, total_revenue, total_expenses, pay
     return response
 
 @login_required
-@user_passes_test(is_billing_staff)
+@user_passes_test(can_view_invoice)
 def invoice_detail(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk)
     
@@ -1490,7 +1559,7 @@ def bulk_set_visit_sha(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(can_view_invoice)
 def manage_visit_invoices(request, visit_id):
     """Superuser-only page to view and manage invoice items for a visit."""
     from home.models import Visit

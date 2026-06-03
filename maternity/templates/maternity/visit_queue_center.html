@@ -407,6 +407,8 @@
                         data-mother-pnc-id="{% if item.que %}{{ item.que.mother_pnc_visit_id|default:'' }}{% endif %}"
                         data-baby-pnc-id="{% if item.que %}{{ item.que.baby_pnc_visit_id|default:'' }}{% endif %}"
                         data-has-cwc-records="{% if item.que %}{{ item.que.has_cwc_records|yesno:'true,false' }}{% endif %}"
+                        data-delivered-pregnancy-id="{% if item.que and item.que.delivered_pregnancy_id %}{{ item.que.delivered_pregnancy_id }}{% elif item.delivered_pregnancy_id %}{{ item.delivered_pregnancy_id }}{% elif item.linked_newborn %}{{ item.linked_newborn.delivery.pregnancy.id }}{% endif %}"
+                        data-newborns='{% if item.que %}{{ item.que.pnc_newborns_json|default:"[]" }}{% else %}{{ item.pnc_newborns_json|default:"[]" }}{% endif %}'
                         data-pregnancies='[{% for p in item.pregnancies %}{"id": "{{ p.id }}", "edd": "{{ p.edd }}", "ga": "{{ p.ga|default:0 }}", "status": "{{ p.status }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
                         <td>
                             <div class="flex items-center gap-3">
@@ -472,6 +474,8 @@
                         data-mother-pnc-id="{{ item.mother_pnc_visit_id|default:'' }}"
                         data-baby-pnc-id="{{ item.baby_pnc_visit_id|default:'' }}"
                         data-has-cwc-records="{{ item.has_cwc_records|yesno:'true,false' }}"
+                        data-delivered-pregnancy-id="{% if item.delivered_pregnancy_id %}{{ item.delivered_pregnancy_id }}{% elif item.linked_pregnancy %}{{ item.linked_pregnancy.id }}{% endif %}"
+                        data-newborns='{{ item.pnc_newborns_json|default:"[]" }}'
                         data-pregnancies='[{% for p in item.pregnancies %}{"id": "{{ p.id }}", "edd": "{{ p.edd }}", "ga": "{{ p.ga|default:0 }}", "status": "{{ p.status }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
                         <td>
                             <div class="flex items-center gap-3">
@@ -527,7 +531,7 @@
 <!-- Clinical Workflow Modal -->
 <div id="actionModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 9999;">
     <div class="fixed inset-0 bg-slate-900/60" style="z-index: 9998;" onclick="closeActionModal()"></div>
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full relative overflow-hidden border border-slate-200 duration-200" style="z-index: 9999;">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full relative overflow-hidden border border-slate-200 duration-200" style="z-index: 9999;">
         
         <!-- Header: Patient Identity -->
         <div class="modal-profile-card">
@@ -559,6 +563,31 @@
                 </div>
             </div>
 
+            <!-- PNC Section -->
+            <div id="pncSection" class="mch-category-block mch-category-pnc-bg" style="display:none;">
+                <div class="workflow-section-title">
+                    <i class="fas fa-user-nurse text-rose-600"></i> POSTNATAL CARE (PNC)
+                </div>
+                <div id="pncActionList" class="space-y-2">
+                    <a id="pncMotherAction" href="#" class="action-tile tile-pnc-mother" style="display:none;">
+                        <div class="action-tile-icon"><i class="fas fa-female"></i></div>
+                        <div class="action-tile-text">
+                            <div class="action-tile-label">Mother PNC</div>
+                            <div class="action-tile-sub">Record mother's postnatal visit</div>
+                        </div>
+                    </a>
+                    <div id="pncBabyList" class="space-y-2"></div>
+                    <a id="pncStartVisitAction" href="#" class="action-tile tile-pnc-mother" style="display:none;">
+                        <div class="action-tile-icon"><i class="fas fa-plus-circle"></i></div>
+                        <div class="action-tile-text">
+                            <div class="action-tile-label">Start PNC Visit</div>
+                            <div class="action-tile-sub">Create visit and open PNC form</div>
+                        </div>
+                    </a>
+                    <p id="pncHint" class="text-[10px] font-bold text-slate-500 text-center hidden"></p>
+                </div>
+            </div>
+
             <!-- CWC Section -->
             <div id="cwcSection" class="mch-category-block mch-category-cwc-bg">
                 <div class="workflow-section-title">
@@ -585,6 +614,153 @@
 
 {% block extra_js %}
 <script>
+function administerVaccineUrl(queId) {
+    return '{% url "maternity:administer_vaccine" que_id=0 %}'.replace('/0/', '/' + queId + '/');
+}
+
+function motherPncUrl(pregnancyId) {
+    return '{% url "maternity:record_mother_pnc_visit" pregnancy_id=0 %}'.replace('/0/', '/' + pregnancyId + '/');
+}
+
+function babyPncUrl(newbornId) {
+    return '{% url "maternity:record_baby_pnc_visit" newborn_id=0 %}'.replace('/0/', '/' + newbornId + '/');
+}
+
+function setupPncSection(data) {
+    const section = document.getElementById('pncSection');
+    const motherBtn = document.getElementById('pncMotherAction');
+    const babyList = document.getElementById('pncBabyList');
+    const startBtn = document.getElementById('pncStartVisitAction');
+    const hint = document.getElementById('pncHint');
+
+    let newborns = [];
+    try {
+        newborns = JSON.parse(data.newborns || '[]');
+    } catch (e) {
+        newborns = [];
+    }
+
+    const pregId = data.deliveredPregnancyId || data.linkedPregnancyId || '';
+    const isFemale = data.gender === 'F';
+    const age = parseInt(data.age, 10) || 0;
+    const isChild = age <= 5;
+    const category = (data.category || '').toUpperCase();
+    const showPnc = category.includes('PNC') || pregId || newborns.length > 0 || isChild
+        || (isFemale && data.pregnancies && JSON.parse(data.pregnancies || '[]').some(p => p.status === 'Delivered'));
+
+    section.style.display = showPnc ? 'block' : 'none';
+    babyList.innerHTML = '';
+    hint.classList.add('hidden');
+    motherBtn.style.display = 'none';
+    startBtn.style.display = 'none';
+    motherBtn.onclick = null;
+    startBtn.onclick = null;
+
+    if (!showPnc) return;
+
+    const hasMotherPnc = isFemale && pregId;
+    const hasBabyPnc = newborns.length > 0;
+
+    if (data.queId && (hasMotherPnc || hasBabyPnc)) {
+        if (hasMotherPnc) {
+            motherBtn.style.display = 'flex';
+            motherBtn.href = motherPncUrl(pregId);
+            motherBtn.querySelector('.action-tile-label').textContent = data.motherPncId
+                ? 'Continue Mother PNC'
+                : 'Record Mother PNC';
+            motherBtn.querySelector('.action-tile-sub').textContent = 'Postnatal check for mother';
+        }
+        newborns.forEach(function (nb) {
+            const a = document.createElement('a');
+            a.className = 'action-tile tile-pnc-baby';
+            a.href = babyPncUrl(nb.id);
+            a.innerHTML = `
+                <div class="action-tile-icon"><i class="fas fa-baby"></i></div>
+                <div class="action-tile-text">
+                    <div class="action-tile-label">Baby ${nb.baby_number || ''} PNC</div>
+                    <div class="action-tile-sub">Record baby's postnatal visit</div>
+                </div>
+            `;
+            babyList.appendChild(a);
+        });
+    } else if (hasMotherPnc || hasBabyPnc || isChild) {
+        startBtn.style.display = 'flex';
+        startBtn.href = '#';
+        startBtn.onclick = function (e) {
+            e.preventDefault();
+            createPncVisit(data.id, hasBabyPnc && !hasMotherPnc ? 'baby' : 'auto', newborns[0] ? newborns[0].id : '');
+        };
+        if (hasMotherPnc && hasBabyPnc) {
+            startBtn.querySelector('.action-tile-sub').textContent = 'Opens mother or baby PNC based on patient';
+        } else if (hasBabyPnc) {
+            startBtn.querySelector('.action-tile-sub').textContent = 'Opens baby PNC form';
+        } else {
+            startBtn.querySelector('.action-tile-sub').textContent = 'Opens mother PNC form';
+        }
+        if (hasMotherPnc) {
+            motherBtn.style.display = 'flex';
+            motherBtn.href = motherPncUrl(pregId);
+            motherBtn.querySelector('.action-tile-label').textContent = 'Record Mother PNC';
+            motherBtn.querySelector('.action-tile-sub').textContent = "Uses today's visit if active";
+        }
+        newborns.forEach(function (nb) {
+            const a = document.createElement('a');
+            a.className = 'action-tile tile-pnc-baby';
+            a.href = babyPncUrl(nb.id);
+            a.innerHTML = `
+                <div class="action-tile-icon"><i class="fas fa-baby"></i></div>
+                <div class="action-tile-text">
+                    <div class="action-tile-label">Baby ${nb.baby_number || ''} PNC</div>
+                    <div class="action-tile-sub">Record without new visit</div>
+                </div>
+            `;
+            babyList.appendChild(a);
+        });
+    } else {
+        hint.textContent = 'No delivery on file. Register external delivery to enable PNC.';
+        hint.classList.remove('hidden');
+        const regLink = document.createElement('a');
+        regLink.href = '{% url "maternity:register_external_delivery" %}?patient_id=' + data.id;
+        regLink.className = 'action-tile tile-pnc-mother';
+        regLink.innerHTML = `
+            <div class="action-tile-icon"><i class="fas fa-file-medical"></i></div>
+            <div class="action-tile-text">
+                <div class="action-tile-label">Register Delivery</div>
+                <div class="action-tile-sub">Required before PNC</div>
+            </div>
+        `;
+        babyList.appendChild(regLink);
+    }
+}
+
+function createPncVisit(patientId, target, newbornId) {
+    if (!confirm("Create or use today's visit and open the PNC record form?")) return;
+
+    const formData = new FormData();
+    formData.append('patient_id', patientId);
+    formData.append('pnc_target', target || 'auto');
+    if (newbornId) formData.append('newborn_id', newbornId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch('{% url "maternity:api_pnc_create_visit" %}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert(data.error || 'Could not start PNC visit.');
+        }
+    })
+    .catch(function () {
+        alert('An error occurred while starting the PNC visit.');
+    });
+}
+
 function openActionModal(row) {
     const data = row.dataset;
     const pregnancies = JSON.parse(data.pregnancies || '[]');
@@ -623,13 +799,15 @@ function openActionModal(row) {
     
     // 2. Open New Pregnancy File button
     document.getElementById('ancNewPregnancy').href = `{% url 'maternity:register_pregnancy' %}?patient_id=${data.id}`;
+
+    // 3. PNC (mother + baby)
+    setupPncSection(data);
     
-    // 3. CWC / Immunization Section
+    // 4. CWC / Immunization Section
     const cwcAction = document.getElementById('cwcAction');
     
     if (data.queId) {
-        // If in queue, go to immunization dashboard for this visit
-        cwcAction.href = `{% url 'maternity:vaccination_dashboard' %}?q=${data.id}`;
+        cwcAction.href = administerVaccineUrl(data.queId);
         cwcAction.onclick = null;
         
         if (data.hasCwcRecords === 'true') {
@@ -680,8 +858,14 @@ function createCwcVisit(patientId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
-            window.location.reload();
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else if (data.que_id) {
+                window.location.href = administerVaccineUrl(data.que_id);
+            } else {
+                alert(data.message);
+                window.location.reload();
+            }
         } else {
             alert('Error: ' + data.error);
         }

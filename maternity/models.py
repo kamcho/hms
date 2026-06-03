@@ -682,3 +682,64 @@ class ImmunizationRecord(models.Model):
     def __str__(self):
         return f"{self.vaccine.abbreviation} Dose {self.dose_number}"
 
+
+class CwcGrowthRecord(models.Model):
+    """Anthropometry at a CWC / immunization visit (growth monitoring, separate from PNC)."""
+
+    patient = models.ForeignKey(
+        'home.Patient',
+        on_delete=models.CASCADE,
+        related_name='cwc_growth_records',
+    )
+    visit = models.ForeignKey(
+        'home.Visit',
+        on_delete=models.CASCADE,
+        related_name='cwc_growth_records',
+    )
+    newborn = models.ForeignKey(
+        Newborn,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cwc_growth_records',
+    )
+    measured_date = models.DateField(default=timezone.now)
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=3, help_text='kg')
+    height_cm = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        help_text='Height / length (cm)',
+        null=True,
+        blank=True,
+    )
+    head_circumference_cm = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        help_text='cm',
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='cwc_growth_recorded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-measured_date', '-created_at']
+        verbose_name = 'CWC Growth Record'
+        verbose_name_plural = 'CWC Growth Records'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['visit', 'patient'],
+                name='unique_cwc_growth_per_visit_patient',
+            ),
+        ]
+
+    def __str__(self):
+        return f"CWC growth {self.patient} — {self.measured_date} ({self.weight_kg} kg)"
+

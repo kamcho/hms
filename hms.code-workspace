@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "hms",
+			"path": "."
+		}
+	],
+	"settings": {
+		"[html]": {
+			"editor.defaultFormatter": "monosans.djlint"
+		},
+		"editor.formatOnSave": true
+	},
+	"workbenchMode": "windsurf-agent-window"
+}

@@ -3,30 +3,322 @@
 {% block title %}{{ title }}{% endblock %}
 {% block content %}    <style>
     :root {
-        --dash-bg: #f8fafc;
+        --dash-bg: #f1f5f9;
         --card-bg: #ffffff;
-        --clinical-primary: #6366f1;
-        --clinical-success: #10b981;
-        --clinical-danger: #ef4444;
-        --clinical-warning: #f59e0b;
+        --clinical-primary: #4f46e5;
+        --clinical-primary-light: #818cf8;
+        --clinical-success: #059669;
+        --clinical-danger: #dc2626;
+        --clinical-warning: #d97706;
         --text-main: #0f172a;
         --text-muted: #64748b;
-        --border-light: #f1f5f9;
+        --border-light: #e2e8f0;
+        --hero-gradient: linear-gradient(135deg, #312e81 0%, #4f46e5 45%, #6366f1 100%);
     }
 
     .insurance-container {
-        background: #fdfdfd;
+        background: var(--dash-bg);
         min-height: 100vh;
-        padding: 3rem 2rem;
+        padding: 1.75rem 1.5rem 3rem;
+        max-width: 1600px;
+        margin: 0 auto;
     }
+
+    /* Hero */
+    .insurance-hero {
+        background: var(--hero-gradient);
+        border-radius: 24px;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.35);
+    }
+
+    .insurance-hero::before {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .insurance-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -60%;
+        left: 20%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .hero-inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1.5rem;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.95);
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+        font-size: 1.875rem;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.35rem;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.75);
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin: 0;
+        max-width: 420px;
+    }
+
+    .hero-search-form {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-search-wrap {
+        position: relative;
+    }
+
+    .hero-search-wrap i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 0.85rem;
+    }
+
+    .search-input.hero-search {
+        width: min(360px, 100%);
+        padding-left: 2.75rem;
+        border: none;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+        border-radius: 14px;
+    }
+
+    .search-input.hero-search:focus {
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.18), 0 0 0 3px rgba(255,255,255,0.25);
+    }
+
+    .btn-hero-search {
+        background: #fff;
+        color: var(--clinical-primary);
+        padding: 0.75rem 1.35rem;
+        border-radius: 14px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .btn-hero-search:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+
+    .btn-hero-clear {
+        color: rgba(255,255,255,0.85);
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-decoration: none;
+        padding: 0.5rem;
+    }
+
+    .btn-hero-clear:hover {
+        color: #fff;
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 1.25rem 1.35rem;
+        border: 1px solid var(--border-light);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -8px rgba(0,0,0,0.1);
+    }
+
+    .kpi-card.kpi-highlight {
+        background: linear-gradient(145deg, #1e1b4b 0%, #312e81 100%);
+        border-color: transparent;
+        color: #fff;
+    }
+
+    .kpi-card.kpi-highlight .kpi-label { color: rgba(255,255,255,0.65); }
+    .kpi-card.kpi-highlight .kpi-value { color: #fff; }
+    .kpi-card.kpi-highlight .kpi-meta { color: rgba(255,255,255,0.55); }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-icon.indigo { background: #eef2ff; color: #4f46e5; }
+    .kpi-icon.emerald { background: #ecfdf5; color: #059669; }
+    .kpi-icon.pink { background: #fdf2f8; color: #db2777; }
+    .kpi-icon.amber { background: #fffbeb; color: #d97706; }
+    .kpi-icon.slate { background: rgba(255,255,255,0.12); color: #c7d2fe; }
+
+    .kpi-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--text-main);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    .kpi-meta {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-top: 0.35rem;
+    }
+
+    .patient-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 900;
+        flex-shrink: 0;
+        letter-spacing: -0.02em;
+    }
+
+    .patient-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    .patient-cell-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .btn-claim {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        border: none;
+        padding: 0.45rem 0.9rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        margin-right: 0.35rem;
+    }
+
+    .btn-claim:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    .sections-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+    }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-animate {
+        animation: fadeUp 0.45s ease-out backwards;
+    }
+
+    .section-animate:nth-child(1) { animation-delay: 0.05s; }
+    .section-animate:nth-child(2) { animation-delay: 0.1s; }
+    .section-animate:nth-child(3) { animation-delay: 0.15s; }
+    .section-animate:nth-child(4) { animation-delay: 0.2s; }
 
     .glass-card {
         background: var(--card-bg);
         border: 1px solid var(--border-light);
-        border-radius: 24px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border-radius: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 20px -5px rgba(0, 0, 0, 0.04);
         overflow: hidden;
     }
+
+    .glass-card.opd-theme { border-left: 4px solid #6366f1; }
+    .glass-card.ipd-theme { border-left: 4px solid #10b981; }
+    .glass-card.maternity-theme { border-left: 4px solid #ec4899; }
+    .glass-card.other-theme { border-left: 4px solid #f59e0b; }
 
     .section-header {
         padding: 1.5rem 2rem;
@@ -114,11 +406,6 @@
 
     .invoice-table tr:hover td {
         background-color: #fcfcfd;
-    }
-
-    .patient-cell {
-        display: flex;
-        flex-direction: column;
     }
 
     .patient-name {
@@ -475,37 +762,91 @@
     .hidden {
         display: none !important;
     }
+
+    @media (max-width: 768px) {
+        .insurance-container { padding: 1rem; }
+        .insurance-hero { padding: 1.5rem; border-radius: 18px; }
+        .hero-title { font-size: 1.4rem; }
+        .hero-search-form { width: 100%; }
+        .search-input.hero-search { width: 100%; min-width: 0; }
+        .section-header { flex-direction: column; align-items: flex-start !important; gap: 1rem; }
+        .kpi-value { font-size: 1.25rem; }
+    }
 </style>
 
     <div class="insurance-container">
-        <!-- Header -->
-        <div class="flex justify-between items-end mb-10">
-            <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">{{ title }}</h1>
-                <p class="text-slate-500 font-medium italic">
-                    Monitor and manage outstanding patient claims & insurance
-                    balances
-                </p>
-            </div>
-            <div class="flex items-center gap-3">
-                <!-- <button onclick="document.getElementById('shaModal').style.display='flex'" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    <i class="fas fa-shield-alt"></i> Tag Patient as SHA
-                </button> -->
-                <form method="GET" class="flex items-center gap-3">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" name="search" value="{{ search_query }}" placeholder="Search patient name, phone, ID or invoice..." class="search-input pl-11">
+        <!-- Hero -->
+        <header class="insurance-hero">
+            <div class="hero-inner">
+                <div>
+                    <div class="hero-badge">
+                        <i class="fas fa-shield-alt"></i> SHA Claims Workspace
                     </div>
-                    <button type="submit" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors">Search</button>
+                    <h1 class="hero-title">{{ title }}</h1>
+                    <p class="hero-subtitle">
+                        Track outstanding SHA claims, process insurance payments, and manage active cash visits awaiting coverage.
+                    </p>
+                </div>
+                <form method="GET" class="hero-search-form">
+                    <div class="hero-search-wrap">
+                        <i class="fas fa-search"></i>
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Patient, phone, ID, or invoice #..." class="search-input hero-search">
+                    </div>
+                    <button type="submit" class="btn-hero-search">Search</button>
                     {% if search_query %}
-                        <a href="{% url 'accounts:insurance_manager' %}" class="text-slate-400 hover:text-slate-600 font-bold text-sm ml-2">Clear</a>
+                        <a href="{% url 'accounts:insurance_manager' %}" class="btn-hero-clear">Clear filters</a>
                     {% endif %}
                 </form>
             </div>
+        </header>
+
+        <!-- KPI summary -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-highlight">
+                <div class="kpi-icon slate"><i class="fas fa-wallet"></i></div>
+                <div>
+                    <div class="kpi-label">Total Outstanding</div>
+                    <div class="kpi-value">Ksh {{ stats.total_balance|format_number:2 }}</div>
+                    <div class="kpi-meta">{{ stats.total_claims }} pending claim{{ stats.total_claims|pluralize }}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon indigo"><i class="fas fa-user-clock"></i></div>
+                <div>
+                    <div class="kpi-label">OPD Claims</div>
+                    <div class="kpi-value">{{ stats.opd_count }}</div>
+                    <div class="kpi-meta">Ksh {{ stats.opd_balance|format_number:2 }} due</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon emerald"><i class="fas fa-procedures"></i></div>
+                <div>
+                    <div class="kpi-label">IPD Claims</div>
+                    <div class="kpi-value">{{ stats.ipd_count }}</div>
+                    <div class="kpi-meta">Ksh {{ stats.ipd_balance|format_number:2 }} due</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon pink"><i class="fas fa-baby-carriage"></i></div>
+                <div>
+                    <div class="kpi-label">Maternity</div>
+                    <div class="kpi-value">{{ stats.maternity_count }}</div>
+                    <div class="kpi-meta">Ksh {{ stats.maternity_balance|format_number:2 }} due</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon amber"><i class="fas fa-coins"></i></div>
+                <div>
+                    <div class="kpi-label">Cash Visits Today</div>
+                    <div class="kpi-value">{{ stats.cash_count }}</div>
+                    <div class="kpi-meta">Active, not yet SHA</div>
+                </div>
+            </div>
         </div>
-        <div class="space-y-12">
+
+        <div class="sections-stack">
             <!-- OPD Section -->
-            <section>
+            <section class="section-animate">
                 <div class="glass-card opd-theme">
                     <div class="section-header !bg-indigo-50/30">
                         <h2 class="section-title">
@@ -541,11 +882,14 @@
                             </thead>
                             <tbody>
                                 {% for inv in opd_invoices %}
-                                    <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
                                         <td>
                                             <div class="patient-cell">
-                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
-                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                <span class="patient-avatar bg-indigo-100 text-indigo-700">{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}</span>
+                                                <div class="patient-cell-info">
+                                                    <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                    <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
@@ -555,9 +899,12 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right">
+                                        <td class="text-right" onclick="event.stopPropagation()">
+                                            <button type="button" class="btn-claim" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                                <i class="fas fa-file-invoice-dollar"></i> Claim
+                                            </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
-                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                                <i class="fas fa-eye text-[10px]"></i> View
                                             </a>
                                         </td>
                                     </tr>
@@ -565,10 +912,11 @@
                                     <tr>
                                         <td colspan="7" class="empty-state">
                                             <div class="flex flex-col items-center gap-3">
-                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                <div class="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-200 text-2xl mb-2">
                                                     <i class="fas fa-check-circle"></i>
                                                 </div>
-                                                <p class="font-bold text-slate-400">No pending OPD invoices found</p>
+                                                <p class="font-bold text-slate-500">All clear — no pending OPD claims</p>
+                                                <p class="text-xs text-slate-400">Outstanding SHA outpatient invoices will appear here</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -579,7 +927,7 @@
                 </div>
             </section>
             <!-- IPD Section -->
-            <section>
+            <section class="section-animate">
                 <div class="glass-card ipd-theme">
                     <div class="section-header !bg-emerald-50/30">
                         <h2 class="section-title">
@@ -615,11 +963,14 @@
                             </thead>
                             <tbody>
                                 {% for inv in ipd_invoices %}
-                                    <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
                                         <td>
                                             <div class="patient-cell">
-                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
-                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                <span class="patient-avatar bg-emerald-100 text-emerald-700">{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}</span>
+                                                <div class="patient-cell-info">
+                                                    <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                    <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
@@ -635,9 +986,12 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right">
+                                        <td class="text-right" onclick="event.stopPropagation()">
+                                            <button type="button" class="btn-claim" style="background: linear-gradient(135deg, #059669, #10b981);" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                                <i class="fas fa-file-invoice-dollar"></i> Claim
+                                            </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
-                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                                <i class="fas fa-eye text-[10px]"></i> View
                                             </a>
                                         </td>
                                     </tr>
@@ -645,10 +999,11 @@
                                     <tr>
                                         <td colspan="7" class="empty-state">
                                             <div class="flex flex-col items-center gap-3">
-                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                <div class="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-2xl mb-2">
                                                     <i class="fas fa-check-circle"></i>
                                                 </div>
-                                                <p class="font-bold text-slate-400">No pending IPD invoices found</p>
+                                                <p class="font-bold text-slate-500">All clear — no pending IPD claims</p>
+                                                <p class="text-xs text-slate-400">Inpatient SHA invoices will appear here</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -659,7 +1014,7 @@
                 </div>
             </section>
             <!-- Maternity Section -->
-            <section>
+            <section class="section-animate">
                 <div class="glass-card maternity-theme">
                     <div class="section-header !bg-pink-50/30">
                         <h2 class="section-title">
@@ -695,11 +1050,14 @@
                             </thead>
                             <tbody>
                                 {% for inv in maternity_invoices %}
-                                    <tr class="cursor-pointer hover:bg-pink-50/50 transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
                                         <td>
                                             <div class="patient-cell">
-                                                <span class="patient-name">{{ inv.patient.full_name }}</span>
-                                                <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                <span class="patient-avatar bg-pink-100 text-pink-700">{% if inv.patient %}{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}{% else %}—{% endif %}</span>
+                                                <div class="patient-cell-info">
+                                                    <span class="patient-name">{{ inv.patient.full_name }}</span>
+                                                    <span class="invoice-id">#INV-{{ inv.id }}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="font-bold text-slate-600">{{ inv.created_at|date:"d M, Y" }}</td>
@@ -715,9 +1073,12 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right">
+                                        <td class="text-right" onclick="event.stopPropagation()">
+                                            <button type="button" class="btn-claim" style="background: linear-gradient(135deg, #db2777, #ec4899);" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                                <i class="fas fa-file-invoice-dollar"></i> Claim
+                                            </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
-                                                <i class="fas fa-eye text-[10px]"></i> View Details
+                                                <i class="fas fa-eye text-[10px]"></i> View
                                             </a>
                                         </td>
                                     </tr>
@@ -725,10 +1086,11 @@
                                     <tr>
                                         <td colspan="7" class="empty-state">
                                             <div class="flex flex-col items-center gap-3">
-                                                <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
+                                                <div class="w-16 h-16 rounded-3xl bg-pink-50 flex items-center justify-center text-pink-200 text-2xl mb-2">
                                                     <i class="fas fa-baby-carriage"></i>
                                                 </div>
-                                                <p class="font-bold text-slate-400">No maternity invoices found</p>
+                                                <p class="font-bold text-slate-500">No maternity claims pending</p>
+                                                <p class="text-xs text-slate-400">L&amp;D inpatient invoices will appear here</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -739,7 +1101,7 @@
                 </div>
             </section>
             <!-- Active Cash Visits Section -->
-            <section>
+            <section class="section-animate">
                 <div class="glass-card other-theme">
                     <div class="section-header !bg-amber-50/30">
                         <div class="flex justify-between items-center w-full">
@@ -783,14 +1145,17 @@
                             </thead>
                             <tbody id="cashVisitsBody">
                                 {% for visit in active_cash_visits %}
-                                    <tr class="hover:bg-amber-50/50 transition-colors">
+                                    <tr class="transition-colors">
                                         <td>
-                                            <input type="checkbox" value="{{ visit.id }}" class="cash-visit-checkbox" style="width: 18px; height: 18px; border-radius: 4px; cursor: pointer;" onclick="updateBulkShaBtn()">
+                                            <input type="checkbox" value="{{ visit.id }}" class="cash-visit-checkbox" style="width: 18px; height: 18px; border-radius: 4px; cursor: pointer; accent-color: #f59e0b;" onclick="updateBulkShaBtn()">
                                         </td>
                                         <td>
                                             <div class="patient-cell">
-                                                <span class="patient-name">{{ visit.patient.full_name }}</span>
-                                                <span class="invoice-id">#VISIT-{{ visit.id }}</span>
+                                                <span class="patient-avatar bg-amber-100 text-amber-700">{{ visit.patient.first_name|slice:":1" }}{{ visit.patient.last_name|slice:":1" }}</span>
+                                                <div class="patient-cell-info">
+                                                    <span class="patient-name">{{ visit.patient.full_name }}</span>
+                                                    <span class="invoice-id">#VISIT-{{ visit.id }}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="font-bold text-slate-600">{{ visit.visit_date|date:"d M, Y H:i" }}</td>
@@ -806,7 +1171,8 @@
                                                 <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
                                                     <i class="fas fa-check-circle"></i>
                                                 </div>
-                                                <p class="font-bold text-slate-400">No active cash visits for today</p>
+                                                <p class="font-bold text-slate-500">No active cash visits</p>
+                                                <p class="text-xs text-slate-400">Today's cash patients ready for SHA tagging appear here</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -1051,10 +1417,9 @@
             amountInput.readOnly = true;
             amountInput.classList.add('bg-slate-50', 'cursor-not-allowed');
 
-            // Calculate adjustment: Difference between billed and per-diem
-            // Positive = billed > per-diem (loss), Negative = billed < per-diem (profit)
-            // Use total_billed_for_per_diem for adjustment calculation
-            currentAdjustment = totalSelected - perDiemTotal;
+            // Loss/gain from full billed amount (excl. Normal Delivery), not selected line balances
+            // Positive = billed > per-diem (facility loss), Negative = billed < per-diem (gain)
+            currentAdjustment = parseFloat(totalBilled) - perDiemTotal;
 
             const adjustmentEl = document.getElementById('adjustmentLabel');
             if (currentAdjustment > 0) {

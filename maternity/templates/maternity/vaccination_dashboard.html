@@ -3,7 +3,6 @@
 {% block title %}Vaccination Clinic Dashboard - HMS{% endblock %}
 {% block content %}
     <div class="px-8 py-6">
-        <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -16,59 +15,54 @@
                     <i class="fas fa-calendar-alt text-blue-500"></i> {{ today|date:"l, d F Y" }}
                 </p>
             </div>
-            <div class="flex gap-4 w-full md:w-auto">
-                <div class="flex-1 md:flex-none bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 min-w-[160px]">
-                    <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Overdue</div>
-                        <div class="text-xl font-black text-slate-900">{{ overdue|length }}</div>
-                    </div>
+            <form method="get" class="flex gap-2 w-full md:w-auto items-center">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search child name or ID…" class="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold min-w-[200px] focus:ring-2 focus:ring-blue-500 outline-none">
+                <button type="submit" class="px-5 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Search</button>
+                {% if search_query %}
+                <a href="{% url 'maternity:vaccination_dashboard' %}" class="px-4 py-3 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase">Clear</a>
+                {% endif %}
+            </form>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 min-w-[160px]">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                    <i class="fas fa-users"></i>
                 </div>
-                <div class="flex-1 md:flex-none bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 min-w-[160px]">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Due Today</div>
-                        <div class="text-xl font-black text-slate-900">{{ due_today|length }}</div>
-                    </div>
+                <div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting</div>
+                    <div class="text-xl font-black text-slate-900">{{ cwc_queue|length }}</div>
                 </div>
             </div>
         </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Main Queue -->
-            <div class="lg:col-span-2 space-y-8">
-                <!-- CWC Queue Section -->
+            <div class="lg:col-span-2">
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                     <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <i class="fas fa-users text-blue-600"></i>
-                            <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">Waiting Queue</h2>
+                            <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">Today's waiting queue</h2>
                         </div>
-                        <span class="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full uppercase tracking-widest">{{ cwc_queue|length }} Waiting</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full uppercase tracking-widest">{{ cwc_queue|length }} waiting</span>
                     </div>
                     {% if cwc_queue %}
                         <div class="divide-y divide-slate-50">
                             {% for que in cwc_queue %}
-                                <div class="px-8 py-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                <div class="px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
                                     <div class="flex items-center gap-5">
                                         <div class="w-14 h-14 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center text-blue-500 shadow-sm shrink-0">
                                             <i class="fas fa-child text-xl"></i>
                                         </div>
                                         <div>
                                             <div class="text-lg font-black text-slate-900">{{ que.visit.patient.full_name }}</div>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <span class="text-[10px] font-black uppercase text-slate-400">Arrived {{ que.created_at|time:"H:i" }}</span>
+                                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                                <span class="text-[10px] font-black uppercase text-slate-400">Queued {{ que.created_at|time:"H:i" }}</span>
                                                 <span class="text-slate-300">•</span>
-                                                <span class="text-[10px] font-bold text-slate-500">{{ que.visit.primary_service.name }}</span>
+                                                <span class="text-[10px] font-bold text-slate-500">{{ que.sent_to.name }}</span>
+                                                <span class="text-slate-300">•</span>
+                                                <span class="text-[10px] font-bold text-slate-500">ID #{{ que.visit.patient.id }}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    {% if que.visit.patient %}
-                                        <a href="{% url 'maternity:administer_vaccine' que.id %}" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all">Receive</a>
-                                    {% endif %}
+                                    <a href="{% url 'maternity:administer_vaccine' que.id %}" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-center shrink-0">Receive</a>
                                 </div>
                             {% endfor %}
                         </div>
@@ -77,96 +71,54 @@
                             <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border-4 border-white shadow-inner">
                                 <i class="fas fa-user-clock text-2xl"></i>
                             </div>
-                            <p class="font-black tracking-tight text-lg text-slate-900">No patients in queue</p>
-                            <p class="text-[11px] font-black uppercase tracking-widest text-slate-400 mt-1">
-                                The CWC waiting list
-                                is currently empty.
+                            <p class="font-black tracking-tight text-lg text-slate-900">No children in today's queue</p>
+                            <p class="text-[11px] font-bold text-slate-500 mt-2 max-w-md">
+                                Use <strong>Visit Queue Center</strong> → search child → <strong>New CWC Visit</strong>.
+                                Only visits queued <strong>today</strong> ({{ today|date:"d M Y" }}) appear here.
                             </p>
+                            <a href="{% url 'maternity:visit_queue_center' %}" class="mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Open Visit Queue Center</a>
                         </div>
                     {% endif %}
                 </div>
-              
             </div>
-            <!-- Sidebar -->
+
             <div class="space-y-8">
-                <!-- Recent Activity -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
                     <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-3">
                         <span class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                             <i class="fas fa-history text-xs"></i>
                         </span>
-                        Recent Sessions
+                        Recent sessions
                     </h3>
-                    <div class="space-y-8 relative">
-                        <!-- Vertical Line -->
-                        <div class="absolute left-[15px] top-2 bottom-2 w-0.5 bg-slate-50"></div>
+                    <div class="space-y-6">
                         {% for record in recent_records %}
-                            <div class="relative flex gap-5 pl-1">
-                                <div class="mt-1.5 w-7 h-7 rounded-full bg-white border-4 border-blue-500 shadow-sm shrink-0 z-10 flex items-center justify-center">
+                            <div class="flex gap-4">
+                                <div class="w-7 h-7 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center shrink-0">
                                     <i class="fas fa-syringe text-[10px] text-blue-600"></i>
                                 </div>
                                 <div>
-                                    <div class="text-[11px] font-black text-slate-900">
-                                        {{ record.vaccine.abbreviation }}
-                                        Administered
-                                    </div>
+                                    <div class="text-[11px] font-black text-slate-900">{{ record.vaccine.abbreviation }} administered</div>
                                     <div class="text-[10px] font-bold text-slate-400 mt-1">
-                                        Baby {{ record.newborn.baby_number }} •
-                                        <span class="text-blue-500">{{ record.date_administered|timesince }} ago</span>
+                                        {% if record.patient %}{{ record.patient.full_name }}{% elif record.newborn %}Baby {{ record.newborn.baby_number }}{% endif %}
+                                        · {{ record.date_administered|date:"d M Y" }}
                                     </div>
                                 </div>
                             </div>
                         {% empty %}
-                            <div class="flex flex-col items-center justify-center py-6">
-                                <i class="fas fa-clipboard-list text-3xl text-slate-100 mb-4"></i>
-                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">No recent activity</p>
-                            </div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-300 text-center py-4">No recent activity</p>
                         {% endfor %}
                     </div>
                 </div>
-                <!-- KEPI Schedule Quick Reference -->
                 <div class="bg-slate-900 rounded-3xl shadow-2xl p-8 text-white relative overflow-hidden ring-1 ring-white/10">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-8 text-blue-400 flex items-center gap-2">
-                        <i class="fas fa-shield-alt"></i> Immunization Guide (KEPI)
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 text-blue-400 flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i> KEPI quick reference
                     </h3>
-                    <div class="space-y-5 relative z-10">
-                        <div class="group flex justify-between items-center pb-3 border-b border-white/5 hover:border-blue-500/30 transition-colors">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">Birth</span>
-                            <span class="text-[11px] font-bold text-slate-200">BCG, OPV 0</span>
-                        </div>
-                        <div class="group flex justify-between items-center pb-3 border-b border-white/5 hover:border-blue-500/30 transition-colors">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">6
-                            Weeks</span>
-                            <span class="text-[11px] font-bold text-slate-200 text-right">OPV 1, Penta 1, PCV 1, Rota
-                            1</span>
-                        </div>
-                        <div class="group flex justify-between items-center pb-3 border-b border-white/5 hover:border-blue-500/30 transition-colors">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">10
-                            Weeks</span>
-                            <span class="text-[11px] font-bold text-slate-200 text-right">OPV 2, Penta 2, PCV 2, Rota
-                            2</span>
-                        </div>
-                        <div class="group flex justify-between items-center pb-3 border-b border-white/5 hover:border-blue-500/30 transition-colors">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">14
-                            Weeks</span>
-                            <span class="text-[11px] font-bold text-slate-200 text-right">OPV 3, IPV, Penta 3, PCV 3</span>
-                        </div>
-                        <div class="group flex justify-between items-center">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors">9
-                            Months</span>
-                            <span class="text-[11px] font-bold text-slate-200">Measles 1, Yellow Fever</span>
-                        </div>
-                    </div>
-                    <div class="mt-8 pt-6 border-t border-white/5 flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center text-blue-400">
-                            <i class="fas fa-info-circle text-xs"></i>
-                        </div>
-                        <p class="text-[9px] font-medium text-slate-400 leading-tight">
-                            Follow Ministry of Health guidelines
-                            for vitamin A and deworming schedules.
-                        </p>
+                    <div class="space-y-3 text-[11px] font-bold text-slate-300 relative z-10">
+                        <div class="flex justify-between"><span>Birth</span><span>BCG, OPV 0</span></div>
+                        <div class="flex justify-between"><span>6 weeks</span><span>OPV1, Penta1, PCV1, Rota1</span></div>
+                        <div class="flex justify-between"><span>10 weeks</span><span>OPV2, Penta2, PCV2, Rota2</span></div>
+                        <div class="flex justify-between"><span>14 weeks</span><span>OPV3, IPV, Penta3, PCV3</span></div>
+                        <div class="flex justify-between"><span>9 months</span><span>Measles, Yellow Fever</span></div>
                     </div>
                 </div>
             </div>

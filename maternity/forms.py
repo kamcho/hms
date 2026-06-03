@@ -1,7 +1,7 @@
 from django import forms
 from .models import (
     PostnatalMotherVisit, PostnatalBabyVisit, MaternityDischarge, MaternityReferral,
-    Vaccine, ImmunizationRecord, Pregnancy, AntenatalVisit, LaborDelivery, Newborn
+    Vaccine, ImmunizationRecord, CwcGrowthRecord, Pregnancy, AntenatalVisit, LaborDelivery, Newborn
 )
 from home.models import Patient
 from inpatient.models import Ward, Bed
@@ -352,6 +352,34 @@ class MaternityReferralForm(forms.ModelForm):
             'urgent': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'transport_mode': forms.Select(attrs={'class': 'form-control'}),
         }
+
+class CwcGrowthRecordForm(forms.ModelForm):
+    class Meta:
+        model = CwcGrowthRecord
+        fields = [
+            'measured_date',
+            'weight_kg',
+            'height_cm',
+            'head_circumference_cm',
+            'notes',
+        ]
+        widgets = {
+            'measured_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'weight_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'placeholder': 'kg', 'required': True}),
+            'height_cm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'cm'}),
+            'head_circumference_cm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'cm'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional'}),
+        }
+        labels = {
+            'weight_kg': 'Weight (kg)',
+            'height_cm': 'Height (cm)',
+            'head_circumference_cm': 'Head circumference (cm)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['weight_kg'].required = True
+
 
 class ImmunizationRecordForm(forms.ModelForm):
     class Meta:
