@@ -7,5 +7,6 @@ migrations/
 *.pyc
 *.log
 .env
+scripts/deploy.env
 
 db.sqlite3
