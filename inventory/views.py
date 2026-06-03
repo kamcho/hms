@@ -8,10 +8,43 @@ from .forms import InventoryItemForm, InventoryCategoryForm, SupplierForm, Stock
 from home.models import Departments, Patient, Visit
 from accounts.utils import get_or_create_invoice
 
+from decimal import Decimal
+
 from django.db.models import Sum, Count, Q, Case, When, Value, IntegerField
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import ManyToManyRel, ManyToOneRel, OneToOneRel
+
+
+def _grn_received_reconciliation(purchase, stock_records):
+    """Sum line totals (unit cost × qty) and compare to GRN invoice total."""
+    invoice_total = purchase.total_amount or Decimal('0')
+    received_sum = Decimal('0')
+    for record in stock_records:
+        unit = record.purchase_price or Decimal('0')
+        line_total = unit * record.quantity
+        record.line_total = line_total
+        received_sum += line_total
+
+    variance = received_sum - invoice_total
+    tolerance = Decimal('0.01')
+    if abs(variance) <= tolerance:
+        match_status = 'match'
+        match_label = 'Matches invoice total'
+    elif variance > 0:
+        match_status = 'over'
+        match_label = f'Over invoice by KES {variance:,.2f}'
+    else:
+        match_status = 'under'
+        match_label = f'Under invoice by KES {abs(variance):,.2f}'
+
+    return {
+        'received_sum': received_sum,
+        'invoice_total': invoice_total,
+        'variance': variance,
+        'match_status': match_status,
+        'match_label': match_label,
+    }
 
 @login_required
 def item_list(request):
@@ -815,8 +848,14 @@ def add_grn_item(request, grn_id):
         form.fields['supplier'].required = False
     
     # Get items already added to this GRN
-    added_items = purchase.stock_records.all().select_related('item', 'item__category', 'current_location').order_by('item__name')
-    
+    added_items = list(
+        purchase.stock_records.all().select_related(
+            'item', 'item__category', 'current_location'
+        ).order_by('item__name')
+    )
+
+    received_reconciliation = _grn_received_reconciliation(purchase, added_items)
+
     # All items for the dropdown and JS profit calculator
     import json
     inventory_items = InventoryItem.objects.all().order_by('name')
@@ -824,11 +863,12 @@ def add_grn_item(request, grn_id):
         str(item.id): float(item.selling_price) if item.selling_price else 0
         for item in inventory_items
     })
-    
+
     context = {
         'purchase': purchase,
         'form': form,
         'added_items': added_items,
+        'received_reconciliation': received_reconciliation,
         'inventory_items': inventory_items,
         'all_items_prices_json': all_items_prices_json,
     }

@@ -1,0 +1,28 @@
+from django import forms
+
+from .models import NvipMonthlyReport
+
+
+class NvipReportHeaderForm(forms.ModelForm):
+    class Meta:
+        model = NvipMonthlyReport
+        fields = [
+            'facility_name',
+            'kmhfl_code',
+            'month',
+            'year',
+            'ward',
+            'sub_county',
+            'county',
+            'notes',
+        ]
+        widgets = {
+            'facility_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'kmhfl_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'month': forms.Select(attrs={'class': 'form-control'}),
+            'year': forms.NumberInput(attrs={'class': 'form-control', 'min': 2020, 'max': 2100}),
+            'ward': forms.TextInput(attrs={'class': 'form-control'}),
+            'sub_county': forms.TextInput(attrs={'class': 'form-control'}),
+            'county': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }

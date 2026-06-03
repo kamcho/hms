@@ -35,6 +35,7 @@ urlpatterns = [
     # path('api-auth/', include('rest_framework.urls')),
     path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),  # Accounts app
     path('comms/', include(('comms.urls', 'comms'), namespace='comms')),  # Comms app
+    path('reports/', include(('reports.urls', 'reports'), namespace='reports')),
 
     # Shared API
     path('api/patient-search/', home_views.patient_search_api, name='patient_search_api'),

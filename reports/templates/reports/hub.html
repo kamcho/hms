@@ -1,0 +1,23 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}Reports - HMS{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-2xl font-black text-slate-800 mb-2">Reports</h1>
+    <p class="text-slate-500 text-sm mb-8">National programme summaries and facility returns</p>
+
+    <div class="grid gap-4 md:grid-cols-2">
+        <a href="{% url 'reports:nvip_list' %}"
+           class="block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <div>
+                    <h2 class="font-black text-slate-800 uppercase tracking-wide text-sm">NVIP</h2>
+                    <p class="text-xs text-slate-500 mt-1">MOH 710 — Integrated Immunization, Vitamin A, Ophthalmology &amp; EPI Logistics Summary</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

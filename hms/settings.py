@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'lab',
     'maternity',
     'comms',
+    'reports.apps.ReportsConfig',
 ]
 
 MIDDLEWARE = [
@@ -96,7 +97,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'reports', 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

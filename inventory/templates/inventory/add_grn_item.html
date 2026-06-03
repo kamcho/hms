@@ -420,6 +420,72 @@
         background: rgba(99, 102, 241, 0.03);
     }
 
+    .items-table tfoot td {
+        background: #f1f5f9;
+        border-top: 2px solid #cbd5e1;
+        font-weight: 800;
+        padding: 1rem 1.5rem;
+    }
+
+    .grn-reconcile-bar {
+        margin: 0 1.5rem 1.5rem;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .grn-reconcile-bar.match {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+    }
+
+    .grn-reconcile-bar.over {
+        background: #fff7ed;
+        border-color: #fed7aa;
+    }
+
+    .grn-reconcile-bar.under {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    .grn-reconcile-bar .rc-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+    }
+
+    .grn-reconcile-bar .rc-value {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin-top: 0.2rem;
+    }
+
+    .grn-reconcile-status {
+        grid-column: 1 / -1;
+        font-size: 0.85rem;
+        font-weight: 800;
+        padding-top: 0.5rem;
+        border-top: 1px dashed rgba(0,0,0,0.08);
+    }
+
+    .grn-reconcile-bar.match .grn-reconcile-status { color: #059669; }
+    .grn-reconcile-bar.over .grn-reconcile-status { color: #c2410c; }
+    .grn-reconcile-bar.under .grn-reconcile-status { color: #1d4ed8; }
+
+    .line-total-cell {
+        font-weight: 800;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+
     .empty-state {
         padding: 4rem 2rem;
         text-align: center;
@@ -912,6 +978,7 @@
                             <th>Batch</th>
                             <th style="text-align: center;">Qty</th>
                             <th style="text-align: right;">Unit Cost</th>
+                            <th style="text-align: right;">Total Price</th>
                             <th style="text-align: right;">Location</th>
                             <th style="text-align: center;">Action</th>
                         </tr>
@@ -938,6 +1005,9 @@
                                 <td style="text-align: right; font-weight: 600; color: #475569;">
                                     KES {{ record.purchase_price|floatformat:2 }}
                                 </td>
+                                <td style="text-align: right;" class="line-total-cell">
+                                    KES {{ record.line_total|floatformat:2 }}
+                                </td>
                                 <td style="text-align: right;">
                                     <span class="badge badge-muted">{{ record.current_location.name }}</span>
                                 </td>
@@ -949,7 +1019,42 @@
                             </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" style="text-align: right; text-transform: uppercase; font-size: 0.7rem; color: #64748b;">
+                                Sum of received goods
+                            </td>
+                            <td style="text-align: right;" class="line-total-cell">
+                                KES {{ received_reconciliation.received_sum|floatformat:2 }}
+                            </td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
                 </table>
+                <div class="grn-reconcile-bar {{ received_reconciliation.match_status }}">
+                    <div>
+                        <div class="rc-label">Invoice / GRN total</div>
+                        <div class="rc-value">KES {{ received_reconciliation.invoice_total|floatformat:2 }}</div>
+                    </div>
+                    <div>
+                        <div class="rc-label">Sum of line totals</div>
+                        <div class="rc-value">KES {{ received_reconciliation.received_sum|floatformat:2 }}</div>
+                    </div>
+                    <div>
+                        <div class="rc-label">Variance</div>
+                        <div class="rc-value">
+                            {% if received_reconciliation.match_status == 'match' %}
+                                KES 0.00
+                            {% else %}
+                                {% if received_reconciliation.variance > 0 %}+{% endif %}KES {{ received_reconciliation.variance|floatformat:2 }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="grn-reconcile-status">
+                        <i class="fas fa-{% if received_reconciliation.match_status == 'match' %}check-circle{% elif received_reconciliation.match_status == 'over' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                        {{ received_reconciliation.match_label }}
+                    </div>
+                </div>
             {% else %}
                 <div class="empty-state">
                     <i class="fas fa-box-open"></i>

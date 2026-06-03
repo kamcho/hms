@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOH 710 NVIP — {{ report.facility_name }} {{ report.month_name }} {{ report.year }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 8mm; }
+        body { font-family: Arial, sans-serif; font-size: 7pt; margin: 0; }
+        h1 { font-size: 11pt; margin: 0 0 4px; text-align: center; }
+        .sub { text-align: center; font-size: 8pt; margin-bottom: 8px; }
+        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 7pt; margin-bottom: 8px; border: 1px solid #000; padding: 6px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #333; padding: 1px 2px; text-align: center; }
+        th { background: #eee; font-size: 6pt; }
+        .lbl { text-align: left; min-width: 120px; font-weight: bold; }
+        .age { text-align: left; font-size: 6pt; color: #444; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <p class="no-print"><button onclick="window.print()">Print</button></p>
+
+    <h1>REPUBLIC OF KENYA — NVIP (MOH 710)</h1>
+    <p class="sub">Integrated Immunization, Vitamin A, Ophthalmology &amp; EPI Logistics Summary — Section A</p>
+
+    <div class="meta">
+        <div><strong>Facility:</strong> {{ report.facility_name }}</div>
+        <div><strong>KMHFL:</strong> {{ report.kmhfl_code|default:"—" }}</div>
+        <div><strong>Month/Year:</strong> {{ report.month_name }} {{ report.year }}</div>
+        <div><strong>Status:</strong> {{ report.get_status_display }}</div>
+        <div><strong>Ward:</strong> {{ report.ward|default:"—" }}</div>
+        <div><strong>Sub County:</strong> {{ report.sub_county|default:"—" }}</div>
+        <div><strong>County:</strong> {{ report.county|default:"—" }}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="lbl">Antigen</th>
+                <th class="age">Age group</th>
+                {% for d in day_range %}<th>{{ d }}</th>{% endfor %}
+                <th>Total Static</th>
+                <th>Total Outreach</th>
+                <th>Grand Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr>
+                <td class="lbl">{{ row.def.antigen }}</td>
+                <td class="age">{{ row.def.age_group|default:"—" }}</td>
+                {% for c in row.days %}<td>{{ c }}</td>{% endfor %}
+                <td>{{ row.total_static }}</td>
+                <td>{{ row.total_outreach }}</td>
+                <td>{{ row.grand }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

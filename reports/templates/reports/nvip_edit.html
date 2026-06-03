@@ -1,0 +1,392 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block extra_css %}
+<style>
+/* NVIP MOH 710 editor — HMS styling (self-contained) */
+.nvip-page {
+    padding: 1.25rem 1.5rem 2rem;
+    max-width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.nvip-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.nvip-toolbar h1 {
+    margin: 0.35rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #2c3e50;
+}
+.nvip-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #3498db;
+    text-decoration: none;
+}
+.nvip-back:hover { color: #2980b9; }
+.nvip-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.nvip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+}
+.nvip-btn:hover { transform: translateY(-1px); }
+.nvip-btn-primary { background: #3498db; color: #fff; }
+.nvip-btn-primary:hover { background: #2980b9; }
+.nvip-btn-success { background: #27ae60; color: #fff; }
+.nvip-btn-success:hover { background: #219a52; }
+.nvip-btn-dark { background: #2c3e50; color: #fff; }
+.nvip-btn-dark:hover { background: #1a252f; }
+.nvip-btn-outline {
+    background: #fff;
+    color: #2c3e50;
+    border: 1px solid #cbd5e1;
+}
+.nvip-btn-outline:hover { background: #f8fafc; border-color: #3498db; color: #3498db; }
+
+.nvip-sheet {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(44, 62, 80, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+.moh710-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: #fff;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+}
+.moh710-header .gov { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; opacity: 0.9; }
+.moh710-header .title { font-size: 1rem; font-weight: 800; text-transform: uppercase; margin-top: 0.25rem; }
+.moh710-header .subtitle { font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; opacity: 0.95; }
+.moh710-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem 1rem;
+    margin-top: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+}
+.moh710-meta span { opacity: 0.85; }
+.moh710-meta strong { font-weight: 700; }
+
+.moh710-wrap {
+    overflow: auto;
+    max-height: calc(100vh - 280px);
+    background: #fafbfc;
+}
+.moh710-table {
+    border-collapse: collapse;
+    font-size: 10px;
+    min-width: 2600px;
+    width: 100%;
+    background: #fff;
+}
+.moh710-table th,
+.moh710-table td {
+    border: 1px solid #d1d5db;
+    padding: 4px 5px;
+    text-align: center;
+    vertical-align: middle;
+}
+.moh710-table thead th {
+    background: #ecf0f1;
+    color: #2c3e50;
+    font-weight: 800;
+    font-size: 9px;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    box-shadow: 0 1px 0 #cbd5e1;
+}
+.moh710-table tbody tr:nth-child(even) { background: #f8fafc; }
+.moh710-table tbody tr:hover { background: #eef6fc; }
+.moh710-table .label-col {
+    text-align: left;
+    min-width: 200px;
+    max-width: 240px;
+    position: sticky;
+    left: 0;
+    background: inherit;
+    z-index: 2;
+    font-weight: 700;
+    color: #2c3e50;
+    padding-left: 10px;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+}
+.moh710-table .age-col {
+    text-align: left;
+    min-width: 130px;
+    position: sticky;
+    left: 200px;
+    background: inherit;
+    z-index: 2;
+    color: #64748b;
+    font-size: 9px;
+    padding-left: 8px;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+}
+.moh710-table thead .label-col,
+.moh710-table thead .age-col {
+    background: #ecf0f1;
+    z-index: 5;
+}
+.moh710-table tbody tr:nth-child(even) .label-col,
+.moh710-table tbody tr:nth-child(even) .age-col { background: #f8fafc; }
+.moh710-table tbody tr:hover .label-col,
+.moh710-table tbody tr:hover .age-col { background: #eef6fc; }
+.moh710-table th.summary-col {
+    background: #dbeafe;
+    color: #1e40af;
+    min-width: 72px;
+}
+.moh710-table input.day-inp {
+    width: 34px;
+    padding: 3px 2px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 10px;
+    background: #fff;
+}
+.moh710-table input.day-inp:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+.moh710-table input.sum-inp {
+    width: 52px;
+    padding: 3px 4px;
+    text-align: center;
+    border: 1px solid #93c5fd;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 10px;
+    background: #eff6ff;
+}
+.moh710-table input:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+.moh710-table .grand-cell {
+    font-weight: 800;
+    color: #2c3e50;
+    background: #f0f9ff;
+}
+.nvip-hint {
+    padding: 0.65rem 1rem;
+    background: #eff6ff;
+    border-bottom: 1px solid #bfdbfe;
+    font-size: 0.72rem;
+    color: #1e40af;
+}
+.nvip-status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.nvip-status-draft { background: #fef3c7; color: #b45309; }
+.nvip-status-submitted { background: #d1fae5; color: #047857; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="nvip-page">
+    <div class="nvip-toolbar">
+        <div>
+            <a href="{% url 'reports:nvip_list' %}?year={{ report.year }}" class="nvip-back">
+                <i class="fas fa-arrow-left"></i> NVIP reports
+            </a>
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="nvip-actions">
+            {% if report.status != 'submitted' %}
+            <form method="post" action="{% url 'reports:nvip_sync' report.pk %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="nvip-btn nvip-btn-success">
+                    <i class="fas fa-sync"></i> Pull from immunizations
+                </button>
+            </form>
+            <button type="button" id="btnSave" class="nvip-btn nvip-btn-primary">
+                <i class="fas fa-save"></i> Save draft
+            </button>
+            <button type="button" id="btnSubmit" class="nvip-btn nvip-btn-dark">
+                <i class="fas fa-check"></i> Mark submitted
+            </button>
+            {% endif %}
+            <a href="{% url 'reports:nvip_print' report.pk %}" target="_blank" class="nvip-btn nvip-btn-outline">
+                <i class="fas fa-print"></i> Print MOH 710
+            </a>
+        </div>
+    </div>
+
+    <div class="nvip-sheet">
+        <div class="moh710-header">
+            <div class="gov">Republic of Kenya</div>
+            <div class="title">National Vaccines &amp; Immunization Programme (NVIP)</div>
+            <div class="subtitle">MOH 710 — Section A: Integrated Immunization Summary</div>
+            <div class="moh710-meta">
+                <div><span>Facility: </span><strong>{{ report.facility_name }}</strong></div>
+                <div><span>KMHFL: </span><strong>{{ report.kmhfl_code|default:"—" }}</strong></div>
+                <div><span>Period: </span><strong>{{ report.month_name }} {{ report.year }}</strong></div>
+                <div>
+                    <span>Status: </span>
+                    <span class="nvip-status-badge {% if report.status == 'submitted' %}nvip-status-submitted{% else %}nvip-status-draft{% endif %}">
+                        {{ report.get_status_display }}
+                    </span>
+                </div>
+                <div><span>Ward: </span><strong>{{ report.ward|default:"—" }}</strong></div>
+                <div><span>Sub County: </span><strong>{{ report.sub_county|default:"—" }}</strong></div>
+                <div><span>County: </span><strong>{{ report.county|default:"—" }}</strong></div>
+            </div>
+        </div>
+
+        <div class="nvip-hint">
+            <i class="fas fa-info-circle"></i>
+            Enter daily tallies (columns 1–{{ days_in_month }}). <strong>Total Static</strong> and <strong>Total Outreach</strong> are monthly totals; Grand Total = Static + Outreach.
+            Scroll horizontally for all days.
+        </div>
+
+        <div class="moh710-wrap">
+            <table class="moh710-table">
+                <thead>
+                    <tr>
+                        <th class="label-col">Antigen / Item</th>
+                        <th class="age-col">Age group</th>
+                        {% for d in day_range %}
+                        <th>{{ d }}</th>
+                        {% endfor %}
+                        <th class="summary-col">Total Static</th>
+                        <th class="summary-col">Total Outreach</th>
+                        <th class="summary-col">Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in grid %}
+                    <tr data-line-id="{{ row.line.id }}">
+                        <td class="label-col">{{ row.def.antigen }}</td>
+                        <td class="age-col">{{ row.def.age_group|default:"—" }}</td>
+                        {% for cnt in row.days %}
+                        <td>
+                            <input type="number" min="0" class="day-inp" data-day="{{ forloop.counter }}"
+                                   value="{{ cnt }}" {% if report.status == 'submitted' %}disabled{% endif %}>
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <input type="number" min="0" class="sum-inp total-static"
+                                   value="{{ row.line.total_static|default:row.line.computed_daily_sum }}"
+                                   {% if report.status == 'submitted' %}disabled{% endif %}>
+                        </td>
+                        <td>
+                            <input type="number" min="0" class="sum-inp total-outreach"
+                                   value="{{ row.line.total_outreach }}"
+                                   {% if report.status == 'submitted' %}disabled{% endif %}>
+                        </td>
+                        <td class="grand-cell">{{ row.grand }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if report.status != 'submitted' %}
+<script>
+(function() {
+    const saveUrl = "{% url 'reports:nvip_save' report.pk %}";
+    const csrf = '{{ csrf_token }}';
+
+    function collectLines() {
+        const lines = {};
+        document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+            const id = tr.dataset.lineId;
+            const daily = {};
+            tr.querySelectorAll('.day-inp').forEach(inp => {
+                daily[inp.dataset.day] = parseInt(inp.value, 10) || 0;
+            });
+            lines[id] = {
+                daily: daily,
+                total_static: parseInt(tr.querySelector('.total-static').value, 10) || 0,
+                total_outreach: parseInt(tr.querySelector('.total-outreach').value, 10) || 0,
+            };
+        });
+        return lines;
+    }
+
+    function recalcRow(tr) {
+        let sum = 0;
+        tr.querySelectorAll('.day-inp').forEach(inp => { sum += parseInt(inp.value, 10) || 0; });
+        const st = parseInt(tr.querySelector('.total-static').value, 10) || 0;
+        const out = parseInt(tr.querySelector('.total-outreach').value, 10) || 0;
+        const staticTotal = st || sum;
+        tr.querySelector('.grand-cell').textContent = staticTotal + out;
+    }
+
+    document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+        tr.querySelectorAll('input').forEach(inp => {
+            inp.addEventListener('input', () => recalcRow(tr));
+        });
+    });
+
+    function post(saveData) {
+        return fetch(saveUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify(saveData),
+        }).then(r => r.json());
+    }
+
+    document.getElementById('btnSave').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        post({ lines: collectLines(), submit: false }).then(d => {
+            btn.disabled = false;
+            if (d.success) alert('Draft saved.');
+            else alert(d.error || 'Save failed');
+        });
+    });
+
+    document.getElementById('btnSubmit').addEventListener('click', function() {
+        if (!confirm('Submit this MOH 710 report? It will be locked.')) return;
+        const btn = this;
+        btn.disabled = true;
+        post({ lines: collectLines(), submit: true }).then(d => {
+            if (d.success) location.reload();
+            else { alert(d.error || 'Submit failed'); btn.disabled = false; }
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
