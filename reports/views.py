@@ -8,8 +8,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import NvipReportHeaderForm
-from .models import NvipLineDefinition, NvipMonthlyReport, NvipReportLine
+from .forms import Moh705bReportHeaderForm, NvipReportHeaderForm
+from .models import (
+    Moh705bColumnDefinition,
+    Moh705bLineDefinition,
+    Moh705bMonthlyReport,
+    Moh705bReportLine,
+    NvipLineDefinition,
+    NvipMonthlyReport,
+    NvipReportLine,
+)
 from .services import apply_immunization_counts_to_report
 
 
@@ -209,4 +217,171 @@ def nvip_report_print(request, pk):
         'grid': grid,
         'day_range': day_range,
         'days_in_month': days_in_month,
+    })
+
+
+def _ensure_moh705b_lines(report):
+    for line_def in Moh705bLineDefinition.objects.filter(is_active=True):
+        Moh705bReportLine.objects.get_or_create(
+            report=report,
+            line_definition=line_def,
+            defaults={'column_data': {}},
+        )
+
+
+@login_required
+def moh705b_report_list(request):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+
+    year = request.GET.get('year')
+    try:
+        year = int(year) if year else timezone.localdate().year
+    except ValueError:
+        year = timezone.localdate().year
+
+    reports = Moh705bMonthlyReport.objects.filter(year=year).order_by('-month')
+    return render(request, 'reports/moh705b_list.html', {
+        'reports': reports,
+        'year': year,
+        'years': range(timezone.localdate().year, timezone.localdate().year - 5, -1),
+        'title': 'MOH 705B — Outpatient Over 5',
+    })
+
+
+@login_required
+def moh705b_report_create(request):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+
+    if request.method == 'POST':
+        form = Moh705bReportHeaderForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_by = request.user
+            report.save()
+            _ensure_moh705b_lines(report)
+            messages.success(request, 'MOH 705B report created.')
+            return redirect('reports:moh705b_edit', pk=report.pk)
+    else:
+        today = timezone.localdate()
+        form = Moh705bReportHeaderForm(initial={
+            'month': today.month,
+            'year': today.year,
+            'facility_name': 'Facility Name',
+            'compiled_date': today,
+        })
+
+    return render(request, 'reports/moh705b_create.html', {
+        'form': form,
+        'title': 'New MOH 705B Report',
+    })
+
+
+@login_required
+def moh705b_report_edit(request, pk):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+
+    report = get_object_or_404(Moh705bMonthlyReport, pk=pk)
+    _ensure_moh705b_lines(report)
+
+    columns = list(Moh705bColumnDefinition.objects.filter(is_active=True).order_by('col_number'))
+    lines = list(
+        report.lines.select_related('line_definition').order_by('line_definition__sort_order')
+    )
+
+    grid = []
+    for line in lines:
+        grid.append({
+            'line': line,
+            'def': line.line_definition,
+            'cols': [line.col_count(c.col_number) for c in columns],
+            'total': line.row_total,
+        })
+
+    col_totals = []
+    for col in columns:
+        col_totals.append(sum(line.col_count(col.col_number) for line in lines))
+
+    return render(request, 'reports/moh705b_edit.html', {
+        'report': report,
+        'columns': columns,
+        'grid': grid,
+        'col_totals': col_totals,
+        'grand_total': sum(col_totals),
+        'title': f'MOH 705B — {report.month_name} {report.year}',
+    })
+
+
+@login_required
+@require_POST
+def moh705b_report_save(request, pk):
+    if not _can_access_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+
+    report = get_object_or_404(Moh705bMonthlyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'})
+
+    for line_id, cells in (payload.get('lines') or {}).items():
+        try:
+            line = Moh705bReportLine.objects.get(pk=int(line_id), report=report)
+        except (ValueError, Moh705bReportLine.DoesNotExist):
+            continue
+        col_data = {}
+        for col_str, val in (cells.get('columns') or {}).items():
+            try:
+                cn = int(col_str)
+                if 1 <= cn <= 16:
+                    col_data[str(cn)] = max(0, int(val or 0))
+            except (TypeError, ValueError):
+                pass
+        line.column_data = col_data
+        line.save()
+
+    if payload.get('compiled_by') is not None:
+        report.compiled_by = payload.get('compiled_by', '')[:200]
+    if payload.get('compiled_designation') is not None:
+        report.compiled_designation = payload.get('compiled_designation', '')[:120]
+    if payload.get('compiled_date'):
+        report.compiled_date = payload.get('compiled_date') or None
+
+    if payload.get('submit'):
+        report.status = 'submitted'
+    report.save()
+
+    return JsonResponse({'success': True, 'status': report.status})
+
+
+@login_required
+def moh705b_report_print(request, pk):
+    if not _can_access_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+
+    report = get_object_or_404(Moh705bMonthlyReport, pk=pk)
+    columns = list(Moh705bColumnDefinition.objects.filter(is_active=True).order_by('col_number'))
+    lines = report.lines.select_related('line_definition').order_by('line_definition__sort_order')
+
+    grid = []
+    for line in lines:
+        grid.append({
+            'def': line.line_definition,
+            'cols': [line.col_count(c.col_number) for c in columns],
+            'total': line.row_total,
+        })
+
+    col_totals = [sum(line.col_count(c.col_number) for line in lines) for c in columns]
+
+    return render(request, 'reports/moh705b_print.html', {
+        'report': report,
+        'columns': columns,
+        'grid': grid,
+        'col_totals': col_totals,
+        'grand_total': sum(col_totals),
     })

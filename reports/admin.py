@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import NvipLineDefinition, NvipMonthlyReport, NvipReportLine
+from .models import (
+    Moh705bColumnDefinition,
+    Moh705bLineDefinition,
+    Moh705bMonthlyReport,
+    Moh705bReportLine,
+    NvipLineDefinition,
+    NvipMonthlyReport,
+    NvipReportLine,
+)
 
 
 class NvipReportLineInline(admin.TabularInline):
@@ -21,3 +29,26 @@ class NvipMonthlyReportAdmin(admin.ModelAdmin):
     list_display = ('facility_name', 'month', 'year', 'status', 'updated_at')
     list_filter = ('year', 'month', 'status')
     inlines = [NvipReportLineInline]
+
+
+@admin.register(Moh705bColumnDefinition)
+class Moh705bColumnDefinitionAdmin(admin.ModelAdmin):
+    list_display = ('col_number', 'full_label', 'label', 'is_active')
+
+
+@admin.register(Moh705bLineDefinition)
+class Moh705bLineDefinitionAdmin(admin.ModelAdmin):
+    list_display = ('line_number', 'disease_name', 'category', 'is_active')
+    list_filter = ('category',)
+
+
+class Moh705bReportLineInline(admin.TabularInline):
+    model = Moh705bReportLine
+    extra = 0
+
+
+@admin.register(Moh705bMonthlyReport)
+class Moh705bMonthlyReportAdmin(admin.ModelAdmin):
+    list_display = ('facility_name', 'month', 'year', 'status', 'updated_at')
+    list_filter = ('year', 'month', 'status')
+    inlines = [Moh705bReportLineInline]

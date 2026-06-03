@@ -396,7 +396,7 @@
                         <a href="{% url 'reports:hub' %}"
                            class="menu-item {% if request.resolver_match.namespace == 'reports' %}active{% endif %}">
                             <i class="fas fa-chart-bar"></i>
-                            <span>Reports (NVIP)</span>
+                            <span>Reports</span>
                         </a>
                     {% endif %}
                     {% if user.role == 'Admin' or user.role == 'Accountant'  %}

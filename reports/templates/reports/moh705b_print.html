@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOH 705B — {{ report.facility_name }} {{ report.month_name }} {{ report.year }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 6mm; }
+        body { font-family: Arial, sans-serif; font-size: 6pt; margin: 0; }
+        h1 { font-size: 10pt; text-align: center; margin: 0 0 4px; }
+        .sub { text-align: center; font-size: 7pt; margin-bottom: 6px; }
+        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 6pt; border: 1px solid #000; padding: 4px; margin-bottom: 6px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #333; padding: 1px 2px; text-align: center; }
+        th { background: #eee; font-size: 5pt; }
+        .lbl { text-align: left; font-weight: bold; min-width: 140px; }
+        .num { width: 14px; }
+        .att { background: #fffde7; font-weight: bold; }
+        .ref { background: #e3f2fd; }
+        .footer { margin-top: 10px; font-size: 7pt; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <p class="no-print"><button onclick="window.print()">Print</button></p>
+    <h1>MINISTRY OF HEALTH — MOH 705B</h1>
+    <p class="sub">Outpatient Over 5 yr Summary — Diseases (New Cases Only)</p>
+    <div class="meta">
+        <div><b>Facility:</b> {{ report.facility_name }}</div>
+        <div><b>KMHFL:</b> {{ report.kmhfl_code|default:"—" }}</div>
+        <div><b>Month:</b> {{ report.month_name }} {{ report.year }}</div>
+        <div><b>Ward:</b> {{ report.ward|default:"—" }}</div>
+        <div><b>Sub County:</b> {{ report.sub_county|default:"—" }}</div>
+        <div><b>County:</b> {{ report.county|default:"—" }}</div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th class="num">#</th>
+                <th class="lbl">Disease</th>
+                {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+                <th>Tot</th>
+            </tr>
+            <tr>
+                <th></th>
+                <th class="lbl" style="font-weight:normal;font-size:5pt;">Age/Sex</th>
+                {% for col in columns %}<th style="font-weight:normal;font-size:4pt;">{{ col.full_label }}</th>{% endfor %}
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr class="{% if row.def.category == 'attendance' %}att{% elif row.def.category == 'referral' %}ref{% endif %}">
+                <td>{{ row.def.line_number }}</td>
+                <td class="lbl">{{ row.def.disease_name }}</td>
+                {% for c in row.cols %}<td>{{ c }}</td>{% endfor %}
+                <td><b>{{ row.total }}</b></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" style="text-align:right;">Totals</td>
+                {% for t in col_totals %}<td>{{ t }}</td>{% endfor %}
+                <td><b>{{ grand_total }}</b></td>
+            </tr>
+        </tfoot>
+    </table>
+    <div class="footer">
+        <div><b>Compiled by:</b> {{ report.compiled_by|default:"________________" }}</div>
+        <div><b>Designation:</b> {{ report.compiled_designation|default:"________________" }}</div>
+        <div><b>Date:</b> {{ report.compiled_date|date:"d M Y"|default:"________________" }}</div>
+    </div>
+</body>
+</html>

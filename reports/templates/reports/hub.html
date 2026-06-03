@@ -18,6 +18,18 @@
                 </div>
             </div>
         </a>
+        <a href="{% url 'reports:moh705b_list' %}"
+           class="block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-teal-400 hover:shadow-md transition-all">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center text-xl">
+                    <i class="fas fa-hospital-user"></i>
+                </div>
+                <div>
+                    <h2 class="font-black text-slate-800 uppercase tracking-wide text-sm">MOH 705B</h2>
+                    <p class="text-xs text-slate-500 mt-1">Outpatient Over 5 yr Summary — diseases (new cases) by age/sex</p>
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 {% endblock %}

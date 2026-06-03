@@ -1,0 +1,220 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block extra_css %}
+<style>
+.moh705b-page { padding: 1.25rem 1.5rem 2rem; font-family: 'Segoe UI', Tahoma, sans-serif; }
+.moh705b-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.moh705b-toolbar h1 { margin: 0.35rem 0 0; font-size: 1.35rem; font-weight: 800; color: #2c3e50; }
+.moh705b-back { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #0d9488; text-decoration: none; }
+.moh705b-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.moh705b-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.55rem 1rem; border: none; border-radius: 8px;
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+    cursor: pointer; text-decoration: none; color: #fff;
+}
+.moh705b-btn-teal { background: #0d9488; } .moh705b-btn-teal:hover { background: #0f766e; }
+.moh705b-btn-primary { background: #3498db; } .moh705b-btn-dark { background: #2c3e50; }
+.moh705b-btn-outline { background: #fff; color: #2c3e50; border: 1px solid #cbd5e1; }
+
+.moh705b-sheet { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; }
+.moh705b-header {
+    background: linear-gradient(135deg, #134e4a 0%, #0d9488 100%);
+    color: #fff; padding: 1.25rem 1.5rem; text-align: center;
+}
+.moh705b-header .gov { font-size: 0.65rem; letter-spacing: 0.12em; font-weight: 700; }
+.moh705b-header .title { font-size: 0.95rem; font-weight: 800; text-transform: uppercase; margin-top: 0.25rem; }
+.moh705b-header .subtitle { font-size: 0.8rem; margin-top: 0.35rem; opacity: 0.95; }
+.moh705b-meta {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.5rem 1rem; margin-top: 1rem; text-align: left; font-size: 0.75rem;
+}
+.moh705b-hint { padding: 0.6rem 1rem; background: #f0fdfa; border-bottom: 1px solid #99f6e4; font-size: 0.72rem; color: #115e59; }
+.moh705b-wrap { overflow: auto; max-height: calc(100vh - 320px); }
+.moh705b-table { border-collapse: collapse; font-size: 9px; min-width: 1400px; width: 100%; }
+.moh705b-table th, .moh705b-table td { border: 1px solid #cbd5e1; padding: 3px 4px; text-align: center; }
+.moh705b-table thead th { background: #ecf0f1; color: #2c3e50; font-weight: 800; position: sticky; top: 0; z-index: 4; }
+.moh705b-table .num-col { width: 28px; font-weight: 700; color: #64748b; position: sticky; left: 0; background: inherit; z-index: 2; }
+.moh705b-table .name-col {
+    text-align: left; min-width: 220px; max-width: 280px; position: sticky; left: 28px;
+    background: inherit; z-index: 2; padding-left: 8px; font-weight: 600; font-size: 9px;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+}
+.moh705b-table thead .num-col, .moh705b-table thead .name-col { background: #ecf0f1; z-index: 5; }
+.moh705b-table tbody tr:nth-child(even) { background: #f8fafc; }
+.moh705b-table tbody tr:hover { background: #f0fdfa; }
+.moh705b-table tr.row-attendance { background: #fef3c7 !important; font-weight: 800; }
+.moh705b-table tr.row-referral { background: #eff6ff !important; }
+.moh705b-table tr.row-spacer td { background: #f1f5f9; height: 8px; }
+.moh705b-table tr.row-spacer input { display: none; }
+.moh705b-table input.col-inp {
+    width: 36px; padding: 2px; text-align: center; border: 1px solid #e2e8f0;
+    border-radius: 3px; font-size: 9px;
+}
+.moh705b-table input.col-inp:focus { border-color: #0d9488; outline: none; box-shadow: 0 0 0 2px rgba(13,148,136,0.2); }
+.moh705b-table .total-col { font-weight: 800; background: #f0fdfa; min-width: 44px; }
+.moh705b-table tfoot td { background: #e2e8f0; font-weight: 800; border-top: 2px solid #94a3b8; }
+.moh705b-footer-fields {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem; padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; background: #f8fafc;
+}
+.moh705b-footer-fields label { display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.25rem; }
+.moh705b-footer-fields input { width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; }
+.col-hint { font-size: 7px; font-weight: 600; color: #64748b; display: block; line-height: 1.1; margin-top: 1px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="moh705b-page">
+    <div class="moh705b-toolbar">
+        <div>
+            <a href="{% url 'reports:moh705b_list' %}?year={{ report.year }}" class="moh705b-back"><i class="fas fa-arrow-left"></i> MOH 705B list</a>
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="moh705b-actions">
+            {% if report.status != 'submitted' %}
+            <button type="button" id="btnSave" class="moh705b-btn moh705b-btn-primary"><i class="fas fa-save"></i> Save draft</button>
+            <button type="button" id="btnSubmit" class="moh705b-btn moh705b-btn-dark"><i class="fas fa-check"></i> Submit</button>
+            {% endif %}
+            <a href="{% url 'reports:moh705b_print' report.pk %}" target="_blank" class="moh705b-btn moh705b-btn-outline"><i class="fas fa-print"></i> Print</a>
+        </div>
+    </div>
+
+    <div class="moh705b-sheet">
+        <div class="moh705b-header">
+            <div class="gov">Ministry of Health — Kenya</div>
+            <div class="title">MOH 705B — Outpatient Over 5 yr Summary</div>
+            <div class="subtitle">Diseases (New Cases Only)</div>
+            <div class="moh705b-meta">
+                <div><span>Facility: </span><strong>{{ report.facility_name }}</strong></div>
+                <div><span>KMHFL: </span><strong>{{ report.kmhfl_code|default:"—" }}</strong></div>
+                <div><span>Month: </span><strong>{{ report.month_name }} {{ report.year }}</strong></div>
+                <div><span>Ward: </span><strong>{{ report.ward|default:"—" }}</strong></div>
+                <div><span>Sub County: </span><strong>{{ report.sub_county|default:"—" }}</strong></div>
+                <div><span>County: </span><strong>{{ report.county|default:"—" }}</strong></div>
+            </div>
+        </div>
+        <div class="moh705b-hint">
+            <i class="fas fa-info-circle"></i> Enter new-case counts in columns 1–16 (age/sex groups). Row total is calculated automatically.
+        </div>
+        <div class="moh705b-wrap">
+            <table class="moh705b-table">
+                <thead>
+                    <tr>
+                        <th class="num-col">#</th>
+                        <th class="name-col">Diseases (New Cases Only)</th>
+                        {% for col in columns %}
+                        <th title="{{ col.full_label }}">{{ col.label }}<span class="col-hint">{{ col.full_label }}</span></th>
+                        {% endfor %}
+                        <th class="total-col">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in grid %}
+                    <tr data-line-id="{{ row.line.id }}"
+                        class="{% if row.def.category == 'attendance' %}row-attendance{% elif row.def.category == 'referral' %}row-referral{% elif row.def.category == 'spacer' %}row-spacer{% endif %}">
+                        <td class="num-col">{{ row.def.line_number }}</td>
+                        <td class="name-col">{{ row.def.disease_name|default:"&nbsp;" }}</td>
+                        {% for cnt in row.cols %}
+                        <td>
+                            {% if row.def.category != 'spacer' %}
+                            <input type="number" min="0" class="col-inp" data-col="{{ forloop.counter }}"
+                                   value="{{ cnt }}" {% if report.status == 'submitted' %}disabled{% endif %}>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="total-col row-total-cell">{{ row.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" style="text-align:right;text-transform:uppercase;font-size:8px;">Column totals</td>
+                        {% for t in col_totals %}
+                        <td>{{ t }}</td>
+                        {% endfor %}
+                        <td>{{ grand_total }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="moh705b-footer-fields">
+            <div>
+                <label>Report compiled by</label>
+                <input type="text" id="compiledBy" value="{{ report.compiled_by }}" {% if report.status == 'submitted' %}disabled{% endif %}>
+            </div>
+            <div>
+                <label>Designation</label>
+                <input type="text" id="compiledDesignation" value="{{ report.compiled_designation }}" {% if report.status == 'submitted' %}disabled{% endif %}>
+            </div>
+            <div>
+                <label>Date</label>
+                <input type="date" id="compiledDate" value="{{ report.compiled_date|date:'Y-m-d' }}" {% if report.status == 'submitted' %}disabled{% endif %}>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if report.status != 'submitted' %}
+<script>
+(function() {
+    const saveUrl = "{% url 'reports:moh705b_save' report.pk %}";
+    const csrf = '{{ csrf_token }}';
+
+    function collectLines() {
+        const lines = {};
+        document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+            const id = tr.dataset.lineId;
+            const columns = {};
+            tr.querySelectorAll('.col-inp').forEach(inp => {
+                columns[inp.dataset.col] = parseInt(inp.value, 10) || 0;
+            });
+            lines[id] = { columns: columns };
+        });
+        return lines;
+    }
+
+    function recalcRow(tr) {
+        let sum = 0;
+        tr.querySelectorAll('.col-inp').forEach(inp => { sum += parseInt(inp.value, 10) || 0; });
+        const cell = tr.querySelector('.row-total-cell');
+        if (cell) cell.textContent = sum;
+    }
+
+    document.querySelectorAll('tbody tr[data-line-id]').forEach(tr => {
+        tr.querySelectorAll('.col-inp').forEach(inp => {
+            inp.addEventListener('input', () => recalcRow(tr));
+        });
+    });
+
+    function postData(submit) {
+        return fetch(saveUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({
+                lines: collectLines(),
+                compiled_by: document.getElementById('compiledBy').value,
+                compiled_designation: document.getElementById('compiledDesignation').value,
+                compiled_date: document.getElementById('compiledDate').value,
+                submit: submit,
+            }),
+        }).then(r => r.json());
+    }
+
+    document.getElementById('btnSave').addEventListener('click', function() {
+        postData(false).then(d => {
+            if (d.success) alert('Draft saved.');
+            else alert(d.error || 'Save failed');
+        });
+    });
+    document.getElementById('btnSubmit').addEventListener('click', function() {
+        if (!confirm('Submit and lock this MOH 705B report?')) return;
+        postData(true).then(d => {
+            if (d.success) location.reload();
+            else alert(d.error || 'Submit failed');
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
