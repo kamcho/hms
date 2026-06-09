@@ -87,6 +87,62 @@ def _validate_pharmacy_stock_for_lines(lines, pharmacy_dept=None):
     return True, ''
 
 
+def _get_or_create_maternity_visit_for_date(patient, user, care_date, queue_dept_names=None):
+    """
+    Hospital visit for maternity care on a given date.
+    Reuses a visit from the same calendar day only — never a stale active OPD visit.
+    """
+    if isinstance(care_date, datetime):
+        care_date = care_date.date()
+
+    start = timezone.make_aware(datetime.combine(care_date, time.min))
+    end = timezone.make_aware(datetime.combine(care_date, time.max))
+
+    todays_visit = (
+        Visit.objects.filter(
+            patient=patient,
+            is_active=True,
+            visit_date__range=(start, end),
+        )
+        .order_by('-visit_date')
+        .first()
+    )
+    if todays_visit:
+        return todays_visit
+
+    ipd_visit = (
+        Visit.objects.filter(
+            patient=patient,
+            visit_type='IN-PATIENT',
+            is_active=True,
+            admissions__status='Admitted',
+        )
+        .order_by('-visit_date')
+        .first()
+    )
+    if ipd_visit:
+        return ipd_visit
+
+    visit = Visit.objects.create(
+        patient=patient,
+        visit_type='OUT-PATIENT',
+        visit_mode='Walk In',
+        payment_method='CASH',
+        is_active=True,
+    )
+
+    if queue_dept_names:
+        dept = Departments.objects.filter(name__in=queue_dept_names).first()
+        if dept:
+            PatientQue.objects.create(
+                visit=visit,
+                sent_to=dept,
+                created_by=user,
+                status='COMPLETED',
+            )
+    return visit
+
+
 @login_required
 def maternity_dashboard(request):
     """Maternity ward overview dashboard (Ward Management focal point)"""
@@ -124,12 +180,14 @@ def maternity_dashboard(request):
         status__in=['Alive', 'NICU']
     ).select_related('delivery__pregnancy__patient')
     
-    # Delivery Queue (Mothers delivered but not discharged)
+    # Delivery Queue (Mothers delivered but not discharged from IPD)
     maternity_arrivals = Pregnancy.objects.filter(
         delivery__isnull=False,
         maternity_discharge__isnull=True,
-        delivery__is_external=False
-    ).select_related('patient', 'delivery').order_by('-delivery__delivery_datetime')
+        delivery__is_external=False,
+    ).exclude(
+        delivery__admission__status='Discharged',
+    ).select_related('patient', 'delivery', 'delivery__admission').order_by('-delivery__delivery_datetime')
     
     context = {
         'active_pregnancies': active_pregnancies[:20],
@@ -995,22 +1053,46 @@ def pregnancy_detail(request, pregnancy_id):
     
     today = timezone.now().date()
     
-    # Look for the latest active visit (can span multiple days for IPD admissions)
-    latest_visit = Visit.objects.filter(
-        patient=pregnancy.patient,
-        is_active=True
-    ).last()
+    # Today's maternity visit (from PNC/ANC on this date — not a stale active OPD visit)
+    latest_visit = (
+        Visit.objects.filter(
+            patient=pregnancy.patient,
+            is_active=True,
+        )
+        .filter(
+            Q(maternity_mother_pnc_visits__visit_date=today)
+            | Q(maternity_baby_pnc_visits__visit_date=today)
+            | Q(maternity_anc_visits__visit_date=today)
+        )
+        .distinct()
+        .order_by('-visit_date')
+        .first()
+    )
 
-    # Verify the latest active visit has a maternity (ANC or PNC) record created/active today
-    if latest_visit:
-        has_anc = AntenatalVisit.objects.filter(visit=latest_visit, visit_date=today).exists()
-        has_pnc = PostnatalMotherVisit.objects.filter(visit=latest_visit, visit_date=today).exists() or \
-                  PostnatalBabyVisit.objects.filter(visit=latest_visit, visit_date=today).exists()
-        print(f"[DEBUG DISPENSE] latest_visit={latest_visit.id}, date={latest_visit.visit_date}, is_active={latest_visit.is_active}, has_anc={has_anc}, has_pnc={has_pnc}")
-        if not (has_anc or has_pnc):
-            latest_visit = None
-    else:
-        print(f"[DEBUG DISPENSE] latest_visit=None")
+    if not latest_visit:
+        start_of_day = timezone.make_aware(datetime.combine(today, time.min))
+        end_of_day = timezone.make_aware(datetime.combine(today, time.max))
+        latest_visit = (
+            Visit.objects.filter(
+                patient=pregnancy.patient,
+                is_active=True,
+                visit_date__range=(start_of_day, end_of_day),
+            )
+            .order_by('-visit_date')
+            .first()
+        )
+
+    if not latest_visit:
+        latest_visit = (
+            Visit.objects.filter(
+                patient=pregnancy.patient,
+                visit_type='IN-PATIENT',
+                is_active=True,
+                admissions__status='Admitted',
+            )
+            .order_by('-visit_date')
+            .first()
+        )
     
     # 1. Fetch physical dispensations (Stock deducted, filtered to today only)
     if latest_visit:
@@ -1018,10 +1100,8 @@ def pregnancy_detail(request, pregnancy_id):
             visit=latest_visit,
             dispensed_at__date=today
         ).select_related('item', 'dispensed_by').order_by('-dispensed_at')
-        print(f"[DEBUG DISPENSE] d_items count={d_items.count()}")
     else:
         d_items = DispensedItem.objects.none()
-        print(f"[DEBUG DISPENSE] No latest_visit -> empty d_items")
         
     # 2. Fetch billed items (Requested by doctor but might not be dispensed yet, filtered to today only)
     if latest_visit:
@@ -1213,6 +1293,12 @@ def pregnancy_detail(request, pregnancy_id):
         patient=pregnancy.patient, 
         status='Admitted'
     ).order_by('-admitted_at').first()
+
+    ipd_discharge = None
+    if current_ipd_admission and hasattr(current_ipd_admission, 'discharge_record'):
+        ipd_discharge = current_ipd_admission.discharge_record
+    elif delivery and delivery.admission_id and hasattr(delivery.admission, 'discharge_record'):
+        ipd_discharge = delivery.admission.discharge_record
     
     pharmacy_dept = Departments.objects.filter(name__iexact='Pharmacy').first()
     
@@ -1233,6 +1319,7 @@ def pregnancy_detail(request, pregnancy_id):
         'mother_pnc': mother_pnc_visits,
         'baby_pnc': PostnatalBabyVisit.objects.filter(newborn__in=newborns).select_related('newborn', 'recorded_by') if has_delivery else [],
         'discharge': discharge,
+        'ipd_discharge': ipd_discharge,
         'referrals': referrals,
         'available_departments': Departments.objects.filter(name__in=['Lab', 'Imaging', 'Procedure Room']).order_by('name'),
         'dispensing_departments': Departments.objects.all().order_by('name'),
@@ -1536,37 +1623,20 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
             anc_visit.recorded_by = request.user
             anc_visit.service_received = True  # Mark as seen by doctor
             
-            # Link to active hospital visit or create one
-            if not anc_visit.visit:
-                latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
-                
-                if not latest_hosp_visit:
-                    latest_hosp_visit = Visit.objects.create(
-                        patient=pregnancy.patient,
-                        visit_type='OUT-PATIENT',
-                        visit_mode='Walk In',
-                        payment_method='CASH',
-                        is_active=True
-                    )
-                    
-                    # Also create a completed queue entry for department volume tracking
-                    dept = Departments.objects.filter(name__in=['ANC', 'MCH', 'Maternity']).first()
-                    PatientQue.objects.create(
-                        visit=latest_hosp_visit,
-                        sent_to=dept,
-                        created_by=request.user,
-                        status='COMPLETED'
-                    )
-                
-                anc_visit.visit = latest_hosp_visit
-                
+            care_date = form.cleaned_data.get('visit_date') or timezone.localdate()
+            anc_visit.visit = _get_or_create_maternity_visit_for_date(
+                pregnancy.patient,
+                request.user,
+                care_date,
+                ['ANC', 'MCH', 'Maternity'],
+            )
+
             anc_visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
         # For non-POST, prepare the form
         today = timezone.now().date()
-        latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
-        
+
         # Calculate suggested gestational age based on FIRST visit (Anchor)
         # Fallback to LMP-based if no previous visit exists
         first_visit = pregnancy.anc_visits.filter(service_received=True, gestational_age__isnull=False).order_by('visit_number', 'visit_date').first()
@@ -1585,7 +1655,6 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
                 next_visit_num = (last_completed.visit_number + 1) if last_completed else 1
                 
                 form.initial.update({
-                    'visit': latest_hosp_visit,
                     'visit_number': next_visit_num,
                     'visit_date': today,
                     'gestational_age': calc_ga
@@ -1596,7 +1665,6 @@ def record_anc_visit(request, pregnancy_id, visit_id=None):
             next_visit_number = (last_completed.visit_number + 1) if last_completed else 1
             
             form = AntenatalVisitForm(initial={
-                'visit': latest_hosp_visit,
                 'visit_number': next_visit_number,
                 'visit_date': today,
                 'gestational_age': calc_ga
@@ -1654,32 +1722,42 @@ def record_delivery(request, pregnancy_id):
                     visit_date=timezone.now()
                 )
                 delivery_record.visit = visit
-                
-                # Create admission if ward is selected
-                if selected_ward:
-                    # Deactivate any other active visits for this patient
-                    from home.models import Visit
-                    Visit.objects.filter(patient=pregnancy.patient, is_active=True).exclude(id=visit.id).update(is_active=False)
-                    
-                    # Close any other active admissions using transition utility
-                    from inpatient.utils import handle_admission_transition
-                    handle_admission_transition(pregnancy.patient, visit, request.user)
-                    
-                    admission = Admission.objects.create(
-                        patient=pregnancy.patient,
-                        visit=visit,
-                        bed=selected_bed,
-                        provisional_diagnosis=f"Delivery - {delivery_record.get_delivery_mode_display()}",
-                        admitted_by=request.user
+
+                # Always create admission for case-folder discharge (ward/bed optional)
+                from home.models import Visit
+                Visit.objects.filter(
+                    patient=pregnancy.patient,
+                    is_active=True,
+                ).exclude(id=visit.id).update(is_active=False)
+
+                from inpatient.utils import handle_admission_transition
+                handle_admission_transition(pregnancy.patient, visit, request.user)
+
+                admission = Admission.objects.create(
+                    patient=pregnancy.patient,
+                    visit=visit,
+                    bed=selected_bed,
+                    provisional_diagnosis=f"Delivery - {delivery_record.get_delivery_mode_display()}",
+                    admitted_by=request.user,
+                )
+                delivery_record.admission = admission
+
+                if selected_bed:
+                    messages.success(
+                        request,
+                        f"Mother admitted to {selected_bed.ward.name} - Bed {selected_bed.bed_number}",
                     )
-                    delivery_record.admission = admission
-                    
-                    if selected_bed:
-                        messages.success(request, f"Mother admitted to {selected_ward.name} - Bed {selected_bed.bed_number}")
-                    else:
-                        messages.warning(request, f"Mother admitted to {selected_ward.name} without bed assignment. Please assign bed manually.")
+                elif selected_ward:
+                    messages.warning(
+                        request,
+                        f"Admission created for {selected_ward.name} without bed assignment. "
+                        "Assign a bed from the case folder if needed.",
+                    )
                 else:
-                    messages.info(request, "Delivery recorded without ward admission.")
+                    messages.info(
+                        request,
+                        "Delivery recorded. Ward/bed not assigned — discharge is still available from the case folder.",
+                    )
             
             delivery_record.save()
             
@@ -1873,29 +1951,14 @@ def record_mother_pnc_visit(request, pregnancy_id):
             visit.delivery = delivery
             visit.recorded_by = request.user
             
-            # Link to active hospital visit or create one
-            if not visit.visit:
-                latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
-                
-                if not latest_hosp_visit:
-                    latest_hosp_visit = Visit.objects.create(
-                        patient=pregnancy.patient,
-                        visit_type='OUT-PATIENT',
-                        visit_mode='Walk In',
-                        payment_method='CASH',
-                        is_active=True
-                    )
-                    
-                    dept = Departments.objects.filter(name__in=['PNC', 'MCH', 'Maternity']).first()
-                    PatientQue.objects.create(
-                        visit=latest_hosp_visit,
-                        sent_to=dept,
-                        created_by=request.user,
-                        status='COMPLETED'
-                    )
-                
-                visit.visit = latest_hosp_visit
-                
+            care_date = form.cleaned_data.get('visit_date') or timezone.localdate()
+            visit.visit = _get_or_create_maternity_visit_for_date(
+                pregnancy.patient,
+                request.user,
+                care_date,
+                ['PNC', 'MCH', 'Maternity'],
+            )
+
             visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
@@ -1904,10 +1967,8 @@ def record_mother_pnc_visit(request, pregnancy_id):
         delivery_date = delivery_dt.date()
         today = timezone.now().date()
         visit_day = (today - delivery_date).days
-        latest_hosp_visit = Visit.objects.filter(patient=pregnancy.patient, is_active=True).last()
-        
+
         form = PostnatalMotherVisitForm(initial={
-            'visit': latest_hosp_visit,
             'visit_date': today,
             'visit_day': max(0, visit_day),
         })
@@ -1942,29 +2003,15 @@ def record_baby_pnc_visit(request, newborn_id):
             visit.newborn = newborn
             visit.recorded_by = request.user
             
-            # Link to active hospital visit or create one
-            if not visit.visit and newborn.patient_profile:
-                latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
-                
-                if not latest_hosp_visit:
-                    latest_hosp_visit = Visit.objects.create(
-                        patient=newborn.patient_profile,
-                        visit_type='OUT-PATIENT',
-                        visit_mode='Walk In',
-                        payment_method='CASH',
-                        is_active=True
-                    )
-                    
-                    dept = Departments.objects.filter(name__in=['PNC', 'MCH', 'CWC']).first()
-                    PatientQue.objects.create(
-                        visit=latest_hosp_visit,
-                        sent_to=dept,
-                        created_by=request.user,
-                        status='COMPLETED'
-                    )
-                
-                visit.visit = latest_hosp_visit
-                
+            if newborn.patient_profile:
+                care_date = form.cleaned_data.get('visit_date') or timezone.localdate()
+                visit.visit = _get_or_create_maternity_visit_for_date(
+                    newborn.patient_profile,
+                    request.user,
+                    care_date,
+                    ['PNC', 'MCH', 'CWC'],
+                )
+
             visit.save()
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
     else:
@@ -1978,10 +2025,8 @@ def record_baby_pnc_visit(request, newborn_id):
             return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
 
         visit_day = (today - delivery_date).days
-        latest_hosp_visit = Visit.objects.filter(patient=newborn.patient_profile, is_active=True).last()
-        
+
         form = PostnatalBabyVisitForm(initial={
-            'visit': latest_hosp_visit,
             'visit_date': today,
             'visit_day': max(0, visit_day),
             'weight': newborn.birth_weight,
@@ -2000,72 +2045,34 @@ def record_baby_pnc_visit(request, newborn_id):
 
 @login_required
 def record_maternity_discharge(request, pregnancy_id):
-    """Formal clinical closure for mother and baby"""
-    from .forms import MaternityDischargeForm
-    from django.contrib import messages
-    
+    """
+    Maternity discharge is handled from the inpatient case folder.
+    This route redirects staff to the unified IPD discharge page.
+    """
+    from inpatient.utils import ensure_maternity_admission_for_discharge
+
     pregnancy = get_object_or_404(Pregnancy, id=pregnancy_id)
-    
-    # Payment Validation: Check for pending delivery invoice
-    if hasattr(pregnancy, 'delivery') and pregnancy.delivery.visit:
-        if hasattr(pregnancy.delivery.visit, 'invoice'):
-            invoice = pregnancy.delivery.visit.invoice
-            # Allow discharge if invoice is Paid OR Canceled
-            if invoice.status not in ['Paid', 'Canceled']:
-                messages.error(request, f"Cannot discharge patient. There is an unpaid invoice for the delivery visit (Invoice #{invoice.id}). Please clear it first.")
-                return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
-    
-    # Check if already discharged
+
     if hasattr(pregnancy, 'maternity_discharge'):
-        discharge = pregnancy.maternity_discharge
-    else:
-        discharge = None
-        
-    if request.method == 'POST':
-        if discharge:
-            form = MaternityDischargeForm(request.POST, instance=discharge)
-        else:
-            form = MaternityDischargeForm(request.POST)
-            
-        if form.is_valid():
-            discharge_record = form.save(commit=False)
-            discharge_record.pregnancy = pregnancy
-            discharge_record.discharged_by = request.user
-            discharge_record.save()
-            
-            # Ensure pregnancy status is updated
-            if pregnancy.status == 'Active':
-                pregnancy.status = 'Delivered'
-                pregnancy.save()
-                
-            return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
-    else:
-        if discharge:
-            form = MaternityDischargeForm(instance=discharge)
-        else:
-            # Pre-population logic
-            mother_cond = 'Stable'
-            if hasattr(pregnancy, 'delivery'):
-                mother_cond = pregnancy.delivery.mother_condition
-                
-            baby_cond = "Healthy"
-            if hasattr(pregnancy, 'delivery'):
-                newborns = pregnancy.delivery.newborns.all()
-                if newborns.exists():
-                    baby_cond = ", ".join([f"Baby {b.baby_number}: {b.status}" for b in newborns])
-            
-            form = MaternityDischargeForm(initial={
-                'discharge_date': timezone.now(),
-                'mother_condition_at_discharge': mother_cond,
-                'baby_condition_at_discharge': baby_cond,
-            })
-            
-    context = {
-        'form': form,
-        'pregnancy': pregnancy,
-        'is_edit': discharge is not None,
-    }
-    return render(request, 'maternity/record_maternity_discharge.html', context)
+        messages.info(request, 'This patient has already been discharged.')
+        return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
+    if not hasattr(pregnancy, 'delivery'):
+        messages.warning(request, 'Record the delivery before discharging.')
+        return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
+    admission = ensure_maternity_admission_for_discharge(pregnancy, request.user)
+    if not admission:
+        messages.warning(request, 'Could not prepare an admission record for discharge.')
+        return redirect('maternity:pregnancy_detail', pregnancy_id=pregnancy.id)
+
+    if not getattr(admission, 'delivery', None):
+        messages.info(
+            request,
+            'An admission record was created so you can complete discharge from the case folder. '
+            'Payment is collected after discharge.',
+        )
+    return redirect('inpatient:discharge_patient', admission_id=admission.id)
 
 
 @login_required

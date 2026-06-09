@@ -1,0 +1,200 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static custom_filters %}
+{% block title %}Clean Admissions - HMS{% endblock %}
+{% block content %}
+<style>
+    .clean-adm-stats {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 1rem;
+        width: 100%;
+    }
+    .clean-adm-stat-card {
+        flex: 1 1 0;
+        min-width: 0;
+        background: #fff;
+        padding: 1.25rem 1.5rem;
+        border-radius: 1rem;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .clean-adm-stat-card--pink { border-color: #fce7f3; }
+    .clean-adm-stat-card--indigo { border-color: #e0e7ff; }
+    .clean-adm-stat-card--amber { border-color: #fef3c7; }
+    .clean-adm-stat-label {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+    }
+    .clean-adm-stat-card--pink .clean-adm-stat-label { color: #ec4899; }
+    .clean-adm-stat-card--indigo .clean-adm-stat-label { color: #6366f1; }
+    .clean-adm-stat-card--amber .clean-adm-stat-label { color: #d97706; }
+    .clean-adm-stat-value {
+        font-size: 1.875rem;
+        font-weight: 900;
+        color: #0f172a;
+        margin-top: 0.25rem;
+        line-height: 1.1;
+    }
+    .clean-adm-stat-card--pink .clean-adm-stat-value { color: #be185d; }
+    .clean-adm-stat-card--indigo .clean-adm-stat-value { color: #4338ca; }
+    .clean-adm-stat-card--amber .clean-adm-stat-value { color: #b45309; }
+    .clean-adm-stat-hint {
+        font-size: 10px;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+</style>
+<div class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white text-lg shadow-lg shadow-amber-200">
+                    <i class="fas fa-broom"></i>
+                </span>
+                Clean Admissions
+            </h1>
+            <p class="text-slate-500 font-bold mt-2">
+                Open IPD admissions and active inpatient visits not yet discharged
+            </p>
+        </div>
+        <a href="{% url 'inpatient:dashboard' %}" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm flex items-center gap-2">
+            <i class="fas fa-procedures"></i> IPD Dashboard
+        </a>
+    </div>
+
+    <div class="clean-adm-stats mb-10">
+        <div class="clean-adm-stat-card">
+            <div class="clean-adm-stat-label">Active admissions</div>
+            <div class="clean-adm-stat-value">{{ total_admissions }}</div>
+        </div>
+        <div class="clean-adm-stat-card clean-adm-stat-card--pink">
+            <div class="clean-adm-stat-label">Maternity</div>
+            <div class="clean-adm-stat-value">{{ maternity_count }}</div>
+        </div>
+        <div class="clean-adm-stat-card clean-adm-stat-card--indigo">
+            <div class="clean-adm-stat-label">Normal IPD</div>
+            <div class="clean-adm-stat-value">{{ normal_count }}</div>
+        </div>
+        <div class="clean-adm-stat-card clean-adm-stat-card--amber">
+            <div class="clean-adm-stat-label">Orphan IPD visits</div>
+            <div class="clean-adm-stat-value">{{ orphan_visit_count }}</div>
+            <div class="clean-adm-stat-hint">No open admission</div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-8 py-5 border-b border-slate-50 bg-slate-50/40 flex justify-between items-center">
+            <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                <i class="fas fa-list text-amber-500"></i> Open records
+            </h2>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ rows|length }} row{{ rows|length|pluralize }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[960px]">
+                <thead>
+                    <tr class="bg-slate-50/80">
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Patient</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Visit ID</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Visit date</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Admitted</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Invoice amount</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Type</th>
+                        <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Location</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for row in rows %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-black text-slate-900">{{ row.patient_name }}</div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PID {{ row.patient_id }}</div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-black">#{{ row.visit_id|default:"—" }}</span>
+                        </td>
+                        <td class="px-4 py-4 text-sm font-bold text-slate-700">
+                            {% if row.visit_date %}{{ row.visit_date|date:"d M Y, H:i" }}{% else %}—{% endif %}
+                        </td>
+                        <td class="px-4 py-4 text-sm font-semibold text-slate-600">
+                            {% if row.admitted_at %}{{ row.admitted_at|date:"d M Y, H:i" }}{% else %}<span class="text-amber-600 text-xs font-bold">No admission</span>{% endif %}
+                        </td>
+                        <td class="px-4 py-4">
+                            {% if row.invoice_amount is not None %}
+                                <div class="text-sm font-black text-slate-900">KES {{ row.invoice_amount|format_number }}</div>
+                                {% if row.invoice_status %}
+                                <div class="text-[10px] font-bold uppercase tracking-wider mt-0.5
+                                    {% if row.invoice_status == 'Paid' %}text-emerald-600{% elif row.invoice_status == 'Partial' %}text-amber-600{% else %}text-rose-600{% endif %}">
+                                    {{ row.invoice_status }}
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs font-bold text-slate-400">No invoice</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4">
+                            {% if row.is_maternity %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-pink-50 text-pink-700 border border-pink-100 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                                <i class="fas fa-baby-carriage text-[9px]"></i> Maternity
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                                <i class="fas fa-user text-[9px]"></i> Normal IPD
+                            </span>
+                            {% endif %}
+                            {% if row.row_type == 'visit_only' %}
+                            <div class="text-[9px] font-bold text-amber-600 uppercase tracking-wider mt-1">Visit only</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4 text-xs font-bold text-slate-600">
+                            {% if row.ward %}{{ row.ward }}{% if row.bed %}, Bed {{ row.bed }}{% endif %}{% else %}—{% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <div class="inline-flex flex-wrap items-center justify-end gap-1">
+                            {% if row.admission_id %}
+                            <a href="{% url 'inpatient:patient_case_folder' row.admission_id %}" class="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-600 hover:text-white transition-all">
+                                <i class="fas fa-folder-open"></i> Folder
+                            </a>
+                            <form method="post" action="{% url 'inpatient:clean_admissions_close' %}" class="inline"
+                                  onsubmit="return confirm('Close admission and visit #{{ row.visit_id }} for {{ row.patient_name|escapejs }}? This cannot be undone.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="admission_id" value="{{ row.admission_id }}">
+                                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-rose-600 hover:text-white transition-all cursor-pointer border-0">
+                                    <i class="fas fa-door-closed"></i> Close
+                                </button>
+                            </form>
+                            {% elif row.visit_id %}
+                            <form method="post" action="{% url 'inpatient:clean_admissions_close' %}" class="inline"
+                                  onsubmit="return confirm('Close orphan visit #{{ row.visit_id }} for {{ row.patient_name|escapejs }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="visit_id" value="{{ row.visit_id }}">
+                                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-rose-600 hover:text-white transition-all cursor-pointer border-0">
+                                    <i class="fas fa-door-closed"></i> Close visit
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if row.pregnancy_id %}
+                            <a href="{% url 'maternity:pregnancy_detail' row.pregnancy_id %}" class="inline-flex items-center gap-1.5 px-3 py-2 bg-pink-50 text-pink-700 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-pink-600 hover:text-white transition-all">
+                                <i class="fas fa-baby"></i> Maternity
+                            </a>
+                            {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-8 py-16 text-center">
+                            <div class="text-slate-400 font-bold text-sm">No open IPD admissions or active inpatient visits.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

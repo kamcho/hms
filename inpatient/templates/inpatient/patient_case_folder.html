@@ -703,6 +703,11 @@
                             <a href="tel:{{ admission.patient.phone }}" class="cf-action-btn"><i class="fas fa-phone"></i></a>
                             {% endif %}
                             <button type="button" class="cf-action-btn" onclick="window.print()"><i class="fas fa-print"></i></button>
+                            {% if admission.delivery %}
+                            <a href="{% url 'maternity:pregnancy_detail' admission.delivery.pregnancy.id %}" class="cf-action-btn cf-action-btn--primary">
+                                <i class="fas fa-baby-carriage"></i><span class="cf-action-btn-label">Maternity</span>
+                            </a>
+                            {% endif %}
                             {% if admission.status == 'Admitted' %}
                             <button type="button" class="cf-action-btn" onclick="showModal('transferModal')"><i class="fas fa-exchange-alt"></i></button>
                             <a href="{% url 'inpatient:discharge_patient' admission.id %}" class="cf-action-btn cf-action-btn--danger"><i class="fas fa-door-open"></i><span class="cf-action-btn-label">Discharge</span></a>

@@ -430,6 +430,13 @@
                         </a>
                         
                     {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'SHA Manager' or user.is_superuser %}
+                        <a href="{% url 'inpatient:clean_admissions' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'clean_admissions' %}active{% endif %}">
+                            <i class="fas fa-broom"></i>
+                            <span>Clean Admissions</span>
+                        </a>
+                    {% endif %}
                 </div>
                 <div class="sidebar-footer">
                     {% if user.role != 'Doctors' %}

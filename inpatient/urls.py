@@ -5,6 +5,8 @@ app_name = 'inpatient'
 
 urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('clean-admissions/', views.clean_admissions, name='clean_admissions'),
+    path('clean-admissions/close/', views.clean_admissions_close, name='clean_admissions_close'),
     path('patients/<int:patient_id>/admit/', views.admit_patient, name='admit_patient'),
     path('admissions/<int:admission_id>/case-folder/', views.patient_case_folder, name='patient_case_folder'),
     path('admissions/<int:admission_id>/edit-date/', views.edit_admission_date, name='edit_admission_date'),

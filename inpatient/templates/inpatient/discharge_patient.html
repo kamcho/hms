@@ -57,8 +57,19 @@
                 </div>
                 <p class="text-slate-500 font-bold ml-1">
                     Finalizing medical records and billing for <span class="text-slate-900">{{ admission.patient.full_name }}</span>
+                    {% if is_maternity_admission %}<span class="text-pink-600"> · Maternity admission</span>{% endif %}
                 </p>
             </div>
+            {% if is_maternity_admission %}
+            <div class="mb-8 p-4 rounded-2xl bg-pink-50 border border-pink-100 text-sm text-pink-900">
+                <strong>Maternity discharge:</strong> completing this form closes the inpatient admission and visit,
+                updates the maternity pregnancy record, and adds take-home medicines to the bill.
+                Payment is collected at accounts after discharge.
+                {% if maternity_pregnancy %}
+                <a href="{% url 'maternity:pregnancy_detail' maternity_pregnancy.id %}" class="ml-2 font-bold underline">View pregnancy record</a>
+                {% endif %}
+            </div>
+            {% endif %}
             <div class="flex gap-4">
                 <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm flex items-center gap-2">
                     <i class="fas fa-arrow-left"></i> Return to Case Folder

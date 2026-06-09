@@ -356,9 +356,11 @@ class PrescriptionItem(models.Model):
                     'Every 24 Hours': 1
                 }
                 multiplier = freq_map.get(self.frequency)
-                if multiplier:
-                    # Calculate quantity, ensuring it's an integer for the IntegerField
-                    self.quantity = int((float(self.dose_count) or 0) * multiplier * self.number_of_days)
+                if multiplier and self.dose_count is not None:
+                    # Auto-calculate only when dose is specified; explicit quantity is kept otherwise
+                    self.quantity = int(float(self.dose_count) * multiplier * self.number_of_days)
+                elif self.quantity is None:
+                    self.quantity = 1
         
         super().save(*args, **kwargs)
     
