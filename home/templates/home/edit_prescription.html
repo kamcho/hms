@@ -127,10 +127,17 @@
         box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
     }
 
-    .btn-indigo:hover {
+    .btn-indigo:hover:not(:disabled) {
         background: var(--indigo-dark);
         transform: translateY(-2px);
         box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none !important;
+        pointer-events: none;
     }
 
     .btn-ghost {
@@ -224,6 +231,7 @@
 
             <form method="post" id="prescription-form">
                 {% csrf_token %}
+                <input type="hidden" name="form_token" value="{{ form_token }}">
                 <!-- Diagnosis Section -->
                 <div class="premium-card">
                     <div class="flex items-center gap-4 mb-8">
@@ -356,9 +364,9 @@
                 </div>
                 <!-- Global Actions -->
                 <div class="flex items-center justify-end gap-4 mt-12 pb-20">
-                    <button type="submit" class="btn-action btn-indigo">
-                        <i class="fas fa-save"></i>
-                        Save Changes
+                    <button type="submit" class="btn-action btn-indigo save-submit-btn">
+                        <i class="fas fa-save save-submit-icon"></i>
+                        <span class="save-submit-label">Save Changes</span>
                     </button>
                 </div>
             </form>
@@ -699,23 +707,51 @@
         }
     });
 
-    // Form submission validation
-    document.querySelector('form').addEventListener('submit', function (e) {
-        const medSelects = document.querySelectorAll('select[name$="-medication"]');
-        let hasMedication = false;
-        
-        medSelects.forEach(select => {
-            if (select.value && select.closest('.medication-entry').style.display !== 'none') {
-                hasMedication = true;
-            }
-        });
+    // Form submission validation + double-submit guard
+    (function initPrescriptionFormSubmit() {
+        const form = document.getElementById('prescription-form');
+        if (!form) return;
 
-        if (!hasMedication) {
-            e.preventDefault();
-            alert('Please select at least one medication.');
-            return false;
-        }
-    });
+        let submitting = false;
+
+        form.addEventListener('submit', function (e) {
+            if (submitting) {
+                e.preventDefault();
+                return;
+            }
+
+            const medSelects = document.querySelectorAll('select[name$="-medication"]');
+            let hasMedication = false;
+
+            medSelects.forEach(select => {
+                if (select.value && select.closest('.medication-entry').style.display !== 'none') {
+                    hasMedication = true;
+                }
+            });
+
+            if (!hasMedication) {
+                e.preventDefault();
+                alert('Please select at least one medication.');
+                return;
+            }
+
+            submitting = true;
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+                btn.disabled = true;
+            });
+            form.querySelectorAll('.save-submit-btn').forEach(function (btn) {
+                const icon = btn.querySelector('.save-submit-icon');
+                const label = btn.querySelector('.save-submit-label');
+                if (icon) {
+                    icon.classList.remove('fa-save');
+                    icon.classList.add('fa-spinner', 'fa-spin');
+                }
+                if (label) {
+                    label.textContent = 'Saving…';
+                }
+            });
+        });
+    })();
 
     // Initial load
     document.querySelectorAll('.medication-entry').forEach(entry => {

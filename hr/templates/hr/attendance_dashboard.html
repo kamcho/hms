@@ -1,0 +1,164 @@
+{% extends 'hr/base.html' %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Attendance</h1>
+        <p>Daily roll — present, late, absent, leave, and device punches.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'hr:attendance_manual' %}?date={{ day|date:'Y-m-d' }}" class="btn btn-secondary btn-sm"><i class="fas fa-edit"></i> Manual entry</a>
+        {% if devices %}
+        <form method="post" action="{% url 'hr:attendance_sync_all' %}" style="display: inline;" data-confirm="Sync attendance from all active K40 devices?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-sync"></i> Sync K40</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'hr:attendance_profiles' %}" class="btn btn-secondary btn-sm"><i class="fas fa-id-badge"></i> Device PINs</a>
+    </div>
+</div>
+
+<div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+    <form method="get" class="filter-row">
+        <div class="form-group" style="width: 180px; margin-bottom: 0;">
+            <label class="form-label" for="date">Date</label>
+            <input type="date" name="date" id="date" class="form-input" value="{{ day|date:'Y-m-d' }}">
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 160px; margin-bottom: 0;">
+            <label class="form-label" for="q">Search staff</label>
+            <input type="search" name="q" id="q" class="form-input" value="{{ q }}" placeholder="Name or ID…">
+        </div>
+        <div class="form-group" style="width: 160px; margin-bottom: 0;">
+            <label class="form-label" for="status">Status</label>
+            <select name="status" id="status" class="form-input">
+                <option value="">All</option>
+                <option value="Present" {% if status_filter == 'Present' %}selected{% endif %}>Present</option>
+                <option value="Late" {% if status_filter == 'Late' %}selected{% endif %}>Late</option>
+                <option value="Absent" {% if status_filter == 'Absent' %}selected{% endif %}>Absent</option>
+                <option value="On Leave" {% if status_filter == 'On Leave' %}selected{% endif %}>On leave</option>
+                <option value="Off" {% if status_filter == 'Off' %}selected{% endif %}>Off</option>
+                <option value="Holiday" {% if status_filter == 'Holiday' %}selected{% endif %}>Holiday</option>
+                <option value="Half Day" {% if status_filter == 'Half Day' %}selected{% endif %}>Half day</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Apply</button>
+            <a href="{% url 'hr:attendance_dashboard' %}" class="btn btn-secondary btn-sm">Today</a>
+        </div>
+    </form>
+</div>
+
+<div class="metrics-grid">
+    <a href="?date={{ day|date:'Y-m-d' }}&status=Present" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-check"></i></div>
+            <div><div class="metric-label">Present</div><div class="metric-value" style="color: var(--success);">{{ metrics.present }}</div></div>
+        </div>
+    </a>
+    <a href="?date={{ day|date:'Y-m-d' }}&status=Late" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+            <div><div class="metric-label">Late</div><div class="metric-value" style="color: var(--warning);">{{ metrics.late }}</div></div>
+        </div>
+    </a>
+    <a href="?date={{ day|date:'Y-m-d' }}&status=Absent" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-user-times"></i></div>
+            <div><div class="metric-label">Absent</div><div class="metric-value">{{ metrics.absent }}</div></div>
+        </div>
+    </a>
+    <a href="?date={{ day|date:'Y-m-d' }}&status=On Leave" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-calendar-minus"></i></div>
+            <div><div class="metric-label">On leave</div><div class="metric-value">{{ metrics.on_leave }}</div></div>
+        </div>
+    </a>
+    <a href="?date={{ day|date:'Y-m-d' }}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-users"></i></div>
+            <div><div class="metric-label">Staff tracked</div><div class="metric-value">{{ metrics.total }}</div></div>
+        </div>
+    </a>
+</div>
+
+<div class="card" style="padding: 1.75rem;">
+    <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+            <h3 style="font-size: 1.1rem; font-weight: 800;">Daily roll — {{ day|date:"d M Y" }}</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">{{ records|length }} record{{ records|length|pluralize }}</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <form method="post" style="display: inline;" data-confirm="Recalculate attendance for {{ day|date:'d M Y' }}?">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="process">
+                <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+                <button type="submit" class="btn btn-secondary btn-sm"><i class="fas fa-redo"></i> Recalculate</button>
+            </form>
+            <a href="{% url 'hr:attendance_logs' %}" class="btn btn-secondary btn-sm">Punch logs</a>
+            <a href="{% url 'hr:attendance_devices' %}" class="btn btn-secondary btn-sm">Devices</a>
+        </div>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>In</th>
+                    <th>Out</th>
+                    <th>Late</th>
+                    <th>Worked</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in records %}
+                <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:attendance_user_detail' rec.user.pk %}?year={{ rec.date.year }}&month={{ rec.date.month }}&date={{ rec.date|date:'Y-m-d' }}'">
+                    <td>
+                        <div class="staff-cell">
+                            <div class="staff-avatar">{{ rec.user.get_full_name|slice:":1"|upper }}</div>
+                            <div>
+                                <div class="staff-name">{{ rec.user.get_full_name }}</div>
+                                <div class="staff-meta">{% if rec.is_manual %}Manual{% else %}Auto{% endif %}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-role">{{ rec.user.role }}</span></td>
+                    <td>
+                        {% if rec.status == 'Present' %}<span class="badge badge-success">Present</span>
+                        {% elif rec.status == 'Late' %}<span class="badge badge-warning">Late</span>
+                        {% elif rec.status == 'Absent' %}<span class="badge badge-danger">Absent</span>
+                        {% elif rec.status == 'On Leave' %}<span class="badge badge-info">On leave</span>
+                        {% elif rec.status == 'Holiday' %}<span class="badge badge-info">Holiday</span>
+                        {% elif rec.status == 'Off' %}<span class="badge badge-muted">Off</span>
+                        {% else %}<span class="badge badge-muted">{{ rec.status }}</span>{% endif %}
+                    </td>
+                    <td style="white-space: nowrap;">{% if rec.first_in %}{{ rec.first_in|time:"H:i" }}{% else %}—{% endif %}</td>
+                    <td style="white-space: nowrap;">{% if rec.last_out %}{{ rec.last_out|time:"H:i" }}{% else %}—{% endif %}</td>
+                    <td>{% if rec.late_minutes %}{{ rec.late_minutes }}m{% else %}—{% endif %}</td>
+                    <td>{% if rec.worked_minutes %}{{ rec.worked_minutes }}m{% else %}—{% endif %}</td>
+                    <td onclick="event.stopPropagation();">
+                        <a href="{% url 'hr:attendance_user_detail' rec.user.pk %}?year={{ rec.date.year }}&month={{ rec.date.month }}&date={{ rec.date|date:'Y-m-d' }}" class="btn btn-secondary btn-sm">Calendar</a>
+                        {% if not rec.is_manual %}
+                        <form method="post" action="{% url 'hr:attendance_reprocess' rec.pk %}" style="display: inline;" data-confirm="Recalculate attendance for {{ rec.user.get_full_name }}?">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Recalculate"><i class="fas fa-redo"></i></button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="empty-state">
+                        <i class="fas fa-fingerprint"></i>
+                        <div style="font-weight: 700;">No attendance for this date</div>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;"><a href="{% url 'hr:attendance_manual' %}" class="text-link">Add manual entry</a> or sync device</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

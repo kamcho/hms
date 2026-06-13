@@ -1,0 +1,354 @@
+{% extends 'hr/base.html' %}
+{% block title %}{% if is_create %}Set salary{% else %}Edit salary{% endif %}{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:salary_list' %}" class="text-link" style="font-size: 0.875rem;">
+        <i class="fas fa-arrow-left"></i> Back to salaries
+    </a>
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="staff-avatar" style="width: 52px; height: 52px; font-size: 1.1rem; border-radius: 14px;">{{ staff_user.get_full_name|slice:":1"|upper }}</div>
+        <div>
+            <h1 style="font-size: 1.35rem;">{% if is_create %}Set salary{% else %}Edit salary{% endif %}</h1>
+            <p>{{ staff_user.get_full_name }} · {{ staff_user.id_number }} · <span class="badge badge-role">{{ staff_user.role }}</span></p>
+        </div>
+    </div>
+</div>
+<br>
+{% if read_only %}
+<div class="alert-message" style="position: static; margin-bottom: 1rem; border-left-color: var(--warning);">
+    Read-only view for Accountant role. Contact HR to make changes.
+</div>
+{% endif %}
+
+<div class="salary-page-layout">
+    <div class="card salary-profile-compact">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Salary profile</h3>
+            {% if hr_ctx.can_manage_settings %}
+            <a href="{% url 'hr:staff_entitlement_edit' staff_user.pk %}" class="btn btn-secondary btn-sm">Leave entitlements</a>
+            {% endif %}
+        </div>
+        {% if not read_only %}
+        <form method="post">
+            {% csrf_token %}
+            {% if history_from %}<input type="hidden" name="history_from" value="{{ history_from }}">{% endif %}
+            {% if history_to %}<input type="hidden" name="history_to" value="{{ history_to }}">{% endif %}
+            <input type="hidden" name="action" value="save_salary">
+            <div class="salary-profile-grid">
+                {% for field in form %}
+                <div class="form-group {% if field.name == 'notes' %}form-group-notes{% endif %}" style="margin-bottom: 0;">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<p style="font-size: 0.8rem; color: var(--danger); margin-top: 0.25rem;">{{ field.errors.0 }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="salary-profile-actions">
+                <button type="submit" class="btn btn-primary">Save salary</button>
+                <a href="{% url 'hr:salary_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        {% else %}
+        <div class="salary-profile-grid">
+            {% for field in form %}
+            <div class="form-group {% if field.name == 'notes' %}form-group-notes{% endif %}" style="margin-bottom: 0;">
+                <label class="form-label">{{ field.label }}</label>
+                <div>{{ field.value|default:"—" }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card" style="padding: 1.5rem 1.75rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 0.35rem;">Monthly payroll invoice</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Full monthly salary — no attendance deductions.</p>
+
+        <div class="payroll-steps">
+            <span class="payroll-step {% if is_create %}active{% else %}done{% endif %}">① Save salary</span>
+            <span class="payroll-step {% if current_payroll and current_payroll.status == 'Draft' %}active{% elif current_payroll %}done{% endif %}">② Lock invoice</span>
+            <span class="payroll-step {% if current_payroll and current_payroll.status == 'Finalized' or current_payroll and current_payroll.status == 'Partial' %}active{% elif current_payroll and current_payroll.status == 'Paid' %}done{% endif %}">③ Pay staff</span>
+        </div>
+
+        <form method="get" class="filter-row" style="margin-bottom: 1.25rem;">
+            <div class="form-group" style="width: 100%; max-width: 200px; margin-bottom: 0;">
+                <label class="form-label" for="month">Pay period</label>
+                <input type="month" name="month" id="month" class="form-input" value="{{ payroll_year }}-{% if payroll_month < 10 %}0{% endif %}{{ payroll_month }}">
+            </div>
+            <input type="hidden" name="year" value="{{ payroll_year }}">
+            {% if history_from %}<input type="hidden" name="history_from" value="{{ history_from }}">{% endif %}
+            {% if history_to %}<input type="hidden" name="history_to" value="{{ history_to }}">{% endif %}
+        </form>
+
+        {% if is_create %}
+        <div class="empty-state" style="padding: 2rem 1rem;">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <div style="font-weight: 700;">Save salary first</div>
+            <p style="font-size: 0.85rem;">Enter basic pay above, then save — the invoice for this month will appear here.</p>
+        </div>
+        {% else %}
+        {% if not current_payroll %}
+        <p class="payroll-action-hint">Save salary above to create the <strong>{{ payroll_year }}-{{ payroll_month|stringformat:"02d" }}</strong> invoice automatically.</p>
+        {% elif current_payroll.status == 'Draft' %}
+        <p class="payroll-action-hint">Invoice is a <strong>draft</strong> — it updates when you save salary. When the month is done, click <strong>Lock invoice</strong> to confirm the amount owed (KES {{ current_payroll.net_pay|floatformat:2 }}).</p>
+        {% elif current_payroll.status == 'Finalized' or current_payroll.status == 'Partial' %}
+        <p class="payroll-action-hint">Invoice is <strong>locked</strong>. Record payment below — balance due: <strong>KES {{ current_payroll.balance_due|floatformat:2 }}</strong>.</p>
+        {% else %}
+        <p class="payroll-action-hint">This month is <strong>fully paid</strong>.</p>
+        {% endif %}
+
+        {% if current_payroll and current_payroll.status == 'Draft' and not read_only %}
+        <details class="payroll-adjust-form">
+            <summary>Optional: bonus or deduction</summary>
+            <form method="post" style="margin-top: 1rem;">
+                {% csrf_token %}
+                {% if history_from %}<input type="hidden" name="history_from" value="{{ history_from }}">{% endif %}
+                {% if history_to %}<input type="hidden" name="history_to" value="{{ history_to }}">{% endif %}
+                <input type="hidden" name="action" value="generate_payroll">
+                <input type="hidden" name="period_year" value="{{ payroll_year }}">
+                <input type="hidden" name="period_month" value="{{ payroll_month }}">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label">Adjustment (KES)</label>
+                    <input type="number" name="adjustment" class="form-input" step="0.01" value="{{ current_payroll.adjustment }}" placeholder="+ bonus or − deduction">
+                </div>
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="payroll_notes" class="form-input" value="{{ current_payroll.notes }}" placeholder="Optional">
+                </div>
+                <button type="submit" class="btn btn-secondary btn-sm"><i class="fas fa-calculator"></i> Apply adjustment</button>
+            </form>
+        </details>
+        {% endif %}
+
+        {% if current_payroll %}
+        <div class="payroll-invoice-box">
+            <div class="payroll-invoice-header">
+                <span style="font-weight: 800;">{{ current_payroll.payroll_run.period_label }}</span>
+                {% if current_payroll.status == 'Draft' %}<span class="badge badge-warning">Draft — not locked</span>
+                {% elif current_payroll.status == 'Finalized' %}<span class="badge badge-info">Locked — awaiting payment</span>
+                {% elif current_payroll.status == 'Partial' %}<span class="badge badge-warning">Partial</span>
+                {% else %}<span class="badge badge-success">Paid</span>{% endif %}
+            </div>
+            <table class="payroll-summary-table">
+                <tbody>
+                    <tr><td>Basic salary</td><td class="money">KES {{ current_payroll.basic_salary|floatformat:2 }}</td></tr>
+                    <tr><td>Allowance</td><td class="money">KES {{ current_payroll.allowance|floatformat:2 }}</td></tr>
+                    <tr><td>Gross pay</td><td class="money">KES {{ current_payroll.gross_pay|floatformat:2 }}</td></tr>
+                    {% if current_payroll.adjustment %}
+                    <tr><td>Adjustment</td><td class="money">KES {{ current_payroll.adjustment|floatformat:2 }}</td></tr>
+                    {% endif %}
+                    <tr class="summary-total">
+                        <td>Net pay</td>
+                        <td class="money" style="color: var(--success);">KES {{ current_payroll.net_pay|floatformat:2 }}</td>
+                    </tr>
+                    <tr><td>Paid</td><td class="money">KES {{ current_payroll.paid_amount|floatformat:2 }}</td></tr>
+                    <tr class="summary-total">
+                        <td>Balance due</td>
+                        <td class="money" style="color: {% if current_payroll.balance_due %}var(--warning){% else %}var(--success){% endif %};">KES {{ current_payroll.balance_due|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {% if current_payroll.status == 'Draft' and not read_only %}
+        <form method="post" style="margin-bottom: 1rem;" data-confirm="Lock this invoice at KES {{ current_payroll.net_pay|floatformat:2 }}? You can then record payment.">
+            {% csrf_token %}
+            {% if history_from %}<input type="hidden" name="history_from" value="{{ history_from }}">{% endif %}
+            {% if history_to %}<input type="hidden" name="history_to" value="{{ history_to }}">{% endif %}
+            <input type="hidden" name="action" value="finalize_payroll">
+            <input type="hidden" name="payroll_id" value="{{ current_payroll.pk }}">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-lock"></i> Lock invoice — ready to pay
+            </button>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Confirms the amount owed for {{ current_payroll.payroll_run.period_label }}. You can still edit salary before locking if the draft changes.</p>
+        </form>
+        {% endif %}
+
+        {% if current_payroll.status == 'Finalized' or current_payroll.status == 'Partial' %}
+        {% if not read_only %}
+        <div style="padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 1rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 1rem;">Record payment</h4>
+            <form method="post" data-confirm="Record payment of KES {{ current_payroll.balance_due|floatformat:2 }} for {{ current_payroll.payroll_run.period_label }}?">
+                {% csrf_token %}
+                {% if history_from %}<input type="hidden" name="history_from" value="{{ history_from }}">{% endif %}
+                {% if history_to %}<input type="hidden" name="history_to" value="{{ history_to }}">{% endif %}
+                <input type="hidden" name="action" value="record_payment">
+                <input type="hidden" name="payroll_id" value="{{ current_payroll.pk }}">
+                <div class="form-group">
+                    <label class="form-label">Amount (KES)</label>
+                    <input type="number" name="amount" class="form-input" step="0.01" min="0.01" max="{{ current_payroll.balance_due }}" value="{{ current_payroll.balance_due }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Method</label>
+                    <select name="payment_method" class="form-input">
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Bank">Bank transfer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reference</label>
+                    <input type="text" name="reference" class="form-input" placeholder="M-Pesa code or bank ref…">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-input" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-money-bill-wave"></i> Record payment</button>
+            </form>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if current_payroll.payments.all %}
+        <div>
+            <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.75rem;">Payment history ({{ current_payroll.payments.count }} payment{{ current_payroll.payments.count|pluralize }})</h4>
+            <table class="payroll-summary-table" style="font-size: 0.85rem;">
+                <thead>
+                    <tr>
+                        <td style="font-weight: 700; color: var(--text-secondary); padding-bottom: 0.5rem;">Date</td>
+                        <td style="font-weight: 700; color: var(--text-secondary); text-align: right; padding-bottom: 0.5rem;">Amount</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in current_payroll.payments.all %}
+                    <tr>
+                        <td>{{ p.paid_at|date:"d M Y, H:i" }} · {{ p.payment_method }}{% if p.reference %} · {{ p.reference }}{% endif %}</td>
+                        <td class="money">KES {{ p.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% else %}
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">No invoice for this month yet. Save salary or click <strong>Generate invoice</strong> to create one.</p>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+<br>
+{% if not is_create %}
+<div class="card payroll-history-section" id="payroll-history" style="padding: 1.75rem;">
+    <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 0.25rem;">Payroll history</h3>
+    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">One row per month. <strong>Paid</strong> is the total of all payments that month — each payment is listed underneath.</p>
+
+    <form method="get" id="payroll-history-filter" class="filter-row" action="#payroll-history" style="margin-bottom: 1.25rem;">
+        <input type="hidden" name="year" value="{{ payroll_year }}">
+        <input type="hidden" name="month" value="{{ payroll_month }}">
+        <div class="form-group" style="width: 100%; max-width: 180px; margin-bottom: 0;">
+            <label class="form-label" for="history_from">From</label>
+            <input type="month" name="history_from" id="history_from" class="form-input" value="{{ history_from }}">
+        </div>
+        <div class="form-group" style="width: 100%; max-width: 180px; margin-bottom: 0;">
+            <label class="form-label" for="history_to">To</label>
+            <input type="month" name="history_to" id="history_to" class="form-input" value="{{ history_to }}">
+        </div>
+        <button type="submit" class="btn btn-secondary btn-sm" style="align-self: flex-end;">Filter</button>
+        {% if history_from or history_to %}
+        <a href="?year={{ payroll_year }}&month={{ payroll_month }}#payroll-history" class="btn btn-secondary btn-sm" style="align-self: flex-end;">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if payrolls %}
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Period / payments</th>
+                    <th>Net pay</th>
+                    <th>Total paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payrolls %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 700;">{{ p.payroll_run.period_label }}</div>
+                        {% for pay in p.payments.all %}
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ↳ KES {{ pay.amount|floatformat:2 }} · {{ pay.paid_at|date:"d M, H:i" }} · {{ pay.payment_method }}
+                        </div>
+                        {% empty %}
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">No payments yet</div>
+                        {% endfor %}
+                    </td>
+                    <td class="money">KES {{ p.net_pay|floatformat:0 }}</td>
+                    <td class="money">KES {{ p.paid_amount|floatformat:0 }}{% if p.payments.count > 1 %} <span style="font-size: 0.7rem; color: var(--text-muted);">({{ p.payments.count }}×)</span>{% endif %}</td>
+                    <td class="money">KES {{ p.balance_due|floatformat:0 }}</td>
+                    <td>
+                        {% if p.status == 'Paid' %}<span class="badge badge-success">Paid</span>
+                        {% elif p.status == 'Partial' %}<span class="badge badge-warning">Partial</span>
+                        {% elif p.status == 'Finalized' %}<span class="badge badge-info">Finalized</span>
+                        {% else %}<span class="badge badge-muted">Draft</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="?year={{ p.payroll_run.period_year }}&month={{ p.payroll_run.period_month }}{% if history_from %}&history_from={{ history_from }}{% endif %}{% if history_to %}&history_to={{ history_to }}{% endif %}" class="btn btn-secondary btn-sm">Open</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem 1rem;">
+        <i class="fas fa-history"></i>
+        <div style="font-weight: 700;">No payroll records{% if history_from or history_to %} in this range{% endif %}</div>
+        {% if history_from or history_to %}
+        <p style="font-size: 0.85rem;">Try widening the date range or <a href="?year={{ payroll_year }}&month={{ payroll_month }}#payroll-history">clear filters</a>.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#payroll-history') {
+        var historySection = document.getElementById('payroll-history');
+        if (historySection) {
+            historySection.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+    }
+
+    var historyFilterForm = document.getElementById('payroll-history-filter');
+    if (historyFilterForm) {
+        historyFilterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var params = new URLSearchParams(new FormData(this));
+            window.location = window.location.pathname + '?' + params.toString() + '#payroll-history';
+        });
+    }
+
+    var monthInput = document.getElementById('month');
+    if (monthInput) {
+        monthInput.addEventListener('change', function() {
+            if (this.value) {
+                var parts = this.value.split('-');
+                var form = this.form;
+                var y = form.querySelector('input[name=year]');
+                if (y) y.name = '_ignore';
+                var q = '?year=' + parts[0] + '&month=' + parseInt(parts[1], 10);
+                var historyFrom = form.querySelector('input[name=history_from]');
+                var historyTo = form.querySelector('input[name=history_to]');
+                if (historyFrom && historyFrom.value) {
+                    q += '&history_from=' + encodeURIComponent(historyFrom.value);
+                }
+                if (historyTo && historyTo.value) {
+                    q += '&history_to=' + encodeURIComponent(historyTo.value);
+                }
+                window.location = q;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

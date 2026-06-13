@@ -1,0 +1,387 @@
+<style>
+    .loan-page {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        animation: loanFadeIn 0.45s ease-out;
+    }
+
+    @keyframes loanFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loan-page .loan-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .loan-page .loan-header h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+
+    .loan-page .loan-header-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    }
+
+    .loan-page .loan-subtitle {
+        color: #64748b;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.35rem;
+    }
+
+    .loan-page .loan-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #0d9488;
+        text-decoration: none;
+        margin-bottom: 0.5rem;
+    }
+
+    .loan-page .loan-back-link:hover {
+        color: #0f766e;
+        text-decoration: underline;
+    }
+
+    .loan-page .loan-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .loan-page .loan-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.625rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .loan-page .loan-btn-primary {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.3);
+    }
+
+    .loan-page .loan-btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(13, 148, 136, 0.4);
+    }
+
+    .loan-page .loan-btn-secondary {
+        background: #fff;
+        color: #475569;
+        border-color: #e2e8f0;
+    }
+
+    .loan-page .loan-btn-secondary:hover {
+        border-color: #14b8a6;
+        color: #0f766e;
+    }
+
+    .loan-page .loan-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .loan-page .loan-btn-dark {
+        background: #1e293b;
+        color: #fff;
+    }
+
+    .loan-page .loan-btn-dark:hover {
+        background: #0f172a;
+    }
+
+    .loan-page .loan-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+        overflow: hidden;
+    }
+
+    .loan-page .loan-card-padded {
+        padding: 1.5rem;
+    }
+
+    .loan-page .loan-card-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: #f8fafc;
+    }
+
+    .loan-page .loan-card-header h2 {
+        margin: 0;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #475569;
+    }
+
+    .loan-page .loan-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .loan-page .loan-table thead {
+        background: #f8fafc;
+    }
+
+    .loan-page .loan-table th {
+        padding: 0.875rem 1rem;
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+    }
+
+    .loan-page .loan-table td {
+        padding: 0.875rem 1rem;
+        border-top: 1px solid #f8fafc;
+        color: #334155;
+        font-size: 0.875rem;
+        vertical-align: middle;
+    }
+
+    .loan-page .loan-table tbody tr:hover {
+        background: rgba(248, 250, 252, 0.9);
+    }
+
+    .loan-page .loan-link {
+        color: #0d9488;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .loan-page .loan-link:hover {
+        color: #0f766e;
+        text-decoration: underline;
+    }
+
+    .loan-page .loan-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .loan-page .loan-stat {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    }
+
+    .loan-page .loan-stat-label {
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.35rem;
+    }
+
+    .loan-page .loan-stat-value {
+        font-size: 1.875rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1;
+    }
+
+    .loan-page .loan-form-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        padding: 2rem;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+    }
+
+    .loan-page .loan-form-card label,
+    .loan-page .loan-field-label {
+        display: block;
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.35rem;
+    }
+
+    .loan-page .loan-form-card .form-control,
+    .loan-page .loan-form-card .form-select,
+    .loan-page .loan-filters .form-select {
+        width: 100%;
+    }
+
+    .loan-page .loan-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+    }
+
+    .loan-page .loan-pill {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .loan-page .loan-pill-open { background: #e0e7ff; color: #3730a3; }
+    .loan-page .loan-pill-partial { background: #fef3c7; color: #b45309; }
+    .loan-page .loan-pill-closed { background: #d1fae5; color: #047857; }
+    .loan-page .loan-pill-active { color: #059669; font-weight: 700; }
+    .loan-page .loan-pill-inactive { color: #94a3b8; font-weight: 700; }
+
+    .loan-page .loan-empty {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .loan-page .hybrid-select-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .loan-page .hybrid-select-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .loan-page .hybrid-select-input-wrapper i {
+        position: absolute;
+        right: 1rem;
+        color: #94a3b8;
+        pointer-events: none;
+        transition: transform 0.2s ease, color 0.2s ease;
+        font-size: 0.75rem;
+    }
+
+    .loan-page .hybrid-select-container.active .hybrid-select-input-wrapper i {
+        transform: rotate(180deg);
+        color: #0d9488;
+    }
+
+    .loan-page .hybrid-search-input {
+        width: 100%;
+        cursor: text !important;
+        padding-right: 2.5rem !important;
+    }
+
+    .loan-page .hybrid-dropdown {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+        z-index: 1000;
+        max-height: 280px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .loan-page .hybrid-dropdown.show {
+        display: block;
+    }
+
+    .loan-page .hybrid-option {
+        padding: 0.875rem 1rem;
+        cursor: pointer;
+        transition: background 0.15s ease, padding-left 0.15s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .loan-page .hybrid-option:last-child {
+        border-bottom: none;
+    }
+
+    .loan-page .hybrid-option:hover,
+    .loan-page .hybrid-option.focused {
+        background: rgba(13, 148, 136, 0.06);
+        padding-left: 1.25rem;
+    }
+
+    .loan-page .hybrid-option.focused {
+        border-left: 3px solid #0d9488;
+    }
+
+    .loan-page .hybrid-option.selected {
+        background: rgba(13, 148, 136, 0.1);
+    }
+
+    .loan-page .hybrid-option .option-name {
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.875rem;
+    }
+
+    .loan-page .hybrid-option .option-meta {
+        font-size: 0.625rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .loan-page .hybrid-no-results {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+</style>

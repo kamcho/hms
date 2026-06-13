@@ -660,6 +660,7 @@
                                                 <td><span class="badge badge-warning" style="font-size: 12px; padding: 0.5rem 1rem;">Consumable</span></td>
                                                 {% if can_edit_consumables %}
                                                 <td>
+                                                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
                                                     <button type="button"
                                                             class="btn-edit-consumable"
                                                             style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f472b6; color: #f472b6; background: transparent; cursor: pointer;"
@@ -669,6 +670,14 @@
                                                             data-quantity="{{ item.quantity }}">
                                                         <i class="fas fa-edit"></i> Edit
                                                     </button>
+                                                    <button type="button"
+                                                            class="btn-delete-consumable"
+                                                            style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f87171; color: #f87171; background: transparent; cursor: pointer;"
+                                                            data-item-id="{{ item.id }}"
+                                                            data-item-name="{{ item.inventory_item.name|escape }}">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                    </div>
                                                 </td>
                                                 {% endif %}
                                             </tr>
@@ -768,6 +777,7 @@
                                                 </td>
                                                 {% if can_edit_consumables %}
                                                 <td>
+                                                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
                                                     <button type="button"
                                                             class="btn-edit-consumable"
                                                             style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f472b6; color: #f472b6; background: transparent; cursor: pointer;"
@@ -777,6 +787,14 @@
                                                             data-quantity="{{ item.quantity }}">
                                                         <i class="fas fa-edit"></i> Edit
                                                     </button>
+                                                    <button type="button"
+                                                            class="btn-delete-consumable"
+                                                            style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #f87171; color: #f87171; background: transparent; cursor: pointer;"
+                                                            data-item-id="{{ item.id }}"
+                                                            data-item-name="{{ item.inventory_item.name|escape }}">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                    </div>
                                                 </td>
                                                 {% endif %}
                                             </tr>
@@ -1059,6 +1077,7 @@
     <script>
     const PHARMACY_DEPT_ID = {{ pharmacy_dept.id }};
     const CONSUMABLE_UPDATE_URL_TEMPLATE = "{% url 'home:api_pharmacy_update_consumable' item_id=0 %}";
+    const CONSUMABLE_DELETE_URL_TEMPLATE = "{% url 'home:api_pharmacy_delete_consumable' item_id=0 %}";
     let editConsumableInvoiceItemId = null;
     let consumableSearchTimer = null;
 
@@ -1213,6 +1232,35 @@
             });
     }
 
+    function deleteConsumable(btn) {
+        const itemId = btn.dataset.itemId;
+        const itemName = btn.dataset.itemName || 'this consumable';
+        if (!confirm('Remove ' + itemName + ' from this visit invoice?')) {
+            return;
+        }
+        btn.disabled = true;
+        fetch(CONSUMABLE_DELETE_URL_TEMPLATE.replace('/0/', '/' + itemId + '/'), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Removed.');
+                    location.reload();
+                } else {
+                    alert(data.error || 'Could not remove consumable.');
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert(String(err));
+                btn.disabled = false;
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         initConsumableSearch();
         const saveBtn = document.getElementById('consumableSaveBtn');
@@ -1221,6 +1269,12 @@
         document.querySelectorAll('.btn-edit-consumable').forEach(button => {
             button.addEventListener('click', function () {
                 openEditConsumableModal(this);
+            });
+        });
+
+        document.querySelectorAll('.btn-delete-consumable').forEach(button => {
+            button.addEventListener('click', function () {
+                deleteConsumable(this);
             });
         });
 

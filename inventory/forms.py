@@ -210,3 +210,61 @@ class GeneralUsageForm(forms.ModelForm):
         mini_pharmacy = Departments.objects.filter(name='Mini Pharmacy').first()
         if mini_pharmacy:
             self.fields['adjusted_from'].initial = mini_pharmacy
+
+
+class ExternalInstitutionForm(forms.ModelForm):
+    class Meta:
+        from .models import ExternalInstitution
+        model = ExternalInstitution
+        fields = ['name', 'contact_person', 'phone', 'email', 'address', 'notes', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Hospital / facility name'}),
+            'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class StockLoanHeaderForm(forms.Form):
+    institution = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    source_department = forms.ModelChoiceField(
+        queryset=None,
+        label='Lend from department',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    expected_return_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Purpose, contact at partner hospital…'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import ExternalInstitution
+        from home.models import Departments
+        self.fields['institution'].queryset = ExternalInstitution.objects.filter(is_active=True).order_by('name')
+        self.fields['source_department'].queryset = Departments.objects.all().order_by('name')
+        pharmacy = Departments.objects.filter(name__iexact='Pharmacy').first()
+        if pharmacy:
+            self.fields['source_department'].initial = pharmacy
+
+
+class LoanReturnForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+
+
+class LoanWriteOffForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    reason = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Reason (optional)'}),
+    )

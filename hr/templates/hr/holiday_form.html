@@ -1,0 +1,26 @@
+{% extends 'hr/base.html' %}
+{% block title %}{% if is_edit %}Edit holiday{% else %}Add holiday{% endif %}{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:off_day_list' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to off days</a>
+</div>
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <h1>{% if is_edit %}Edit public holiday{% else %}Add public holiday{% endif %}</h1>
+</div>
+<div class="card" style="padding: 2rem; max-width: 480px;">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p style="font-size: 0.8rem; color: var(--danger);">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Save holiday</button>
+            <a href="{% url 'hr:off_day_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

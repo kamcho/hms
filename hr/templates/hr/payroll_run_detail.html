@@ -1,0 +1,160 @@
+{% extends 'hr/base.html' %}
+{% block title %}Payroll run — {{ month_label }}{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:salary_list' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to salaries</a>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1>Payroll run — {{ month_label }}</h1>
+        <p>Facility-wide month-end register: all staff invoices, totals, and batch lock.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+        <form method="get" class="filter-row" style="margin: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="month">Period</label>
+                <input type="month" name="month" id="month" class="form-input" value="{{ payroll_year }}-{% if payroll_month < 10 %}0{% endif %}{{ payroll_month }}">
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Go</button>
+        </form>
+    </div>
+</div>
+
+<div class="metrics-grid" style="margin-bottom: 1.25rem;">
+    <div class="card metric-card">
+        <div class="metric-icon cyan"><i class="fas fa-users"></i></div>
+        <div>
+            <div class="metric-label">Invoices</div>
+            <div class="metric-value">{{ status_counts.total }}</div>
+            {% if status_counts.missing %}<div class="metric-meta warning">{{ status_counts.missing }} staff missing</div>{% endif %}
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon amber"><i class="fas fa-file-alt"></i></div>
+        <div>
+            <div class="metric-label">Draft</div>
+            <div class="metric-value" style="color: var(--warning);">{{ status_counts.draft }}</div>
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-lock"></i></div>
+        <div>
+            <div class="metric-label">Locked / paying</div>
+            <div class="metric-value">{{ status_counts.finalized|add:status_counts.partial }}</div>
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-check-circle"></i></div>
+        <div>
+            <div class="metric-label">Paid</div>
+            <div class="metric-value" style="color: var(--success);">{{ status_counts.paid }}</div>
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-coins"></i></div>
+        <div>
+            <div class="metric-label">Total net pay</div>
+            <div class="metric-value money" style="color: var(--success);">KES {{ totals.total_net|floatformat:0 }}</div>
+            <div class="metric-meta">KES {{ totals.total_paid|floatformat:0 }} paid</div>
+        </div>
+    </div>
+</div>
+
+{% if run %}
+<div class="card" style="padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="font-weight: 800; margin-bottom: 0.25rem;">Run status</div>
+        {% if run.status == 'Draft' %}<span class="badge badge-warning">Draft</span>
+        {% elif run.status == 'Finalized' %}<span class="badge badge-info">Finalized</span>
+        {% else %}<span class="badge badge-success">Paid</span>{% endif %}
+        {% if run.finalized_at %}
+        <span style="font-size: 0.82rem; color: var(--text-secondary); margin-left: 0.5rem;">
+            Locked {{ run.finalized_at|date:"d M Y, H:i" }}{% if run.finalized_by %} by {{ run.finalized_by.get_full_name }}{% endif %}
+        </span>
+        {% endif %}
+    </div>
+    {% if can_edit and status_counts.draft %}
+    <form method="post" data-confirm="Lock all {{ status_counts.draft }} draft invoice(s) for {{ month_label }}? Staff will not be able to edit amounts after this.">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="finalize_run">
+        <input type="hidden" name="period" value="{{ payroll_year }}-{% if payroll_month < 10 %}0{% endif %}{{ payroll_month }}">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-lock"></i> Lock all draft invoices</button>
+    </form>
+    {% elif can_edit and not status_counts.total %}
+    <a href="{% url 'hr:salary_list' %}" class="btn btn-secondary btn-sm">Update all balances first</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card" style="padding: 1.75rem;">
+    <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800;">Payroll register</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">Gross KES {{ totals.total_gross|floatformat:0 }} · Adjustments KES {{ totals.total_adjustment|floatformat:0 }}</p>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Basic</th>
+                    <th>Allowance</th>
+                    <th>Adj.</th>
+                    <th>Net pay</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td>
+                        <div class="staff-name">{{ line.user.get_full_name }}</div>
+                        <div class="staff-meta">{{ line.user.id_number }}</div>
+                    </td>
+                    <td><span class="badge badge-role">{{ line.user.role }}</span></td>
+                    <td class="money">KES {{ line.basic_salary|floatformat:0 }}</td>
+                    <td class="money">KES {{ line.allowance|floatformat:0 }}</td>
+                    <td class="money">{% if line.adjustment %}KES {{ line.adjustment|floatformat:0 }}{% else %}—{% endif %}</td>
+                    <td class="money">KES {{ line.net_pay|floatformat:0 }}</td>
+                    <td class="money">KES {{ line.paid_amount|floatformat:0 }}</td>
+                    <td class="money">KES {{ line.balance_due|floatformat:0 }}</td>
+                    <td>
+                        {% if line.status == 'Draft' %}<span class="badge badge-warning">Draft</span>
+                        {% elif line.status == 'Finalized' %}<span class="badge badge-info">Finalized</span>
+                        {% elif line.status == 'Partial' %}<span class="badge badge-warning">Partial</span>
+                        {% else %}<span class="badge badge-success">Paid</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'hr:salary_edit' line.user_id %}?year={{ payroll_year }}&month={{ payroll_month }}" class="btn btn-secondary btn-sm">Open</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="empty-state">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <div style="font-weight: 700;">No invoices for {{ month_label }}</div>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;"><a href="{% url 'hr:salary_list' %}" class="text-link">Generate month-end invoices</a></p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if lines %}
+            <tfoot>
+                <tr style="font-weight: 800; background: rgba(99, 102, 241, 0.04);">
+                    <td colspan="5" style="text-align: right;">Totals</td>
+                    <td class="money">KES {{ totals.total_net|floatformat:0 }}</td>
+                    <td class="money">KES {{ totals.total_paid|floatformat:0 }}</td>
+                    <td class="money">KES {{ totals.total_balance|floatformat:0 }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    {% include 'hr/includes/pagination.html' with page_obj=page_obj page_param='page' %}
+</div>
+{% endblock %}

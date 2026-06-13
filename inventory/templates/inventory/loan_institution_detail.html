@@ -1,0 +1,110 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ institution.name }} — Items on loan{% endblock %}
+{% block content %}
+{% include 'inventory/_loan_styles.html' %}
+<div class="loan-page">
+    <div class="loan-header">
+        <div>
+            <a href="{% url 'inventory:loan_institution_list' %}" class="loan-back-link"><i class="fas fa-arrow-left"></i> All hospitals</a>
+            <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0;">{{ institution.name }}</h1>
+            <p class="loan-subtitle">
+                {% if institution.contact_person %}{{ institution.contact_person }} · {% endif %}
+                {% if institution.phone %}{{ institution.phone }}{% endif %}
+            </p>
+        </div>
+        <div class="loan-actions">
+            <a href="{% url 'inventory:stock_loan_create' %}?institution={{ institution.pk }}" class="loan-btn loan-btn-primary">+ New loan</a>
+            <a href="{% url 'inventory:loan_institution_edit' institution.pk %}" class="loan-btn loan-btn-secondary">Edit</a>
+        </div>
+    </div>
+
+    <div class="loan-stat-grid">
+        <div class="loan-stat" style="border-color: #fde68a;">
+            <div class="loan-stat-label" style="color: #d97706;">Units still out</div>
+            <div class="loan-stat-value" style="color: #92400e;">{{ total_outstanding_units }}</div>
+        </div>
+        <div class="loan-stat">
+            <div class="loan-stat-label">Open line items</div>
+            <div class="loan-stat-value">{{ outstanding_lines|length }}</div>
+        </div>
+        <div class="loan-stat">
+            <div class="loan-stat-label">Total loans</div>
+            <div class="loan-stat-value">{{ loans|length }}</div>
+        </div>
+    </div>
+
+    <div class="loan-card" style="margin-bottom: 2rem;">
+        <div class="loan-card-header" style="background: #fffbeb;">
+            <h2 style="color: #92400e;"><i class="fas fa-box-open"></i> Items currently on loan</h2>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="loan-table" style="min-width: 800px;">
+                <thead>
+                    <tr>
+                        <th style="padding-left: 1.5rem;">Item</th>
+                        <th>Batch</th>
+                        <th>Lent</th>
+                        <th>Returned</th>
+                        <th>Outstanding</th>
+                        <th>Loan #</th>
+                        <th>From</th>
+                        <th>Date</th>
+                        <th style="padding-right: 1.5rem;">Open</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in outstanding_lines %}
+                    <tr>
+                        <td style="padding-left: 1.5rem; font-weight: 700;">{{ line.item.name }}</td>
+                        <td>{{ line.batch_number }}</td>
+                        <td>{{ line.quantity_lent }}</td>
+                        <td>{{ line.quantity_returned }}</td>
+                        <td style="font-weight: 800; color: #b45309;">{{ line.outstanding }}</td>
+                        <td style="font-weight: 700;">#{{ line.loan_id }}</td>
+                        <td style="font-size: 0.75rem;">{{ line.loan.source_department.name }}</td>
+                        <td style="font-size: 0.75rem;">{{ line.loan.loan_date|date:"d M Y" }}</td>
+                        <td style="padding-right: 1.5rem;">
+                            <a href="{% url 'inventory:stock_loan_detail' line.loan_id %}" class="loan-link" style="font-size: 0.6875rem; text-transform: uppercase;">Open</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="loan-empty">Nothing outstanding — all items returned or written off.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="loan-card">
+        <div class="loan-card-header"><h2>Loan history</h2></div>
+        <table class="loan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 1.5rem;">Loan</th>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td style="padding-left: 1.5rem; font-weight: 700;">#{{ loan.id }}</td>
+                    <td>{{ loan.loan_date|date:"d M Y" }}</td>
+                    <td>{{ loan.source_department.name }}</td>
+                    <td>
+                        <span class="loan-pill {% if loan.status == 'Closed' %}loan-pill-closed{% elif loan.status == 'Partial' %}loan-pill-partial{% else %}loan-pill-open{% endif %}">
+                            {{ loan.get_status_display }}
+                        </span>
+                    </td>
+                    <td><a href="{% url 'inventory:stock_loan_detail' loan.pk %}" class="loan-link" style="font-size: 0.6875rem; text-transform: uppercase;">Open</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="loan-empty">No loans recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

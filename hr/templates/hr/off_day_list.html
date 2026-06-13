@@ -1,0 +1,215 @@
+{% extends 'hr/base.html' %}
+{% block title %}Off days{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Off days &amp; holidays</h1>
+        <p>Public holidays (whole facility) and individual staff off days.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        {% if can_manage %}
+        <a href="{% url 'hr:holiday_create' %}" class="btn btn-secondary btn-sm"><i class="fas fa-flag"></i> Add holiday</a>
+        {% endif %}
+        <a href="{% url 'hr:staff_off_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-user-clock"></i> {% if is_self_view %}Request off day{% else %}Staff off day{% endif %}</a>
+    </div>
+</div>
+
+{% if not is_self_view %}
+<div class="tab-bar">
+    <a href="{% url 'hr:off_day_list' %}{% if upcoming_only %}?upcoming=1{% endif %}" class="tab-link {% if tab == 'holidays' %}active{% endif %}">Public holidays</a>
+    <a href="{% url 'hr:off_day_queue' %}{% if upcoming_only %}?upcoming=1{% endif %}" class="tab-link {% if tab == 'staff' %}active{% endif %}">Off day queue</a>
+    <a href="{% if tab == 'staff' %}{% url 'hr:off_day_queue' %}{% else %}{% url 'hr:off_day_list' %}{% endif %}?upcoming=1" class="tab-link tab-link-muted {% if upcoming_only %}active{% endif %}" style="margin-left: auto;">Upcoming only</a>
+    {% if upcoming_only %}<a href="{% if tab == 'staff' %}{% url 'hr:off_day_queue' %}{% else %}{% url 'hr:off_day_list' %}{% endif %}" class="tab-link tab-link-muted">Show all</a>{% endif %}
+</div>
+{% else %}
+<input type="hidden" value="staff">
+{% endif %}
+
+{% if tab == 'staff' %}
+<div class="metrics-grid">
+    <a href="{% url 'hr:off_day_queue' %}?status=Pending{% if upcoming_only %}&upcoming=1{% endif %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+            <div>
+                <div class="metric-label">Pending</div>
+                <div class="metric-value" style="color: var(--warning);">{{ off_metrics.pending }}</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:off_day_queue' %}?status=Approved{% if upcoming_only %}&upcoming=1{% endif %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="metric-label">Approved</div>
+                <div class="metric-value" style="color: var(--success);">{{ off_metrics.approved }}</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:off_day_queue' %}?status=Rejected{% if upcoming_only %}&upcoming=1{% endif %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-times-circle"></i></div>
+            <div>
+                <div class="metric-label">Rejected</div>
+                <div class="metric-value">{{ off_metrics.rejected }}</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:off_day_queue' %}{% if upcoming_only %}?upcoming=1{% endif %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-list"></i></div>
+            <div>
+                <div class="metric-label">All requests</div>
+                <div class="metric-value">{{ off_metrics.total }}</div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <form method="get" class="filter-row">
+        <div class="form-group" style="width: 160px; margin-bottom: 0;">
+            <label class="form-label" for="status">Status</label>
+            <select name="status" id="status" class="form-input">
+                <option value="">All statuses</option>
+                <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+                <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+                <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        {% if upcoming_only %}<input type="hidden" name="upcoming" value="1">{% endif %}
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Apply</button>
+            <a href="{% url 'hr:off_day_queue' %}{% if upcoming_only %}?upcoming=1{% endif %}" class="btn btn-secondary btn-sm">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding: 1.75rem;">
+    <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800;">Off day queue</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">{% if page_obj.paginator.count %}{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}{% else %}0{% endif %} request{{ page_obj.paginator.count|pluralize }}</p>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for off in staff_offs %}
+                <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:staff_off_detail' off.pk %}'">
+                    <td>
+                        <div class="staff-cell">
+                            <div class="staff-avatar">{{ off.user.get_full_name|slice:":1"|upper }}</div>
+                            <div>
+                                <div class="staff-name">{{ off.user.get_full_name }}</div>
+                                <div class="staff-meta">{{ off.user.id_number }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-role">{{ off.user.role }}</span></td>
+                    <td style="font-weight: 700; white-space: nowrap;">
+                        {{ off.date|date:"d M Y" }}
+                        {% if off.date == today %}<span class="badge badge-info">Today</span>{% elif off.date < today %}<span class="badge badge-muted">Past</span>{% endif %}
+                    </td>
+                    <td style="color: var(--text-secondary);">{{ off.reason|default:"—" }}</td>
+                    <td>
+                        {% if off.status == 'Pending' %}
+                        <span class="badge badge-warning">Pending</span>
+                        {% elif off.status == 'Approved' %}
+                        <span class="badge badge-success">Approved</span>
+                        {% elif off.status == 'Rejected' %}
+                        <span class="badge badge-danger">Rejected</span>
+                        {% else %}
+                        <span class="badge badge-muted">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ off.requested_at|date:"d M Y" }}</td>
+                    <td onclick="event.stopPropagation();">
+                        {% if off.status == 'Pending' %}
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                            <a href="{% url 'hr:staff_off_detail' off.pk %}" class="btn btn-secondary btn-sm">View</a>
+                            <form method="post" action="{% url 'hr:staff_off_approve' off.pk %}" style="display: inline;" data-confirm="Approve off day for {{ off.user.get_full_name }}?">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="list">
+                                <button type="submit" class="btn btn-primary btn-sm" title="Approve"><i class="fas fa-check"></i></button>
+                            </form>
+                            <form method="post" action="{% url 'hr:staff_off_reject' off.pk %}" style="display: inline;" data-confirm="Reject this off day request?">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="list">
+                                <button type="submit" class="btn btn-secondary btn-sm" title="Reject" style="color: var(--danger); border-color: #fecaca;"><i class="fas fa-times"></i></button>
+                            </form>
+                        </div>
+                        {% elif off.status == 'Approved' %}
+                        <div style="display: flex; gap: 0.35rem;">
+                            <a href="{% url 'hr:staff_off_detail' off.pk %}" class="btn btn-secondary btn-sm">View</a>
+                            <form method="post" action="{% url 'hr:staff_off_cancel' off.pk %}" style="display: inline;" data-confirm="Cancel this approved off day?">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="list">
+                                <button type="submit" class="btn btn-secondary btn-sm">Cancel</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'hr:staff_off_detail' off.pk %}" class="btn btn-secondary btn-sm">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="empty-state"><i class="fas fa-user-slash"></i><div style="font-weight:700;">No off day requests</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'hr/includes/pagination.html' with page_obj=page_obj page_param='page' %}
+</div>
+{% else %}
+<div class="card" style="padding: 1.75rem;">
+    <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800;">Public holidays</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">{% if holidays_page.paginator.count %}{{ holidays_page.start_index }}–{{ holidays_page.end_index }} of {{ holidays_page.paginator.count }}{% else %}0{% endif %} holiday{{ holidays_page.paginator.count|pluralize }}</p>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Holiday</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in holidays %}
+                <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:holiday_detail' h.pk %}'">
+                    <td style="font-weight: 700; white-space: nowrap;">
+                        {{ h.date|date:"d M Y" }}
+                        {% if h.date == today %}<span class="badge badge-info">Today</span>{% elif h.date < today %}<span class="badge badge-muted">Past</span>{% endif %}
+                    </td>
+                    <td style="font-weight: 700;">{{ h.name }}</td>
+                    <td style="color: var(--text-secondary);">{{ h.notes|default:"—" }}</td>
+                    <td onclick="event.stopPropagation();">
+                        <a href="{% url 'hr:holiday_detail' h.pk %}" class="btn btn-secondary btn-sm">View</a>
+                        <form method="post" action="{% url 'hr:holiday_delete' h.pk %}" style="display: inline;" data-confirm="Remove holiday &quot;{{ h.name }}&quot;?">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger);"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="empty-state"><i class="fas fa-flag"></i><div style="font-weight:700;">No holidays recorded</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'hr/includes/pagination.html' with page_obj=holidays_page page_param='hpage' %}
+</div>
+{% endif %}
+{% endblock %}

@@ -128,10 +128,17 @@
         box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
     }
 
-    .btn-indigo:hover {
+    .btn-indigo:hover:not(:disabled) {
         background: var(--indigo-dark);
         transform: translateY(-2px);
         box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none !important;
+        pointer-events: none;
     }
 
     .btn-ghost {
@@ -208,8 +215,19 @@
                         {% endif %}
                     </div>
                 </div>
+            {% if existing_prescription %}
+            <div class="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">
+                <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
+                <p class="text-sm font-bold text-indigo-900">
+                    A prescription already exists for this visit. New medications will be added to
+                    <a href="{% url 'home:prescription_detail' existing_prescription.id %}" class="underline">prescription #{{ existing_prescription.id }}</a>.
+                </p>
+            </div>
+            {% endif %}
+
             <form method="post" id="prescription-form">
                 {% csrf_token %}
+                <input type="hidden" name="form_token" value="{{ form_token }}">
                 <!-- Diagnosis Section -->
                 <div class="premium-card">
                     <div class="flex items-center gap-4 mb-8">
@@ -327,9 +345,9 @@
                 </div>
                 <!-- Global Actions -->
                 <div class="flex items-center justify-end gap-4 mt-12 pb-20">
-                    <button type="submit" name="action" value="prescribe" class="btn-action btn-indigo">
-                        <i class="fas fa-check"></i>
-                        Prescribe
+                    <button type="submit" name="action" value="prescribe" class="btn-action btn-indigo prescribe-submit-btn">
+                        <i class="fas fa-check prescribe-submit-icon"></i>
+                        <span class="prescribe-submit-label">Prescribe</span>
                     </button>
                     <!-- <button type="submit" name="action" value="prescribe_close" class="btn-action bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-500/30">
                         <i class="fas fa-check-double"></i>
@@ -738,5 +756,36 @@
             modal.style.display = 'none'; // Force hide
         }
     }
+
+    (function initPrescriptionSubmitGuard() {
+        const form = document.getElementById('prescription-form');
+        if (!form) return;
+
+        let submitting = false;
+
+        form.addEventListener('submit', function (e) {
+            if (submitting) {
+                e.preventDefault();
+                return;
+            }
+            submitting = true;
+
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+                btn.disabled = true;
+            });
+
+            form.querySelectorAll('.prescribe-submit-btn').forEach(function (btn) {
+                const icon = btn.querySelector('.prescribe-submit-icon');
+                const label = btn.querySelector('.prescribe-submit-label');
+                if (icon) {
+                    icon.classList.remove('fa-check');
+                    icon.classList.add('fa-spinner', 'fa-spin');
+                }
+                if (label) {
+                    label.textContent = 'Saving…';
+                }
+            });
+        });
+    })();
     </script>
 {% endblock %}

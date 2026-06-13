@@ -1,0 +1,53 @@
+{% extends 'hr/base.html' %}
+{% block title %}Attendance devices{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:attendance_dashboard' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to attendance</a>
+</div>
+<div class="page-header">
+    <div>
+        <h1>ZKTeco devices</h1>
+        <p>Configure K40 terminals for attendance sync.</p>
+    </div>
+    <a href="{% url 'hr:attendance_device_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add device</a>
+</div>
+<div class="card" style="padding: 1.75rem;">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Status</th>
+                    <th>Last sync</th>
+                    <th>Message</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td style="font-weight: 700;">{{ device.name }}</td>
+                    <td>{{ device.ip_address }}:{{ device.port }}</td>
+                    <td>{% if device.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Inactive</span>{% endif %}</td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">{% if device.last_sync_at %}{{ device.last_sync_at|date:"d M Y H:i" }}{% else %}Never{% endif %}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-secondary); max-width: 200px;">{{ device.last_sync_message|truncatechars:60|default:"—" }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <form method="post" action="{% url 'hr:attendance_device_sync' device.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary btn-sm" title="Sync"><i class="fas fa-sync"></i></button>
+                            </form>
+                            <a href="{% url 'hr:attendance_device_edit' device.pk %}" class="btn btn-secondary btn-sm"><i class="fas fa-edit"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state"><i class="fas fa-network-wired"></i><div style="font-weight:700;">No devices configured</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 1rem;">Install <code>pyzk</code> on the server for live sync: <code>pip install pyzk</code>. Schedule <code>python manage.py sync_zkteco_attendance</code> every 15 minutes.</p>
+{% endblock %}

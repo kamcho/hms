@@ -1,0 +1,261 @@
+{% extends 'hr/base.html' %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+{% if is_self_dashboard %}
+<div class="page-header">
+    <div>
+        <h1>My HR</h1>
+        <p>Your leave balance, requests, and attendance summary.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'hr:leave_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Request leave</a>
+        <a href="{% url 'hr:staff_off_create' %}" class="btn btn-secondary btn-sm"><i class="fas fa-plus"></i> Request off day</a>
+        <a href="{% url 'hr:attendance_user_detail' request.user.pk %}" class="btn btn-secondary btn-sm"><i class="fas fa-fingerprint"></i> My attendance</a>
+    </div>
+</div>
+
+<div class="metrics-grid">
+    <div class="card metric-card">
+        <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+        <div>
+            <div class="metric-label">Pending leave</div>
+            <div class="metric-value" style="color: var(--warning);">{{ own_pending }}</div>
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-check-circle"></i></div>
+        <div>
+            <div class="metric-label">Approved leave</div>
+            <div class="metric-value" style="color: var(--success);">{{ own_approved }}</div>
+        </div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon cyan"><i class="fas fa-calendar-check"></i></div>
+        <div>
+            <div class="metric-label">Present this month</div>
+            <div class="metric-value">{{ att_summary.present|add:att_summary.late }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-split">
+    <div class="card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem;">Leave balance ({{ today.year }})</h3>
+        <div class="table-scroll">
+            <table class="data-table" style="font-size: 0.875rem;">
+                <thead>
+                    <tr><th>Type</th><th>Allowed</th><th>Used</th><th>Pending</th><th>Remaining</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in balance_rows %}
+                    <tr>
+                        <td>{{ row.leave_type_name }}</td>
+                        <td>{{ row.entitlement }}</td>
+                        <td>{{ row.used }}</td>
+                        <td>{{ row.pending }}</td>
+                        <td style="font-weight: 800;">{{ row.remaining }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem;">My recent leave</h3>
+        <div class="table-scroll">
+            <table class="data-table">
+                <tbody>
+                    {% for leave in own_leave %}
+                    <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:leave_detail' leave.pk %}'">
+                        <td>{{ leave.leave_type.name }}</td>
+                        <td>{{ leave.start_date|date:"d M" }} – {{ leave.end_date|date:"d M Y" }}</td>
+                        <td>{{ leave.status }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="empty-state">No leave requests yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="page-header">
+    <div>
+        <h1>HR Overview</h1>
+        <p>Staff headcount, payroll, attendance, leave, and off days at a glance.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'hr:attendance_dashboard' %}" class="btn btn-secondary btn-sm"><i class="fas fa-fingerprint"></i> Attendance</a>
+        <a href="{% url 'hr:leave_create' %}" class="btn btn-secondary btn-sm"><i class="fas fa-plus"></i> Record leave</a>
+        <a href="{% url 'hr:salary_list' %}" class="btn btn-primary btn-sm"><i class="fas fa-wallet"></i> Salaries</a>
+    </div>
+</div>
+
+<div class="metrics-grid">
+    <a href="{% url 'hr:salary_list' %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-users"></i></div>
+            <div>
+                <div class="metric-label">Active staff</div>
+                <div class="metric-value">{{ active_staff_count }}</div>
+                <div class="metric-meta">{{ with_salary_count }} with salary profile</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:salary_list' %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div>
+                <div class="metric-label">Salary profiles</div>
+                <div class="metric-value" style="color: var(--accent);">{{ with_salary_count }}</div>
+                <div class="metric-meta {% if without_salary_count %}warning{% else %}success{% endif %}">
+                    {% if without_salary_count %}{{ without_salary_count }} still need setup{% else %}All configured{% endif %}
+                </div>
+            </div>
+        </div>
+    </a>
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-coins"></i></div>
+        <div>
+            <div class="metric-label">Monthly payroll (gross)</div>
+            <div class="metric-value money" style="color: var(--success);">KES {{ monthly_payroll_gross|floatformat:0 }}</div>
+            <div class="metric-meta">Basic + allowances</div>
+        </div>
+    </div>
+    <a href="{% url 'hr:leave_list' %}?status=Pending" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+            <div>
+                <div class="metric-label">Pending leave</div>
+                <div class="metric-value" style="color: var(--warning);">{{ pending_leave_count }}</div>
+                <div class="metric-meta">Awaiting review</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:off_day_list' %}?upcoming=1" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-umbrella-beach"></i></div>
+            <div>
+                <div class="metric-label">Upcoming off days</div>
+                <div class="metric-value">{{ upcoming_off_count }}</div>
+                <div class="metric-meta">Holidays + staff off</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'hr:attendance_dashboard' %}" style="text-decoration: none;">
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-fingerprint"></i></div>
+            <div>
+                <div class="metric-label">Present today</div>
+                <div class="metric-value" style="color: var(--success);">{{ attendance_metrics.present|add:attendance_metrics.late }}</div>
+                <div class="metric-meta">{{ attendance_metrics.absent }} absent · {{ attendance_metrics.on_leave }} on leave</div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<div class="dashboard-split">
+    <div class="card" style="padding: 1.75rem;">
+        <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 800;">Recent leave</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">Latest requests across all staff</p>
+            </div>
+            <a href="{% url 'hr:leave_list' %}" class="btn btn-secondary btn-sm">View all</a>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Type</th>
+                        <th>Dates</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leave in recent_leave %}
+                    <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:leave_detail' leave.pk %}'">
+                        <td>
+                            <div class="staff-cell">
+                                <div class="staff-avatar">{{ leave.user.get_full_name|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="staff-name">{{ leave.user.get_full_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ leave.leave_type.name }}</td>
+                        <td style="white-space: nowrap; font-size: 0.85rem;">{{ leave.start_date|date:"d M" }} – {{ leave.end_date|date:"d M Y" }}</td>
+                        <td>
+                            {% if leave.status == 'Pending' %}
+                            <span class="badge badge-warning">Pending</span>
+                            {% elif leave.status == 'Approved' %}
+                            <span class="badge badge-success">Approved</span>
+                            {% elif leave.status == 'Rejected' %}
+                            <span class="badge badge-danger">Rejected</span>
+                            {% else %}
+                            <span class="badge badge-muted">Cancelled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="empty-state" style="padding: 2rem;">
+                            <i class="fas fa-calendar-minus"></i>
+                            <div style="font-weight: 700;">No leave recorded</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.75rem;">
+        <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 800;">Recently updated salaries</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">Latest compensation changes</p>
+            </div>
+            <a href="{% url 'hr:salary_list' %}" class="btn btn-secondary btn-sm">View all</a>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Gross</th>
+                        <th>Effective</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for salary in recent_salaries %}
+                    <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:salary_edit' salary.user_id %}'">
+                        <td>
+                            <div class="staff-cell">
+                                <div class="staff-avatar">{{ salary.user.get_full_name|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="staff-name">{{ salary.user.get_full_name }}</div>
+                                    <div class="staff-meta">{{ salary.user.role }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="money">KES {{ salary.gross_monthly|floatformat:0 }}</td>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">{{ salary.effective_from|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="empty-state" style="padding: 2rem;">
+                            <i class="fas fa-folder-open"></i>
+                            <div style="font-weight: 700;">No salary profiles yet</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

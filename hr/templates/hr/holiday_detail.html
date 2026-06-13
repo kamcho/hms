@@ -1,0 +1,68 @@
+{% extends 'hr/base.html' %}
+{% block title %}{{ holiday.name }}{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:off_day_list' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to holidays</a>
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="staff-avatar" style="width: 52px; height: 52px; font-size: 1.1rem; border-radius: 14px; background: linear-gradient(135deg, #f59e0b, #d97706);"><i class="fas fa-flag" style="font-size: 1rem;"></i></div>
+        <div>
+            <h1 style="font-size: 1.35rem;">{{ holiday.name }}</h1>
+            <p>Public holiday · facility-wide day off</p>
+        </div>
+    </div>
+    <div>
+        {% if holiday.date == today %}
+        <span class="badge badge-info">Today</span>
+        {% elif holiday.date < today %}
+        <span class="badge badge-muted">Past</span>
+        {% else %}
+        <span class="badge badge-success">Upcoming</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-layout detail-layout-single">
+    <div class="card detail-card">
+        <h3>Holiday details</h3>
+        <dl class="detail-dl">
+            <div class="detail-dl-row">
+                <dt>Date</dt>
+                <dd><strong>{{ holiday.date|date:"l, d M Y" }}</strong></dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Name</dt>
+                <dd>{{ holiday.name }}</dd>
+            </div>
+            {% if holiday.created_by %}
+            <div class="detail-dl-row">
+                <dt>Added by</dt>
+                <dd>{{ holiday.created_by.get_full_name }}</dd>
+            </div>
+            {% endif %}
+            <div class="detail-dl-row">
+                <dt>Created</dt>
+                <dd>{{ holiday.created_at|date:"d M Y, H:i" }}</dd>
+            </div>
+        </dl>
+        {% if holiday.notes %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Notes</div>
+            <p>{{ holiday.notes|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        <div class="detail-actions" style="margin-top: 1.5rem;">
+            {% if can_manage %}
+            <a href="{% url 'hr:holiday_edit' holiday.pk %}" class="btn btn-secondary"><i class="fas fa-edit"></i> Edit</a>
+            <form method="post" action="{% url 'hr:holiday_delete' holiday.pk %}" data-confirm="Remove public holiday &quot;{{ holiday.name }}&quot;?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary" style="color: var(--danger); border-color: #fecaca;">
+                    <i class="fas fa-trash"></i> Remove holiday
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

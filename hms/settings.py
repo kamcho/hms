@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'maternity',
     'comms',
     'reports.apps.ReportsConfig',
+    'hr',
 ]
 
 MIDDLEWARE = [
@@ -108,6 +109,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'hr.context_processors.hr_permissions',
             ],
         },
     },

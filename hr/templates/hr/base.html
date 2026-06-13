@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}HR{% endblock %} · HMS</title>
+    <link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+    <link rel="stylesheet" href="{% static 'users/vendor/fontawesome/css/all.min.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="site-layout">
+
+    <nav class="navbar" id="main-navbar">
+        <div class="nav-container">
+            <a href="{% url 'hr:dashboard' %}" class="nav-brand">
+                <div class="nav-brand-logo">H</div>
+                <span>HMS <span class="highlight">PEOPLE</span></span>
+            </a>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li>
+                    <a href="{% url 'hr:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-th-large"></i> {% if hr_ctx.is_staff_self %}My HR{% else %}Overview{% endif %}
+                    </a>
+                </li>
+                {% if hr_ctx.can_view_salaries %}
+                <li>
+                    <a href="{% url 'hr:salary_list' %}" class="nav-link {% if 'salary' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-wallet"></i> Salaries
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="{% url 'hr:leave_list' %}" class="nav-link {% if 'leave' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-calendar-minus"></i> {% if hr_ctx.is_staff_self %}My leave{% else %}Leave{% endif %}
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'hr:attendance_dashboard' %}" class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-fingerprint"></i> {% if hr_ctx.is_staff_self %}My attendance{% else %}Attendance{% endif %}
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'hr:off_day_list' %}" class="nav-link {% if 'off_day' in request.resolver_match.url_name or 'holiday' in request.resolver_match.url_name or 'staff_off' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-umbrella-beach"></i> {% if hr_ctx.is_staff_self %}My off days{% else %}Off days{% endif %}
+                    </a>
+                </li>
+                {% if hr_ctx.can_manage_settings %}
+                <li>
+                    <a href="{% url 'hr:leave_type_list' %}" class="nav-link {% if 'leave_type' in request.resolver_match.url_name or 'entitlement' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="{% url 'users:dashboard' %}" class="nav-link">
+                        <i class="fas fa-hospital"></i> Back to HMS
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-actions">
+                <div class="user-profile-menu" id="profile-menu-toggle" onclick="toggleProfileDropdown()">
+                    <div class="user-avatar">{{ request.user.get_full_name|slice:":1"|upper }}</div>
+                    <div class="user-info">
+                        <span class="user-name">{{ request.user.get_full_name }}</span>
+                        <span class="user-role">{{ request.user.role }}</span>
+                    </div>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--text-muted);"></i>
+                    <div class="dropdown-menu" id="profile-dropdown-list">
+                        <a href="{% url 'users:dashboard' %}" class="dropdown-item">
+                            <i class="fas fa-arrow-left"></i> Main dashboard
+                        </a>
+                    </div>
+                </div>
+                <button type="button" class="nav-toggle" id="nav-toggle-btn" aria-label="Open navigation menu" aria-expanded="false">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+    <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
+
+    <main class="main-wrapper" id="main-content-section">
+        {% if messages %}
+        <div class="messages-container" id="toast-messages-container">
+            {% for message in messages %}
+            <div class="alert-message" role="alert">
+                <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer id="main-footer">
+        <div class="footer-content">
+            <span class="footer-brand">HMS Human Resources</span>
+            <span class="footer-text">&copy; {% now "Y" %} · Staff, salaries &amp; workforce</span>
+        </div>
+    </footer>
+</div>
+
+<script>
+function toggleProfileDropdown() {
+    const dropdown = document.getElementById('profile-dropdown-list');
+    if (dropdown) dropdown.classList.toggle('show');
+}
+
+window.addEventListener('click', function(e) {
+    const profileMenu = document.getElementById('profile-menu-toggle');
+    const dropdown = document.getElementById('profile-dropdown-list');
+    if (profileMenu && dropdown && !profileMenu.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+
+function setNavOpen(isOpen) {
+    const toggleBtn = document.getElementById('nav-toggle-btn');
+    const navMenu = document.getElementById('nav-menu');
+    const backdrop = document.getElementById('nav-backdrop');
+    if (!toggleBtn || !navMenu) return;
+    navMenu.classList.toggle('show', isOpen);
+    if (backdrop) {
+        backdrop.classList.toggle('show', isOpen);
+        backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    }
+    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    toggleBtn.innerHTML = isOpen ? '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('nav-toggle-btn');
+    const navMenu = document.getElementById('nav-menu');
+    const backdrop = document.getElementById('nav-backdrop');
+
+    if (toggleBtn && navMenu) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setNavOpen(!navMenu.classList.contains('show'));
+        });
+        if (backdrop) backdrop.addEventListener('click', function() { setNavOpen(false); });
+        navMenu.querySelectorAll('.nav-link').forEach(function(link) {
+            link.addEventListener('click', function() { setNavOpen(false); });
+        });
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 992) setNavOpen(false);
+        });
+    }
+
+    document.querySelectorAll('.alert-message').forEach(function(toast) {
+        setTimeout(function() {
+            toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(20px)';
+            setTimeout(function() { toast.remove(); }, 400);
+        }, 5000);
+    });
+
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        if (!form || form.tagName !== 'FORM') return;
+        var msg = form.getAttribute('data-confirm');
+        if (msg && !window.confirm(msg)) {
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[data-confirm]');
+        if (!link) return;
+        if (!window.confirm(link.getAttribute('data-confirm'))) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

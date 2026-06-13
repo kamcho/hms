@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, loan_views
 
 app_name = 'inventory'
 
@@ -32,4 +32,16 @@ urlpatterns = [
     # IPD Pharmacy
     path('ipd-pharmacy/', views.ipd_pharmacy_dashboard, name='ipd_pharmacy_dashboard'),
     path('ipd-pharmacy/fulfill/', views.confirm_ipd_fulfillment, name='confirm_ipd_fulfillment'),
+
+    # Inter-facility stock loans
+    path('loan-institutions/', loan_views.loan_institution_list, name='loan_institution_list'),
+    path('loan-institutions/add/', loan_views.loan_institution_create, name='loan_institution_create'),
+    path('loan-institutions/<int:pk>/', loan_views.loan_institution_detail, name='loan_institution_detail'),
+    path('loan-institutions/<int:pk>/edit/', loan_views.loan_institution_edit, name='loan_institution_edit'),
+    path('stock-loans/', loan_views.stock_loan_list, name='stock_loan_list'),
+    path('stock-loans/create/', loan_views.stock_loan_create, name='stock_loan_create'),
+    path('stock-loans/<int:pk>/', loan_views.stock_loan_detail, name='stock_loan_detail'),
+    path('stock-loans/<int:pk>/lines/<int:line_id>/return/', loan_views.stock_loan_return, name='stock_loan_return'),
+    path('stock-loans/<int:pk>/lines/<int:line_id>/writeoff/', loan_views.stock_loan_writeoff, name='stock_loan_writeoff'),
+    path('api/loan-item-stock/', loan_views.api_loan_item_stock, name='api_loan_item_stock'),
 ]

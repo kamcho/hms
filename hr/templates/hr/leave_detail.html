@@ -1,0 +1,204 @@
+{% extends 'hr/base.html' %}
+{% block title %}Leave request{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:leave_list' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to leave</a>
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div class="staff-avatar" style="width: 52px; height: 52px; font-size: 1.1rem; border-radius: 14px;">{{ leave.user.get_full_name|slice:":1"|upper }}</div>
+        <div>
+            <h1 style="font-size: 1.35rem;">Leave request</h1>
+            <p>{{ leave.user.get_full_name }} · {{ leave.user.id_number }} · <span class="badge badge-role">{{ leave.user.role }}</span></p>
+        </div>
+    </div>
+    <div>
+        {% if leave.status == 'Pending' %}
+        <span class="badge badge-warning">Pending</span>
+        {% elif leave.status == 'Approved' %}
+        <span class="badge badge-success">Approved</span>
+        {% elif leave.status == 'Rejected' %}
+        <span class="badge badge-danger">Rejected</span>
+        {% else %}
+        <span class="badge badge-muted">Cancelled</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-layout">
+    <div class="card detail-card">
+        <h3>Request details</h3>
+        <dl class="detail-dl">
+            <div class="detail-dl-row">
+                <dt>Leave type</dt>
+                <dd>{{ leave.leave_type.name }}{% if not leave.leave_type.is_paid %} <span class="badge badge-muted">Unpaid</span>{% endif %}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Start date</dt>
+                <dd>{{ leave.start_date|date:"l, d M Y" }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>End date</dt>
+                <dd>{{ leave.end_date|date:"l, d M Y" }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Duration</dt>
+                <dd><strong>{{ leave.days_count }}</strong> day{{ leave.days_count|pluralize }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Requested</dt>
+                <dd>{{ leave.requested_at|date:"d M Y, H:i" }}</dd>
+            </div>
+        </dl>
+        {% if leave.reason %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Reason</div>
+            <p>{{ leave.reason|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if balance_years %}
+    <div class="card detail-card">
+        <h3>Leave balance</h3>
+        {% for year_block in balance_years %}
+        <div style="{% if not forloop.first %}margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);{% endif %}">
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                {{ year_block.year }} · this request uses <strong>{{ year_block.request_days }}</strong> day{{ year_block.request_days|pluralize }}
+            </p>
+            <div class="table-scroll">
+                <table class="data-table" style="font-size: 0.875rem;">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Allowed</th>
+                            <th>Used</th>
+                            <th>Pending</th>
+                            <th>Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in year_block.rows %}
+                        <tr{% if row.leave_type_id == leave.leave_type_id %} style="background: var(--bg-secondary);"{% endif %}>
+                            <td>{{ row.leave_type_name }}</td>
+                            <td>{{ row.entitlement }}</td>
+                            <td>{{ row.used }}</td>
+                            <td>{{ row.pending }}</td>
+                            <td style="font-weight: 800; color: {% if row.remaining == 0 %}var(--danger){% else %}var(--success){% endif %};">
+                                {{ row.remaining }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card detail-card">
+        <h3>Review</h3>
+        {% if leave.reviewed_by %}
+        <dl class="detail-dl">
+            <div class="detail-dl-row">
+                <dt>Reviewed by</dt>
+                <dd>{{ leave.reviewed_by.get_full_name }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Reviewed at</dt>
+                <dd>{{ leave.reviewed_at|date:"d M Y, H:i" }}</dd>
+            </div>
+        </dl>
+        {% if leave.review_notes %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Review notes</div>
+            <p>{{ leave.review_notes|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% else %}
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Not reviewed yet.</p>
+        {% endif %}
+
+        {% if leave.status == 'Pending' %}
+        {% if approval_blocked %}
+        <div class="alert-message" style="position: static; margin-bottom: 1rem; border-left-color: var(--danger); font-size: 0.875rem;">
+            This request exceeds the staff member's remaining leave balance and cannot be approved.
+        </div>
+        {% endif %}
+        <div class="detail-actions">
+            {% if can_edit %}
+            <a href="{% url 'hr:leave_edit' leave.pk %}" class="btn btn-secondary"><i class="fas fa-edit"></i> Edit</a>
+            {% endif %}
+            {% if can_approve %}
+            <form method="post" action="{% url 'hr:leave_approve' leave.pk %}" data-confirm="Approve leave for {{ leave.user.get_full_name }}?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"{% if approval_blocked %} disabled title="Insufficient leave balance"{% endif %}><i class="fas fa-check"></i> Approve</button>
+            </form>
+            <form method="post" action="{% url 'hr:leave_reject' leave.pk %}" class="detail-reject-form" data-confirm="Reject this leave request?">
+                {% csrf_token %}
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label" for="review_notes">Rejection notes (optional)</label>
+                    <textarea name="review_notes" id="review_notes" class="form-input" rows="2" placeholder="Reason for rejection…"></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="color: var(--danger); border-color: #fecaca;">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'hr:leave_cancel' leave.pk %}" data-confirm="Cancel this leave request?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fas fa-ban"></i> Cancel request
+                </button>
+            </form>
+        </div>
+        {% elif leave.status == 'Approved' %}
+        <div class="detail-actions">
+            <form method="post" action="{% url 'hr:leave_cancel' leave.pk %}" data-confirm="Cancel this approved leave for {{ leave.user.get_full_name }}?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fas fa-ban"></i> Cancel leave
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if other_leaves %}
+<div class="card detail-card" style="margin-top: 1.25rem; padding: 1.75rem;">
+    <h3>Other leave for {{ leave.user.get_full_name }}</h3>
+    <div class="table-scroll">
+        <table class="data-table" style="font-size: 0.875rem;">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Dates</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in other_leaves %}
+                <tr>
+                    <td>{{ item.leave_type.name }}</td>
+                    <td style="white-space: nowrap;">{{ item.start_date|date:"d M Y" }} – {{ item.end_date|date:"d M Y" }}</td>
+                    <td>{{ item.days_count }}</td>
+                    <td>
+                        {% if item.status == 'Pending' %}<span class="badge badge-warning">Pending</span>
+                        {% elif item.status == 'Approved' %}<span class="badge badge-success">Approved</span>
+                        {% elif item.status == 'Rejected' %}<span class="badge badge-danger">Rejected</span>
+                        {% else %}<span class="badge badge-muted">Cancelled</span>{% endif %}
+                    </td>
+                    <td><a href="{% url 'hr:leave_detail' item.pk %}" class="btn btn-secondary btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -33,6 +33,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('Pharmacist', 'Pharmacist'),
         ('Lab Technician', 'Lab Technician'),
         ('Accountant', 'Accountant'),
+        ('HR Manager', 'HR Manager'),
         ('Triage Nurse', 'Triage Nurse'),
         ('Radiographer', 'Radiographer'),
         ('Procurement Officer', 'Procurement Officer'),

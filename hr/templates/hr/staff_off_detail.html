@@ -1,0 +1,167 @@
+{% extends 'hr/base.html' %}
+{% block title %}Staff off day{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:off_day_queue' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to off day queue</a>
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div class="staff-avatar" style="width: 52px; height: 52px; font-size: 1.1rem; border-radius: 14px;">{{ off.user.get_full_name|slice:":1"|upper }}</div>
+        <div>
+            <h1 style="font-size: 1.35rem;">Staff off day</h1>
+            <p>{{ off.user.get_full_name }} · {{ off.user.id_number }} · <span class="badge badge-role">{{ off.user.role }}</span></p>
+        </div>
+    </div>
+    <div>
+        {% if off.status == 'Pending' %}
+        <span class="badge badge-warning">Pending</span>
+        {% elif off.status == 'Approved' %}
+        <span class="badge badge-success">Approved</span>
+        {% elif off.status == 'Rejected' %}
+        <span class="badge badge-danger">Rejected</span>
+        {% else %}
+        <span class="badge badge-muted">Cancelled</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-layout">
+    <div class="card detail-card">
+        <h3>Request details</h3>
+        <dl class="detail-dl">
+            <div class="detail-dl-row">
+                <dt>Date</dt>
+                <dd>
+                    <strong>{{ off.date|date:"l, d M Y" }}</strong>
+                    {% if off.date == today %}<span class="badge badge-info">Today</span>
+                    {% elif off.date < today %}<span class="badge badge-muted">Past</span>
+                    {% else %}<span class="badge badge-info">Upcoming</span>{% endif %}
+                </dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Requested</dt>
+                <dd>{{ off.requested_at|date:"d M Y, H:i" }}</dd>
+            </div>
+            {% if off.created_by %}
+            <div class="detail-dl-row">
+                <dt>Recorded by</dt>
+                <dd>{{ off.created_by.get_full_name }}</dd>
+            </div>
+            {% endif %}
+            <div class="detail-dl-row">
+                <dt>Created</dt>
+                <dd>{{ off.created_at|date:"d M Y, H:i" }}</dd>
+            </div>
+        </dl>
+        {% if off.reason %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Reason</div>
+            <p>{{ off.reason|linebreaksbr }}</p>
+        </div>
+        {% else %}
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">No reason provided.</p>
+        {% endif %}
+    </div>
+
+    <div class="card detail-card">
+        <h3>Review</h3>
+        {% if off.reviewed_by %}
+        <dl class="detail-dl">
+            <div class="detail-dl-row">
+                <dt>Reviewed by</dt>
+                <dd>{{ off.reviewed_by.get_full_name }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Reviewed at</dt>
+                <dd>{{ off.reviewed_at|date:"d M Y, H:i" }}</dd>
+            </div>
+        </dl>
+        {% if off.review_notes %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Review notes</div>
+            <p>{{ off.review_notes|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% else %}
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Not reviewed yet.</p>
+        {% endif %}
+
+        {% if off.status == 'Pending' %}
+        <div class="detail-actions">
+            <form method="post" action="{% url 'hr:staff_off_approve' off.pk %}" data-confirm="Approve off day for {{ off.user.get_full_name }}?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Approve</button>
+            </form>
+            <form method="post" action="{% url 'hr:staff_off_reject' off.pk %}" class="detail-reject-form" data-confirm="Reject this off day request?">
+                {% csrf_token %}
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label" for="review_notes">Rejection notes (optional)</label>
+                    <textarea name="review_notes" id="review_notes" class="form-input" rows="2" placeholder="Reason for rejection…"></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="color: var(--danger); border-color: #fecaca;">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </form>
+            <form method="post" action="{% url 'hr:staff_off_cancel' off.pk %}" data-confirm="Cancel this off day request?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fas fa-ban"></i> Cancel request
+                </button>
+            </form>
+        </div>
+        {% elif off.status == 'Approved' %}
+        <div class="detail-actions">
+            <form method="post" action="{% url 'hr:staff_off_cancel' off.pk %}" data-confirm="Cancel this approved off day for {{ off.user.get_full_name }}?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fas fa-ban"></i> Cancel off day
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if off.status != 'Approved' %}
+        <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+            <form method="post" action="{% url 'hr:staff_off_delete' off.pk %}" data-confirm="Permanently delete this off day record?">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger);"><i class="fas fa-trash"></i> Delete record</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if other_offs %}
+<div class="card detail-card" style="margin-top: 1.25rem; padding: 1.75rem;">
+    <h3>Other off days for {{ off.user.get_full_name }}</h3>
+    <div class="table-scroll">
+        <table class="data-table" style="font-size: 0.875rem;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in other_offs %}
+                <tr>
+                    <td style="white-space: nowrap; font-weight: 700;">{{ item.date|date:"d M Y" }}</td>
+                    <td style="color: var(--text-secondary);">{{ item.reason|default:"—" }}</td>
+                    <td>
+                        {% if item.status == 'Pending' %}<span class="badge badge-warning">Pending</span>
+                        {% elif item.status == 'Approved' %}<span class="badge badge-success">Approved</span>
+                        {% elif item.status == 'Rejected' %}<span class="badge badge-danger">Rejected</span>
+                        {% else %}<span class="badge badge-muted">Cancelled</span>{% endif %}
+                    </td>
+                    <td><a href="{% url 'hr:staff_off_detail' item.pk %}" class="btn btn-secondary btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

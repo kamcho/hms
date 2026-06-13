@@ -1,0 +1,94 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}Loan #{{ loan.id }} — HMS{% endblock %}
+{% block content %}
+{% include 'inventory/_loan_styles.html' %}
+<div class="loan-page" style="max-width: 1100px;">
+    <a href="{% url 'inventory:stock_loan_list' %}" class="loan-back-link"><i class="fas fa-arrow-left"></i> All loans</a>
+
+    <div class="loan-header" style="margin-top: 0.75rem;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0;">Loan #{{ loan.id }}</h1>
+            <p class="loan-subtitle">
+                <a href="{% url 'inventory:loan_institution_detail' loan.institution_id %}" class="loan-link">{{ loan.institution.name }}</a>
+                · {{ loan.loan_date|date:"d M Y, H:i" }}
+                · From <strong>{{ loan.source_department.name }}</strong>
+            </p>
+            {% if loan.expected_return_date %}
+            <p style="font-size: 0.875rem; color: #b45309; font-weight: 700; margin-top: 0.35rem;">Expected return: {{ loan.expected_return_date|date:"d M Y" }}</p>
+            {% endif %}
+            {% if loan.notes %}<p style="font-size: 0.875rem; color: #64748b; margin-top: 0.5rem;">{{ loan.notes }}</p>{% endif %}
+        </div>
+        <div style="text-align: right;">
+            <span class="loan-pill {% if loan.status == 'Closed' %}loan-pill-closed{% elif loan.status == 'Partial' %}loan-pill-partial{% else %}loan-pill-open{% endif %}">
+                {{ loan.get_status_display }}
+            </span>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">Issued by {{ loan.issued_by.get_full_name|default:loan.issued_by.username }}</p>
+        </div>
+    </div>
+
+    <div class="loan-card">
+        <table class="loan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 1.5rem;">Item</th>
+                    <th>Batch</th>
+                    <th>Lent</th>
+                    <th>Returned</th>
+                    <th>Written off</th>
+                    <th>Outstanding</th>
+                    <th style="padding-right: 1.5rem;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td style="padding-left: 1.5rem; font-weight: 700;">{{ line.item.name }}</td>
+                    <td>{{ line.batch_number }}</td>
+                    <td>{{ line.quantity_lent }}</td>
+                    <td style="color: #047857;">{{ line.quantity_returned }}</td>
+                    <td style="color: #e11d48;">{{ line.quantity_written_off }}</td>
+                    <td style="font-weight: 800; color: {% if line.outstanding %}#b45309{% else %}#94a3b8{% endif %};">{{ line.outstanding }}</td>
+                    <td style="padding-right: 1.5rem;">
+                        {% if line.outstanding > 0 %}
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <form method="post" action="{% url 'inventory:stock_loan_return' loan.pk line.pk %}" style="display: flex; gap: 0.5rem; align-items: center;">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" min="1" max="{{ line.outstanding }}" value="{{ line.outstanding }}" class="form-control" style="width: 5rem; padding: 0.35rem 0.5rem; font-size: 0.875rem;">
+                                <button type="submit" class="loan-btn loan-btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.625rem;">Return</button>
+                            </form>
+                            <form method="post" action="{% url 'inventory:stock_loan_writeoff' loan.pk line.pk %}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" min="1" max="{{ line.outstanding }}" value="{{ line.outstanding }}" class="form-control" style="width: 5rem; padding: 0.35rem 0.5rem; font-size: 0.875rem;">
+                                <input type="text" name="reason" placeholder="Reason" class="form-control" style="flex: 1; min-width: 120px; padding: 0.35rem 0.5rem; font-size: 0.875rem;">
+                                <button type="submit" class="loan-btn loan-btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.625rem; color: #be123c; border-color: #fecdd3; background: #fff1f2;" onclick="return confirm('Write off these units? Stock was already deducted when loaned.');">Write off</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span style="font-size: 0.6875rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Settled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="loan-empty">No line items.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if lines %}
+    <div class="loan-card loan-card-padded" style="margin-top: 2rem; background: #f8fafc;">
+        <h3 class="loan-field-label" style="margin-bottom: 0.75rem;">Stock adjustments for this loan</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            {% for line in lines %}
+                {% for adj in line.adjustments.all %}
+                <li style="display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                    <span><strong>{{ adj.get_adjustment_type_display }}</strong> — {{ adj.item.name }} ({{ adj.quantity }})</span>
+                    <span style="color: #94a3b8; font-size: 0.75rem; white-space: nowrap;">{{ adj.adjusted_at|date:"d M Y H:i" }}</span>
+                </li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

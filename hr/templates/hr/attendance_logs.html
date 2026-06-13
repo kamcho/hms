@@ -1,0 +1,59 @@
+{% extends 'hr/base.html' %}
+{% block title %}Punch logs{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:attendance_dashboard' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to attendance</a>
+</div>
+<div class="page-header">
+    <div>
+        <h1>Device punch logs</h1>
+        <p>Raw check-in/out records from ZKTeco K40{% if unmapped_count %} — <strong style="color: var(--warning);">{{ unmapped_count }} unmapped</strong>{% endif %}</p>
+    </div>
+    <a href="{% url 'hr:attendance_profiles' %}" class="btn btn-secondary btn-sm">Map device PINs</a>
+</div>
+<div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <form method="get" class="filter-row">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <input type="search" name="q" class="form-input" value="{{ q }}" placeholder="Staff name or device PIN…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+    </form>
+</div>
+<div class="card" style="padding: 1.75rem;">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Device PIN</th>
+                    <th>Staff</th>
+                    <th>Type</th>
+                    <th>Device</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="white-space: nowrap; font-weight: 700;">{{ log.punch_time|date:"d M Y H:i" }}</td>
+                    <td>{{ log.device_user_id }}</td>
+                    <td>
+                        {% if log.user %}
+                        {{ log.user.get_full_name }}
+                        {% else %}
+                        <span class="badge badge-warning">Unmapped</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.punch_type }}</td>
+                    <td>{{ log.device.name|default:"—" }}</td>
+                    <td>{{ log.get_source_display }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state"><i class="fas fa-fingerprint"></i><div style="font-weight:700;">No punches yet</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'hr/includes/pagination.html' with page_obj=page_obj page_param='page' %}
+</div>
+{% endblock %}

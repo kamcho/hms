@@ -1,0 +1,64 @@
+{% extends 'hr/base.html' %}
+{% block title %}Device PINs{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:attendance_dashboard' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to attendance</a>
+</div>
+<div class="page-header">
+    <div>
+        <h1>Device PIN mapping</h1>
+        <p>Link each staff member to their ZKTeco K40 user ID.</p>
+    </div>
+</div>
+<div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <form method="get" class="filter-row">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <input type="search" name="q" class="form-input" value="{{ q }}" placeholder="Name, ID, or PIN…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+    </form>
+</div>
+<div class="card" style="padding: 1.75rem;">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Device PIN</th>
+                    <th>Shift</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="table-row-hover" onclick="window.location.href='{% url 'hr:attendance_user_detail' row.user.pk %}'">
+                    <td>
+                        <div class="staff-cell">
+                            <div class="staff-avatar">{{ row.user.get_full_name|slice:":1"|upper }}</div>
+                            <div>
+                                <div class="staff-name">{{ row.user.get_full_name }}</div>
+                                <div class="staff-meta">{{ row.user.id_number }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-role">{{ row.user.role }}</span></td>
+                    <td style="font-weight: 800;">
+                        {% if row.profile.device_user_id %}{{ row.profile.device_user_id }}{% else %}<span class="badge badge-warning">Not set</span>{% endif %}
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        {{ row.profile.shift_start|time:"H:i" }} – {{ row.profile.shift_end|time:"H:i" }}
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <a href="{% url 'hr:attendance_user_detail' row.user.pk %}" class="btn btn-secondary btn-sm">Calendar</a>
+                        <a href="{% url 'hr:attendance_profile_edit' row.user.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="empty-state">No staff found</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

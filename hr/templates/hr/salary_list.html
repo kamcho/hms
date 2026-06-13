@@ -1,0 +1,349 @@
+{% extends 'hr/base.html' %}
+{% block title %}Salaries{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Staff salaries</h1>
+        <p>Set compensation and run month-end payroll invoices for all staff.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="period">Month-end invoices</label>
+            <input type="month" id="period" class="form-input" value="{{ today|date:'Y-m' }}">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="open-bulk-payroll-modal">
+            <i class="fas fa-file-invoice-dollar"></i> Update all balances
+        </button>
+        <a href="{% url 'hr:payroll_run_detail' %}?month={{ today|date:'Y-m' }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-clipboard-list"></i> Payroll run
+        </a>
+    </div>
+</div>
+
+<div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <form method="get" class="filter-row">
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <label for="q" class="form-label">Search staff</label>
+            <input type="search" name="q" id="q" class="form-input" placeholder="Name or ID number…" value="{{ q }}">
+        </div>
+        <div class="form-group" style="width: 180px; margin-bottom: 0;">
+            <label for="role" class="form-label">Role</label>
+            <select name="role" id="role" class="form-input">
+                <option value="">All roles</option>
+                {% for code, label in roles %}
+                <option value="{{ code }}" {% if role_filter == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Apply</button>
+            <a href="{% url 'hr:salary_list' %}" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding: 1.75rem;">
+    <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 800;">Staff roster</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">{{ page_obj.paginator.count }} staff member{{ page_obj.paginator.count|pluralize }}</p>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Basic</th>
+                    <th>Allowance</th>
+                    <th>Gross</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_list %}
+                <tr>
+                    <td>
+                        <div class="staff-cell">
+                            <div class="staff-avatar">{{ staff.get_full_name|slice:":1"|upper }}</div>
+                            <div>
+                                <div class="staff-name">{{ staff.get_full_name }}</div>
+                                <div class="staff-meta">{{ staff.id_number }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-role">{{ staff.role }}</span></td>
+                    {% if staff.salary_profile %}
+                    <td class="money">KES {{ staff.salary_profile.basic_salary|floatformat:2 }}</td>
+                    <td class="money">KES {{ staff.salary_profile.allowance|floatformat:2 }}</td>
+                    <td class="money">KES {{ staff.salary_profile.gross_monthly|floatformat:2 }}</td>
+                    <td><span class="badge badge-success">Configured</span></td>
+                    <td><a href="{% url 'hr:salary_edit' staff.pk %}" class="btn btn-secondary btn-sm">Edit</a></td>
+                    {% else %}
+                    <td colspan="3" style="color: var(--text-muted);">—</td>
+                    <td><span class="badge badge-warning">Not set</span></td>
+                    <td><a href="{% url 'hr:salary_edit' staff.pk %}" class="btn btn-primary btn-sm">Set salary</a></td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <i class="fas fa-user-slash"></i>
+                        <div style="font-weight: 700;">No staff found</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'hr/includes/pagination.html' with page_obj=page_obj page_param='page' %}
+</div>
+
+<div class="hr-modal" id="bulk-payroll-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-payroll-title" hidden>
+    <div class="hr-modal-backdrop" data-close-modal></div>
+    <div class="hr-modal-panel hr-modal-panel-wide">
+        <div class="hr-modal-header">
+            <div>
+                <h3 id="bulk-payroll-title">Update all balances</h3>
+                <p id="bulk-payroll-period" class="hr-modal-subtitle"></p>
+            </div>
+            <button type="button" class="hr-modal-close" data-close-modal aria-label="Close">&times;</button>
+        </div>
+
+        <div class="hr-modal-body">
+            <div id="bulk-payroll-loading" class="bulk-payroll-loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading payroll summary…
+            </div>
+            <div id="bulk-payroll-empty" class="empty-state" style="display: none; padding: 2rem 1rem;">
+                <i class="fas fa-user-slash"></i>
+                <div style="font-weight: 700;">No staff with salaries configured</div>
+                <p style="font-size: 0.85rem;">Set salaries first, then run month-end invoices.</p>
+            </div>
+            <div id="bulk-payroll-content" style="display: none;">
+                <div class="bulk-payroll-summary" id="bulk-payroll-summary"></div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 1rem 0 0.75rem;">
+                    Adjust bonuses or deductions per staff before updating. Locked invoices cannot be changed here.
+                </p>
+                <div class="table-scroll bulk-payroll-table-wrap">
+                    <table class="data-table bulk-payroll-table">
+                        <thead>
+                            <tr>
+                                <th>Staff</th>
+                                <th>Basic</th>
+                                <th>Allowance</th>
+                                <th>Gross</th>
+                                <th>Adjustment</th>
+                                <th>Net pay</th>
+                                <th>Notes</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-payroll-rows"></tbody>
+                        <tfoot id="bulk-payroll-tfoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" id="bulk-payroll-form" data-confirm="Update month-end invoices for all editable staff with these adjustments?">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generate_all_payroll">
+            <input type="hidden" name="period" id="bulk-payroll-period-input" value="">
+            <div id="bulk-payroll-hidden-fields"></div>
+            <div class="hr-modal-footer">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                <button type="submit" class="btn btn-primary" id="bulk-payroll-submit" disabled>
+                    <i class="fas fa-check"></i> Update all balances
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var previewUrl = '{% url "hr:bulk_payroll_preview" %}';
+    var modal = document.getElementById('bulk-payroll-modal');
+    var periodInput = document.getElementById('period');
+    var openBtn = document.getElementById('open-bulk-payroll-modal');
+    var loadingEl = document.getElementById('bulk-payroll-loading');
+    var emptyEl = document.getElementById('bulk-payroll-empty');
+    var contentEl = document.getElementById('bulk-payroll-content');
+    var summaryEl = document.getElementById('bulk-payroll-summary');
+    var rowsEl = document.getElementById('bulk-payroll-rows');
+    var tfootEl = document.getElementById('bulk-payroll-tfoot');
+    var periodLabelEl = document.getElementById('bulk-payroll-period');
+    var periodHiddenInput = document.getElementById('bulk-payroll-period-input');
+    var hiddenFieldsEl = document.getElementById('bulk-payroll-hidden-fields');
+    var submitBtn = document.getElementById('bulk-payroll-submit');
+    var formEl = document.getElementById('bulk-payroll-form');
+    var currentRows = [];
+
+    function formatMoney(value) {
+        var num = parseFloat(value) || 0;
+        return 'KES ' + num.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function parsePeriod() {
+        if (!periodInput || !periodInput.value) return null;
+        var parts = periodInput.value.split('-');
+        return { year: parseInt(parts[0], 10), month: parseInt(parts[1], 10) };
+    }
+
+    function statusBadge(status) {
+        if (status === 'Paid') return '<span class="badge badge-success">Paid</span>';
+        if (status === 'Partial') return '<span class="badge badge-warning">Partial</span>';
+        if (status === 'Finalized') return '<span class="badge badge-info">Finalized</span>';
+        if (status === 'New') return '<span class="badge badge-muted">New</span>';
+        return '<span class="badge badge-warning">Draft</span>';
+    }
+
+    function recalcTotals() {
+        var totals = { gross: 0, adjustment: 0, net: 0 };
+        rowsEl.querySelectorAll('tr[data-editable="true"]').forEach(function(row) {
+            var gross = parseFloat(row.dataset.gross) || 0;
+            var adjInput = row.querySelector('.bulk-adjustment-input');
+            var netCell = row.querySelector('.bulk-net-cell');
+            var adjustment = parseFloat(adjInput.value) || 0;
+            var net = Math.max(0, gross + adjustment);
+            netCell.textContent = formatMoney(net);
+            totals.gross += gross;
+            totals.adjustment += adjustment;
+            totals.net += net;
+        });
+        var tfootRow = tfootEl.querySelector('tr');
+        if (tfootRow) {
+            tfootRow.children[1].textContent = formatMoney(totals.gross);
+            tfootRow.children[2].textContent = formatMoney(totals.adjustment);
+            tfootRow.children[3].textContent = formatMoney(totals.net);
+        }
+    }
+
+    function buildHiddenFields() {
+        hiddenFieldsEl.innerHTML = '';
+        rowsEl.querySelectorAll('tr[data-editable="true"]').forEach(function(row) {
+            var userId = row.dataset.userId;
+            var adjInput = row.querySelector('.bulk-adjustment-input');
+            var notesInput = row.querySelector('.bulk-notes-input');
+            var adjField = document.createElement('input');
+            adjField.type = 'hidden';
+            adjField.name = 'adjustment_' + userId;
+            adjField.value = adjInput.value || '0';
+            hiddenFieldsEl.appendChild(adjField);
+            var notesField = document.createElement('input');
+            notesField.type = 'hidden';
+            notesField.name = 'notes_' + userId;
+            notesField.value = notesInput.value || '';
+            hiddenFieldsEl.appendChild(notesField);
+        });
+    }
+
+    function renderPreview(data) {
+        currentRows = data.rows || [];
+        periodLabelEl.textContent = data.period_label;
+        periodHiddenInput.value = data.period_year + '-' + String(data.period_month).padStart(2, '0');
+
+        if (!currentRows.length) {
+            loadingEl.style.display = 'none';
+            emptyEl.style.display = 'block';
+            contentEl.style.display = 'none';
+            submitBtn.disabled = true;
+            return;
+        }
+
+        var summary = data.summary;
+        summaryEl.innerHTML =
+            '<div class="bulk-summary-card"><span class="bulk-summary-label">Staff</span><strong>' + summary.staff_count + '</strong></div>' +
+            '<div class="bulk-summary-card"><span class="bulk-summary-label">Editable</span><strong>' + summary.editable_count + '</strong></div>' +
+            '<div class="bulk-summary-card"><span class="bulk-summary-label">Skipped (locked)</span><strong>' + summary.skipped_count + '</strong></div>' +
+            '<div class="bulk-summary-card"><span class="bulk-summary-label">Total gross</span><strong>' + formatMoney(summary.total_gross) + '</strong></div>' +
+            '<div class="bulk-summary-card"><span class="bulk-summary-label">Total net</span><strong class="bulk-summary-net">' + formatMoney(summary.total_net) + '</strong></div>';
+
+        rowsEl.innerHTML = currentRows.map(function(row) {
+            var editable = row.editable;
+            var adjustmentField = editable
+                ? '<input type="number" class="form-input bulk-adjustment-input" step="0.01" value="' + row.adjustment + '" style="width: 110px; padding: 0.45rem 0.55rem;">'
+                : '<span class="money">' + formatMoney(row.adjustment) + '</span>';
+            var notesField = editable
+                ? '<input type="text" class="form-input bulk-notes-input" value="' + (row.notes || '').replace(/"/g, '&quot;') + '" placeholder="Optional" style="min-width: 120px; padding: 0.45rem 0.55rem;">'
+                : '<span style="font-size: 0.8rem; color: var(--text-muted);">' + (row.notes || '—') + '</span>';
+            return '<tr data-user-id="' + row.user_id + '" data-editable="' + editable + '" data-gross="' + row.gross + '" class="' + (editable ? '' : 'bulk-row-locked') + '">' +
+                '<td><div style="font-weight: 700;">' + row.name + '</div><div style="font-size: 0.78rem; color: var(--text-secondary);">' + row.role + '</div></td>' +
+                '<td class="money">' + formatMoney(row.basic) + '</td>' +
+                '<td class="money">' + formatMoney(row.allowance) + '</td>' +
+                '<td class="money">' + formatMoney(row.gross) + '</td>' +
+                '<td>' + adjustmentField + '</td>' +
+                '<td class="money bulk-net-cell">' + formatMoney(row.net_pay) + '</td>' +
+                '<td>' + notesField + '</td>' +
+                '<td>' + statusBadge(row.status) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        tfootEl.innerHTML = '<tr class="bulk-payroll-total-row">' +
+            '<td colspan="3" style="font-weight: 800; text-align: right;">Totals (editable)</td>' +
+            '<td class="money">' + formatMoney(summary.total_gross) + '</td>' +
+            '<td class="money">' + formatMoney(summary.total_adjustment) + '</td>' +
+            '<td class="money bulk-summary-net">' + formatMoney(summary.total_net) + '</td>' +
+            '<td colspan="2"></td>' +
+        '</tr>';
+
+        rowsEl.querySelectorAll('.bulk-adjustment-input').forEach(function(input) {
+            input.addEventListener('input', recalcTotals);
+        });
+
+        loadingEl.style.display = 'none';
+        emptyEl.style.display = 'none';
+        contentEl.style.display = 'block';
+        submitBtn.disabled = summary.editable_count === 0;
+    }
+
+    function openModal() {
+        var period = parsePeriod();
+        if (!period) return;
+
+        modal.hidden = false;
+        document.body.classList.add('hr-modal-open');
+        loadingEl.style.display = 'block';
+        emptyEl.style.display = 'none';
+        contentEl.style.display = 'none';
+        submitBtn.disabled = true;
+        rowsEl.innerHTML = '';
+        tfootEl.innerHTML = '';
+        hiddenFieldsEl.innerHTML = '';
+
+        fetch(previewUrl + '?year=' + period.year + '&month=' + period.month, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(function(resp) { return resp.json(); })
+            .then(renderPreview)
+            .catch(function() {
+                loadingEl.innerHTML = '<span style="color: var(--danger);">Could not load payroll summary.</span>';
+            });
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.classList.remove('hr-modal-open');
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    modal.querySelectorAll('[data-close-modal]').forEach(function(el) {
+        el.addEventListener('click', closeModal);
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+
+    if (formEl) {
+        formEl.addEventListener('submit', function(e) {
+            buildHiddenFields();
+            if (submitBtn.disabled) {
+                e.preventDefault();
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

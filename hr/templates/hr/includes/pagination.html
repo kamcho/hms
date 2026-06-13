@@ -1,0 +1,20 @@
+{% if page_obj.has_other_pages %}
+<nav class="hr-pagination" aria-label="Pagination">
+    <span class="hr-pagination-info">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </span>
+    <div class="hr-pagination-links">
+        {% if page_obj.has_previous %}
+        <a href="?{% for key, val in request.GET.items %}{% if key != page_param|default:'page' %}{{ key }}={{ val|urlencode }}&{% endif %}{% endfor %}{{ page_param|default:'page' }}=1" class="btn btn-secondary btn-sm">First</a>
+        <a href="?{% for key, val in request.GET.items %}{% if key != page_param|default:'page' %}{{ key }}={{ val|urlencode }}&{% endif %}{% endfor %}{{ page_param|default:'page' }}={{ page_obj.previous_page_number }}" class="btn btn-secondary btn-sm"><i class="fas fa-chevron-left"></i></a>
+        {% endif %}
+        <span class="hr-pagination-current">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?{% for key, val in request.GET.items %}{% if key != page_param|default:'page' %}{{ key }}={{ val|urlencode }}&{% endif %}{% endfor %}{{ page_param|default:'page' }}={{ page_obj.next_page_number }}" class="btn btn-secondary btn-sm"><i class="fas fa-chevron-right"></i></a>
+        <a href="?{% for key, val in request.GET.items %}{% if key != page_param|default:'page' %}{{ key }}={{ val|urlencode }}&{% endif %}{% endfor %}{{ page_param|default:'page' }}={{ page_obj.paginator.num_pages }}" class="btn btn-secondary btn-sm">Last</a>
+        {% endif %}
+    </div>
+</nav>
+{% elif page_obj.paginator.count %}
+<p class="hr-pagination-info" style="margin-top: 1rem;">Showing all {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}</p>
+{% endif %}

@@ -1,0 +1,76 @@
+{% extends 'hr/base.html' %}
+{% block title %}Leave entitlements{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:salary_edit' staff_user.pk %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to {{ staff_user.get_full_name }}</a>
+</div>
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div>
+        <h1>Leave entitlements</h1>
+        <p>Override default allowances for {{ staff_user.get_full_name }}.</p>
+    </div>
+</div>
+
+<div class="card" style="padding: 1.75rem; margin-bottom: 1.5rem;">
+    <h3 style="font-size: 1.05rem; margin-bottom: 1rem;">Current allowances</h3>
+    <div class="table-scroll">
+        <table class="data-table" style="font-size: 0.875rem;">
+            <thead>
+                <tr>
+                    <th>Leave type</th>
+                    <th>Default</th>
+                    <th>Custom</th>
+                    <th>Effective</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.leave_type.name }}</td>
+                    <td>{{ row.leave_type.days_per_year }}</td>
+                    <td>{% if row.override %}{{ row.override.days_per_year }}{% else %}—{% endif %}</td>
+                    <td style="font-weight: 800;">{{ row.effective_days }}</td>
+                    <td>
+                        {% if row.override %}
+                        <form method="post" style="display: inline;" data-confirm="Remove custom entitlement for {{ row.leave_type.name }}?">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="leave_type" value="{{ row.leave_type.pk }}">
+                            <button type="submit" class="btn btn-secondary btn-sm">Reset</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding: 2rem; max-width: 520px;">
+    <h3 style="font-size: 1.05rem; margin-bottom: 1rem;">Set custom entitlement</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save">
+        <div class="form-group">
+            <label class="form-label" for="leave_type">Leave type</label>
+            <select name="leave_type" id="leave_type" class="form-input" required>
+                <option value="">Select leave type…</option>
+                {% for lt in leave_types %}
+                <option value="{{ lt.pk }}">{{ lt.name }} (default {{ lt.days_per_year }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="days_per_year">Days per year</label>
+            <input type="number" name="days_per_year" id="days_per_year" class="form-input" min="0" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <input type="text" name="notes" id="notes" class="form-input" placeholder="Optional reason for override…">
+        </div>
+        <button type="submit" class="btn btn-primary">Save entitlement</button>
+    </form>
+</div>
+{% endblock %}

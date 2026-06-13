@@ -1,0 +1,178 @@
+{% extends 'hr/base.html' %}
+{% block title %}{{ staff_user.get_full_name }} — Attendance{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:attendance_dashboard' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to attendance</a>
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div class="staff-avatar" style="width: 52px; height: 52px; font-size: 1.1rem; border-radius: 14px;">{{ staff_user.get_full_name|slice:":1"|upper }}</div>
+        <div>
+            <h1 style="font-size: 1.35rem;">{{ staff_user.get_full_name }}</h1>
+            <p>{{ staff_user.id_number }} · <span class="badge badge-role">{{ staff_user.role }}</span>
+                {% if profile and profile.device_user_id %} · PIN {{ profile.device_user_id }}{% endif %}
+            </p>
+        </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        {% if profile %}
+        <a href="{% url 'hr:attendance_profile_edit' staff_user.pk %}" class="btn btn-secondary btn-sm"><i class="fas fa-id-badge"></i> Edit PIN</a>
+        {% endif %}
+        <a href="{% url 'hr:attendance_manual' %}?user={{ staff_user.pk }}" class="btn btn-secondary btn-sm"><i class="fas fa-edit"></i> Manual entry</a>
+    </div>
+</div>
+
+<div class="metrics-grid" style="margin-bottom: 1.25rem;">
+    <div class="card metric-card">
+        <div class="metric-icon green"><i class="fas fa-check"></i></div>
+        <div><div class="metric-label">Present</div><div class="metric-value" style="color: var(--success);">{{ summary.present }}</div></div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+        <div><div class="metric-label">Late</div><div class="metric-value" style="color: var(--warning);">{{ summary.late }}</div></div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon indigo"><i class="fas fa-user-times"></i></div>
+        <div><div class="metric-label">Absent</div><div class="metric-value">{{ summary.absent }}</div></div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-icon cyan"><i class="fas fa-calendar-minus"></i></div>
+        <div><div class="metric-label">On leave / off</div><div class="metric-value">{{ summary.on_leave|add:summary.off|add:summary.holiday }}</div></div>
+    </div>
+</div>
+
+<div class="attendance-cal-layout">
+    <div class="card" style="padding: 1.5rem 1.75rem;">
+        <div class="att-cal-toolbar">
+            <a href="{% url 'hr:attendance_user_detail' staff_user.pk %}?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-secondary btn-sm" title="Previous month"><i class="fas fa-chevron-left"></i></a>
+            <div style="text-align: center; flex: 1;">
+                <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0;">{{ month_label }}</h3>
+                <form method="get" class="att-cal-month-form">
+                    <input type="month" name="month" class="form-input" value="{{ cal_year }}-{% if cal_month < 10 %}0{% endif %}{{ cal_month }}" onchange="this.form.submit()">
+                </form>
+            </div>
+            <a href="{% url 'hr:attendance_user_detail' staff_user.pk %}?year={{ next_year }}&month={{ next_month }}" class="btn btn-secondary btn-sm" title="Next month"><i class="fas fa-chevron-right"></i></a>
+        </div>
+
+        <div class="att-cal-legend">
+            <span><i class="att-legend-dot att-cal-present"></i> Present</span>
+            <span><i class="att-legend-dot att-cal-late"></i> Late</span>
+            <span><i class="att-legend-dot att-cal-absent"></i> Absent</span>
+            <span><i class="att-legend-dot att-cal-leave"></i> Leave</span>
+            <span><i class="att-legend-dot att-cal-off"></i> Off / holiday</span>
+        </div>
+
+        <div class="att-cal-grid">
+            <div class="att-cal-weekday">Mon</div>
+            <div class="att-cal-weekday">Tue</div>
+            <div class="att-cal-weekday">Wed</div>
+            <div class="att-cal-weekday">Thu</div>
+            <div class="att-cal-weekday">Fri</div>
+            <div class="att-cal-weekday">Sat</div>
+            <div class="att-cal-weekday">Sun</div>
+            {% for week in weeks %}
+                {% for cell in week %}
+                {% if cell.in_month %}
+                <a href="{% url 'hr:attendance_user_detail' staff_user.pk %}?year={{ cal_year }}&month={{ cal_month }}&date={{ cell.date|date:'Y-m-d' }}"
+                   class="att-cal-day {% if cell.record %}att-cal-{{ cell.record.status|slugify }}{% endif %} {% if cell.date == today %}att-cal-today{% endif %} {% if selected_date == cell.date %}att-cal-selected{% endif %}">
+                    <span class="att-cal-day-num">{{ cell.date.day }}</span>
+                    {% if cell.record %}
+                    <span class="att-cal-day-status">{{ cell.record.get_status_display }}</span>
+                    {% if cell.record.first_in %}
+                    <span class="att-cal-day-time">{{ cell.record.first_in|time:"H:i" }}{% if cell.record.last_out %} – {{ cell.record.last_out|time:"H:i" }}{% endif %}</span>
+                    {% endif %}
+                    {% endif %}
+                </a>
+                {% else %}
+                <div class="att-cal-day att-cal-outside"><span class="att-cal-day-num">{{ cell.date.day }}</span></div>
+                {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card detail-card" style="padding: 1.5rem 1.75rem;">
+        {% if selected_date %}
+        <h3>{{ selected_date|date:"l, d M Y" }}</h3>
+        {% if selected_day %}
+        <dl class="detail-dl" style="margin-top: 1rem;">
+            <div class="detail-dl-row">
+                <dt>Status</dt>
+                <dd>
+                    {% if selected_day.status == 'Present' %}<span class="badge badge-success">Present</span>
+                    {% elif selected_day.status == 'Late' %}<span class="badge badge-warning">Late</span>
+                    {% elif selected_day.status == 'Absent' %}<span class="badge badge-danger">Absent</span>
+                    {% elif selected_day.status == 'On Leave' %}<span class="badge badge-info">On leave</span>
+                    {% elif selected_day.status == 'Holiday' %}<span class="badge badge-info">Holiday</span>
+                    {% elif selected_day.status == 'Off' %}<span class="badge badge-muted">Off</span>
+                    {% else %}<span class="badge badge-muted">{{ selected_day.status }}</span>{% endif %}
+                    {% if selected_day.is_manual %}<span class="badge badge-muted">Manual</span>{% endif %}
+                </dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Clock in</dt>
+                <dd>{% if selected_day.first_in %}{{ selected_day.first_in|time:"H:i" }}{% else %}—{% endif %}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Clock out</dt>
+                <dd>{% if selected_day.last_out %}{{ selected_day.last_out|time:"H:i" }}{% else %}—{% endif %}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Worked</dt>
+                <dd>{% if selected_day.worked_minutes %}{{ selected_day.worked_minutes }} min{% else %}—{% endif %}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Late</dt>
+                <dd>{% if selected_day.late_minutes %}{{ selected_day.late_minutes }} min{% else %}—{% endif %}</dd>
+            </div>
+        </dl>
+        {% if selected_day.notes %}
+        <div class="detail-notes">
+            <div class="detail-notes-label">Notes</div>
+            <p>{{ selected_day.notes|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% if not selected_day.is_manual %}
+        <form method="post" action="{% url 'hr:attendance_reprocess' selected_day.pk %}" style="margin-top: 1rem;" data-confirm="Recalculate attendance for this day?">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="user">
+            <button type="submit" class="btn btn-secondary btn-sm"><i class="fas fa-redo"></i> Recalculate</button>
+        </form>
+        {% endif %}
+        {% else %}
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">No attendance record for this date.</p>
+        <a href="{% url 'hr:attendance_manual' %}?date={{ selected_date|date:'Y-m-d' }}&user={{ staff_user.pk }}" class="btn btn-secondary btn-sm" style="margin-top: 1rem;"><i class="fas fa-edit"></i> Add manual entry</a>
+        {% endif %}
+
+        {% if day_logs %}
+        <h4 style="font-size: 0.95rem; font-weight: 800; margin: 1.5rem 0 0.75rem;">Device punches</h4>
+        <div class="att-cal-punch-list">
+            {% for log in day_logs %}
+            <div class="att-cal-punch">
+                <span class="att-cal-punch-time">{{ log.punch_time|date:"H:i" }}</span>
+                <span class="badge badge-muted">{{ log.punch_type }}</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">{{ log.get_source_display }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <h3>Day detail</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.75rem;">Select a day on the calendar to view clock times and punch logs.</p>
+        {% if profile %}
+        <dl class="detail-dl" style="margin-top: 1.25rem;">
+            <div class="detail-dl-row">
+                <dt>Shift</dt>
+                <dd>{{ profile.shift_start|time:"H:i" }} – {{ profile.shift_end|time:"H:i" }}</dd>
+            </div>
+            <div class="detail-dl-row">
+                <dt>Late grace</dt>
+                <dd>{{ profile.late_grace_minutes }} minutes</dd>
+            </div>
+        </dl>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

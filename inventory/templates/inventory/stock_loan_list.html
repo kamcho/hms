@@ -1,0 +1,70 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}Stock Loans — HMS{% endblock %}
+{% block content %}
+{% include 'inventory/_loan_styles.html' %}
+<div class="loan-page">
+    <div class="loan-header">
+        <div>
+            <h1>
+                <span class="loan-header-icon"><i class="fas fa-hand-holding-medical"></i></span>
+                Stock Loans
+            </h1>
+        </div>
+        <div class="loan-actions">
+            <a href="{% url 'inventory:loan_institution_list' %}" class="loan-btn loan-btn-secondary">Hospitals</a>
+            <a href="{% url 'inventory:stock_loan_create' %}" class="loan-btn loan-btn-primary">+ Lend stock</a>
+        </div>
+    </div>
+
+    <form method="get" class="loan-filters">
+        <select name="status" class="form-select" style="width: auto; min-width: 180px;">
+            <option value="">All statuses</option>
+            <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+            <option value="Partial" {% if status_filter == 'Partial' %}selected{% endif %}>Partially returned</option>
+            <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
+        </select>
+        <select name="institution" class="form-select" style="width: auto; min-width: 220px;">
+            <option value="">All hospitals</option>
+            {% for inst in institutions %}
+            <option value="{{ inst.pk }}" {% if institution_filter == inst.pk|stringformat:"s" %}selected{% endif %}>{{ inst.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="loan-btn loan-btn-dark">Filter</button>
+    </form>
+
+    <div class="loan-card">
+        <table class="loan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 1.5rem;">Loan</th>
+                    <th>Hospital</th>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>Expected return</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td style="padding-left: 1.5rem; font-weight: 800;">#{{ loan.id }}</td>
+                    <td><a href="{% url 'inventory:loan_institution_detail' loan.institution_id %}" class="loan-link">{{ loan.institution.name }}</a></td>
+                    <td>{{ loan.loan_date|date:"d M Y" }}</td>
+                    <td>{{ loan.source_department.name }}</td>
+                    <td>{% if loan.expected_return_date %}{{ loan.expected_return_date|date:"d M Y" }}{% else %}—{% endif %}</td>
+                    <td>
+                        <span class="loan-pill {% if loan.status == 'Closed' %}loan-pill-closed{% elif loan.status == 'Partial' %}loan-pill-partial{% else %}loan-pill-open{% endif %}">
+                            {{ loan.get_status_display }}
+                        </span>
+                    </td>
+                    <td><a href="{% url 'inventory:stock_loan_detail' loan.pk %}" class="loan-link" style="font-size: 0.6875rem; text-transform: uppercase;">Detail</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="loan-empty">No loans found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

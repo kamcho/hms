@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Supplier, InventoryCategory, InventoryItem, StockRecord, StockAdjustment, InventoryRequest
+from .models import (
+    Supplier, InventoryCategory, InventoryItem, StockRecord, StockAdjustment,
+    InventoryRequest, ExternalInstitution, StockLoan, StockLoanLine,
+)
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
@@ -33,3 +36,24 @@ class InventoryRequestAdmin(admin.ModelAdmin):
     list_display = ('item', 'quantity', 'location', 'status', 'requested_at', 'requested_by')
     list_filter = ('status', 'requested_at', 'location')
     search_fields = ('item__name', 'requested_by__username')
+
+
+class StockLoanLineInline(admin.TabularInline):
+    model = StockLoanLine
+    extra = 0
+    readonly_fields = ('item', 'batch_number', 'quantity_lent', 'quantity_returned', 'quantity_written_off')
+
+
+@admin.register(ExternalInstitution)
+class ExternalInstitutionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'contact_person', 'phone', 'is_active')
+    search_fields = ('name', 'contact_person')
+    list_filter = ('is_active',)
+
+
+@admin.register(StockLoan)
+class StockLoanAdmin(admin.ModelAdmin):
+    list_display = ('id', 'institution', 'source_department', 'loan_date', 'status', 'issued_by')
+    list_filter = ('status', 'loan_date')
+    search_fields = ('institution__name',)
+    inlines = [StockLoanLineInline]

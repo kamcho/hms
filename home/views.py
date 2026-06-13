@@ -58,6 +58,21 @@ def _consumable_dispensed_qty(visit, inventory_item_id):
     )
 
 
+def _invoice_item_is_consumable_line(invoice_item):
+    """True when this invoice line is a consumable, not a pending prescription medication."""
+    visit = invoice_item.invoice.visit if invoice_item.invoice_id else None
+    if not visit or not invoice_item.inventory_item_id:
+        return False
+    for pi in PrescriptionItem.objects.filter(
+        prescription__visit=visit,
+        medication_id=invoice_item.inventory_item_id,
+        dispensed=False,
+    ):
+        if pi.quantity == invoice_item.quantity:
+            return False
+    return True
+
+
 class PatientListView(LoginRequiredMixin, ListView):
     model = Patient
     template_name = 'home/patient_list.html'
@@ -1698,9 +1713,18 @@ def create_prescription(request, visit_id):
         return redirect('home:patient_detail', pk=visit.patient.id)
     
     from django.forms import inlineformset_factory
+    from django.db import transaction
+    import uuid
     from .forms import PrescriptionForm, PrescriptionItemForm
-
-    
+    from .prescription_utils import (
+        cache_prescription_submit,
+        get_cached_prescription_id,
+        get_or_create_visit_prescription,
+        try_acquire_prescription_submit_lock,
+        release_prescription_submit_lock,
+    )
+    from accounts.utils import get_or_create_invoice
+    from accounts.models import InvoiceItem
     visit = get_object_or_404(Visit, pk=visit_id)
     patient = visit.patient
     
@@ -1735,79 +1759,104 @@ def create_prescription(request, visit_id):
         can_delete=True
     )
     
+    form_token = ''
     if request.method == 'POST':
+        form_token = request.POST.get('form_token', '').strip()
+        cached_id = get_cached_prescription_id(visit_id, form_token)
+        if cached_id:
+            messages.info(request, 'Prescription already saved.')
+            return redirect('home:prescription_detail', prescription_id=cached_id)
+
         form = PrescriptionForm(request.POST)
         formset = PrescriptionItemFormSet(request.POST, prefix='items')
         
         if form.is_valid() and formset.is_valid():
-            # Backend validation: check if at least one medication is selected
-            has_meds = False
-            for med_form in formset:
-                if med_form.cleaned_data and med_form.cleaned_data.get('medication') and not med_form.cleaned_data.get('DELETE'):
-                    has_meds = True
-                    break
-            
-            # Save prescription (medications are optional)
-            prescription = form.save(commit=False)
-            prescription.patient = patient
-            prescription.prescribed_by = request.user
-            prescription.visit = visit
-            
-            # Close visit if requested
-            if request.POST.get('action') == 'prescribe_close':
-                visit.is_active = False
-                visit.save()
-                messages.info(request, "Visit has been closed.")
-            
-            prescription.save()
-            
-            # Save prescription items
-            formset.instance = prescription
-            prescription_items = formset.save()
-            
-            # Create billing for the prescription medications
-            if prescription_items:
-                # Get or Create Visit Invoice (Consolidated)
-                invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
-                
-                # Append to existing notes
-                new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
-                if invoice.notes:
-                    invoice.notes += new_notes
-                else:
-                    invoice.notes = new_notes.strip()
-                invoice.save()
-                
-                # Link invoice to prescription
-                prescription.invoice = invoice
-                prescription.save()
-                
-                for item in prescription_items:
-                    # Skip creating invoice items for free medications
-                    if item.medication.selling_price > 0:
-                        InvoiceItem.objects.create(
-                            invoice=invoice,
-                            inventory_item=item.medication,
-                            name=item.medication.name,
-                            unit_price=item.medication.selling_price,
-                            quantity=item.quantity
-                        )
-                
-                # Update invoice totals and handle free prescriptions
-                invoice.update_totals()
-                if invoice.total_amount == 0 and invoice.status != 'Paid':
-                    invoice.status = 'Paid'
-                    invoice.save()
+            submission_in_progress = False
+            if form_token and not try_acquire_prescription_submit_lock(visit_id, form_token):
+                cached_id = get_cached_prescription_id(visit_id, form_token)
+                if cached_id:
+                    messages.info(request, 'Prescription already saved.')
+                    return redirect('home:prescription_detail', prescription_id=cached_id)
+                submission_in_progress = True
+                messages.warning(
+                    request,
+                    'This prescription is already being saved. Please wait a moment.',
+                )
 
-                messages.success(request, f'Prescription processed successfully for {patient.full_name}')
-                return redirect('home:prescription_detail', prescription_id=prescription.id)
-            else:
-                messages.success(request, f'Prescription created successfully for {patient.full_name}')
-                return redirect('home:prescription_detail', prescription_id=prescription.id)
+            if not submission_in_progress:
+                try:
+                    with transaction.atomic():
+                        locked_visit = Visit.objects.select_for_update().get(pk=visit_id)
+                        cached_id = get_cached_prescription_id(visit_id, form_token)
+                        if cached_id:
+                            messages.info(request, 'Prescription already saved.')
+                            return redirect('home:prescription_detail', prescription_id=cached_id)
+
+                        prescription, _created = get_or_create_visit_prescription(
+                            locked_visit,
+                            patient,
+                            request.user,
+                            diagnosis=form.cleaned_data['diagnosis'],
+                            notes=form.cleaned_data.get('notes', ''),
+                        )
+
+                        if request.POST.get('action') == 'prescribe_close':
+                            locked_visit.is_active = False
+                            locked_visit.save(update_fields=['is_active'])
+                            messages.info(request, "Visit has been closed.")
+
+                        formset = PrescriptionItemFormSet(request.POST, instance=prescription, prefix='items')
+                        formset.is_valid()
+                        prescription_items = formset.save()
+
+                    if prescription_items:
+                        invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
+                        
+                        new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
+                        if invoice.notes:
+                            invoice.notes += new_notes
+                        else:
+                            invoice.notes = new_notes.strip()
+                        invoice.save()
+                        
+                        prescription.invoice = invoice
+                        prescription.save(update_fields=['invoice'])
+                        
+                        for item in prescription_items:
+                            if item.medication.selling_price > 0:
+                                InvoiceItem.objects.create(
+                                    invoice=invoice,
+                                    inventory_item=item.medication,
+                                    name=item.medication.name,
+                                    unit_price=item.medication.selling_price,
+                                    quantity=item.quantity
+                                )
+                        
+                        invoice.update_totals()
+                        if invoice.total_amount == 0 and invoice.status != 'Paid':
+                            invoice.status = 'Paid'
+                            invoice.save()
+
+                    cache_prescription_submit(visit_id, form_token, prescription.id)
+                    if prescription_items:
+                        messages.success(request, f'Prescription processed successfully for {patient.full_name}')
+                    else:
+                        messages.success(request, f'Prescription saved successfully for {patient.full_name}')
+                    return redirect('home:prescription_detail', prescription_id=prescription.id)
+                finally:
+                    if form_token and not get_cached_prescription_id(visit_id, form_token):
+                        release_prescription_submit_lock(visit_id, form_token)
     else:
         form = PrescriptionForm()
         formset = PrescriptionItemFormSet(prefix='items')
+        form_token = str(uuid.uuid4())
     
+    existing_prescription = (
+        Prescription.objects.filter(visit=visit)
+        .exclude(status='Cancelled')
+        .order_by('-prescribed_at')
+        .first()
+    )
     # Prepare medication metadata for JS
     from inventory.models import InventoryItem, InventoryCategory
     import json
@@ -1858,6 +1907,8 @@ def create_prescription(request, visit_id):
         'formset': formset,
         'patient': patient,
         'visit': visit,
+        'form_token': form_token,
+        'existing_prescription': existing_prescription,
         'med_metadata_json': json.dumps(med_metadata),
         # Add Dispensed Items context for the widget (Normalized)
         'dispensed_items': _get_normalized_history(visit, patient),
@@ -2078,7 +2129,15 @@ def edit_prescription(request, prescription_id):
         return redirect('home:prescription_detail', prescription_id=prescription.id)
 
     from django.forms import inlineformset_factory
+    from django.db import transaction
+    import uuid
     from .forms import PrescriptionForm, PrescriptionItemForm
+    from .prescription_utils import (
+        cache_prescription_edit,
+        get_cached_edit_prescription_id,
+        try_acquire_prescription_edit_lock,
+        release_prescription_edit_lock,
+    )
     from accounts.utils import get_or_create_invoice
     from accounts.models import InvoiceItem, PatientCredit
     from decimal import Decimal
@@ -2091,8 +2150,14 @@ def edit_prescription(request, prescription_id):
         extra=1,
         can_delete=True
     )
+    form_token = ''
     if request.method == 'POST':
-        # Store original invoice state
+        form_token = request.POST.get('form_token', '').strip()
+        cached_id = get_cached_edit_prescription_id(prescription_id, form_token)
+        if cached_id:
+            messages.info(request, 'Prescription changes were already saved.')
+            return redirect('home:prescription_detail', prescription_id=cached_id)
+
         invoice = None
         old_paid_amount = Decimal('0')
         if prescription.visit:
@@ -2103,83 +2168,101 @@ def edit_prescription(request, prescription_id):
         formset = PrescriptionItemFormSet(request.POST, instance=prescription, prefix='items')
 
         if form.is_valid() and formset.is_valid():
-            # Safeguard: Check for dispensed items
-            dispensed_conflict = False
-            for med_form in formset.forms:
-                if med_form.instance.pk and med_form.instance.dispensed:
-                    if med_form.cleaned_data.get('DELETE'):
-                        messages.error(request, f"Cannot delete {med_form.instance.medication.name} because it has already been dispensed.")
-                        dispensed_conflict = True
-                    elif any(field in med_form.changed_data for field in ['medication', 'quantity', 'dose_count', 'frequency', 'number_of_days', 'instructions']):
-                        messages.error(request, f"Cannot modify {med_form.instance.medication.name} as it has already been dispensed to the patient.")
-                        dispensed_conflict = True
+            submission_in_progress = False
+            if form_token and not try_acquire_prescription_edit_lock(prescription_id, form_token):
+                cached_id = get_cached_edit_prescription_id(prescription_id, form_token)
+                if cached_id:
+                    messages.info(request, 'Prescription changes were already saved.')
+                    return redirect('home:prescription_detail', prescription_id=cached_id)
+                submission_in_progress = True
+                messages.warning(
+                    request,
+                    'Your changes are already being saved. Please wait a moment.',
+                )
 
-            if not dispensed_conflict:
-                # Save prescription
-                prescription = form.save()
-                
-                # Save items
-                prescription_items = formset.save()
-                
-                # Sync with Invoice
-                if invoice:
-                    if not prescription.invoice:
-                        prescription.invoice = invoice
-                        prescription.save()
+            if not submission_in_progress:
+                dispensed_conflict = False
+                for med_form in formset.forms:
+                    if med_form.instance.pk and med_form.instance.dispensed:
+                        if med_form.cleaned_data.get('DELETE'):
+                            messages.error(request, f"Cannot delete {med_form.instance.medication.name} because it has already been dispensed.")
+                            dispensed_conflict = True
+                        elif any(field in med_form.changed_data for field in ['medication', 'quantity', 'dose_count', 'frequency', 'number_of_days', 'instructions']):
+                            messages.error(request, f"Cannot modify {med_form.instance.medication.name} as it has already been dispensed to the patient.")
+                            dispensed_conflict = True
 
-                    # 1. Update/Create InvoiceItems
-                    current_med_ids = []
-                    for p_item in prescription.items.all():
-                        current_med_ids.append(p_item.medication.id)
-                        i_item = InvoiceItem.objects.filter(
-                            invoice=invoice,
-                            inventory_item=p_item.medication
-                        ).first()
-                        
-                        if i_item:
-                            if i_item.quantity != p_item.quantity or i_item.unit_price != p_item.medication.selling_price:
-                                i_item.quantity = p_item.quantity
-                                i_item.unit_price = p_item.medication.selling_price
-                                i_item.save()
-                        else:
-                            if p_item.medication.selling_price > 0:
-                                InvoiceItem.objects.create(
+                if not dispensed_conflict:
+                    try:
+                        with transaction.atomic():
+                            Prescription.objects.select_for_update().get(pk=prescription_id)
+                            cached_id = get_cached_edit_prescription_id(prescription_id, form_token)
+                            if cached_id:
+                                messages.info(request, 'Prescription changes were already saved.')
+                                return redirect('home:prescription_detail', prescription_id=cached_id)
+
+                            prescription = form.save()
+                            formset.save()
+
+                        if invoice:
+                            if not prescription.invoice:
+                                prescription.invoice = invoice
+                                prescription.save(update_fields=['invoice'])
+
+                            current_med_ids = []
+                            for p_item in prescription.items.all():
+                                current_med_ids.append(p_item.medication.id)
+                                i_item = InvoiceItem.objects.filter(
                                     invoice=invoice,
-                                    inventory_item=p_item.medication,
-                                    name=p_item.medication.name,
-                                    unit_price=p_item.medication.selling_price,
-                                    quantity=p_item.quantity
+                                    inventory_item=p_item.medication
+                                ).first()
+
+                                if i_item:
+                                    if i_item.quantity != p_item.quantity or i_item.unit_price != p_item.medication.selling_price:
+                                        i_item.quantity = p_item.quantity
+                                        i_item.unit_price = p_item.medication.selling_price
+                                        i_item.save()
+                                else:
+                                    if p_item.medication.selling_price > 0:
+                                        InvoiceItem.objects.create(
+                                            invoice=invoice,
+                                            inventory_item=p_item.medication,
+                                            name=p_item.medication.name,
+                                            unit_price=p_item.medication.selling_price,
+                                            quantity=p_item.quantity
+                                        )
+
+                            invoice_meds = invoice.items.filter(inventory_item__isnull=False)
+                            for i_item in invoice_meds:
+                                if hasattr(i_item.inventory_item, 'medication'):
+                                    if i_item.inventory_item.id not in current_med_ids:
+                                        if not i_item.is_dispensed:
+                                            i_item.delete()
+
+                            invoice.update_totals()
+                            if invoice.total_amount < old_paid_amount:
+                                overpaid = old_paid_amount - invoice.total_amount
+                                PatientCredit.objects.create(
+                                    patient=patient,
+                                    invoice=invoice,
+                                    amount=overpaid,
+                                    reason=f"Adjustment due to prescription edit (#{prescription.id})",
+                                    created_by=request.user
                                 )
+                                messages.info(request, f"Note: A credit of {overpaid} has been recorded for {patient.full_name} due to overpayment.")
 
-                    # 2. Cleanup: Remove InvoiceItems that no longer have a PrescriptionItem
-                    # Only remove medication items that are NOT dispensed.
-                    invoice_meds = invoice.items.filter(inventory_item__isnull=False)
-                    for i_item in invoice_meds:
-                        # Check if this inventory item is a medication (drug)
-                        if hasattr(i_item.inventory_item, 'medication'):
-                            if i_item.inventory_item.id not in current_med_ids:
-                                if not i_item.is_dispensed:
-                                    i_item.delete()
-
-                    # 3. Handle Overpayment & Credit
-                    invoice.update_totals()
-                    if invoice.total_amount < old_paid_amount:
-                        overpaid = old_paid_amount - invoice.total_amount
-                        PatientCredit.objects.create(
-                            patient=patient,
-                            invoice=invoice,
-                            amount=overpaid,
-                            reason=f"Adjustment due to prescription edit (#{prescription.id})",
-                            created_by=request.user
-                        )
-                        messages.info(request, f"Note: A credit of {overpaid} has been recorded for {patient.full_name} due to overpayment.")
-
-                messages.success(request, f"Prescription for {patient.full_name} updated successfully.")
-                return redirect('home:prescription_detail', prescription_id=prescription.id)
-
+                        cache_prescription_edit(prescription_id, form_token)
+                        messages.success(request, f"Prescription for {patient.full_name} updated successfully.")
+                        return redirect('home:prescription_detail', prescription_id=prescription.id)
+                    finally:
+                        if form_token and not get_cached_edit_prescription_id(prescription_id, form_token):
+                            release_prescription_edit_lock(prescription_id, form_token)
+                else:
+                    if form_token:
+                        release_prescription_edit_lock(prescription_id, form_token)
     else:
         form = PrescriptionForm(instance=prescription)
         formset = PrescriptionItemFormSet(instance=prescription, prefix='items')
+        form_token = str(uuid.uuid4())
 
     # Prepare medication metadata for JS (same as create_prescription)
     from inventory.models import InventoryItem, InventoryCategory
@@ -2225,6 +2308,7 @@ def edit_prescription(request, prescription_id):
         'patient': patient,
         'prescription': prescription,
         'visit': visit,
+        'form_token': form_token,
         'med_metadata_json': json.dumps(med_metadata),
         'dispensing_departments': Departments.objects.all().order_by('name')
     }
@@ -2664,6 +2748,68 @@ def api_pharmacy_update_consumable(request, item_id):
             'quantity': invoice_item.quantity,
             'inventory_item_id': invoice_item.inventory_item_id,
         },
+    })
+
+
+@login_required
+@transaction.atomic
+@require_http_methods(["POST"])
+def api_pharmacy_delete_consumable(request, item_id):
+    """Remove a pending consumable invoice line (pharmacist/admin only)."""
+    if not _can_edit_pharmacy_consumable(request.user):
+        return JsonResponse({'success': False, 'error': 'Only pharmacists and admins can delete consumables.'})
+
+    from accounts.models import PatientCredit
+    from decimal import Decimal
+
+    invoice_item = get_object_or_404(
+        InvoiceItem.objects.select_related('invoice__visit', 'invoice__patient', 'inventory_item'),
+        pk=item_id,
+        inventory_item__isnull=False,
+    )
+
+    if invoice_item.invoice.status == 'Cancelled':
+        return JsonResponse({'success': False, 'error': 'Cannot remove items on a cancelled invoice.'})
+
+    visit = invoice_item.invoice.visit
+    if not visit:
+        return JsonResponse({'success': False, 'error': 'This item is not linked to a visit.'})
+
+    if not _invoice_item_is_consumable_line(invoice_item):
+        return JsonResponse({
+            'success': False,
+            'error': 'This line is linked to a prescription medication and cannot be removed here.',
+        })
+
+    dispensed = _consumable_dispensed_qty(visit, invoice_item.inventory_item_id)
+    if dispensed > 0 or invoice_item.is_dispensed:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot delete: dispensing has already started for this item on this visit.',
+        })
+
+    item_name = invoice_item.name
+    old_paid = invoice_item.invoice.paid_amount
+    patient = invoice_item.invoice.patient
+    invoice = invoice_item.invoice
+
+    invoice_item.delete()
+    invoice.update_totals()
+
+    if patient and invoice.total_amount < old_paid:
+        overpaid = old_paid - invoice.total_amount
+        if overpaid > 0:
+            PatientCredit.objects.create(
+                patient=patient,
+                invoice=invoice,
+                amount=overpaid,
+                reason=f'Adjustment due to consumable removal (line #{item_id})',
+                created_by=request.user,
+            )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Removed {item_name} from the visit invoice.',
     })
 
 

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 class Supplier(models.Model):
     name = models.CharField(max_length=200)
@@ -110,17 +111,135 @@ class StockAdjustment(models.Model):
         ('Disposal', 'Disposal'),
         ('Addition', 'Addition'),
         ('Correction', 'Correction'),
+        ('Loan Out', 'Loan Out'),
+        ('Loan Return', 'Loan Return'),
+        ('Loan Write-off', 'Loan Write-off'),
     ]
     item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='adjustments')
     quantity = models.IntegerField(help_text="Use negative numbers for stock reduction")
-    adjustment_type = models.CharField(max_length=20, choices=ADJUSTMENT_TYPES)
+    adjustment_type = models.CharField(max_length=25, choices=ADJUSTMENT_TYPES)
     reason = models.TextField()
     adjusted_at = models.DateTimeField(auto_now_add=True)
     adjusted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     adjusted_from = models.ForeignKey('home.Departments', on_delete=models.CASCADE)
+    stock_loan_line = models.ForeignKey(
+        'StockLoanLine',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='adjustments',
+    )
 
     def __str__(self):
         return f"{self.item.name} - {self.adjustment_type} ({self.quantity}) from {self.adjusted_from}"
+
+
+class ExternalInstitution(models.Model):
+    """Neighbor / partner hospital that borrows stock from us."""
+
+    name = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=200, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    address = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def outstanding_line_count(self):
+        from django.db.models import F
+        return (
+            StockLoanLine.objects.filter(
+                loan__institution=self,
+                loan__status__in=['Open', 'Partial'],
+            )
+            .annotate(
+                outstanding_qty=F('quantity_lent') - F('quantity_returned') - F('quantity_written_off'),
+            )
+            .filter(outstanding_qty__gt=0)
+            .count()
+        )
+
+
+class StockLoan(models.Model):
+    STATUS_CHOICES = [
+        ('Open', 'Open'),
+        ('Partial', 'Partially returned'),
+        ('Closed', 'Closed'),
+    ]
+
+    institution = models.ForeignKey(
+        ExternalInstitution,
+        on_delete=models.PROTECT,
+        related_name='loans',
+    )
+    source_department = models.ForeignKey(
+        'home.Departments',
+        on_delete=models.PROTECT,
+        related_name='stock_loans_out',
+    )
+    loan_date = models.DateTimeField(default=timezone.now)
+    expected_return_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Open')
+    notes = models.TextField(blank=True)
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='stock_loans_issued',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-loan_date']
+
+    def __str__(self):
+        return f'Loan #{self.id} — {self.institution.name}'
+
+    def refresh_status(self):
+        lines = self.lines.all()
+        if not lines.exists():
+            self.status = 'Closed'
+        elif all(line.outstanding <= 0 for line in lines):
+            self.status = 'Closed'
+        elif any(line.quantity_returned > 0 or line.quantity_written_off > 0 for line in lines):
+            self.status = 'Partial'
+        else:
+            self.status = 'Open'
+        self.save(update_fields=['status'])
+
+    @property
+    def total_outstanding(self):
+        return sum(max(0, line.outstanding) for line in self.lines.all())
+
+
+class StockLoanLine(models.Model):
+    loan = models.ForeignKey(StockLoan, on_delete=models.CASCADE, related_name='lines')
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name='loan_lines')
+    batch_number = models.CharField(max_length=100)
+    quantity_lent = models.PositiveIntegerField()
+    quantity_returned = models.PositiveIntegerField(default=0)
+    quantity_written_off = models.PositiveIntegerField(default=0)
+    expiry_date = models.DateField(null=True, blank=True)
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.item.name} x{self.quantity_lent} (Loan #{self.loan_id})'
+
+    @property
+    def outstanding(self):
+        return self.quantity_lent - self.quantity_returned - self.quantity_written_off
 
 
 class InventoryRequest(models.Model):

@@ -1,0 +1,119 @@
+{% extends 'hr/base.html' %}
+{% block title %}{% if is_edit %}Edit leave{% elif is_self_view %}Request leave{% else %}Record leave{% endif %}{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:leave_list' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to leave</a>
+</div>
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div>
+        <h1>{% if is_edit %}Edit leave{% elif is_self_view %}Request leave{% else %}Record leave{% endif %}</h1>
+        <p>{% if is_self_view %}Submit a leave request for approval.{% else %}Log a leave request on behalf of a staff member.{% endif %}</p>
+    </div>
+</div>
+<div class="card" style="padding: 2rem; max-width: 520px;">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert-message" style="position: static; margin-bottom: 1rem; border-left-color: var(--danger);">
+            {{ form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p style="font-size: 0.8rem; color: var(--danger);">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div id="leave-balance-panel" class="card" style="display: none; padding: 1rem; margin-bottom: 1rem; background: var(--bg-secondary);">
+            <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem;">Leave balance check</div>
+            <div id="leave-balance-content" style="font-size: 0.85rem; color: var(--text-secondary);"></div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Save request</button>
+            <a href="{% url 'hr:leave_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const userField = document.getElementById('id_user');
+    const typeField = document.getElementById('id_leave_type');
+    const startField = document.getElementById('id_start_date');
+    const endField = document.getElementById('id_end_date');
+    const panel = document.getElementById('leave-balance-panel');
+    const content = document.getElementById('leave-balance-content');
+    if (!userField || !typeField || !startField || !endField || !panel || !content) {
+        return;
+    }
+
+    let timer = null;
+
+    function renderBalance(data) {
+        if (!data.years || Object.keys(data.years).length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        const lines = Object.entries(data.years).map(([year, row]) => {
+            const status = row.would_exceed
+                ? `<span style="color: var(--danger); font-weight: 700;">Exceeds balance</span>`
+                : `<span style="color: var(--success); font-weight: 700;">Within balance</span>`;
+            return `<div style="margin-bottom: 0.35rem;">
+                <strong>${year}</strong>: requesting ${row.requested} day(s) ·
+                ${row.remaining} remaining of ${row.entitlement}
+                (${row.used} used, ${row.pending} pending) · ${status}
+            </div>`;
+        });
+
+        panel.style.display = 'block';
+        content.innerHTML = lines.join('');
+    }
+
+    function checkBalance() {
+        const user = userField.value;
+        const leaveType = typeField.value;
+        const start = startField.value;
+        const end = endField.value;
+        if (!user || !leaveType || !start || !end) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        const url = `{% url 'hr:leave_balance_json' %}?${new URLSearchParams({
+            user: user,
+            leave_type: leaveType,
+            start_date: start,
+            end_date: end,
+        })}`;
+
+        fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.error) {
+                    panel.style.display = 'none';
+                    return;
+                }
+                renderBalance(data);
+            })
+            .catch(() => {
+                panel.style.display = 'none';
+            });
+    }
+
+    function scheduleCheck() {
+        clearTimeout(timer);
+        timer = setTimeout(checkBalance, 250);
+    }
+
+    [userField, typeField, startField, endField].forEach((field) => {
+        field.addEventListener('change', scheduleCheck);
+        field.addEventListener('input', scheduleCheck);
+    });
+    scheduleCheck();
+})();
+</script>
+{% endblock %}

@@ -277,8 +277,21 @@
                             <span>Ward Management</span>
                         </a>
                     {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'HR Manager' or user.role == 'Accountant' or user.is_superuser %}
+                        <a href="{% url 'hr:dashboard' %}" 
+                           class="menu-item {% if request.resolver_match.namespace == 'hr' %}active{% endif %}">
+                            <i class="fas fa-users"></i>
+                            <span>HR</span>
+                        </a>
+                    {% elif user.is_active %}
+                        <a href="{% url 'hr:dashboard' %}" 
+                           class="menu-item {% if request.resolver_match.namespace == 'hr' %}active{% endif %}">
+                            <i class="fas fa-user-circle"></i>
+                            <span>My HR</span>
+                        </a>
+                    {% endif %}
                     {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
-                        <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}" id="inventoryMenu">
+                        <a href="javascript:void(0)" class="menu-item has-submenu {% if request.resolver_match.namespace == 'inventory' and 'loan_institution' not in request.resolver_match.url_name and 'stock_loan' not in request.resolver_match.url_name %}active{% endif %}" id="inventoryMenu">
                             <i class="fas fa-boxes"></i>
                             <span>Inventory</span>
                             <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
@@ -316,6 +329,29 @@
                                class="menu-item submenu-item {% if request.resolver_match.url_name == 'record_usage' %}active{% endif %}">
                                 <i class="fas fa-clipboard-check"></i>
                                 <span>Record General Usage</span>
+                            </a>
+                        </div>
+                        <a href="javascript:void(0)" class="menu-item has-submenu {% if 'loan_institution' in request.resolver_match.url_name or 'stock_loan' in request.resolver_match.url_name %}active{% endif %}" id="eFacilityMenu">
+                            <i class="fas fa-hospital-alt"></i>
+                            <span>E Facility</span>
+                            <i class="fas fa-chevron-down ms-auto submenu-arrow" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
+                        </a>
+                        <div class="submenu" id="eFacilitySubmenu">
+                            <a href="{% url 'inventory:loan_institution_list' %}" class="menu-item submenu-item {% if 'loan_institution' in request.resolver_match.url_name %}active{% endif %}">
+                                <i class="fas fa-hospital"></i>
+                                <span>Partner Hospitals</span>
+                            </a>
+                            <a href="{% url 'inventory:loan_institution_create' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'loan_institution_create' %}active{% endif %}">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Register Hospital</span>
+                            </a>
+                            <a href="{% url 'inventory:stock_loan_list' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'stock_loan_list' or request.resolver_match.url_name == 'stock_loan_detail' %}active{% endif %}">
+                                <i class="fas fa-hand-holding-medical"></i>
+                                <span>Stock Loans</span>
+                            </a>
+                            <a href="{% url 'inventory:stock_loan_create' %}" class="menu-item submenu-item {% if request.resolver_match.url_name == 'stock_loan_create' %}active{% endif %}">
+                                <i class="fas fa-share"></i>
+                                <span>Lend Stock</span>
                             </a>
                         </div>
                     {% endif %}

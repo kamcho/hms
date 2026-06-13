@@ -1,0 +1,27 @@
+{% extends 'hr/base.html' %}
+{% block title %}Staff off day{% endblock %}
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <a href="{% url 'hr:off_day_queue' %}" class="text-link" style="font-size: 0.875rem;"><i class="fas fa-arrow-left"></i> Back to off day queue</a>
+</div>
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <h1>Record staff off day</h1>
+    <p>Schedule a planned day off for one staff member.</p>
+</div>
+<div class="card" style="padding: 2rem; max-width: 480px;">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p style="font-size: 0.8rem; color: var(--danger);">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'hr:off_day_queue' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

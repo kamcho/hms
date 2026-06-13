@@ -1,0 +1,63 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}Partner Hospitals — HMS{% endblock %}
+{% block content %}
+{% include 'inventory/_loan_styles.html' %}
+<div class="loan-page">
+    <div class="loan-header">
+        <div>
+            <h1>
+                <span class="loan-header-icon"><i class="fas fa-hospital"></i></span>
+                Partner Hospitals
+            </h1>
+            <p class="loan-subtitle">Facilities that borrow stock from us</p>
+        </div>
+        <div class="loan-actions">
+            <a href="{% url 'inventory:stock_loan_list' %}" class="loan-btn loan-btn-secondary">All loans</a>
+            <a href="{% url 'inventory:loan_institution_create' %}" class="loan-btn loan-btn-primary">+ Register hospital</a>
+        </div>
+    </div>
+
+    <div class="loan-card">
+        <table class="loan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 1.5rem;">Hospital</th>
+                    <th>Contact</th>
+                    <th>Loans</th>
+                    <th>Status</th>
+                    <th style="padding-right: 1.5rem; text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inst in institutions %}
+                <tr>
+                    <td style="padding-left: 1.5rem;">
+                        <div style="font-weight: 700; color: #0f172a;">{{ inst.name }}</div>
+                        {% if inst.address %}<div style="font-size: 0.75rem; color: #94a3b8;">{{ inst.address|truncatechars:60 }}</div>{% endif %}
+                    </td>
+                    <td>
+                        {% if inst.contact_person %}{{ inst.contact_person }}<br>{% endif %}
+                        {% if inst.phone %}{{ inst.phone }}{% endif %}
+                    </td>
+                    <td style="font-weight: 800;">{{ inst.loan_count }}</td>
+                    <td>
+                        {% if inst.is_active %}<span class="loan-pill-active">Active</span>{% else %}<span class="loan-pill-inactive">Inactive</span>{% endif %}
+                    </td>
+                    <td style="padding-right: 1.5rem; text-align: right; white-space: nowrap;">
+                        <a href="{% url 'inventory:loan_institution_detail' inst.pk %}" class="loan-btn loan-btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.625rem;">Items on loan</a>
+                        <a href="{% url 'inventory:loan_institution_edit' inst.pk %}" class="loan-link" style="margin-left: 0.5rem; font-size: 0.625rem; text-transform: uppercase;">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="loan-empty">
+                        No partner hospitals yet.
+                        <a href="{% url 'inventory:loan_institution_create' %}" class="loan-link">Register one</a>.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
