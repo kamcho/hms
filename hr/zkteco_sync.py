@@ -2,7 +2,7 @@
 
 from django.utils import timezone
 
-from .attendance_service import process_attendance_for_date, user_for_device_id
+from .attendance_service import process_attendance_for_date, remap_unmapped_attendance_logs, user_for_device_id
 from .models import AttendanceDevice, AttendanceLog
 
 
@@ -38,7 +38,7 @@ def sync_device(device):
             if status is not None:
                 punch_type = 'In' if int(status) == 0 else 'Out' if int(status) == 1 else 'Unknown'
 
-            _, created = AttendanceLog.objects.get_or_create(
+            log, created = AttendanceLog.objects.get_or_create(
                 device=device,
                 device_user_id=device_user_id,
                 punch_time=punch_time,
@@ -48,14 +48,20 @@ def sync_device(device):
                     'source': 'device',
                 },
             )
+            if not created and user and log.user_id is None:
+                log.user = user
+                log.save(update_fields=['user'])
             if created:
                 imported += 1
 
+        remapped = remap_unmapped_attendance_logs(device=device)
         device.last_sync_at = timezone.now()
         unmapped = AttendanceLog.objects.filter(user__isnull=True, device=device).count()
         msg = f'Imported {imported} punch(es).'
+        if remapped:
+            msg += f' Mapped {remapped} existing log(s) to staff.'
         if unmapped:
-            msg += f' {unmapped} log(s) still unmapped — set device PIN on staff profiles.'
+            msg += f' {unmapped} log(s) still unmapped — check device PIN matches HMS user id or set PIN on staff profiles.'
         device.last_sync_message = msg
         device.save(update_fields=['last_sync_at', 'last_sync_message'])
         return True, msg, imported

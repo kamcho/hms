@@ -37,15 +37,53 @@ def get_profile(user):
 
 
 def user_for_device_id(device_user_id):
+    """
+    Resolve HMS user from a ZKTeco device user id / PIN.
+
+    Lookup order:
+    1. StaffAttendanceProfile.device_user_id (manual PIN mapping)
+    2. User.pk when the device was enrolled with Django user.id
+    """
     if not device_user_id:
         return None
     device_user_id = str(device_user_id).strip()
+    if not device_user_id:
+        return None
+
     try:
         return StaffAttendanceProfile.objects.select_related('user').get(
             device_user_id=device_user_id,
         ).user
     except StaffAttendanceProfile.DoesNotExist:
-        return None
+        pass
+
+    if device_user_id.isdigit():
+        user = User.objects.filter(pk=int(device_user_id), is_active=True).first()
+        if user:
+            profile = get_profile(user)
+            pin_taken = StaffAttendanceProfile.objects.filter(
+                device_user_id=device_user_id,
+            ).exclude(user=user).exists()
+            if not pin_taken and profile.device_user_id != device_user_id:
+                profile.device_user_id = device_user_id
+                profile.save(update_fields=['device_user_id'])
+            return user
+
+    return None
+
+
+def remap_unmapped_attendance_logs(*, device=None):
+    """Attach HMS users to punch logs that were imported before mapping existed."""
+    qs = AttendanceLog.objects.filter(user__isnull=True)
+    if device is not None:
+        qs = qs.filter(device=device)
+    updated = 0
+    for log in qs.iterator():
+        user = user_for_device_id(log.device_user_id)
+        if user:
+            AttendanceLog.objects.filter(pk=log.pk, user__isnull=True).update(user=user)
+            updated += 1
+    return updated
 
 
 def _is_on_leave(user, day):

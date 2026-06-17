@@ -63,6 +63,7 @@ from .attendance_service import (
     build_user_attendance_calendar,
     compute_attendance_day,
     process_attendance_for_date,
+    remap_unmapped_attendance_logs,
 )
 from .forms import (
     AttendanceDeviceForm,
@@ -1155,6 +1156,8 @@ def attendance_profile_edit(request, user_id):
                     device_user_id=profile.device_user_id,
                     user__isnull=True,
                 ).update(user=staff_user)
+            else:
+                remap_unmapped_attendance_logs()
             messages.success(request, f'Device profile saved for {staff_user.get_full_name()}.')
             return redirect('hr:attendance_profiles')
     else:
