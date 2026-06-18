@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg, Prefetch, F
 from django.http import JsonResponse
@@ -46,6 +46,45 @@ def _visit_ok_for_user(visit, user):
 
 def _can_edit_pharmacy_consumable(user):
     return user.is_superuser or getattr(user, 'role', None) in ('Pharmacist', 'Admin')
+
+
+def _can_edit_visit_consumable(user):
+    """Doctors/nurses may edit pending consumables on a visit; pharmacists/admins too."""
+    return user.is_superuser or getattr(user, 'role', None) in (
+        'Pharmacist', 'Admin', 'Doctor', 'Nurse',
+    )
+
+
+def _get_editable_visit_consumables(visit):
+    """Split visit invoice consumable lines into pending vs already dispensed."""
+    from accounts.models import InvoiceItem
+
+    if not visit:
+        return [], []
+
+    pending = []
+    dispensed = []
+    invoice_items = InvoiceItem.objects.filter(
+        invoice__visit=visit,
+        inventory_item__isnull=False,
+    ).select_related('inventory_item', 'invoice').order_by('-created_at')
+
+    for item in invoice_items:
+        if not _invoice_item_is_consumable_line(item):
+            continue
+        qty_dispensed = _consumable_dispensed_qty(visit, item.inventory_item_id)
+        row = {
+            'id': item.id,
+            'name': item.name or item.inventory_item.name,
+            'quantity': item.quantity,
+            'inventory_item_id': item.inventory_item_id,
+        }
+        if qty_dispensed > 0 or item.is_dispensed:
+            row['dispensed_qty'] = qty_dispensed or item.quantity
+            dispensed.append(row)
+        else:
+            pending.append(row)
+    return pending, dispensed
 
 
 def _consumable_dispensed_qty(visit, inventory_item_id):
@@ -391,7 +430,10 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         from inpatient.models import Admission
 
         # Get all visits for the filter dropdown
-        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date').prefetch_related('prescriptions')
+        all_visits = Visit.objects.filter(patient=patient).order_by('-visit_date').prefetch_related(
+            'prescriptions',
+            'tb_screening',
+        )
         latest_visit = all_visits.first()
 
         # Get visit filter from GET parameters
@@ -438,9 +480,31 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # TB Screening context
         from .forms import TBScreeningForm
         from .models import TBScreening
-        context['tb_screening_form'] = TBScreeningForm()
+        from .clinical_gates import tb_screening_required_for_patient_view
         if latest_visit:
             context['current_tb_screening'] = TBScreening.objects.filter(visit=latest_visit).first()
+        context['tb_screening_form'] = TBScreeningForm(
+            instance=context.get('current_tb_screening'),
+            show_failure_to_thrive=patient.age is not None and patient.age < 15,
+        )
+        context['tb_screening_required'] = tb_screening_required_for_patient_view(
+            self.request.user, latest_visit, selected_visit,
+        )
+        context['tb_screening_visit_id'] = (
+            latest_visit.pk if context['tb_screening_required'] and latest_visit else None
+        )
+        context['tb_screening_map'] = {
+            str(v.pk): {
+                'has_cough': v.tb_screening.has_cough,
+                'has_chest_pain': v.tb_screening.has_chest_pain,
+                'has_night_sweats': v.tb_screening.has_night_sweats,
+                'has_unexplained_fever': v.tb_screening.has_unexplained_fever,
+                'has_weight_loss': v.tb_screening.has_weight_loss,
+                'failure_to_thrive': v.tb_screening.failure_to_thrive,
+            }
+            for v in all_visits
+            if getattr(v, 'tb_screening', None)
+        }
         
         if active_adm:
             context['active_medications'] = active_adm.medications.all().order_by('-prescribed_at')
@@ -630,6 +694,7 @@ def add_consultation_note(request):
     
     if request.method == 'POST':
         try:
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
             patient_id = request.POST.get('patient_id')
             consultation_id = request.POST.get('consultation_id')
             doctor_id = request.POST.get('doctor_id')
@@ -652,6 +717,9 @@ def add_consultation_note(request):
 
             if not latest_visit.is_active:
                 return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is already closed. Please create a new visit to record notes.'})
+
+            if doctor_requires_tb_screening(request.user, latest_visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
             # Handle consultation
             consultation = None
@@ -709,6 +777,10 @@ def submit_next_action(request):
                 return JsonResponse({'success': False, 'error': f'Visit for {patient.full_name} is not active. Clinical actions cannot be performed without an active visit.'})
 
             visit = latest_visit
+
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
             
             # Process department routing
             for dept in send_to_departments:
@@ -1098,6 +1170,10 @@ def add_symptoms(request):
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot add symptoms to a closed visit. Please create a new visit.'})
 
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
+
             from .models import Symptoms
             
             Symptoms.objects.update_or_create(
@@ -1123,6 +1199,10 @@ def refer_patient(request, visit_id):
     referral = Referral.objects.filter(visit=visit).first()
     
     if request.method == 'POST':
+        from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+        if doctor_requires_tb_screening(request.user, visit):
+            messages.warning(request, TB_SCREENING_MESSAGE)
+            return redirect(f"{reverse('home:patient_detail', kwargs={'pk': patient.pk})}?visit_id={visit.pk}#visits")
         form = ReferralForm(request.POST, instance=referral)
         if form.is_valid():
             referral = form.save(commit=False)
@@ -1235,6 +1315,10 @@ def add_impression(request):
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot add impressions to a closed visit.'})
 
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
+
             from .models import Impression
             Impression.objects.create(
                 visit=visit,
@@ -1260,6 +1344,10 @@ def update_impression(request, pk):
                 return JsonResponse({'success': False, 'error': 'Cannot edit impressions on a previous visit.'})
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot edit impressions on a closed visit.'})
+
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
             data = request.POST.get('data')
             impression.data = data
@@ -1288,6 +1376,10 @@ def add_diagnosis(request):
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot add diagnosis to a closed visit.'})
 
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
+
             from .models import Diagnosis
             Diagnosis.objects.create(
                 visit=visit,
@@ -1313,6 +1405,10 @@ def update_diagnosis(request, pk):
                 return JsonResponse({'success': False, 'error': 'Cannot edit diagnosis on a previous visit.'})
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot edit diagnosis on a closed visit.'})
+
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
             data = request.POST.get('data')
             diagnosis.data = data
@@ -1345,16 +1441,32 @@ def add_tb_screening(request):
 
             # Handle existing screening (Update instead of Create if already exists)
             screening = TBScreening.objects.filter(visit=visit).first()
-            form = TBScreeningForm(request.POST, instance=screening)
+            patient = visit.patient
+            show_failure_to_thrive = patient.age is not None and patient.age < 15
+            form = TBScreeningForm(
+                request.POST,
+                instance=screening,
+                show_failure_to_thrive=show_failure_to_thrive,
+            )
             
             if form.is_valid():
                 tb_obj = form.save(commit=False)
                 tb_obj.visit = visit
                 tb_obj.screened_by = request.user
+                if 'failure_to_thrive' not in form.cleaned_data:
+                    tb_obj.failure_to_thrive = False
                 tb_obj.save()
                 return JsonResponse({'success': True})
             else:
-                return JsonResponse({'success': False, 'error': 'Invalid data submitted.'})
+                errors = []
+                for field, msgs in form.errors.items():
+                    label = form.fields.get(field)
+                    name = label.label if label else field.replace('_', ' ').title()
+                    errors.append(f'{name}: select Yes or No')
+                return JsonResponse({
+                    'success': False,
+                    'error': errors[0] if len(errors) == 1 else 'Please select Yes or No for every symptom.',
+                })
                 
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -1375,6 +1487,10 @@ def update_consultation_note(request, pk):
                 return JsonResponse({'success': False, 'error': 'Cannot edit notes on a previous visit.'})
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot edit notes on a closed visit.'})
+
+            from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
             note_content = request.POST.get('note_content')
             note_type_detail = request.POST.get('note_type_detail', '').strip()
@@ -1738,6 +1854,11 @@ def create_prescription(request, visit_id):
     if not visit.is_active:
         messages.error(request, f"Visit for {patient.full_name} is already closed. Please create a new visit to prescribe medications.")
         return redirect('home:patient_detail', pk=patient.id)
+
+    from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+    if doctor_requires_tb_screening(request.user, visit):
+        messages.warning(request, TB_SCREENING_MESSAGE)
+        return redirect(f"{reverse('home:patient_detail', kwargs={'pk': patient.pk})}?visit_id={visit.pk}#visits")
     
     # Block prescription creation for IPD visits — use MedicationChart via case folder instead
     from inpatient.models import Admission
@@ -1847,7 +1968,15 @@ def create_prescription(request, visit_id):
                     if form_token and not get_cached_prescription_id(visit_id, form_token):
                         release_prescription_submit_lock(visit_id, form_token)
     else:
-        form = PrescriptionForm()
+        from .models import Diagnosis
+        visit_diagnosis = (
+            Diagnosis.objects.filter(visit=visit)
+            .order_by('-created_at')
+            .values_list('data', flat=True)
+            .first()
+        )
+        initial = {'diagnosis': visit_diagnosis} if visit_diagnosis else {}
+        form = PrescriptionForm(initial=initial)
         formset = PrescriptionItemFormSet(prefix='items')
         form_token = str(uuid.uuid4())
     
@@ -1918,6 +2047,7 @@ def create_prescription(request, visit_id):
 
 def _get_normalized_history(visit, patient):
     from inventory.models import DispensedItem
+    from inventory.consumable_utils import is_pharmaceutical_item
     from accounts.models import InvoiceItem
     from inpatient.models import MedicationChart, InpatientConsumable
     
@@ -1925,32 +2055,31 @@ def _get_normalized_history(visit, patient):
         return []
 
     # 1. Fetch physical dispensations (Stock deducted)
-    d_items = DispensedItem.objects.filter(visit=visit).select_related('item', 'dispensed_by').order_by('-dispensed_at')
+    d_items = DispensedItem.objects.filter(visit=visit).select_related(
+        'item', 'item__category', 'dispensed_by',
+    ).order_by('-dispensed_at')
     
     # 2. Fetch billed items (Requested by doctor but might not be dispensed yet)
     billed_items = InvoiceItem.objects.filter(
         invoice__visit=visit,
-        inventory_item__isnull=False
-    ).select_related('inventory_item', 'invoice__created_by').order_by('-created_at')
+        inventory_item__isnull=False,
+    ).select_related('inventory_item', 'inventory_item__category', 'invoice__created_by').order_by('-created_at')
 
-    # 3. Fetch IPD requests (not yet dispensed)
-    ipd_meds = MedicationChart.objects.filter(
-        admission__visit=visit,
-        is_dispensed=False
-    ).select_related('item', 'prescribed_by').order_by('-prescribed_at')
-    
+    # 3. Fetch IPD consumable requests (not yet dispensed) — skip MedicationChart (drugs)
     ipd_consumables = InpatientConsumable.objects.filter(
         admission__visit=visit,
-        is_dispensed=False
-    ).select_related('item', 'prescribed_by').order_by('-prescribed_at')
+        is_dispensed=False,
+    ).select_related('item', 'item__category', 'prescribed_by').order_by('-prescribed_at')
         
-    # 4. Combine and Normalize with De-duplication
+    # 4. Combine and Normalize with De-duplication (consumables only — no pharmaceuticals)
     history = []
     
     # Track dispensed items to suppress corresponding requests
     # Frequency map: (item_id, quantity) -> count
     dispensed_counts = {}
     for d in d_items:
+        if is_pharmaceutical_item(d.item):
+            continue
         key = (d.item.id, d.quantity)
         dispensed_counts[key] = dispensed_counts.get(key, 0) + 1
         
@@ -1965,6 +2094,8 @@ def _get_normalized_history(visit, patient):
         
     # Add billed items (Requests) - Suppress if already dispensed
     for b in billed_items:
+        if is_pharmaceutical_item(b.inventory_item):
+            continue
         key = (b.inventory_item.id, b.quantity)
         if dispensed_counts.get(key, 0) > 0:
             dispensed_counts[key] -= 1
@@ -1980,24 +2111,10 @@ def _get_normalized_history(visit, patient):
             'status_class': 'bg-amber-50 text-amber-700'
         })
 
-    # Add IPD Meds
-    for m in ipd_meds:
-        key = (m.item.id, m.quantity)
-        if dispensed_counts.get(key, 0) > 0:
-            dispensed_counts[key] -= 1
-            continue
-
-        history.append({
-            'item_name': m.item.name,
-            'quantity': m.quantity,
-            'at': m.prescribed_at,
-            'by': m.prescribed_by,
-            'status': 'Requested',
-            'status_class': 'bg-amber-50 text-amber-700'
-        })
-
-    # Add IPD Consumables
+    # Add IPD Consumables (non-pharmaceutical only)
     for c in ipd_consumables:
+        if is_pharmaceutical_item(c.item):
+            continue
         key = (c.item.id, c.quantity)
         if dispensed_counts.get(key, 0) > 0:
             dispensed_counts[key] -= 1
@@ -2127,6 +2244,12 @@ def edit_prescription(request, prescription_id):
     if request.user.role not in allowed_roles and not request.user.is_superuser:
         messages.error(request, "Access denied. You do not have permission to edit prescriptions.")
         return redirect('home:prescription_detail', prescription_id=prescription.id)
+
+    if visit:
+        from .clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+        if doctor_requires_tb_screening(request.user, visit):
+            messages.warning(request, TB_SCREENING_MESSAGE)
+            return redirect(f"{reverse('home:patient_detail', kwargs={'pk': patient.pk})}?visit_id={visit.pk}#visits")
 
     from django.forms import inlineformset_factory
     from django.db import transaction
@@ -2302,6 +2425,18 @@ def edit_prescription(request, prescription_id):
             'visit_type': visit.visit_type if visit else 'OUT-PATIENT'
         }
     
+    pending_consumables, dispensed_consumables = _get_editable_visit_consumables(visit)
+    from inventory.models import InventoryItem
+    from inventory.consumable_utils import available_stock_for_department
+    consumable_dept = Departments.objects.filter(
+        name__iexact='Mini Pharmacy' if request.user.role == 'Nurse' else 'Pharmacy',
+    ).first()
+    for row in pending_consumables:
+        try:
+            inv_item = InventoryItem.objects.get(pk=row['inventory_item_id'])
+            row['available_stock'] = available_stock_for_department(inv_item, consumable_dept)
+        except InventoryItem.DoesNotExist:
+            row['available_stock'] = 0
     context = {
         'form': form,
         'formset': formset,
@@ -2310,7 +2445,13 @@ def edit_prescription(request, prescription_id):
         'visit': visit,
         'form_token': form_token,
         'med_metadata_json': json.dumps(med_metadata),
-        'dispensing_departments': Departments.objects.all().order_by('name')
+        'dispensing_departments': Departments.objects.all().order_by('name'),
+        'pending_consumables': pending_consumables,
+        'dispensed_consumables': dispensed_consumables,
+        'dispensed_items': _get_normalized_history(visit, patient),
+        'can_edit_consumables': _can_edit_visit_consumable(request.user),
+        'consumable_stock_department_id': consumable_dept.pk if consumable_dept else '',
+        'consumable_stock_department_name': consumable_dept.name if consumable_dept else 'Pharmacy',
     }
     return render(request, 'home/edit_prescription.html', context)
 
@@ -2659,8 +2800,8 @@ def pharmacy_dashboard(request):
 @require_http_methods(["POST"])
 def api_pharmacy_update_consumable(request, item_id):
     """Update pending consumable item and/or quantity. Unit price follows the selected item (not editable separately)."""
-    if not _can_edit_pharmacy_consumable(request.user):
-        return JsonResponse({'success': False, 'error': 'Only pharmacists and admins can edit consumables.'})
+    if not _can_edit_visit_consumable(request.user):
+        return JsonResponse({'success': False, 'error': 'You do not have permission to edit consumables.'})
 
     from inventory.models import InventoryItem
     from accounts.models import PatientCredit
@@ -2676,6 +2817,7 @@ def api_pharmacy_update_consumable(request, item_id):
 
     quantity = payload.get('quantity')
     inventory_item_id = payload.get('inventory_item_id')
+    department_id = payload.get('department_id')
 
     try:
         quantity = int(quantity)
@@ -2696,6 +2838,12 @@ def api_pharmacy_update_consumable(request, item_id):
     visit = invoice_item.invoice.visit
     if not visit:
         return JsonResponse({'success': False, 'error': 'This item is not linked to a visit.'})
+
+    if not _invoice_item_is_consumable_line(invoice_item):
+        return JsonResponse({
+            'success': False,
+            'error': 'This line is linked to a prescription medication and cannot be edited here.',
+        })
 
     dispensed = _consumable_dispensed_qty(visit, invoice_item.inventory_item_id)
     if dispensed > 0:
@@ -2722,6 +2870,31 @@ def api_pharmacy_update_consumable(request, item_id):
         invoice_item.inventory_item = new_item
         invoice_item.name = new_item.name
         invoice_item.unit_price = new_item.selling_price or Decimal('0')
+
+    stock_item = invoice_item.inventory_item
+    from home.models import Departments
+    from inventory.consumable_utils import available_stock_for_department
+
+    department = None
+    if department_id:
+        try:
+            department = Departments.objects.filter(pk=int(department_id)).first()
+        except (TypeError, ValueError):
+            pass
+    if not department:
+        dept_name = 'Mini Pharmacy' if getattr(request.user, 'role', None) == 'Nurse' else 'Pharmacy'
+        department = Departments.objects.filter(name__iexact=dept_name).first()
+
+    available_stock = available_stock_for_department(stock_item, department)
+    if quantity > available_stock:
+        dept_label = department.name if department else 'Pharmacy'
+        return JsonResponse({
+            'success': False,
+            'error': (
+                f'Insufficient stock in {dept_label}. '
+                f'Available: {available_stock}, requested: {quantity}.'
+            ),
+        })
 
     invoice_item.quantity = quantity
     invoice_item.save()
@@ -2756,8 +2929,8 @@ def api_pharmacy_update_consumable(request, item_id):
 @require_http_methods(["POST"])
 def api_pharmacy_delete_consumable(request, item_id):
     """Remove a pending consumable invoice line (pharmacist/admin only)."""
-    if not _can_edit_pharmacy_consumable(request.user):
-        return JsonResponse({'success': False, 'error': 'Only pharmacists and admins can delete consumables.'})
+    if not _can_edit_visit_consumable(request.user):
+        return JsonResponse({'success': False, 'error': 'You do not have permission to delete consumables.'})
 
     from accounts.models import PatientCredit
     from decimal import Decimal

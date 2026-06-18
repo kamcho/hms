@@ -1,0 +1,348 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}{{ title }} — HMS{% endblock %}
+{% block content %}
+<style>
+    .chart-container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+    .chart-card {
+        background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem;
+        padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px -8px rgba(0,0,0,0.08);
+    }
+    .consumable-edit-modal {
+        display: none; position: fixed; inset: 0; z-index: 10000;
+        background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+        align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;
+    }
+    .consumable-edit-modal.is-open { display: flex; }
+    .consumable-edit-dialog { width: 100%; max-width: 28rem; margin: auto; flex-shrink: 0; }
+</style>
+
+<div class="bg-slate-50 min-h-screen">
+    <div class="chart-container">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Manage Patient Chart</h1>
+                <p class="text-sm font-bold text-slate-500 mt-1">
+                    {{ patient.full_name }} · Bed {{ admission.bed.bed_number|default:"—" }} · {{ admission.bed.ward.name|default:"Ward" }}
+                </p>
+            </div>
+            <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+                <i class="fas fa-arrow-left"></i> Back to Case Folder
+            </a>
+        </div>
+
+        {% if admission.status != 'Admitted' %}
+        <div class="chart-card bg-amber-50 border-amber-200 mb-6">
+            <p class="text-sm font-bold text-amber-800"><i class="fas fa-lock mr-2"></i>This admission is closed. Consumables are read-only.</p>
+        </div>
+        {% endif %}
+
+        <div class="chart-card">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">IPD Consumables</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Edit or remove items not yet dispensed</p>
+                </div>
+            </div>
+
+            {% if chart_consumables %}
+            <div class="space-y-3 mb-8" id="chartConsumablesList">
+                {% for row in chart_consumables %}
+                <div class="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl" data-chart-row="{{ row.source }}-{{ row.id }}">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="text-sm font-black text-slate-800">{{ row.name }}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter {{ row.status_class }}">{{ row.status_label }}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase">{% if row.source == 'ipd' %}Chart{% else %}Invoice{% endif %}</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Qty: {{ row.quantity }}{% if row.quantity_dispensed %} · Dispensed: {{ row.quantity_dispensed }}{% endif %}
+                            · {{ row.at|date:"d M Y H:i" }}
+                            {% if row.by %}· {{ row.by.first_name|default:row.by.id_number }}{% endif %}
+                        </div>
+                    </div>
+                    {% if can_edit_consumables and row.can_edit %}
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                            class="btn-edit-chart-consumable px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                            data-source="{{ row.source }}"
+                            data-item-id="{{ row.id }}"
+                            data-item-name="{{ row.name|escape }}"
+                            data-inventory-item-id="{{ row.inventory_item_id }}"
+                            data-quantity="{{ row.quantity }}"
+                            data-available-stock="{{ row.available_stock }}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button type="button"
+                            class="btn-delete-chart-consumable px-3 py-2 bg-rose-50 border border-rose-100 rounded-lg text-xs font-black uppercase tracking-widest text-rose-600 hover:bg-rose-100"
+                            data-source="{{ row.source }}"
+                            data-item-id="{{ row.id }}"
+                            data-item-name="{{ row.name|escape }}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                    {% elif row.status == 'dispensed' or row.status == 'partial' %}
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-lock"></i> Locked</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-500 font-bold mb-8"><i class="fas fa-info-circle mr-2"></i>No consumables on this chart yet.</p>
+            {% endif %}
+
+            {% if admission.status == 'Admitted' %}
+            <div class="border-t border-slate-100 pt-8">
+                <p class="text-sm text-slate-500 font-bold mb-4"><i class="fas fa-plus-circle mr-2"></i>Add consumables to the chart</p>
+                {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Mini Pharmacy,Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" confirm_non_pharmacy_dispense="true" %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if can_edit_consumables %}
+<div id="editConsumableModal" class="consumable-edit-modal" aria-hidden="true">
+    <div class="consumable-edit-dialog bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="px-6 py-4 bg-indigo-600 text-white flex justify-between items-center">
+            <h3 class="font-black text-sm uppercase tracking-widest">Edit Consumable</h3>
+            <button type="button" onclick="closeConsumableModal()" class="text-white/80 hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="editConsumableSource" value="">
+            <input type="hidden" id="editConsumableLineId" value="">
+            {% csrf_token %}
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Item</label>
+                <input type="text" id="consumableSearch" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm font-bold" placeholder="Search consumable (type 2+ letters)..." autocomplete="off">
+                <input type="hidden" id="consumableItemId" value="">
+                <div id="consumableSearchResults" class="mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden"></div>
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Quantity</label>
+                <input type="number" id="consumableQty" min="1" value="1" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm font-bold">
+                <p id="consumableStockHint" class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-2 hidden"></p>
+                <p id="consumableQtyError" class="text-rose-500 text-xs font-bold mt-1 hidden"></p>
+            </div>
+            <p id="consumableEditError" class="text-rose-500 text-xs font-bold hidden"></p>
+        </div>
+        <div class="px-6 py-4 bg-slate-50 flex gap-3 justify-end border-t border-slate-100">
+            <button type="button" onclick="closeConsumableModal()" class="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">Cancel</button>
+            <button type="button" id="consumableSaveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black uppercase tracking-widest">Save</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const IPD_UPDATE_URL = "{% url 'inpatient:api_ipd_consumable_update' consumable_id=0 %}".replace('/0/', '/');
+    const IPD_DELETE_URL = "{% url 'inpatient:api_ipd_consumable_delete' consumable_id=0 %}".replace('/0/', '/');
+    const INVOICE_UPDATE_URL = "{% url 'home:api_pharmacy_update_consumable' item_id=0 %}".replace('/0/', '/');
+    const INVOICE_DELETE_URL = "{% url 'home:api_pharmacy_delete_consumable' item_id=0 %}".replace('/0/', '/');
+    const STOCK_DEPT_ID = "{{ consumable_stock_department_id }}";
+    const STOCK_DEPT_NAME = "{{ consumable_stock_department_name|escapejs }}";
+
+    let consumableSearchTimer = null;
+    let consumableMaxStock = null;
+
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+
+    function getConsumableDepartmentId() {
+        const deptInput = document.querySelector('input[name="dispense_department"]:checked');
+        return (deptInput && deptInput.value) ? deptInput.value : STOCK_DEPT_ID;
+    }
+
+    function updateConsumableStockUI() {
+        const qtyInput = document.getElementById('consumableQty');
+        const hint = document.getElementById('consumableStockHint');
+        const qtyError = document.getElementById('consumableQtyError');
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        if (!qtyInput) return;
+        const qty = parseInt(qtyInput.value, 10) || 0;
+        if (consumableMaxStock === null) {
+            if (hint) hint.classList.add('hidden');
+            qtyInput.removeAttribute('max');
+            if (saveBtn) saveBtn.disabled = false;
+            return;
+        }
+        if (hint) {
+            hint.textContent = `Available in ${STOCK_DEPT_NAME}: ${consumableMaxStock}`;
+            hint.classList.remove('hidden');
+        }
+        qtyInput.max = consumableMaxStock;
+        if (qty > consumableMaxStock) {
+            if (qtyError) {
+                qtyError.textContent = `Cannot exceed available stock (${consumableMaxStock}).`;
+                qtyError.classList.remove('hidden');
+            }
+            if (saveBtn) saveBtn.disabled = true;
+        } else {
+            if (qtyError) qtyError.classList.add('hidden');
+            if (saveBtn) saveBtn.disabled = qty < 1;
+        }
+    }
+
+    function setConsumableStock(stock) {
+        consumableMaxStock = stock === null || stock === undefined ? null : parseInt(stock, 10);
+        if (consumableMaxStock !== null && isNaN(consumableMaxStock)) consumableMaxStock = 0;
+        updateConsumableStockUI();
+    }
+
+    window.closeConsumableModal = function () {
+        const modal = document.getElementById('editConsumableModal');
+        if (modal) {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body.style.overflow = '';
+    };
+
+    function showEditError(msg) {
+        const el = document.getElementById('consumableEditError');
+        if (!el) return;
+        if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+        else { el.textContent = ''; el.classList.add('hidden'); }
+    }
+
+    function openConsumableModal(btn) {
+        document.getElementById('editConsumableSource').value = btn.dataset.source;
+        document.getElementById('editConsumableLineId').value = btn.dataset.itemId;
+        document.getElementById('consumableSearch').value = btn.dataset.itemName || '';
+        document.getElementById('consumableItemId').value = btn.dataset.inventoryItemId || '';
+        document.getElementById('consumableQty').value = btn.dataset.quantity || '1';
+        setConsumableStock(btn.dataset.availableStock);
+        document.getElementById('consumableSearchResults').classList.add('hidden');
+        showEditError('');
+        const modal = document.getElementById('editConsumableModal');
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        updateConsumableStockUI();
+    }
+
+    function initSearch() {
+        const searchInput = document.getElementById('consumableSearch');
+        const resultsBox = document.getElementById('consumableSearchResults');
+        const hiddenId = document.getElementById('consumableItemId');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(consumableSearchTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) {
+                resultsBox.classList.add('hidden');
+                return;
+            }
+            consumableSearchTimer = setTimeout(() => {
+                const deptId = getConsumableDepartmentId();
+                const url = `{% url 'inventory:search_inventory' %}?q=${encodeURIComponent(q)}&exclude_pharmaceuticals=true` + (deptId ? `&department_id=${deptId}` : '');
+                fetch(url).then(r => r.json()).then(data => {
+                    resultsBox.innerHTML = '';
+                    (data.results || []).forEach(item => {
+                        const stock = item.stock != null ? item.stock : 0;
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'w-full text-left px-4 py-3 text-sm font-bold border-b border-slate-50 ' + (stock > 0 ? 'hover:bg-indigo-50' : 'opacity-50 cursor-not-allowed');
+                        b.innerHTML = `${item.text} <span class="text-[10px] text-slate-400">(stock: ${stock})</span>`;
+                        if (stock > 0) {
+                            b.onclick = () => {
+                                hiddenId.value = item.id;
+                                searchInput.value = item.text;
+                                resultsBox.classList.add('hidden');
+                                setConsumableStock(stock);
+                            };
+                        }
+                        resultsBox.appendChild(b);
+                    });
+                    resultsBox.classList.remove('hidden');
+                });
+            }, 300);
+        });
+
+        document.getElementById('consumableQty')?.addEventListener('input', updateConsumableStockUI);
+    }
+
+    async function saveEdit() {
+        const source = document.getElementById('editConsumableSource').value;
+        const lineId = document.getElementById('editConsumableLineId').value;
+        const invId = document.getElementById('consumableItemId').value;
+        const qty = parseInt(document.getElementById('consumableQty').value, 10);
+        if (!invId) { showEditError('Select a consumable from search.'); return; }
+        if (!qty || qty < 1) { showEditError('Quantity must be at least 1.'); return; }
+        if (consumableMaxStock !== null && qty > consumableMaxStock) {
+            showEditError(`Cannot exceed available stock (${consumableMaxStock}).`);
+            return;
+        }
+
+        const url = source === 'ipd'
+            ? IPD_UPDATE_URL + lineId + '/'
+            : INVOICE_UPDATE_URL + lineId + '/';
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        saveBtn.disabled = true;
+        showEditError('');
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({
+                    inventory_item_id: parseInt(invId, 10),
+                    quantity: qty,
+                    department_id: getConsumableDepartmentId() || null,
+                }),
+            });
+            const data = await res.json();
+            if (data.success) window.location.reload();
+            else { showEditError(data.error || 'Could not save.'); saveBtn.disabled = false; }
+        } catch (e) {
+            showEditError('Network error.');
+            saveBtn.disabled = false;
+        }
+    }
+
+    async function deleteRow(btn) {
+        const source = btn.dataset.source;
+        const lineId = btn.dataset.itemId;
+        const name = btn.dataset.itemName || 'this item';
+        if (!confirm(`Remove ${name} from the chart?`)) return;
+        btn.disabled = true;
+        const url = source === 'ipd'
+            ? IPD_DELETE_URL + lineId + '/'
+            : INVOICE_DELETE_URL + lineId + '/';
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+            });
+            const data = await res.json();
+            if (data.success) window.location.reload();
+            else { alert(data.error || 'Could not delete.'); btn.disabled = false; }
+        } catch (e) {
+            alert('Network error.');
+            btn.disabled = false;
+        }
+    }
+
+    document.querySelectorAll('.btn-edit-chart-consumable').forEach(b => b.addEventListener('click', () => openConsumableModal(b)));
+    document.querySelectorAll('.btn-delete-chart-consumable').forEach(b => b.addEventListener('click', () => deleteRow(b)));
+    document.getElementById('consumableSaveBtn')?.addEventListener('click', saveEdit);
+    initSearch();
+
+    const modal = document.getElementById('editConsumableModal');
+    if (modal) {
+        modal.addEventListener('click', e => { if (e.target === modal) closeConsumableModal(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) closeConsumableModal();
+        });
+    }
+})();
+</script>
+{% endblock %}

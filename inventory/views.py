@@ -453,7 +453,7 @@ def search_inventory(request):
     from home.models import Departments
     query = request.GET.get('q', '')
     department_id = request.GET.get('department_id')
-    exclude_pharmaceuticals = request.GET.get('exclude_pharmaceuticals') == 'true'
+    exclude_pharmaceuticals = request.GET.get('exclude_pharmaceuticals', 'true') == 'true'
     
     if len(query) < 2:
         return JsonResponse({'results': []})
@@ -461,20 +461,19 @@ def search_inventory(request):
     items = InventoryItem.objects.filter(name__icontains=query)
     
     if exclude_pharmaceuticals:
-        # Items that don't have a linked Medication record
-        items = items.filter(medication__isnull=True)
+        from .consumable_utils import exclude_pharmaceutical_items
+        items = exclude_pharmaceutical_items(items)
         
     items = items.select_related('category').order_by('name')[:20]
     
+    department = None
+    if department_id:
+        department = Departments.objects.filter(pk=department_id).first()
+
+    from .consumable_utils import available_stock_for_department
     results = []
     for item in items:
-        # Calculate stock for this item in the specific department
-        stock = 0
-        if department_id:
-            stock = StockRecord.objects.filter(
-                item=item, 
-                current_location_id=department_id
-            ).aggregate(total=Sum('quantity'))['total'] or 0
+        stock = available_stock_for_department(item, department) if department else 0
             
         results.append({
             'id': item.id,
@@ -513,6 +512,13 @@ def dispense_item(request):
 
         with transaction.atomic():
             item = get_object_or_404(InventoryItem, id=item_id)
+            from .consumable_utils import is_pharmaceutical_item
+            if is_pharmaceutical_item(item):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Pharmaceutical items cannot be dispensed as consumables. Use prescription or medication chart.',
+                }, status=400)
+
             patient = get_object_or_404(Patient, id=patient_id)
             visit = Visit.objects.filter(id=visit_id).first() if visit_id else None
             
@@ -523,6 +529,10 @@ def dispense_item(request):
 
             if not visit:
                 return JsonResponse({'status': 'error', 'message': 'Visit not identified'}, status=400)
+
+            from home.clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+            if doctor_requires_tb_screening(request.user, visit):
+                return JsonResponse({'status': 'error', 'message': TB_SCREENING_MESSAGE}, status=403)
 
             # Optional linkage for procedure pages: block dispensing if selected procedure is already done.
             if procedure_item_id:

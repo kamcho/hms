@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.urls import reverse
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import (
@@ -82,6 +83,13 @@ def admit_patient(request, patient_id):
     print(f"DEBUG: Access granted for role: {request.user.role}")
     patient = get_object_or_404(Patient, id=patient_id)
     print(f"DEBUG: Patient = {patient.full_name} (ID: {patient.id})")
+
+    from home.models import Visit
+    from home.clinical_gates import doctor_requires_tb_screening, TB_SCREENING_MESSAGE
+    latest_visit = Visit.objects.filter(patient=patient).order_by('-visit_date').first()
+    if latest_visit and doctor_requires_tb_screening(request.user, latest_visit):
+        messages.warning(request, TB_SCREENING_MESSAGE)
+        return redirect(f"{reverse('home:patient_detail', kwargs={'pk': patient.pk})}?visit_id={latest_visit.pk}#visits")
     
     # Get invoice_id from URL parameter (for Extend to IPD functionality)
     invoice_id = request.GET.get('invoice_id')
@@ -1623,3 +1631,160 @@ def clean_admissions_close(request):
         messages.error(request, 'Nothing selected to close.')
 
     return redirect('inpatient:clean_admissions')
+
+
+def _can_manage_ipd_chart(user):
+    return user.is_superuser or getattr(user, 'role', None) in (
+        'Doctor', 'Nurse', 'Pharmacist', 'Admin',
+    )
+
+
+@login_required
+def manage_patient_chart(request, admission_id):
+    """Manage IPD chart — edit/delete pending consumables."""
+    admission = get_object_or_404(
+        Admission.objects.select_related('patient', 'visit', 'bed', 'bed__ward'),
+        pk=admission_id,
+    )
+    if not _can_manage_ipd_chart(request.user):
+        messages.error(request, 'You do not have permission to manage this patient chart.')
+        return redirect('inpatient:patient_case_folder', admission_id=admission.id)
+
+    from .chart_utils import get_ipd_chart_consumables
+    from home.views import _get_normalized_history
+
+    chart_consumables, stock_dept = get_ipd_chart_consumables(admission, request.user)
+    visit = admission.visit
+
+    context = {
+        'admission': admission,
+        'patient': admission.patient,
+        'visit': visit,
+        'chart_consumables': chart_consumables,
+        'can_edit_consumables': _can_manage_ipd_chart(request.user) and admission.status == 'Admitted',
+        'consumable_stock_department_id': stock_dept.pk if stock_dept else '',
+        'consumable_stock_department_name': stock_dept.name if stock_dept else 'Pharmacy',
+        'dispensed_items': _get_normalized_history(visit, admission.patient) if visit else [],
+        'dispensing_departments': Departments.objects.all().order_by('name'),
+        'title': f'Manage Chart — {admission.patient.full_name}',
+    }
+    return render(request, 'inpatient/manage_patient_chart.html', context)
+
+
+@login_required
+@require_POST
+def api_ipd_consumable_update(request, consumable_id):
+    """Update a pending InpatientConsumable (not yet dispensed)."""
+    import json
+    from django.db import transaction
+    from inventory.models import InventoryItem
+    from inventory.consumable_utils import available_stock_for_department, is_pharmaceutical_item
+    from .chart_utils import consumable_stock_department_for_user
+
+    if not _can_manage_ipd_chart(request.user):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'})
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request data.'})
+
+    quantity = payload.get('quantity')
+    inventory_item_id = payload.get('inventory_item_id')
+    department_id = payload.get('department_id')
+
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Quantity must be a whole number.'})
+    if quantity < 1:
+        return JsonResponse({'success': False, 'error': 'Quantity must be at least 1.'})
+
+    consumable = get_object_or_404(
+        InpatientConsumable.objects.select_related('admission', 'item', 'admission__visit'),
+        pk=consumable_id,
+    )
+    admission = consumable.admission
+
+    if admission.status != 'Admitted':
+        return JsonResponse({'success': False, 'error': 'Cannot edit consumables on a closed admission.'})
+    if consumable.quantity_dispensed > 0 or consumable.is_dispensed:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot edit: dispensing has already started for this item.',
+        })
+
+    department = None
+    if department_id:
+        try:
+            department = Departments.objects.filter(pk=int(department_id)).first()
+        except (TypeError, ValueError):
+            pass
+    if not department:
+        department = consumable_stock_department_for_user(request.user)
+
+    stock_item = consumable.item
+    if inventory_item_id is not None:
+        try:
+            inventory_item_id = int(inventory_item_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Invalid item selected.'})
+        new_item = get_object_or_404(InventoryItem, pk=inventory_item_id)
+        if is_pharmaceutical_item(new_item):
+            return JsonResponse({
+                'success': False,
+                'error': 'Selected item is a medication. Choose a consumable.',
+            })
+        stock_item = new_item
+        consumable.item = new_item
+
+    available = available_stock_for_department(stock_item, department)
+    if quantity > available:
+        dept_label = department.name if department else 'Pharmacy'
+        return JsonResponse({
+            'success': False,
+            'error': f'Insufficient stock in {dept_label}. Available: {available}, requested: {quantity}.',
+        })
+
+    with transaction.atomic():
+        consumable.quantity = quantity
+        consumable.total_quantity = quantity
+        consumable.save(update_fields=['item', 'quantity', 'total_quantity'])
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Updated {consumable.item.name} × {quantity}.',
+    })
+
+
+@login_required
+@require_POST
+def api_ipd_consumable_delete(request, consumable_id):
+    """Remove a pending InpatientConsumable that has not been dispensed."""
+    from django.db import transaction
+
+    if not _can_manage_ipd_chart(request.user):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'})
+
+    consumable = get_object_or_404(
+        InpatientConsumable.objects.select_related('admission', 'item'),
+        pk=consumable_id,
+    )
+    admission = consumable.admission
+
+    if admission.status != 'Admitted':
+        return JsonResponse({'success': False, 'error': 'Cannot remove consumables on a closed admission.'})
+    if consumable.quantity_dispensed > 0 or consumable.is_dispensed:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot delete: dispensing has already started for this item.',
+        })
+
+    item_name = consumable.item.name
+    with transaction.atomic():
+        consumable.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Removed {item_name} from the IPD chart.',
+    })

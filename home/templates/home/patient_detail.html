@@ -400,6 +400,99 @@
         border-color: var(--clinical-primary);
     }
 
+    .tab-item.tab-locked {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .tb-screening-highlight .event-header h5 {
+        color: #c2410c;
+    }
+
+    .tb-screening-highlight {
+        background: #fff7ed;
+        border-radius: 8px;
+        padding-right: 0.5rem;
+    }
+
+    .tb-screening-questions {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tb-screening-row {
+        padding: 0.85rem 1rem;
+        background: var(--clinical-bg);
+        border: 1px solid var(--clinical-border);
+        border-radius: 10px;
+    }
+
+    .tb-screening-label {
+        display: block;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--clinical-text-main);
+        margin-bottom: 0.65rem;
+    }
+
+    .tb-screening-options {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .tb-screening-options ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .tb-screening-options li {
+        flex: 1;
+        margin: 0;
+    }
+
+    .tb-screening-options li label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1rem;
+        border: 2px solid var(--clinical-border);
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--clinical-text-muted);
+        transition: all 0.15s ease;
+        width: 100%;
+        margin: 0;
+    }
+
+    .tb-screening-options li label:has(input:checked) {
+        border-color: var(--clinical-primary);
+        background: var(--clinical-primary-light);
+        color: var(--clinical-primary);
+    }
+
+    .tb-screening-options li label input[type="radio"] {
+        accent-color: var(--clinical-primary);
+        width: 1rem;
+        height: 1rem;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .tb-screening-hint {
+        font-size: 0.78rem;
+        color: var(--clinical-text-muted);
+        margin: 0 0 1rem;
+    }
+
     textarea.form-control {
         overflow-y: hidden;
         resize: none;
@@ -536,6 +629,14 @@
                                     </a>
 
                                 {% else %}
+                                    {% if tb_screening_required %}
+                                        <button type="button" onclick="openTBModal('{{ tb_screening_visit_id }}')" class="modern-btn btn-warning" style="width: 100%;">
+                                            <i class="fas fa-lungs"></i> Complete TB Screening
+                                        </button>
+                                        <p style="font-size: 0.75rem; color: var(--clinical-text-muted); margin: 0; text-align: center;">
+                                            <i class="fas fa-lock"></i> Other clinical actions are locked until screening is saved.
+                                        </p>
+                                    {% else %}
                                     <a href="{% url 'inpatient:admit_patient' patient.pk %}?provisional_diagnosis={{ latest_diagnosis|urlencode }}" class="modern-btn btn-warning" style="width: 100%;">
                                         <i class="fas fa-bed"></i> Admit for Observation
                                     </a>
@@ -556,6 +657,7 @@
                                     <button onclick="showModal('appointmentModal')" class="modern-btn btn-primary" style="width: 100%; border: none;">
                                         <i class="fas fa-calendar-plus"></i> Book Appointment
                                     </button>
+                                    {% endif %}
                                 {% endif %}
                             {% endif %}
                         {% else %}
@@ -592,6 +694,20 @@
                     </span>
                 {% endif %}
             </div>
+            {% if tb_screening_required %}
+            <div class="tb-screening-banner" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 2px solid #f97316; border-radius: 12px; margin-bottom: 1.5rem;">
+                <div style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: #f97316; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <i class="fas fa-lungs"></i>
+                </div>
+                <div style="flex: 1;">
+                    <strong style="display: block; color: #9a3412; font-size: 0.9rem;">TB screening required</strong>
+                    <span style="font-size: 0.8rem; color: #c2410c;">Complete compulsory TB screening for this visit before symptoms, notes, prescriptions, diagnostics, or other clinical actions.</span>
+                </div>
+                <button type="button" onclick="openTBModal('{{ tb_screening_visit_id }}')" class="modern-btn btn-warning" style="flex-shrink: 0; white-space: nowrap;">
+                    <i class="fas fa-clipboard-check"></i> Complete Screening
+                </button>
+            </div>
+            {% endif %}
             <!-- TABS SECTION -->
             <div class="modern-card">
                 <div class="modern-card-header" style="background: white; padding-bottom: 0;">
@@ -599,19 +715,23 @@
                         <div class="tab-item active" onclick="openTab(event, 'visits')">
                             <i class="fas fa-calendar-alt"></i> Visits
                         </div>
-                        <div class="tab-item" onclick="openTab(event, 'labs')">
+                        <div class="tab-item{% if tb_screening_required %} tab-locked{% endif %}" onclick="openTab(event, 'labs')">
                             <i class="fas fa-microscope"></i> Diagnostics
+                            {% if tb_screening_required %}<i class="fas fa-lock" style="font-size: 0.65rem; margin-left: 0.25rem; opacity: 0.6;"></i>{% endif %}
                         </div>
-                        <div class="tab-item" onclick="openTab(event, 'prescriptions')">
+                        <div class="tab-item{% if tb_screening_required %} tab-locked{% endif %}" onclick="openTab(event, 'prescriptions')">
                             <i class="fas fa-prescription"></i> Prescriptions
+                            {% if tb_screening_required %}<i class="fas fa-lock" style="font-size: 0.65rem; margin-left: 0.25rem; opacity: 0.6;"></i>{% endif %}
                         </div>
                         {% if active_admission %}
-                            <div class="tab-item" onclick="openTab(event, 'inpatient')">
+                            <div class="tab-item{% if tb_screening_required %} tab-locked{% endif %}" onclick="openTab(event, 'inpatient')">
                                 <i class="fas fa-procedures"></i> Inpatient
+                                {% if tb_screening_required %}<i class="fas fa-lock" style="font-size: 0.65rem; margin-left: 0.25rem; opacity: 0.6;"></i>{% endif %}
                             </div>
                         {% endif %}
-                        <div class="tab-item" onclick="openTab(event, 'dispense')">
+                        <div class="tab-item{% if tb_screening_required %} tab-locked{% endif %}" onclick="openTab(event, 'dispense')">
                             <i class="fas fa-prescription-bottle-alt"></i> Consumables
+                            {% if tb_screening_required %}<i class="fas fa-lock" style="font-size: 0.65rem; margin-left: 0.25rem; opacity: 0.6;"></i>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -619,7 +739,7 @@
                     <!-- DISPENSE TAB -->
                     <div id="dispense" class="tab-content">
                         {% if selected_visit or latest_visit %}
-                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient allowed_departments="Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
+                            {% include 'inventory/partials/dispense_widget.html' with visit=selected_visit|default:latest_visit patient=patient allowed_departments="Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" dispense_reload_hash="dispense" %}
                         {% else %}
                             <div class="text-center py-8">
                                 <i class="fas fa-info-circle text-4xl text-slate-300 mb-4"></i>
@@ -691,7 +811,7 @@
                                             </div>
                                         {% endfor %}
                                         <!-- 0.5 TB SCREENING SECTION -->
-                                        <div class="activity-event" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
+                                        <div class="activity-event{% if tb_screening_required and visit.id == tb_screening_visit_id %} tb-screening-highlight{% endif %}" id="{% if visit.id == tb_screening_visit_id %}tb-screening-section{% endif %}" style="margin-left: 1.5rem; border-left: 2px dashed var(--clinical-border); padding-left: 1.5rem;">
                                             <div class="event-header">
                                                 <h5 style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main);">
                                                     <i class="fas fa-lungs"></i> TB Screening
@@ -728,7 +848,7 @@
                                                     <i class="fas fa-notes-medical"></i> Symptoms
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                    {% if user.role == 'Doctor' or user.role == 'Nurse' %}
+                                                    {% if user.role == 'Nurse' or user.role == 'Doctor' and not tb_screening_required %}
                                                         {% with visit_has_symptom=False %}
                                                         {% for symptom in symptoms %}
                                                             {% if symptom.visit == visit %}
@@ -762,7 +882,7 @@
                                                     <i class="fas fa-user-md"></i> Consultation Notes
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                    {% if user.role == 'Doctor' %}
+                                                    {% if user.role == 'Doctor' and not tb_screening_required %}
                                                         <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openNoteModal()">
                                                             <i class="fas fa-plus"></i> Add
                                                         </button>
@@ -776,7 +896,7 @@
                                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem;">
                                                             <span style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ note.created_at|date:"M d, H:i" }}</span>
                                                             {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                {% if user.role == 'Doctor' and visit.is_active and not tb_screening_required %}
                                                                     <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" onclick="openEditNoteModal('{{ note.id }}', '{{ note.notes|escapejs }}')"><i class="fas fa-edit"></i> Edit</button>
                                                                 {% endif %}
                                                             {% endif %}
@@ -792,7 +912,7 @@
                                                     <i class="fas fa-brain"></i> Clinical Impression
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                    {% if user.role == 'Doctor' %}
+                                                    {% if user.role == 'Doctor' and not tb_screening_required %}
                                                         <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openImpressionModal('{{ visit.id }}')">
                                                             <i class="fas fa-plus"></i> Add
                                                         </button>
@@ -805,7 +925,7 @@
                                                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                                             <p style="margin: 0; font-size: 0.9rem; color: var(--clinical-text-main); flex: 1;">{{ impression.data }}</p>
                                                             {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                {% if user.role == 'Doctor' and visit.is_active and not tb_screening_required %}
                                                                     <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; margin-left: 0.5rem; flex-shrink: 0;" onclick="openEditImpressionModal('{{ visit.id }}', '{{ impression.id }}', '{{ impression.data|escapejs }}')"><i class="fas fa-edit"></i></button>
                                                                 {% endif %}
                                                             {% endif %}
@@ -821,7 +941,7 @@
                                                     <i class="fas fa-diagnoses"></i> Diagnosis
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                    {% if user.role == 'Doctor' %}
+                                                    {% if user.role == 'Doctor' and not tb_screening_required %}
                                                         <button class="modern-btn btn-primary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="openDiagnosisModal('{{ visit.id }}')">
                                                             <i class="fas fa-plus"></i> Add
                                                         </button>
@@ -834,7 +954,7 @@
                                                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                                             <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600; flex: 1;">{{ diagnosis.data }}</p>
                                                             {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                                {% if user.role == 'Doctor' and visit.is_active %}
+                                                                {% if user.role == 'Doctor' and visit.is_active and not tb_screening_required %}
                                                                     <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; margin-left: 0.5rem; flex-shrink: 0;" onclick="openEditDiagnosisModal('{{ visit.id }}', '{{ diagnosis.id }}', '{{ diagnosis.data|escapejs }}')"><i class="fas fa-edit"></i></button>
                                                                 {% endif %}
                                                             {% endif %}
@@ -850,7 +970,7 @@
                                                     <i class="fas fa-prescription"></i> Prescriptions
                                                 </h5>
                                                 {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
-                                                    {% if user.role == 'Doctor' %}
+                                                    {% if user.role == 'Doctor' and not tb_screening_required %}
                                                         {% with visit_prescriptions=visit.prescriptions.all %}
                                                             {% if visit_prescriptions %}
                                                                 <a href="{% url 'home:edit_prescription' visit_prescriptions.first.pk %}" class="modern-btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
@@ -874,7 +994,7 @@
                                                                 <div style="font-size: 0.75rem; color: var(--clinical-text-muted);">{{ prescription.prescribed_at|date:"M d, H:i" }}</div>
                                                                 <span class="status-badge" style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">{{ prescription.status }}</span>
                                                             </div>
-                                                            {% if visit.is_active %}
+                                                            {% if visit.is_active and not tb_screening_required %}
                                                                 <a href="{% url 'home:edit_prescription' prescription.pk %}" class="modern-btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.7rem; flex-shrink: 0;"><i class="fas fa-edit"></i> Edit</a>
                                                             {% endif %}
                                                         </div>
@@ -883,7 +1003,7 @@
                                             {% endfor %}
                                         </div>
                                         {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Triage Nurse' %}
-                                            <div class="mb-8">{% include 'home/partials/next_action_widget.html' with patient_id=patient.pk visit=latest_visit %}</div>
+                                            <div class="mb-8">{% include 'home/partials/next_action_widget.html' with patient_id=patient.pk visit=latest_visit tb_screening_blocked=tb_screening_required %}</div>
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
@@ -993,7 +1113,7 @@
                                                     </td>
                                                     <td style="padding: 1rem; text-align: right;">
                                                         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                                                            {% if prescription.visit.is_active %}
+                                                            {% if prescription.visit.is_active and not tb_screening_required %}
                                                                 <a href="{% url 'home:edit_prescription' prescription.pk %}" class="modern-btn btn-primary btn-sm" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;"><i class="fas fa-edit"></i> Edit</a>
                                                             {% endif %}
                                                             <a href="{% url 'home:prescription_detail' prescription.id %}" class="modern-btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage</a>
@@ -1274,8 +1394,19 @@
                     <form id="tbScreeningForm">
                         {% csrf_token %}
                         <input type="hidden" name="visit_id" id="tb_visit_id">
-                        <div class="clinical-form-styled">
-                            {{ tb_screening_form.as_p }}
+                        <p class="tb-screening-hint">For each symptom below, select <strong>Yes</strong> or <strong>No</strong>.</p>
+                        <div class="tb-screening-questions">
+                            {% for field in tb_screening_form %}
+                                <div class="tb-screening-row" data-field="{{ field.name }}">
+                                    <span class="tb-screening-label">{{ field.label }}</span>
+                                    <div class="tb-screening-options">
+                                        {{ field }}
+                                    </div>
+                                    {% if field.errors %}
+                                        <div style="color: var(--clinical-danger); font-size: 0.75rem; margin-top: 0.35rem;">{{ field.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
                         </div>
                     </form>
                 </div>
@@ -1422,11 +1553,45 @@
         </div>
     {% endblock %}
     {% block extra_js %}
+        {{ tb_screening_map|json_script:"tb-screening-map" }}
         <script>
+    const TB_SCREENING_REQUIRED = {{ tb_screening_required|yesno:"true,false" }};
+    const TB_SCREENING_VISIT_ID = {{ tb_screening_visit_id|default:"null" }};
+    const TB_SCREENING_MESSAGE = 'Complete compulsory TB screening for this visit before other clinical actions.';
+    const TB_BLOCKED_TABS = ['labs', 'prescriptions', 'dispense', 'inpatient'];
+
+    function clinicalActionBlocked() {
+        return TB_SCREENING_REQUIRED;
+    }
+
+    function showTbScreeningRequiredMessage() {
+        showMessageModal('TB Screening Required', TB_SCREENING_MESSAGE, function () {
+            if (TB_SCREENING_VISIT_ID) {
+                openTBModal(TB_SCREENING_VISIT_ID);
+            }
+        }, 'error');
+    }
+
+    function guardClinicalAction() {
+        if (clinicalActionBlocked()) {
+            showTbScreeningRequiredMessage();
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Enhanced Tab Switching
      */
     function openTab(evt, tabName) {
+        if (TB_SCREENING_REQUIRED && TB_BLOCKED_TABS.includes(tabName)) {
+            if (evt) {
+                evt.preventDefault?.();
+                evt.stopPropagation?.();
+            }
+            showTbScreeningRequiredMessage();
+            tabName = 'visits';
+        }
         // Hide all tab content
         const tabContent = document.querySelectorAll(".tab-content");
         tabContent.forEach(tab => {
@@ -1465,12 +1630,20 @@
 
     // Restore tab from hash on load
     document.addEventListener('DOMContentLoaded', () => {
-        const hash = window.location.hash.replace('#', '');
+        let hash = window.location.hash.replace('#', '');
+        if (TB_SCREENING_REQUIRED && TB_BLOCKED_TABS.includes(hash)) {
+            hash = 'visits';
+            window.location.hash = 'visits';
+        }
         if (hash && document.getElementById(hash)) {
             openTab(null, hash);
         } else {
             // Default to visits tab if no hash
             openTab(null, 'visits');
+        }
+
+        if (TB_SCREENING_REQUIRED && TB_SCREENING_VISIT_ID) {
+            setTimeout(() => openTBModal(TB_SCREENING_VISIT_ID), 400);
         }
 
         // Initialize auto-expanding textareas
@@ -1526,6 +1699,7 @@
     let noteEditId = null;
 
     function openNoteModal() {
+        if (!guardClinicalAction()) return;
         noteEditId = null;
         document.getElementById('note_edit_id').value = '';
         document.getElementById('noteModalTitle').innerHTML = '<i class="fas fa-edit"></i> Add Clinical Note';
@@ -1535,6 +1709,7 @@
     }
 
     function openEditNoteModal(id, existingNotes) {
+        if (!guardClinicalAction()) return;
         noteEditId = id;
         document.getElementById('note_edit_id').value = id;
         document.getElementById('noteModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Clinical Note';
@@ -1606,6 +1781,7 @@
      * Clinical Data Modals – Symptoms
      */
     function openSymptomsModal(visitId, existingData) {
+        if (!guardClinicalAction()) return;
         document.getElementById('symptoms_visit_id').value = visitId;
         const dataField = document.querySelector('#addSymptomsForm textarea[name="data"]');
         dataField.value = existingData || '';
@@ -1640,6 +1816,7 @@
     let impressionEditId = null;
 
     function openImpressionModal(visitId) {
+        if (!guardClinicalAction()) return;
         impressionEditId = null;
         document.getElementById('impression_edit_id').value = '';
         document.getElementById('impression_visit_id').value = visitId;
@@ -1649,6 +1826,7 @@
     }
 
     function openEditImpressionModal(visitId, id, existingData) {
+        if (!guardClinicalAction()) return;
         impressionEditId = id;
         document.getElementById('impression_edit_id').value = id;
         document.getElementById('impression_visit_id').value = visitId;
@@ -1687,6 +1865,7 @@
     let diagnosisEditId = null;
 
     function openDiagnosisModal(visitId) {
+        if (!guardClinicalAction()) return;
         diagnosisEditId = null;
         document.getElementById('diagnosis_edit_id').value = '';
         document.getElementById('diagnosis_visit_id').value = visitId;
@@ -1696,6 +1875,7 @@
     }
 
     function openEditDiagnosisModal(visitId, id, existingData) {
+        if (!guardClinicalAction()) return;
         diagnosisEditId = id;
         document.getElementById('diagnosis_edit_id').value = id;
         document.getElementById('diagnosis_visit_id').value = visitId;
@@ -1733,13 +1913,38 @@
     /**
      * TB Screening Logic
      */
-    function openTBModal(visitId) {
+    function getTbScreeningForVisit(visitId) {
+        const el = document.getElementById('tb-screening-map');
+        if (!el) return null;
+        const map = JSON.parse(el.textContent);
+        return map[String(visitId)] || null;
+    }
+
+    function openTBModal(visitId, screening) {
         document.getElementById('tb_visit_id').value = visitId;
+        const form = document.getElementById('tbScreeningForm');
+        if (form) {
+            form.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; });
+            const data = screening !== undefined ? screening : getTbScreeningForVisit(visitId);
+            if (data) {
+                Object.entries(data).forEach(([field, value]) => {
+                    const radio = form.querySelector(`input[name="${field}"][value="${value ? 'True' : 'False'}"]`);
+                    if (radio) radio.checked = true;
+                });
+            }
+        }
         showModal('tbModal');
     }
 
     function submitTBScreening() {
         const form = document.getElementById('tbScreeningForm');
+        const fieldNames = [...new Set([...form.querySelectorAll('input[type="radio"]')].map(r => r.name))];
+        for (const name of fieldNames) {
+            if (!form.querySelector(`input[name="${name}"]:checked`)) {
+                showMessageModal('Incomplete', 'Please select Yes or No for every symptom before saving.', null, 'error');
+                return;
+            }
+        }
         const formData = new FormData(form);
         const url = "{% url 'home:add_tb_screening' %}";
 

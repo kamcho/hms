@@ -151,17 +151,13 @@ class DispenseInventoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from inventory.models import InventoryItem, InventoryCategory
-        
-        # Filter for Consumables or non-pharmaceuticals
+        from inventory.consumable_utils import exclude_pharmaceutical_items
+
         consumable_category = InventoryCategory.objects.filter(name__icontains='Consumable').first()
-        pharma_category = InventoryCategory.objects.filter(name__icontains='Pharmaceutical').first()
-        
+
+        queryset = exclude_pharmaceutical_items(InventoryItem.objects.all())
         if consumable_category:
-            queryset = InventoryItem.objects.filter(category=consumable_category)
-        elif pharma_category:
-            queryset = InventoryItem.objects.exclude(category=pharma_category)
-        else:
-            queryset = InventoryItem.objects.all()
+            queryset = queryset.filter(category=consumable_category)
             
         self.fields['item'].queryset = queryset.order_by('name')
         self.fields['item'].empty_label = "Select an item"
@@ -239,29 +235,43 @@ class PatientForm(forms.ModelForm):
 from .models import Symptoms, Impression, Diagnosis, Referral, TBScreening
  
 class TBScreeningForm(forms.ModelForm):
-    """Form for compulsory TB screening"""
+    """Form for compulsory TB screening — each symptom uses explicit Yes/No."""
+
+    YES_NO = [(True, 'Yes'), (False, 'No')]
+
     class Meta:
         model = TBScreening
         fields = [
-            'has_cough', 'has_chest_pain', 'has_night_sweats', 
-            'has_unexplained_fever', 'has_weight_loss', 'failure_to_thrive'
+            'has_cough', 'has_chest_pain', 'has_night_sweats',
+            'has_unexplained_fever', 'has_weight_loss', 'failure_to_thrive',
         ]
-        widgets = {
-            'has_cough': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_chest_pain': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_night_sweats': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_unexplained_fever': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_weight_loss': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'failure_to_thrive': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
 
     def __init__(self, *args, **kwargs):
+        self.show_failure_to_thrive = kwargs.pop('show_failure_to_thrive', True)
         super().__init__(*args, **kwargs)
-        # Apply Tailwind styling to all checkbox fields
-        for field_name, field in self.fields.items():
-            field.widget.attrs.update({
-                'class': 'w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 transition-all cursor-pointer'
-            })
+        for field_name in self.Meta.fields:
+            if field_name == 'failure_to_thrive' and not self.show_failure_to_thrive:
+                del self.fields[field_name]
+                continue
+            label = self.fields[field_name].label
+            initial = None
+            if self.instance and self.instance.pk:
+                initial = getattr(self.instance, field_name)
+            self.fields[field_name] = forms.TypedChoiceField(
+                choices=self.YES_NO,
+                coerce=self._coerce_bool,
+                empty_value=None,
+                widget=forms.RadioSelect,
+                required=True,
+                label=label,
+                initial=initial,
+            )
+
+    @staticmethod
+    def _coerce_bool(value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() == 'true'
 
 
 class SymptomsForm(forms.ModelForm):

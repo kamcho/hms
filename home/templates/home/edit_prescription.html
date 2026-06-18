@@ -169,6 +169,30 @@
         background: #ffe4e6;
         transform: rotate(90deg);
     }
+
+    .consumable-edit-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    .consumable-edit-modal.is-open {
+        display: flex;
+    }
+
+    .consumable-edit-modal .consumable-edit-dialog {
+        width: 100%;
+        max-width: 28rem;
+        margin: auto;
+        flex-shrink: 0;
+    }
     </style>
 
     <div class="bg-[#f8fafc] min-h-screen">
@@ -363,14 +387,131 @@
                     </div>
                 </div>
                 <!-- Global Actions -->
-                <div class="flex items-center justify-end gap-4 mt-12 pb-20">
+                <div class="flex items-center justify-end gap-4 mt-12">
                     <button type="submit" class="btn-action btn-indigo save-submit-btn">
                         <i class="fas fa-save save-submit-icon"></i>
                         <span class="save-submit-label">Save Changes</span>
                     </button>
                 </div>
             </form>
+
+            {% if visit %}
+            <!-- Consumables Section -->
+            <div class="premium-card">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
+                        <i class="fas fa-box-open text-lg"></i>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900">Consumables</h2>
+                </div>
+
+                {% if pending_consumables %}
+                <div class="mb-8">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Pending — not yet dispensed</h3>
+                    <div class="space-y-3" id="pendingConsumablesList">
+                        {% for item in pending_consumables %}
+                        <div class="flex items-center justify-between gap-4 p-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-100 transition-colors" data-consumable-row="{{ item.id }}">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-black text-slate-800">{{ item.name }}</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Qty: {{ item.quantity }}</div>
+                            </div>
+                            {% if can_edit_consumables %}
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button type="button"
+                                    class="btn-action btn-ghost py-2 px-3 text-xs btn-edit-consumable"
+                                    data-item-id="{{ item.id }}"
+                                    data-item-name="{{ item.name|escape }}"
+                                    data-inventory-item-id="{{ item.inventory_item_id }}"
+                                    data-quantity="{{ item.quantity }}"
+                                    data-available-stock="{{ item.available_stock }}">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button"
+                                    class="btn-action py-2 px-3 text-xs bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 btn-delete-consumable"
+                                    data-item-id="{{ item.id }}"
+                                    data-item-name="{{ item.name|escape }}">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if dispensed_consumables %}
+                <div class="mb-8">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Already dispensed</h3>
+                    <div class="space-y-3">
+                        {% for item in dispensed_consumables %}
+                        <div class="flex items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl opacity-80">
+                            <div class="flex-1">
+                                <div class="text-sm font-bold text-slate-600">{{ item.name }}</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Qty: {{ item.quantity }}</div>
+                            </div>
+                            <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                <i class="fas fa-lock"></i> Dispensed
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not pending_consumables and not dispensed_consumables %}
+                <p class="text-sm text-slate-500 font-bold mb-6">
+                    <i class="fas fa-info-circle mr-2"></i> No consumables billed for this visit yet.
+                </p>
+                {% endif %}
+
+                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                    <p class="text-sm text-slate-500 font-bold mb-6">
+                        <i class="fas fa-plus-circle mr-2"></i> Add consumables required for this visit (e.g. syringes, gloves).
+                    </p>
+                    {% if user.role == 'Nurse' %}
+                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Mini Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
+                    {% else %}
+                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {% endif %}
+
+            <div class="pb-20"></div>
         </div>
+
+        {% if visit and can_edit_consumables %}
+        <div id="editConsumableModal" class="consumable-edit-modal" aria-hidden="true">
+            <div class="consumable-edit-dialog bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="px-6 py-4 bg-indigo-600 text-white flex justify-between items-center">
+                    <h3 class="font-black text-sm uppercase tracking-widest">Edit Consumable</h3>
+                    <button type="button" onclick="closeConsumableModal()" class="text-white/80 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <input type="hidden" id="editConsumableLineId" value="">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Item</label>
+                        <input type="text" id="consumableSearch" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm font-bold" placeholder="Search consumable (type 2+ letters)..." autocomplete="off">
+                        <input type="hidden" id="consumableItemId" value="">
+                        <div id="consumableSearchResults" class="mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Quantity</label>
+                        <input type="number" id="consumableQty" min="1" value="1" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm font-bold">
+                        <p id="consumableStockHint" class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-2 hidden"></p>
+                        <p id="consumableQtyError" class="text-rose-500 text-xs font-bold mt-1 hidden"></p>
+                    </div>
+                    <p id="consumableEditError" class="text-rose-500 text-xs font-bold hidden"></p>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 flex gap-3 justify-end border-t border-slate-100">
+                    <button type="button" onclick="closeConsumableModal()" class="btn-action btn-ghost py-2 px-4 text-xs">Cancel</button>
+                    <button type="button" id="consumableSaveBtn" class="btn-action btn-indigo py-2 px-4 text-xs">Save</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}
 {% block extra_js %}
@@ -825,5 +966,253 @@
             totalForms.value = parseInt(totalForms.value) - 1;
         }
     }
+
+    {% if can_edit_consumables %}
+    const CONSUMABLE_UPDATE_URL_TEMPLATE = "{% url 'home:api_pharmacy_update_consumable' item_id=0 %}";
+    const CONSUMABLE_DELETE_URL_TEMPLATE = "{% url 'home:api_pharmacy_delete_consumable' item_id=0 %}";
+    const CONSUMABLE_STOCK_DEPT_ID = "{{ consumable_stock_department_id }}";
+    const CONSUMABLE_STOCK_DEPT_NAME = "{{ consumable_stock_department_name|escapejs }}";
+    let consumableSearchTimer = null;
+    let consumableMaxStock = null;
+
+    function getConsumableDepartmentId() {
+        const deptInput = document.querySelector('input[name="dispense_department"]:checked');
+        if (deptInput && deptInput.value) return deptInput.value;
+        return CONSUMABLE_STOCK_DEPT_ID || '';
+    }
+
+    function updateConsumableStockUI() {
+        const qtyInput = document.getElementById('consumableQty');
+        const hint = document.getElementById('consumableStockHint');
+        const qtyError = document.getElementById('consumableQtyError');
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        if (!qtyInput || !hint) return;
+
+        const qty = parseInt(qtyInput.value, 10) || 0;
+        if (consumableMaxStock === null) {
+            hint.classList.add('hidden');
+            qtyInput.removeAttribute('max');
+            if (qtyError) qtyError.classList.add('hidden');
+            if (saveBtn) saveBtn.disabled = false;
+            return;
+        }
+
+        hint.textContent = `Available in ${CONSUMABLE_STOCK_DEPT_NAME}: ${consumableMaxStock}`;
+        hint.classList.remove('hidden');
+        qtyInput.max = consumableMaxStock;
+
+        if (qty > consumableMaxStock) {
+            if (qtyError) {
+                qtyError.textContent = `Cannot exceed available stock (${consumableMaxStock}).`;
+                qtyError.classList.remove('hidden');
+            }
+            qtyInput.classList.add('border-rose-500');
+            if (saveBtn) saveBtn.disabled = true;
+        } else {
+            if (qtyError) qtyError.classList.add('hidden');
+            qtyInput.classList.remove('border-rose-500');
+            if (saveBtn) saveBtn.disabled = qty < 1;
+        }
+    }
+
+    function setConsumableStock(stock) {
+        consumableMaxStock = stock === null || stock === undefined ? null : parseInt(stock, 10);
+        if (consumableMaxStock !== null && isNaN(consumableMaxStock)) consumableMaxStock = 0;
+        updateConsumableStockUI();
+    }
+
+    function consumableUpdateUrl(lineId) {
+        return CONSUMABLE_UPDATE_URL_TEMPLATE.replace('/0/', `/${lineId}/`);
+    }
+
+    function consumableDeleteUrl(lineId) {
+        return CONSUMABLE_DELETE_URL_TEMPLATE.replace('/0/', `/${lineId}/`);
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+
+    function closeConsumableModal() {
+        const modal = document.getElementById('editConsumableModal');
+        if (modal) {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body.style.overflow = '';
+    }
+
+    function showConsumableEditError(msg) {
+        const el = document.getElementById('consumableEditError');
+        if (!el) return;
+        if (msg) {
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        } else {
+            el.textContent = '';
+            el.classList.add('hidden');
+        }
+    }
+
+    function openConsumableModal(btn) {
+        document.getElementById('editConsumableLineId').value = btn.dataset.itemId;
+        document.getElementById('consumableSearch').value = btn.dataset.itemName || '';
+        document.getElementById('consumableItemId').value = btn.dataset.inventoryItemId || '';
+        document.getElementById('consumableQty').value = btn.dataset.quantity || '1';
+        setConsumableStock(btn.dataset.availableStock);
+        document.getElementById('consumableSearchResults').classList.add('hidden');
+        document.getElementById('consumableSearchResults').innerHTML = '';
+        showConsumableEditError('');
+        const modal = document.getElementById('editConsumableModal');
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('consumableSearch').focus();
+        updateConsumableStockUI();
+    }
+
+    function initConsumableSearch() {
+        const searchInput = document.getElementById('consumableSearch');
+        const resultsBox = document.getElementById('consumableSearchResults');
+        const hiddenId = document.getElementById('consumableItemId');
+        if (!searchInput || !resultsBox) return;
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(consumableSearchTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) {
+                resultsBox.classList.add('hidden');
+                resultsBox.innerHTML = '';
+                return;
+            }
+            consumableSearchTimer = setTimeout(() => {
+                const departmentId = getConsumableDepartmentId();
+                const url = `{% url 'inventory:search_inventory' %}?q=${encodeURIComponent(q)}&exclude_pharmaceuticals=true` + (departmentId ? `&department_id=${departmentId}` : '');
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                        resultsBox.innerHTML = '';
+                        if (!data.results || data.results.length === 0) {
+                            resultsBox.innerHTML = '<div class="p-3 text-xs text-slate-400 italic">No consumables found</div>';
+                        } else {
+                            data.results.forEach(item => {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                const stock = item.stock != null ? item.stock : 0;
+                                const stockLabel = stock > 0 ? `Stock: ${stock}` : 'Out of stock';
+                                btn.className = 'w-full text-left px-4 py-3 text-sm font-bold border-b border-slate-50 last:border-0 ' + (stock > 0 ? 'text-slate-700 hover:bg-indigo-50' : 'text-slate-400 cursor-not-allowed opacity-60');
+                                btn.innerHTML = `${item.text} <span class="text-[10px] font-bold uppercase text-slate-400">(${stockLabel})</span>`;
+                                if (stock > 0) {
+                                    btn.onclick = () => {
+                                        hiddenId.value = item.id;
+                                        searchInput.value = item.text;
+                                        resultsBox.classList.add('hidden');
+                                        setConsumableStock(stock);
+                                    };
+                                }
+                                resultsBox.appendChild(btn);
+                            });
+                        }
+                        resultsBox.classList.remove('hidden');
+                    });
+            }, 300);
+        });
+
+        const qtyInput = document.getElementById('consumableQty');
+        if (qtyInput) {
+            qtyInput.addEventListener('input', updateConsumableStockUI);
+        }
+    }
+
+    async function saveConsumableEdit() {
+        const lineId = document.getElementById('editConsumableLineId').value;
+        const invId = document.getElementById('consumableItemId').value;
+        const qty = parseInt(document.getElementById('consumableQty').value, 10);
+        if (!invId) {
+            showConsumableEditError('Select a consumable from the search results.');
+            return;
+        }
+        if (!qty || qty < 1) {
+            showConsumableEditError('Quantity must be at least 1.');
+            return;
+        }
+        if (consumableMaxStock !== null && qty > consumableMaxStock) {
+            showConsumableEditError(`Cannot exceed available stock (${consumableMaxStock}).`);
+            return;
+        }
+        const saveBtn = document.getElementById('consumableSaveBtn');
+        saveBtn.disabled = true;
+        showConsumableEditError('');
+        try {
+            const res = await fetch(consumableUpdateUrl(lineId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    inventory_item_id: parseInt(invId, 10),
+                    quantity: qty,
+                    department_id: getConsumableDepartmentId() || null,
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                showConsumableEditError(data.error || 'Could not update consumable.');
+                saveBtn.disabled = false;
+            }
+        } catch (e) {
+            showConsumableEditError('Network error. Please try again.');
+            saveBtn.disabled = false;
+        }
+    }
+
+    async function deleteConsumable(btn) {
+        const lineId = btn.dataset.itemId;
+        const itemName = btn.dataset.itemName || 'this consumable';
+        if (!confirm(`Remove ${itemName} from this visit?`)) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(consumableDeleteUrl(lineId), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || 'Could not remove consumable.');
+                btn.disabled = false;
+            }
+        } catch (e) {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+        }
+    }
+
+    document.querySelectorAll('.btn-edit-consumable').forEach(btn => {
+        btn.addEventListener('click', () => openConsumableModal(btn));
+    });
+    document.querySelectorAll('.btn-delete-consumable').forEach(btn => {
+        btn.addEventListener('click', () => deleteConsumable(btn));
+    });
+    const consumableSaveBtn = document.getElementById('consumableSaveBtn');
+    if (consumableSaveBtn) consumableSaveBtn.addEventListener('click', saveConsumableEdit);
+    initConsumableSearch();
+
+    const consumableModal = document.getElementById('editConsumableModal');
+    if (consumableModal) {
+        consumableModal.addEventListener('click', (e) => {
+            if (e.target === consumableModal) closeConsumableModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && consumableModal.classList.contains('is-open')) {
+                closeConsumableModal();
+            }
+        });
+    }
+    {% endif %}
     </script>
 {% endblock %}
