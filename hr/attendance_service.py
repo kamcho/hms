@@ -78,12 +78,14 @@ def remap_unmapped_attendance_logs(*, device=None):
     if device is not None:
         qs = qs.filter(device=device)
     updated = 0
+    affected_dates = set()
     for log in qs.iterator():
         user = user_for_device_id(log.device_user_id)
         if user:
             AttendanceLog.objects.filter(pk=log.pk, user__isnull=True).update(user=user)
             updated += 1
-    return updated
+            affected_dates.add(timezone.localtime(log.punch_time).date())
+    return updated, affected_dates
 
 
 def _is_on_leave(user, day):
@@ -256,6 +258,22 @@ def process_attendance_for_date(day, *, force=False):
     records = []
     for user in _staff_queryset():
         records.append(compute_attendance_day(user, day, force=force))
+    return records
+
+
+def punch_dates_from_logs(logs):
+    """Return local calendar dates covered by attendance punch logs."""
+    return {
+        timezone.localtime(log.punch_time).date()
+        for log in logs.only('punch_time')
+    }
+
+
+def process_attendance_for_dates(dates, *, force=False):
+    """Rebuild daily attendance for each date in the set."""
+    records = []
+    for day in sorted(set(dates)):
+        records.extend(process_attendance_for_date(day, force=force))
     return records
 
 

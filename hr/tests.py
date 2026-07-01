@@ -1,12 +1,58 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
+from hr.attendance_service import process_attendance_for_date, process_attendance_for_dates
 from hr.leave_utils import get_leave_entitlement, leave_balance_snapshot, validate_leave_balance
-from hr.models import LeaveRequest, LeaveType, StaffLeaveEntitlement
+from hr.models import AttendanceDay, AttendanceDevice, AttendanceLog, LeaveRequest, LeaveType, StaffLeaveEntitlement
 
 User = get_user_model()
+
+
+class AttendanceReprocessTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            id_number='STF010',
+            password='test-pass',
+            first_name='Bob',
+            last_name='Clocker',
+            role='Nurse',
+        )
+        self.device = AttendanceDevice.objects.create(
+            name='Test K40',
+            ip_address='127.0.0.1',
+            port=4370,
+        )
+        self.yesterday = timezone.localdate() - timedelta(days=1)
+
+    def test_late_punch_import_marks_previous_day_present(self):
+        """Simulate K40 sync: roll built before punches exist, then reprocessed after import."""
+        process_attendance_for_date(self.yesterday, force=True)
+        self.assertEqual(
+            AttendanceDay.objects.get(user=self.user, date=self.yesterday).status,
+            'Absent',
+        )
+
+        punch_time = timezone.make_aware(
+            datetime.combine(self.yesterday, datetime.strptime('08:05', '%H:%M').time()),
+        )
+        AttendanceLog.objects.create(
+            device=self.device,
+            device_user_id=str(self.user.pk),
+            user=self.user,
+            punch_time=punch_time,
+            punch_type='In',
+            source='device',
+        )
+
+        process_attendance_for_dates({self.yesterday}, force=True)
+
+        self.assertEqual(
+            AttendanceDay.objects.get(user=self.user, date=self.yesterday).status,
+            'Present',
+        )
 
 
 class LeaveBalanceTests(TestCase):

@@ -63,6 +63,8 @@ from .attendance_service import (
     build_user_attendance_calendar,
     compute_attendance_day,
     process_attendance_for_date,
+    process_attendance_for_dates,
+    punch_dates_from_logs,
     remap_unmapped_attendance_logs,
 )
 from .forms import (
@@ -1097,9 +1099,13 @@ def attendance_device_sync(request, pk):
     if request.method != 'POST':
         return redirect('hr:attendance_devices')
     device = get_object_or_404(AttendanceDevice, pk=pk)
-    ok, msg, count = sync_device(device)
+    ok, msg, count, affected_dates = sync_device(device)
     if ok:
-        process_attendance_for_date(timezone.localdate(), force=True)
+        dates_to_process = set(affected_dates)
+        dates_to_process.add(timezone.localdate())
+        process_attendance_for_dates(dates_to_process, force=True)
+        if len(dates_to_process) > 1:
+            msg += f' Recalculated {len(dates_to_process)} day(s).'
         messages.success(request, msg)
     else:
         messages.error(request, msg)
@@ -1114,11 +1120,16 @@ def attendance_sync_all(request):
     if not results:
         messages.warning(request, 'No active devices configured.')
     else:
-        for device, ok, msg, _count in results:
+        all_dates = {timezone.localdate()}
+        for device, ok, msg, _count, device_dates in results:
+            if ok:
+                all_dates.update(device_dates)
             if ok:
                 messages.success(request, f'{device.name}: {msg}')
             else:
                 messages.error(request, f'{device.name}: {msg}')
+        if len(all_dates) > 1:
+            messages.info(request, f'Recalculated attendance for {len(all_dates)} day(s).')
     return redirect('hr:attendance_dashboard')
 
 
@@ -1152,12 +1163,18 @@ def attendance_profile_edit(request, user_id):
         if form.is_valid():
             form.save()
             if profile.device_user_id:
-                AttendanceLog.objects.filter(
+                unmapped_logs = AttendanceLog.objects.filter(
                     device_user_id=profile.device_user_id,
                     user__isnull=True,
-                ).update(user=staff_user)
+                )
+                affected_dates = punch_dates_from_logs(unmapped_logs)
+                unmapped_logs.update(user=staff_user)
+                if affected_dates:
+                    process_attendance_for_dates(affected_dates, force=True)
             else:
-                remap_unmapped_attendance_logs()
+                _remapped, remap_dates = remap_unmapped_attendance_logs()
+                if remap_dates:
+                    process_attendance_for_dates(remap_dates, force=True)
             messages.success(request, f'Device profile saved for {staff_user.get_full_name()}.')
             return redirect('hr:attendance_profiles')
     else:
