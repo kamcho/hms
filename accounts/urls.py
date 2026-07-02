@@ -31,6 +31,7 @@ urlpatterns = [
     path('insurance-manager/', views.insurance_manager, name='insurance_manager'),
     path('api/insurance/invoice-items/<int:invoice_id>/', views.get_invoice_items, name='get_invoice_items'),
     path('api/insurance/process-claim/', views.process_insurance_claim, name='process_insurance_claim'),
+    path('api/discharge-code/<int:visit_id>/', views.get_discharge_code, name='get_discharge_code'),
     
     # Procedure APIs
     path('api/procedures/search/', views.search_procedures, name='search_procedures'),

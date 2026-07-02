@@ -18,6 +18,7 @@ from .forms import (
     SupplierInvoiceForm, SupplierPaymentForm, ServiceForm, SupplierForm
 )
 from home.models import Patient, Departments, Visit
+from home.discharge_codes import get_or_create_discharge_code_payload
 from morgue.models import Deceased, MorgueAdmission
 from inpatient.models import Admission, Ward, MedicationChart, ServiceAdmissionLink
 from inventory.models import StockRecord, Supplier
@@ -314,8 +315,15 @@ def insurance_manager(request):
             q_objects &= term_q
         return queryset.filter(q_objects)
 
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+
     if search_query or search_sha:
-        active_cash_visits = Visit.objects.filter(is_active=True, payment_method='CASH').order_by('-visit_date')
+        active_cash_visits = Visit.objects.filter(
+            is_active=True,
+            payment_method='CASH',
+            visit_type='IN-PATIENT',
+            visit_date__gte=thirty_days_ago
+        ).order_by('-visit_date')
         if search_query:
             active_cash_visits = apply_visit_search(active_cash_visits, search_query)
         if search_sha:
@@ -325,8 +333,18 @@ def insurance_manager(request):
         active_cash_visits = Visit.objects.filter(
             is_active=True, 
             payment_method='CASH', 
+            visit_type='IN-PATIENT',
             visit_date__gte=today_start
         ).order_by('-visit_date')
+
+    discharge_visit_ids = set(active_cash_visits.values_list('id', flat=True))
+    discharge_visit_ids.update(ipd_invoices.values_list('visit_id', flat=True))
+    discharge_visit_ids = [visit_id for visit_id in discharge_visit_ids if visit_id]
+
+    discharge_codes = {
+        visit_id: get_or_create_discharge_code_payload(visit_id)
+        for visit_id in discharge_visit_ids
+    }
 
     balance_expr = F('total_amount') - F('insurance_adjustment') - F('paid_amount')
 
@@ -344,6 +362,7 @@ def insurance_manager(request):
         'search_mat': search_mat,
         'search_sha': search_sha,
         'active_cash_visits': active_cash_visits,
+        'discharge_codes': discharge_codes,
         'title': 'Insurance & Credit Manager',
         'stats': {
             'opd_count': opd_invoices.count(),
@@ -359,6 +378,18 @@ def insurance_manager(request):
     }
 
     return render(request, 'accounts/insurance_manager.html', context)
+
+
+@login_required
+@user_passes_test(is_billing_staff)
+def get_discharge_code(request, visit_id):
+    visit = get_object_or_404(Visit, pk=visit_id)
+    payload = get_or_create_discharge_code_payload(visit.id)
+    return JsonResponse({
+        'success': True,
+        'visit_id': visit.id,
+        **payload,
+    })
 
 @login_required
 @user_passes_test(is_billing_staff)

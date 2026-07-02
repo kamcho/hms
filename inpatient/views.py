@@ -33,6 +33,7 @@ from .utils import (
     admin_close_admission_and_visit,
     admin_close_orphan_visit,
 )
+from home.discharge_codes import validate_discharge_code
 @login_required
 def dashboard(request):
     # Analytics
@@ -1028,12 +1029,21 @@ def discharge_patient(request, admission_id):
 
     # Check if a discharge already exists for this admission
     discharge_instance = InpatientDischarge.objects.filter(admission=admission).first()
+    code_valid = True
 
     if request.method == 'POST':
+        submitted_discharge_code = request.POST.get('discharge_code', '').strip()
+        if not validate_discharge_code(admission.visit_id, submitted_discharge_code):
+            code_valid = False
+            messages.error(
+                request,
+                "Invalid or expired discharge code. Please use the latest 5-digit code from Insurance Manager (expires every 30 seconds)."
+            )
+
         form = InpatientDischargeForm(request.POST, instance=discharge_instance)
         formset = PrescriptionItemFormSet(request.POST, prefix='meds')
         
-        if form.is_valid() and formset.is_valid():
+        if code_valid and form.is_valid() and formset.is_valid():
             discharge = form.save(commit=False)
             discharge.admission = admission
             discharge.total_bill_snapshot = total_bill
