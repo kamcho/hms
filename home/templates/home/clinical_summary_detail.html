@@ -1,0 +1,105 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}Clinical Summary #{{ summary.pk }} — {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<style>
+.cs-page { max-width: 920px; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; }
+.cs-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1rem; }
+.cs-h { font-size:1.25rem; font-weight:800; color:#0f172a; margin:0 0 0.35rem 0; }
+.cs-meta { font-size:0.8rem; color:#64748b; }
+.cs-badge { display:inline-block; font-size:0.65rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:6px; background:#eef2ff; color:#3730a3; margin-right:0.35rem; }
+.cs-badge.ok { background:#ecfdf5; color:#065f46; }
+.cs-badge.warn { background:#fff7ed; color:#9a3412; }
+.cs-actions { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1rem; }
+.cs-pre { white-space:pre-wrap; font-family:ui-monospace,Consolas,monospace; font-size:0.8rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; max-height:420px; overflow:auto; }
+.cs-dir { font-size:0.8rem; color:#475569; line-height:1.45; border-left:3px solid #2563eb; padding:0.65rem 0.85rem; background:#f8fafc; border-radius:0 8px 8px 0; margin-bottom:1rem; }
+</style>
+
+<div class="cs-page">
+    <div class="cs-card">
+        <h1 class="cs-h"><i class="fas fa-file-medical"></i> Clinical Summary #{{ summary.pk }}</h1>
+        <p class="cs-meta">
+            {{ patient.full_name }} · Visit #{{ visit.pk }} ({{ visit.visit_type }}) ·
+            Generated {{ summary.generated_at|date:"M d, Y H:i" }}
+            {% if summary.generated_by %} by {{ summary.generated_by.get_full_name|default:summary.generated_by.username }}{% endif %}
+        </p>
+        <div style="margin-top:0.75rem;">
+            <span class="cs-badge">Status: {{ summary.get_status_display }}</span>
+            <span class="cs-badge {% if summary.hie_sync_status == 'synced' %}ok{% elif summary.hie_sync_status == 'error' %}warn{% endif %}">
+                HIE: {{ summary.get_hie_sync_status_display }}
+            </span>
+            {% if summary.includes_biodata %}<span class="cs-badge ok">Biodata</span>{% endif %}
+            {% if summary.includes_clinical %}<span class="cs-badge ok">Clinical</span>{% endif %}
+            {% if summary.includes_medications %}<span class="cs-badge ok">Medications</span>{% else %}<span class="cs-badge">Meds: empty</span>{% endif %}
+            {% if summary.includes_prescriptions %}<span class="cs-badge ok">Prescriptions</span>{% else %}<span class="cs-badge">Rx: empty</span>{% endif %}
+            {% if summary.includes_care_plan %}<span class="cs-badge ok">Care Plan</span>{% else %}<span class="cs-badge warn">Care Plan missing</span>{% endif %}
+        </div>
+        <div class="cs-actions">
+            <a class="modern-btn btn-primary" href="{% url 'home:clinical_summary_print' summary.pk %}" target="_blank">
+                <i class="fas fa-print"></i> Human-readable print
+            </a>
+            <a class="modern-btn btn-secondary" href="{% url 'home:clinical_summary_fhir' summary.pk %}" target="_blank">
+                <i class="fas fa-code"></i> FHIR JSON
+            </a>
+            {% if user.role == 'Doctor' or user.role == 'Admin' %}
+            <button type="button" class="modern-btn btn-secondary" id="btnSyncHie">
+                <i class="fas fa-cloud-upload-alt"></i> Sync to Kenya HIE
+            </button>
+            {% endif %}
+            <a class="modern-btn btn-secondary" href="{% url 'home:patient_detail' patient.pk %}?visit_id={{ visit.pk }}">
+                Back to patient
+            </a>
+        </div>
+        {% if summary.last_error %}
+        <p style="margin-top:0.85rem; color:#b91c1c; font-size:0.8rem;">{{ summary.last_error }}</p>
+        {% endif %}
+    </div>
+
+    <div class="cs-dir">
+        <strong>Checklist coverage:</strong>
+        Human-readable print · Kenya HIE exchangeable FHIR Composition document ·
+        Biodata · Clinical information · Medications · Prescriptions · Care plan.
+        Add / update source data on the patient profile (Problem List, Allergies, Active Medications)
+        and visit Rx before regenerating.
+    </div>
+
+    <div class="cs-card">
+        <h2 style="font-size:1rem; font-weight:800; margin:0 0 0.75rem 0;">Care plan</h2>
+        <p style="white-space:pre-wrap; font-size:0.9rem; margin:0;">{{ summary.care_plan|default:"Not documented — regenerate with a care plan." }}</p>
+    </div>
+
+    <div class="cs-card">
+        <h2 style="font-size:1rem; font-weight:800; margin:0 0 0.75rem 0;">Human-readable narrative</h2>
+        <pre class="cs-pre">{{ summary.narrative_text }}</pre>
+    </div>
+</div>
+
+<script>
+(function() {
+    const btn = document.getElementById('btnSyncHie');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Syncing…';
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        try {
+            const resp = await fetch("{% url 'home:sync_clinical_summary' summary.pk %}", {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            });
+            const data = await resp.json();
+            alert(data.success
+                ? ('HIE sync: ' + data.hie_sync_status + (data.document_id ? (' · doc ' + data.document_id) : ''))
+                : ('Sync failed: ' + (data.last_error || data.error || 'unknown')));
+            location.reload();
+        } catch (e) {
+            alert('Network error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sync to Kenya HIE';
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 :root {
     --bg-main: #f1f5f9;
@@ -22,7 +22,7 @@
     --warning: #d97706;
     --danger: #dc2626;
 
-    --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-main: 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --shadow-premium: 0 4px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
     --border-radius: 12px;
@@ -743,7 +743,7 @@ body::after {
 
 .tab-link-muted { font-weight: 600; font-size: 0.8rem; }
 
-/* Salary edit page — compact profile on top, invoice full width */
+/* Salary edit page â€” compact profile on top, invoice full width */
 .salary-page-layout {
     display: flex;
     flex-direction: column;

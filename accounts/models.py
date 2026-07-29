@@ -394,3 +394,89 @@ class InventoryPurchase(models.Model):
         verbose_name = "Goods Received Note"
         verbose_name_plural = "Goods Received Notes"
         ordering = ['-date', '-created_at']
+
+
+class ShaClaimSession(models.Model):
+    """
+    Local tracking of a DHA / SHA virtual claim for a visit.
+
+    Flow: eligibility → OTP → start visit (consent_token) → eRx/preauth → submit.
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('eligible', 'Eligible'),
+        ('otp_sent', 'OTP Sent'),
+        ('started', 'Visit Started'),
+        ('preauth_pending', 'Preauth Pending'),
+        ('preauth_approved', 'Preauth Approved'),
+        ('erx_submitted', 'eRx Submitted'),
+        ('dispensed', 'Dispensed'),
+        ('submitted', 'Claim Submitted'),
+        ('closed', 'Closed'),
+        ('rejected', 'Rejected'),
+        ('error', 'Error'),
+    ]
+    SERVICE_TYPE_CHOICES = [
+        ('OUTPATIENT', 'Outpatient'),
+        ('INPATIENT', 'Inpatient'),
+        ('EMERGENCY', 'Emergency'),
+        ('CAPITATION', 'Capitation'),
+    ]
+
+    visit = models.OneToOneField(
+        'home.Visit',
+        on_delete=models.CASCADE,
+        related_name='sha_claim_session',
+    )
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sha_claim_sessions',
+    )
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='draft', db_index=True)
+    service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES, default='OUTPATIENT')
+    intervention_codes = models.JSONField(default=list, blank=True)
+
+    # Patient / coverage snapshot
+    patient_cr_id = models.CharField(max_length=64, blank=True)
+    patient_id_number = models.CharField(max_length=32, blank=True)
+    eligibility_raw = models.JSONField(default=dict, blank=True)
+    eligible = models.BooleanField(default=False)
+
+    # Virtual claim identifiers from DHA
+    consent_token = models.CharField(max_length=128, blank=True, db_index=True)
+    authorization_guid = models.CharField(max_length=128, blank=True)
+    claim_id = models.CharField(max_length=64, blank=True, db_index=True)
+    edi_claim_guid = models.CharField(max_length=128, blank=True)
+    workflow_state = models.CharField(max_length=64, blank=True)
+
+    # Practitioner used for start / eRx
+    practitioner_identification_type = models.CharField(max_length=40, blank=True, default='registration_number')
+    practitioner_identification_number = models.CharField(max_length=64, blank=True)
+    practitioner_regulation_body = models.CharField(max_length=16, blank=True, default='KMPDC')
+
+    erx_raw = models.JSONField(default=dict, blank=True)
+    preauth_raw = models.JSONField(default=dict, blank=True)
+    submit_raw = models.JSONField(default=dict, blank=True)
+    last_error = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sha_claims_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'SHA Claim Session'
+        verbose_name_plural = 'SHA Claim Sessions'
+
+    def __str__(self):
+        return f"SHA claim visit={self.visit_id} status={self.status} token={self.consent_token or '—'}"
+

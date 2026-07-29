@@ -1,6 +1,8 @@
 from django.contrib import admin
 
 from .models import (
+    Moh645DailyEntry,
+    Moh645DailyReport,
     Moh705bColumnDefinition,
     Moh705bLineDefinition,
     Moh705bMonthlyReport,
@@ -8,6 +10,9 @@ from .models import (
     Moh717LineDefinition,
     Moh717MonthlyReport,
     Moh717ReportLine,
+    Moh743CommodityDefinition,
+    Moh743CommodityLine,
+    Moh743MonthlyReport,
     NvipLineDefinition,
     NvipMonthlyReport,
     NvipReportLine,
@@ -73,3 +78,33 @@ class Moh717MonthlyReportAdmin(admin.ModelAdmin):
     list_display = ('facility_name', 'month', 'year', 'county', 'status', 'updated_at')
     list_filter = ('year', 'month', 'status')
     inlines = [Moh717ReportLineInline]
+
+
+class Moh645DailyEntryInline(admin.TabularInline):
+    model = Moh645DailyEntry
+    extra = 0
+
+
+@admin.register(Moh645DailyReport)
+class Moh645DailyReportAdmin(admin.ModelAdmin):
+    list_display = ('facility_name', 'report_date', 'page_number', 'status', 'updated_at')
+    list_filter = ('report_date', 'status')
+    inlines = [Moh645DailyEntryInline]
+
+
+@admin.register(Moh743CommodityDefinition)
+class Moh743CommodityDefinitionAdmin(admin.ModelAdmin):
+    list_display = ('sort_order', 'commodity_name', 'basic_unit', 'row_key', 'is_active')
+    list_filter = ('is_active',)
+
+
+class Moh743CommodityLineInline(admin.TabularInline):
+    model = Moh743CommodityLine
+    extra = 0
+
+
+@admin.register(Moh743MonthlyReport)
+class Moh743MonthlyReportAdmin(admin.ModelAdmin):
+    list_display = ('facility_name', 'month', 'year', 'county', 'status', 'updated_at')
+    list_filter = ('year', 'month', 'status')
+    inlines = [Moh743CommodityLineInline]

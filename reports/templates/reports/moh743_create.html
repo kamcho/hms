@@ -1,0 +1,19 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto p-6">
+    <a href="{% url 'reports:moh743_list' %}" class="text-xs font-bold text-teal-600 uppercase"><i class="fas fa-arrow-left"></i> MOH 743 list</a>
+    <h1 class="text-2xl font-black text-slate-800 mt-2 mb-6">{{ title }}</h1>
+    <form method="post" class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="w-full py-3 bg-teal-600 text-white rounded-xl font-black uppercase text-xs tracking-widest">Create monthly report</button>
+    </form>
+</div>
+{% endblock %}

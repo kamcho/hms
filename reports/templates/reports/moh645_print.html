@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOH 645 — {{ report.report_date }}</title>
+    <style>
+        @page { size: landscape; margin: 10mm; }
+        body { font-family: Arial, sans-serif; font-size: 9px; margin: 0; padding: 12px; }
+        h1 { font-size: 12px; text-align: center; margin: 0 0 4px; text-transform: uppercase; }
+        .sub { text-align: center; font-size: 10px; margin-bottom: 10px; }
+        .meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 9px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 3px 4px; text-align: center; }
+        th { background: #eee; font-size: 8px; }
+        .left { text-align: left; }
+        .summary { margin-top: 10px; font-size: 9px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <button class="no-print" onclick="window.print()" style="margin-bottom:8px;">Print</button>
+    <h1>Republic of Kenya — Ministry of Health</h1>
+    <div class="sub"><strong>MOH 645</strong> — Health Facility Daily Activity Register for Malaria Commodities</div>
+    <div class="meta">
+        <span>Facility: <strong>{{ report.facility_name }}</strong></span>
+        <span>Date: <strong>{{ report.report_date }}</strong></span>
+        <span>Page: <strong>{{ report.page_number }}</strong></span>
+        <span>Receipt: <strong>{{ report.receipt_reference|default:"—" }}</strong></span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th class="left">Patient</th><th>IP/OP</th><th>Test</th><th>Result</th><th>AL band</th>
+                <th>RDTs</th><th>AL 6</th><th>AL 12</th><th>AL 18</th><th>AL 24</th><th>Artesunate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr>
+                <td class="left">{{ e.patient_name }}</td>
+                <td>{{ e.visit_type }}</td>
+                <td>{{ e.get_test_method_display }}</td>
+                <td>{{ e.get_test_result_display|default:"—" }}</td>
+                <td>{{ e.get_al_weight_band_display|default:"—" }}</td>
+                <td>{{ e.qty_rdts }}</td>
+                <td>{{ e.qty_al_6 }}</td>
+                <td>{{ e.qty_al_12 }}</td>
+                <td>{{ e.qty_al_18 }}</td>
+                <td>{{ e.qty_al_24 }}</td>
+                <td>{{ e.qty_artesunate }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="11">No entries</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="summary">
+        <div>A (balance prev): {{ report.balance_previous }} · B (received): {{ report.qty_received }} · C (stock): {{ report.total_stock_available }}</div>
+        <div>E (total dispensed): {{ report.total_dispensed }} · D (losses): {{ report.losses }} · Balance end: {{ report.balance_end }}</div>
+        {% if report.remarks %}<div>Remarks: {{ report.remarks }}</div>{% endif %}
+    </div>
+</body>
+</html>

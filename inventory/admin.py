@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Supplier, InventoryCategory, InventoryItem, StockRecord, StockAdjustment,
+    Supplier, InventoryCategory, InventoryItem, Medication, StockRecord, StockAdjustment,
     InventoryRequest, ExternalInstitution, StockLoan, StockLoanLine,
 )
 
@@ -13,11 +13,58 @@ class SupplierAdmin(admin.ModelAdmin):
 class InventoryCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
 
+
+class MedicationInline(admin.StackedInline):
+    model = Medication
+    extra = 0
+    fieldsets = (
+        (None, {
+            'fields': ('generic_name', 'drug_class', 'formulation', 'strength_amount', 'strength_unit'),
+        }),
+        ('DHA HPT (MOH-PPB)', {
+            'fields': (
+                'generic_concept_code',
+                'generic_concept_display',
+                'active_component_code',
+                'atc_code',
+                'actual_product_code',
+                'dha_form_id',
+                'dha_route_id',
+                'dha_mapped_at',
+            ),
+        }),
+    )
+    readonly_fields = ('dha_mapped_at',)
+
+
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'dispensing_unit', 'selling_price', 'is_dispensed_as_whole')
     list_filter = ('category',)
-    search_fields = ('name',)
+    search_fields = ('name', 'medication__generic_concept_code', 'medication__generic_name')
+    inlines = [MedicationInline]
+
+
+@admin.register(Medication)
+class MedicationAdmin(admin.ModelAdmin):
+    list_display = (
+        'generic_name',
+        'generic_concept_code',
+        'strength_amount',
+        'strength_unit',
+        'formulation',
+        'atc_code',
+        'item',
+    )
+    list_filter = ('formulation', 'strength_unit')
+    search_fields = (
+        'generic_name',
+        'generic_concept_code',
+        'generic_concept_display',
+        'atc_code',
+        'item__name',
+    )
+    readonly_fields = ('dha_mapped_at',)
 
 @admin.register(StockRecord)
 class StockRecordAdmin(admin.ModelAdmin):

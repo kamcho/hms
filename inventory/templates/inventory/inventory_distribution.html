@@ -299,9 +299,9 @@
                 <!-- Medication Details (Conditional) -->
                 {% if med_form %}
                 <div class="form-section">
-                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: #6366f1; text-transform: uppercase;">Clinical Data</h3>
+                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: #6366f1; text-transform: uppercase;">Clinical / DHA HPT</h3>
                     <div class="form-group">
-                        <label>Generic Name</label>
+                        <label>Generic Name (INN)</label>
                         {{ med_form.generic_name }}
                     </div>
                     <div class="form-group">
@@ -309,9 +309,44 @@
                         {{ med_form.drug_class }}
                     </div>
                     <div class="form-group">
+                        <label>Strength amount</label>
+                        {{ med_form.strength_amount }}
+                    </div>
+                    <div class="form-group">
+                        <label>Strength unit</label>
+                        {{ med_form.strength_unit }}
+                    </div>
+                    <div class="form-group">
                         <label>Formulation</label>
                         {{ med_form.formulation }}
                     </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Search DHA generic product (GE*)</label>
+                        <input type="text" id="dha-hpt-search-edit" placeholder="e.g. Paracetamol 500 mg" autocomplete="off" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div id="dha-hpt-results-edit" style="display:none;max-height:180px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;margin-top:0.35rem;background:#fff;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>DHA GE* code</label>
+                        {{ med_form.generic_concept_code }}
+                    </div>
+                    <div class="form-group">
+                        <label>DHA display name</label>
+                        {{ med_form.generic_concept_display }}
+                    </div>
+                    <div class="form-group">
+                        <label>AC* component</label>
+                        {{ med_form.active_component_code }}
+                    </div>
+                    <div class="form-group">
+                        <label>ATC code</label>
+                        {{ med_form.atc_code }}
+                    </div>
+                    <div class="form-group">
+                        <label>PH* pack (optional)</label>
+                        {{ med_form.actual_product_code }}
+                    </div>
+                    {{ med_form.dha_form_id }}
+                    {{ med_form.dha_route_id }}
                 </div>
                 {% endif %}
 
@@ -495,6 +530,73 @@
         const modal = document.getElementById('reconcileModal');
         if (event.target == modal) closeReconcileModal();
     }
+
+    // DHA HPT search on edit
+    (function () {
+        const input = document.getElementById('dha-hpt-search-edit');
+        const box = document.getElementById('dha-hpt-results-edit');
+        if (!input || !box) return;
+        const url = "{% url 'home:hpt_search_api' %}";
+        let timer = null;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+                const q = input.value.trim();
+                if (q.length < 2) { box.style.display = 'none'; return; }
+                try {
+                    const resp = await fetch(`${url}?q=${encodeURIComponent(q)}&prefer=ge&limit=20`, {
+                        headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+                    });
+                    const data = await resp.json();
+                    const results = data.results || [];
+                    box.innerHTML = '';
+                    if (!results.length) {
+                        box.innerHTML = '<div style="padding:0.5rem;font-size:12px;color:#64748b;">No GE* match</div>';
+                        box.style.display = 'block';
+                        return;
+                    }
+                    results.forEach((item) => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.style.cssText = 'display:block;width:100%;text-align:left;padding:0.5rem 0.65rem;border:0;border-bottom:1px solid #f1f5f9;background:#fff;cursor:pointer;';
+                        btn.innerHTML = `<div style="font-size:11px;font-weight:700;color:#4338ca;">${item.code || ''}</div><div style="font-size:13px;">${item.title || ''}</div>`;
+                        btn.addEventListener('click', () => {
+                            const codeEl = document.querySelector('[name="generic_concept_code"]');
+                            const dispEl = document.querySelector('[name="generic_concept_display"]');
+                            const nameEl = document.querySelector('[name="generic_name"]');
+                            const amtEl = document.querySelector('[name="strength_amount"]');
+                            const unitEl = document.querySelector('[name="strength_unit"]');
+                            const formEl = document.querySelector('[name="formulation"]');
+                            const itemName = document.querySelector('[name="name"]');
+                            if (codeEl) codeEl.value = item.code || '';
+                            if (dispEl) dispEl.value = item.title || '';
+                            const m = (item.title || '').match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(mg|g|ml|mcg|iu)\b/i);
+                            if (m) {
+                                if (nameEl) nameEl.value = m[1].trim();
+                                if (amtEl) amtEl.value = m[2];
+                                if (unitEl) unitEl.value = m[3].toLowerCase() === 'iu' ? 'IU' : m[3].toLowerCase();
+                            }
+                            if (formEl) {
+                                const t = item.title || '';
+                                if (/tablet/i.test(t)) formEl.value = 'Tablet';
+                                else if (/capsule/i.test(t)) formEl.value = 'Capsule';
+                                else if (/syrup/i.test(t)) formEl.value = 'Syrup';
+                                else if (/injection/i.test(t)) formEl.value = 'Injection';
+                            }
+                            if (itemName && item.title) itemName.value = item.title;
+                            input.value = item.title || '';
+                            box.style.display = 'none';
+                        });
+                        box.appendChild(btn);
+                    });
+                    box.style.display = 'block';
+                } catch (e) {
+                    box.innerHTML = '<div style="padding:0.5rem;font-size:12px;color:#e11d48;">Search failed</div>';
+                    box.style.display = 'block';
+                }
+            }, 280);
+        });
+    })();
 </script>
 
 {% if user.is_superuser or user.role == "Admin" %}

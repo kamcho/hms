@@ -14,7 +14,7 @@
         --accent-danger: #ef4444;
         --accent-warning: #f59e0b;
         --border-color: #e5e7eb;
-        --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        --font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
     }
 
     /* Base Styles */
@@ -511,6 +511,9 @@
                     <div class="patient-meta-badges">
                         <span class="meta-badge">{{ patient.age }} Years</span>
                         <span class="meta-badge">{{ patient.get_gender_display }}</span>
+                        {% if latest_bmi %}
+                        <span class="meta-badge" title="{{ latest_bmi_category }}">BMI {{ latest_bmi }}</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modern-card-body">
@@ -557,12 +560,48 @@
                             <span class="detail-value">{{ patient.date_of_birth }}</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label"><i class="fas fa-phone"></i> Phone</span>
-                            <span class="detail-value">{{ patient.phone }}</span>
+                            <span class="detail-label"><i class="fas fa-id-card"></i> {{ patient.get_id_type_display|default:"ID" }}</span>
+                            <span class="detail-value">{{ patient.id_number|default:"—" }}</span>
                         </div>
+                        {% if patient.national_id %}
                         <div class="detail-item">
-                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Location</span>
-                            <span class="detail-value">{{ patient.location }}</span>
+                            <span class="detail-label"><i class="fas fa-id-badge"></i> National ID</span>
+                            <span class="detail-value">{{ patient.national_id }}</span>
+                        </div>
+                        {% endif %}
+                        {% if patient.passport_number %}
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-passport"></i> Passport</span>
+                            <span class="detail-value">{{ patient.passport_number }}</span>
+                        </div>
+                        {% endif %}
+                        {% if patient.birth_certificate_number %}
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-baby"></i> Birth Cert.</span>
+                            <span class="detail-value">{{ patient.birth_certificate_number }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-phone"></i> Phone</span>
+                            <span class="detail-value">{{ patient.phone|default:"—" }}</span>
+                        </div>
+                        {% if patient.email %}
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-envelope"></i> Email</span>
+                            <span class="detail-value">{{ patient.email }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Residence</span>
+                            <span class="detail-value">
+                                {% if patient.county or patient.sub_county or patient.ward or patient.village %}
+                                    {{ patient.village }}{% if patient.village and patient.ward %}, {% endif %}{{ patient.ward }}
+                                    {% if patient.ward or patient.village %}{% if patient.sub_county %}, {% endif %}{% endif %}{{ patient.sub_county }}
+                                    {% if patient.sub_county or patient.ward or patient.village %}{% if patient.county %}, {% endif %}{% endif %}{{ patient.county }}
+                                {% else %}
+                                    {{ patient.location|default:"—" }}
+                                {% endif %}
+                            </span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label"><i class="fas fa-clock"></i> Registered</span>
@@ -571,11 +610,441 @@
                     </div>
                 </div>
             </div>
-            <!-- Emergency Contacts Card -->
+            <!-- Problem List (KNHTS / KPS Condition) -->
             <div class="modern-card">
                 <div class="modern-card-header">
                     <h3 class="modern-card-title">
-                        <i class="fas fa-heart"></i> Emergency
+                        <i class="fas fa-notes-medical"></i> Problem List
+                    </h3>
+                    {% if user.role == 'Doctor' %}
+                        <button type="button" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openProblemModal()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                        <span class="detail-label" style="margin:0;">KNHTS / ICD-11</span>
+                        <button type="button" class="modern-btn btn-secondary btn-sm" style="padding:0.15rem 0.45rem; font-size:0.65rem;" onclick="openProblemHistoryModal()">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                    </div>
+                    {% if active_problems %}
+                        <div class="detail-list">
+                            {% for problem in active_problems %}
+                                <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.35rem; border-bottom: 1px solid var(--clinical-border); padding-bottom: 0.65rem; margin-bottom: 0.65rem;">
+                                    <div style="display:flex; justify-content:space-between; width:100%; gap:0.5rem;">
+                                        <span class="detail-value" style="font-size:0.85rem;">{{ problem.display }}</span>
+                                        {% if user.role == 'Doctor' %}
+                                        <button type="button" class="modern-btn btn-secondary btn-sm btn-edit-problem"
+                                            style="padding:0.15rem 0.4rem; font-size:0.65rem; flex-shrink:0;"
+                                            data-problem-id="{{ problem.pk }}"
+                                            data-display="{{ problem.display|escape }}"
+                                            data-clinical-status="{{ problem.clinical_status }}"
+                                            data-verification-status="{{ problem.verification_status }}"
+                                            data-category="{{ problem.category }}"
+                                            data-severity="{{ problem.severity }}"
+                                            data-onset="{{ problem.onset_date|date:'Y-m-d'|default:'' }}"
+                                            data-abatement="{{ problem.abatement_date|date:'Y-m-d'|default:'' }}"
+                                            data-notes="{{ problem.notes|escape }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                        {% if problem.icd11_code %}<span class="status-badge" style="font-size:0.65rem; background:#eef2ff; color:#3730a3;">{{ problem.icd11_code }}</span>{% endif %}
+                                        <span class="status-badge" style="font-size:0.65rem; background:#ecfdf5; color:#065f46;">{{ problem.get_clinical_status_display }}</span>
+                                        <span class="status-badge" style="font-size:0.65rem; background:var(--clinical-bg);">{{ problem.get_verification_status_display }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0 0 0.75rem 0;">No active problems</p>
+                    {% endif %}
+                    {% if resolved_problems %}
+                        <details style="margin-top:0.5rem;">
+                            <summary style="cursor:pointer; font-size:0.75rem; color:var(--clinical-text-muted); font-weight:700;">
+                                Resolved / inactive ({{ resolved_problems|length }})
+                            </summary>
+                            <div class="detail-list" style="margin-top:0.5rem;">
+                                {% for problem in resolved_problems %}
+                                    <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.25rem;">
+                                        <span class="detail-value" style="font-size:0.8rem; color:var(--clinical-text-muted);">{{ problem.display }}</span>
+                                        <span class="detail-label">{{ problem.get_clinical_status_display }} · {{ problem.updated_at|date:"M d, Y" }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Clinical Decision Support -->
+            {% if cds %}
+            <div class="modern-card" style="border-left: 3px solid {% if cds.summary.critical %}#dc2626{% elif cds.summary.high %}#ea580c{% else %}#0f766e{% endif %};">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-brain"></i> Clinical Decision Support
+                    </h3>
+                    <span class="status-badge" style="font-size:0.65rem; background:#f0fdfa; color:#0f766e;">
+                        {{ cds.summary.total|default:0 }} alert{{ cds.summary.total|default:0|pluralize }}
+                    </span>
+                </div>
+                <div class="modern-card-body">
+                    <div style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.75rem;">
+                        {% if cds.inputs_used.problem_list %}<span class="status-badge" style="font-size:0.6rem; background:#eef2ff; color:#3730a3;">Problem List</span>{% endif %}
+                        {% if cds.inputs_used.hpt_medications %}<span class="status-badge" style="font-size:0.6rem; background:#eef2ff; color:#3730a3;">HPT</span>{% endif %}
+                        {% if cds.inputs_used.allergy_list %}<span class="status-badge" style="font-size:0.6rem; background:#fef3c7; color:#92400e;">Allergies</span>{% endif %}
+                        <span class="status-badge" style="font-size:0.6rem; background:#f1f5f9; color:#475569;">Demographics</span>
+                        {% if cds.inputs_used.lab_results %}<span class="status-badge" style="font-size:0.6rem; background:#ecfdf5; color:#065f46;">Labs</span>{% endif %}
+                        {% if cds.inputs_used.vital_signs %}<span class="status-badge" style="font-size:0.6rem; background:#fce7f3; color:#9d174d;">Vitals</span>{% endif %}
+                    </div>
+                    {% if cds.alerts %}
+                        <div class="detail-list" style="max-height: 320px; overflow-y: auto;">
+                            {% for alert in cds.alerts %}
+                                {% if forloop.counter <= 8 %}
+                                <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.25rem; border-bottom:1px solid var(--clinical-border); padding-bottom:0.6rem; margin-bottom:0.6rem;">
+                                    <div style="display:flex; justify-content:space-between; width:100%; gap:0.5rem;">
+                                        <span class="detail-value" style="font-size:0.8rem;">{{ alert.title }}</span>
+                                        <span class="status-badge" style="font-size:0.6rem; flex-shrink:0;
+                                            {% if alert.severity == 'critical' %}background:#fef2f2;color:#991b1b;
+                                            {% elif alert.severity == 'high' %}background:#fff7ed;color:#9a3412;
+                                            {% elif alert.severity == 'moderate' %}background:#fffbeb;color:#92400e;
+                                            {% else %}background:#f8fafc;color:#64748b;{% endif %}">
+                                            {{ alert.severity }}
+                                        </span>
+                                    </div>
+                                    <span class="detail-label" style="line-height:1.35;">{{ alert.intervention }}</span>
+                                    {% if alert.evidence %}
+                                    <span style="font-size:0.65rem; color:#94a3b8;">{{ alert.evidence|truncatechars:90 }}</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if cds.alerts|length > 8 %}
+                        <p class="text-muted" style="font-size:0.7rem; text-align:center; margin:0;">Additional alerts available on prescribe screen</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted" style="font-size:0.85rem; text-align:center; margin:0;">No CDS alerts for current inputs.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Clinician directions: where to record meds & allergies -->
+            <div class="modern-card" style="border-left: 3px solid #2563eb;">
+                <div class="modern-card-body" style="padding: 0.85rem 1rem;">
+                    <p style="margin:0 0 0.5rem 0; font-size:0.8rem; font-weight:700; color:#1e3a8a;">
+                        <i class="fas fa-compass"></i> Where to record medications &amp; allergies
+                    </p>
+                    <ul style="margin:0; padding-left:1.1rem; font-size:0.75rem; color:var(--clinical-text-muted); line-height:1.45;">
+                        <li><strong>Active Medications</strong> (card below) — patient-level current meds (home drugs, chronic therapy). Prefer HPT GE* codes. Also auto-updated when you prescribe.</li>
+                        <li><strong>Prescribe</strong> (visit → Create Prescription) — issue a visit Rx / eRx; items sync into Active Medications.</li>
+                        <li><strong>Allergy List</strong> (card below) — record before prescribing. Search HPT (AC*/GE*) for drug allergens.</li>
+                        <li><strong>History</strong> buttons — medication &amp; allergy audit trail (stopped/resolved changes).</li>
+                        <li><strong>Clinical Summary</strong> (card below) — after documenting the visit, Generate for human-readable + Kenya HIE FHIR export (include Care Plan in the modal).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Active Medication List (HPT) -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-pills"></i> Active Medications
+                    </h3>
+                    {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Admin' %}
+                        <button type="button" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openMedicationModal()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                        <span class="detail-label" style="margin:0;">HPT / longitudinal list</span>
+                        <button type="button" class="modern-btn btn-secondary btn-sm" style="padding:0.15rem 0.45rem; font-size:0.65rem;" onclick="openMedicationHistoryModal()">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                    </div>
+                    {% if active_patient_medications %}
+                        <div class="detail-list">
+                            {% for med in active_patient_medications %}
+                                <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.35rem; border-bottom: 1px solid var(--clinical-border); padding-bottom: 0.65rem; margin-bottom: 0.65rem;">
+                                    <div style="display:flex; justify-content:space-between; width:100%; gap:0.5rem;">
+                                        <span class="detail-value" style="font-size:0.85rem;">{{ med.display_name }}</span>
+                                        {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Admin' %}
+                                        <button type="button" class="modern-btn btn-secondary btn-sm btn-edit-med"
+                                            style="padding:0.15rem 0.4rem; font-size:0.65rem; flex-shrink:0;"
+                                            data-med-id="{{ med.pk }}"
+                                            data-display-name="{{ med.display_name|escape }}"
+                                            data-ge-code="{{ med.generic_concept_code|escape }}"
+                                            data-ge-display="{{ med.generic_concept_display|escape }}"
+                                            data-ph-code="{{ med.actual_product_code|escape }}"
+                                            data-dose="{{ med.dose_text|escape }}"
+                                            data-frequency="{{ med.frequency|escape }}"
+                                            data-route="{{ med.route|escape }}"
+                                            data-instructions="{{ med.instructions|escape }}"
+                                            data-status="{{ med.status }}"
+                                            data-start="{{ med.start_date|date:'Y-m-d'|default:'' }}"
+                                            data-end="{{ med.end_date|date:'Y-m-d'|default:'' }}"
+                                            data-notes="{{ med.notes|escape }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                        {% if med.generic_concept_code %}<span class="status-badge" style="font-size:0.65rem; background:#eef2ff; color:#3730a3;">{{ med.generic_concept_code }}</span>{% endif %}
+                                        {% if med.dose_text or med.frequency %}
+                                        <span class="status-badge" style="font-size:0.65rem; background:var(--clinical-bg);">{{ med.dose_text }}{% if med.dose_text and med.frequency %} · {% endif %}{{ med.frequency }}</span>
+                                        {% endif %}
+                                        <span class="status-badge" style="font-size:0.65rem; background:#ecfdf5; color:#065f46;">{{ med.get_status_display }}</span>
+                                        <span class="status-badge" style="font-size:0.65rem; background:#f8fafc; color:#64748b;">{{ med.get_source_display }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0 0 0.75rem 0;">No active medications on list</p>
+                        <p class="text-muted" style="font-size: 0.7rem; text-align: center; margin: 0;">Add home/chronic meds here, or prescribe to auto-add.</p>
+                    {% endif %}
+                    {% if historical_patient_medications %}
+                        <details style="margin-top:0.5rem;">
+                            <summary style="cursor:pointer; font-size:0.75rem; color:var(--clinical-text-muted); font-weight:700;">
+                                Stopped / completed ({{ historical_patient_medications|length }})
+                            </summary>
+                            <div class="detail-list" style="margin-top:0.5rem;">
+                                {% for med in historical_patient_medications %}
+                                    <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.25rem;">
+                                        <span class="detail-value" style="font-size:0.8rem; color:var(--clinical-text-muted);">{{ med.display_name }}</span>
+                                        <span class="detail-label">{{ med.get_status_display }} · {{ med.updated_at|date:"M d, Y" }}{% if med.generic_concept_code %} · {{ med.generic_concept_code }}{% endif %}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Allergy List (HPT) -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-allergies"></i> Allergy List
+                    </h3>
+                    {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Admin' %}
+                        <button type="button" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openAllergyModal()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                        <span class="detail-label" style="margin:0;">HPT allergen coding</span>
+                        <button type="button" class="modern-btn btn-secondary btn-sm" style="padding:0.15rem 0.45rem; font-size:0.65rem;" onclick="openAllergyHistoryModal()">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                    </div>
+                    {% if active_patient_allergies %}
+                        <div class="detail-list">
+                            {% for allergy in active_patient_allergies %}
+                                <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.35rem; border-bottom: 1px solid var(--clinical-border); padding-bottom: 0.65rem; margin-bottom: 0.65rem;">
+                                    <div style="display:flex; justify-content:space-between; width:100%; gap:0.5rem;">
+                                        <span class="detail-value" style="font-size:0.85rem;">{{ allergy.allergen_name }}</span>
+                                        {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Admin' %}
+                                        <button type="button" class="modern-btn btn-secondary btn-sm btn-edit-allergy"
+                                            style="padding:0.15rem 0.4rem; font-size:0.65rem; flex-shrink:0;"
+                                            data-allergy-id="{{ allergy.pk }}"
+                                            data-allergen-name="{{ allergy.allergen_name|escape }}"
+                                            data-hpt-code="{{ allergy.hpt_code|escape }}"
+                                            data-hpt-display="{{ allergy.hpt_display|escape }}"
+                                            data-hpt-kind="{{ allergy.hpt_kind|escape }}"
+                                            data-type="{{ allergy.allergy_type }}"
+                                            data-category="{{ allergy.category }}"
+                                            data-clinical-status="{{ allergy.clinical_status }}"
+                                            data-criticality="{{ allergy.criticality }}"
+                                            data-severity="{{ allergy.severity }}"
+                                            data-reaction="{{ allergy.reaction|escape }}"
+                                            data-onset="{{ allergy.onset_date|date:'Y-m-d'|default:'' }}"
+                                            data-notes="{{ allergy.notes|escape }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                        {% if allergy.hpt_code %}<span class="status-badge" style="font-size:0.65rem; background:#eef2ff; color:#3730a3;">{{ allergy.hpt_code }}</span>{% endif %}
+                                        {% if allergy.severity %}<span class="status-badge" style="font-size:0.65rem; background:#fef2f2; color:#991b1b;">{{ allergy.get_severity_display }}</span>{% endif %}
+                                        {% if allergy.reaction %}<span class="status-badge" style="font-size:0.65rem; background:var(--clinical-bg);">{{ allergy.reaction }}</span>{% endif %}
+                                        <span class="status-badge" style="font-size:0.65rem; background:#ecfdf5; color:#065f46;">{{ allergy.get_clinical_status_display }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0 0 0.5rem 0;">No active allergies recorded</p>
+                        <p class="text-muted" style="font-size: 0.7rem; text-align: center; margin: 0;">Document known drug allergies here before prescribing.</p>
+                    {% endif %}
+                    {% if historical_patient_allergies %}
+                        <details style="margin-top:0.5rem;">
+                            <summary style="cursor:pointer; font-size:0.75rem; color:var(--clinical-text-muted); font-weight:700;">
+                                Resolved / inactive ({{ historical_patient_allergies|length }})
+                            </summary>
+                            <div class="detail-list" style="margin-top:0.5rem;">
+                                {% for allergy in historical_patient_allergies %}
+                                    <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.25rem;">
+                                        <span class="detail-value" style="font-size:0.8rem; color:var(--clinical-text-muted);">{{ allergy.allergen_name }}</span>
+                                        <span class="detail-label">{{ allergy.get_clinical_status_display }} · {{ allergy.updated_at|date:"M d, Y" }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Clinical Summary Generation -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-file-medical"></i> Clinical Summary
+                    </h3>
+                    {% if selected_visit %}
+                        {% if user.role == 'Doctor' or user.role == 'Admin' or user.role == 'Nurse' %}
+                        <button type="button" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openClinicalSummaryModal()">
+                            <i class="fas fa-magic"></i> Generate
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    <p style="font-size:0.72rem; color:var(--clinical-text-muted); margin:0 0 0.75rem 0; line-height:1.4;">
+                        Builds a <strong>human-readable</strong> document and a <strong>Kenya HIE</strong> FHIR Composition
+                        (biodata, clinical info, meds, prescriptions, care plan).
+                        Fill Problem List, Allergies, Active Meds &amp; visit Rx first; enter Care Plan in the Generate modal.
+                    </p>
+                    {% if visit_clinical_summary %}
+                        <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.35rem;">
+                            <span class="detail-value" style="font-size:0.85rem;">Summary #{{ visit_clinical_summary.pk }}</span>
+                            <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                <span class="status-badge" style="font-size:0.65rem; background:#ecfdf5; color:#065f46;">{{ visit_clinical_summary.get_status_display }}</span>
+                                <span class="status-badge" style="font-size:0.65rem;">HIE: {{ visit_clinical_summary.get_hie_sync_status_display }}</span>
+                                {% if visit_clinical_summary.includes_care_plan %}<span class="status-badge" style="font-size:0.65rem; background:#eef2ff; color:#3730a3;">Care plan</span>{% endif %}
+                            </div>
+                            <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.35rem;">
+                                <a href="{% url 'home:clinical_summary_detail' visit_clinical_summary.pk %}" class="modern-btn btn-secondary btn-sm" style="padding:0.15rem 0.45rem; font-size:0.65rem;">Open</a>
+                                <a href="{% url 'home:clinical_summary_print' visit_clinical_summary.pk %}" target="_blank" class="modern-btn btn-secondary btn-sm" style="padding:0.15rem 0.45rem; font-size:0.65rem;">Print</a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size:0.875rem; text-align:center; margin:0;">
+                            {% if selected_visit %}No summary for this visit yet.{% else %}Select a visit, then Generate.{% endif %}
+                        </p>
+                    {% endif %}
+                    {% if clinical_summaries|length > 1 %}
+                        <details style="margin-top:0.65rem;">
+                            <summary style="cursor:pointer; font-size:0.75rem; color:var(--clinical-text-muted); font-weight:700;">
+                                All summaries ({{ clinical_summaries|length }})
+                            </summary>
+                            <div class="detail-list" style="margin-top:0.5rem;">
+                                {% for s in clinical_summaries %}
+                                <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.2rem;">
+                                    <a href="{% url 'home:clinical_summary_detail' s.pk %}" class="detail-value" style="font-size:0.8rem;">#{{ s.pk }} · Visit {{ s.visit_id }}</a>
+                                    <span class="detail-label">{{ s.get_status_display }} · {{ s.generated_at|date:"M d, Y" }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Family History (CPOE) -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-sitemap"></i> Family History
+                    </h3>
+                    {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Receptionist' %}
+                        <button type="button" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openFamilyHistoryModal()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="modern-card-body">
+                    {% if family_history %}
+                        <div class="detail-list">
+                            {% for fh in family_history %}
+                                <div class="detail-item" style="flex-direction:column; align-items:flex-start; gap:0.25rem; border-bottom:1px solid var(--clinical-border); padding-bottom:0.55rem; margin-bottom:0.55rem;">
+                                    <div style="display:flex; justify-content:space-between; width:100%; gap:0.5rem;">
+                                        <span class="detail-value" style="font-size:0.85rem;">{{ fh.condition }}</span>
+                                        {% if user.role == 'Doctor' or user.role == 'Nurse' or user.role == 'Receptionist' %}
+                                        <button type="button" class="modern-btn btn-secondary btn-sm btn-edit-fh"
+                                            style="padding:0.15rem 0.4rem; font-size:0.65rem;"
+                                            data-fh-id="{{ fh.pk }}"
+                                            data-relationship="{{ fh.relationship }}"
+                                            data-relative-name="{{ fh.relative_name|escape }}"
+                                            data-condition="{{ fh.condition|escape }}"
+                                            data-icd-code="{{ fh.icd11_code|escape }}"
+                                            data-icd-display="{{ fh.icd11_display|escape }}"
+                                            data-onset="{{ fh.onset_age|default:'' }}"
+                                            data-deceased="{{ fh.is_deceased|yesno:'1,0' }}"
+                                            data-death="{{ fh.contributed_to_death|yesno:'1,0' }}"
+                                            data-notes="{{ fh.notes|escape }}"
+                                            data-status="{{ fh.status }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                        <span class="status-badge" style="font-size:0.65rem; background:#eef2ff; color:#3730a3;">{{ fh.get_relationship_display }}</span>
+                                        {% if fh.onset_age %}<span class="status-badge" style="font-size:0.65rem; background:var(--clinical-bg);">onset {{ fh.onset_age }}y</span>{% endif %}
+                                        {% if fh.is_deceased %}<span class="status-badge" style="font-size:0.65rem; background:#fef2f2; color:#991b1b;">Deceased</span>{% endif %}
+                                        {% if fh.icd11_code %}<span class="status-badge" style="font-size:0.65rem; background:#ecfdf5; color:#065f46;">{{ fh.icd11_code }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size:0.875rem; text-align:center; margin:0;">No family history recorded</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- BMI / Growth Chart (CPOE) -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-chart-line"></i> BMI / Growth
+                    </h3>
+                </div>
+                <div class="modern-card-body">
+                    {% if latest_bmi %}
+                        <div style="text-align:center; margin-bottom:0.75rem;">
+                            <div style="font-size:1.5rem; font-weight:800; color:var(--clinical-text-main);">{{ latest_bmi }}</div>
+                            <div style="font-size:0.75rem; color:var(--clinical-text-muted);">BMI · {{ latest_bmi_category|default:"—" }}</div>
+                        </div>
+                    {% endif %}
+                    {% if growth_chart.points %}
+                        <svg id="growthChartSvg" viewBox="0 0 280 140" width="100%" height="140" style="background:#f8fafc; border-radius:8px; border:1px solid var(--clinical-border);"></svg>
+                        <p class="text-muted" style="font-size:0.65rem; margin:0.4rem 0 0; text-align:center;">
+                            Weight trend{% if growth_chart.has_pediatric_refs %} · WHO WFA refs (0–60 mo){% endif %}
+                            · {{ growth_chart.points|length }} point{{ growth_chart.points|length|pluralize }}
+                        </p>
+                        {{ growth_chart|json_script:"growth-chart-data" }}
+                    {% else %}
+                        <p class="text-muted" style="font-size:0.875rem; text-align:center; margin:0;">
+                            Record weight/height at triage or CWC to build BMI &amp; growth chart.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Next of Kin / Emergency Contacts Card -->
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h3 class="modern-card-title">
+                        <i class="fas fa-heart"></i> Next of Kin
                     </h3>
                     {% if user.role == 'Receptionist' %}
                         <a href="{% url 'home:emergency_contact_create' patient.pk %}" class="modern-btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
@@ -591,14 +1060,14 @@
                                     <div style="display: flex; justify-content: space-between; width: 100%;">
                                         <span class="detail-value">{{ contact.name }}</span>
                                         <span class="status-badge" style="font-size: 0.65rem; background: var(--clinical-bg);">{{
-                                        contact.get_relationship_display }}</span>
+                                        contact.get_role_display }} · {{ contact.get_relationship_display }}</span>
                                     </div>
                                     <span class="detail-label"><i class="fas fa-phone"></i> {{ contact.phone }}</span>
                                 </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0;">No contacts registered</p>
+                        <p class="text-muted" style="font-size: 0.875rem; text-align: center; margin: 0;">No next of kin registered</p>
                     {% endif %}
                 </div>
             </div>
@@ -688,10 +1157,20 @@
                     <span class="status-badge" style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
                         <i class="fas fa-check"></i> Filter Active: Latest Visit
                     </span>
+                    {% if selected_visit.payment_method == 'SHA' %}
+                    <a href="{% url 'accounts:sha_claims_desk' selected_visit.id %}" class="modern-btn btn-primary" style="margin-left:0.5rem;">
+                        <i class="fas fa-file-medical"></i> SHA Claims
+                    </a>
+                    {% endif %}
                 {% elif selected_visit %}
                     <span class="status-badge" style="background: var(--clinical-primary-light); color: var(--clinical-primary);">
                         <i class="fas fa-check"></i> Filter Active
                     </span>
+                    {% if selected_visit.payment_method == 'SHA' %}
+                    <a href="{% url 'accounts:sha_claims_desk' selected_visit.id %}" class="modern-btn btn-primary" style="margin-left:0.5rem;">
+                        <i class="fas fa-file-medical"></i> SHA Claims
+                    </a>
+                    {% endif %}
                 {% endif %}
             </div>
             {% if tb_screening_required %}
@@ -799,6 +1278,25 @@
                                                             <div style="text-align: center;">
                                                                 <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">O2 Sat</div>
                                                                 <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.oxygen_saturation }}%</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.weight %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">Wt</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.weight }} kg</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.height %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">Ht</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.height }} cm</div>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if entry.bmi %}
+                                                            <div style="text-align: center;">
+                                                                <div style="font-size: 0.65rem; color: var(--clinical-text-muted); text-transform: uppercase;">BMI</div>
+                                                                <div style="font-weight: 700; color: var(--clinical-text-main); font-size: 0.85rem;">{{ entry.bmi }}</div>
+                                                                <div style="font-size: 0.6rem; color: var(--clinical-text-muted);">{{ entry.bmi_category }}</div>
                                                             </div>
                                                         {% endif %}
                                                     </div>
@@ -952,7 +1450,12 @@
                                                 {% if diagnosis.visit == visit %}
                                                     <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #bfdbfe;">
                                                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                                            <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600; flex: 1;">{{ diagnosis.data }}</p>
+                                                            <div style="flex:1;">
+                                                                <p style="margin: 0; font-size: 0.9rem; color: #1e3a8a; font-weight: 600;">{{ diagnosis.data }}</p>
+                                                                {% if diagnosis.icd11_code %}
+                                                                <span class="status-badge" style="font-size:0.65rem; margin-top:0.35rem; display:inline-block; background:#eef2ff; color:#3730a3;">ICD-11 {{ diagnosis.icd11_code }}</span>
+                                                                {% endif %}
+                                                            </div>
                                                             {% if selected_visit == visit or selected_visit == None and visit == latest_visit %}
                                                                 {% if user.role == 'Doctor' and visit.is_active and not tb_screening_required %}
                                                                     <button class="modern-btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; margin-left: 0.5rem; flex-shrink: 0;" onclick="openEditDiagnosisModal('{{ visit.id }}', '{{ diagnosis.id }}', '{{ diagnosis.data|escapejs }}')"><i class="fas fa-edit"></i></button>
@@ -1471,9 +1974,9 @@
                 </div>
             </div>
         </div>
-        <!-- Diagnosis Modal -->
+        <!-- Diagnosis Modal (ICD-11 / KNHTS) -->
         <div id="diagnosisModal" class="custom-modal">
-            <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-content" style="max-width: 560px;">
                 <div class="modal-header" style="background: var(--clinical-primary); border: none;">
                     <h3 id="diagnosisModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
                         <i class="fas fa-diagnoses"></i> Add Diagnosis
@@ -1488,8 +1991,14 @@
                         <input type="hidden" name="visit_id" id="diagnosis_visit_id">
                         <input type="hidden" name="diagnosis_id" id="diagnosis_edit_id" value="">
                         <div class="form-group">
-                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis</label>
-                            <textarea name="data" class="form-control" rows="3" style="border-radius: 8px; border: 1px solid var(--clinical-border); width: 100%; padding: 0.5rem;" required></textarea>
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis (ICD-11 / KNHTS)</label>
+                            {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=diagnosis_form.data %}
+                        </div>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <label class="checkbox-premium" style="display:flex; align-items:center; gap:0.5rem;">
+                                <input type="checkbox" name="add_to_problem_list" id="diagnosis_add_to_problem_list" value="1" checked>
+                                <span style="font-size:0.85rem; font-weight:600;">Also add / update Problem List</span>
+                            </label>
                         </div>
                     </form>
                 </div>
@@ -1499,6 +2008,447 @@
                 </div>
             </div>
         </div>
+
+        <!-- Problem List Modal -->
+        <div id="problemModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header" style="background: #0f766e; border: none;">
+                    <h3 id="problemModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-notes-medical"></i> Record Problem
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('problemModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="problemForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="visit_id" value="{% if selected_visit %}{{ selected_visit.pk }}{% elif latest_visit %}{{ latest_visit.pk }}{% endif %}">
+                        <input type="hidden" id="problem_edit_id" value="">
+                        <div class="form-group" style="margin-bottom:1rem;">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Problem / Diagnosis (ICD-11)</label>
+                            {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=problem_form.display %}
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Clinical Status</label>
+                                {{ problem_form.clinical_status }}
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Verification</label>
+                                {{ problem_form.verification_status }}
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Category</label>
+                                {{ problem_form.category }}
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Severity</label>
+                                {{ problem_form.severity }}
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Onset Date</label>
+                                {{ problem_form.onset_date }}
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Abatement Date</label>
+                                {{ problem_form.abatement_date }}
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:0.75rem;">
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Notes</label>
+                            {{ problem_form.notes }}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--clinical-bg); border-top: 1px solid var(--clinical-border);">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('problemModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitProblem()">Save Problem</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Problem History Modal -->
+        <div id="problemHistoryModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 640px;">
+                <div class="modal-header" style="background: #334155; border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-history"></i> Problem History
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('problemHistoryModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem; max-height: 70vh; overflow-y: auto;" id="problemHistoryBody">
+                    {% if problem_history_entries %}
+                        {% for h in problem_history_entries %}
+                            <div style="border-left:3px solid #0f766e; padding:0.65rem 0.85rem; margin-bottom:0.75rem; background:#f8fafc; border-radius:0 8px 8px 0;">
+                                <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                                    <strong style="font-size:0.85rem;">{{ h.problem.display|truncatechars:60 }}</strong>
+                                    <span style="font-size:0.7rem; color:#64748b; white-space:nowrap;">{{ h.changed_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:#475569; margin-top:0.25rem;">
+                                    {{ h.get_action_display }}{% if h.change_summary %} — {{ h.change_summary }}{% endif %}
+                                    {% if h.clinical_status %} · {{ h.clinical_status }}{% endif %}
+                                    {% if h.icd11_code %} · {{ h.icd11_code }}{% endif %}
+                                </div>
+                                {% if h.changed_by %}
+                                <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">by {{ h.changed_by.get_full_name|default:h.changed_by.username }}</div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted" style="text-align:center;">No problem history yet.</p>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted" style="text-align:center;">No problem history yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Medication Modal (patient longitudinal list) -->
+        <div id="patientMedicationModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 560px;">
+                <div class="modal-header" style="background: #1e3a8a; border: none;">
+                    <h3 id="medicationModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-pills"></i> Add Active Medication
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('patientMedicationModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem;">
+                    <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.85rem 0;">
+                        Use for <strong>current / chronic / home meds</strong>. Prefer HPT <strong>GE*</strong> generic codes.
+                        Visit prescriptions also sync here automatically.
+                    </p>
+                    <form id="patientMedicationForm">
+                        {% csrf_token %}
+                        {% if selected_visit %}<input type="hidden" name="visit_id" value="{{ selected_visit.pk }}">{% endif %}
+                        <input type="hidden" id="medication_edit_id" value="">
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem; color:var(--clinical-text-muted);">Search HPT (GE* preferred)</label>
+                            <input type="text" id="med_hpt_search" class="form-control" placeholder="e.g. metformin 500" autocomplete="off">
+                            <div id="med_hpt_results" style="display:none; max-height:160px; overflow-y:auto; border:1px solid var(--clinical-border); border-radius:8px; margin-top:0.35rem;"></div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Medication name *</label>
+                            {{ medication_list_form.display_name }}
+                            {{ medication_list_form.generic_concept_code }}
+                            {{ medication_list_form.generic_concept_display }}
+                        </div>
+                        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Dose</label>
+                                {{ medication_list_form.dose_text }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Frequency</label>
+                                {{ medication_list_form.frequency }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Route</label>
+                                {{ medication_list_form.route }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Status</label>
+                                {{ medication_list_form.status }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Start date</label>
+                                {{ medication_list_form.start_date }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">End date</label>
+                                {{ medication_list_form.end_date }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Pack code (optional PH*)</label>
+                            {{ medication_list_form.actual_product_code }}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Instructions</label>
+                            {{ medication_list_form.instructions }}
+                        </div>
+                        <div class="form-group mb-0">
+                            <label style="font-weight:700; font-size:0.75rem;">Notes</label>
+                            {{ medication_list_form.notes }}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.25rem; gap:0.5rem;">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('patientMedicationModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitPatientMedication()">Save Medication</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medication History Modal -->
+        <div id="medicationHistoryModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 640px;">
+                <div class="modal-header" style="background: #334155; border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-history"></i> Medication History
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('medicationHistoryModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem; max-height: 70vh; overflow-y: auto;">
+                    {% if medication_history_entries %}
+                        {% for h in medication_history_entries %}
+                            <div style="border-left:3px solid #2563eb; padding:0.65rem 0.85rem; margin-bottom:0.75rem; background:#f8fafc; border-radius:0 8px 8px 0;">
+                                <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                                    <strong style="font-size:0.85rem;">{{ h.medication.display_name|truncatechars:60 }}</strong>
+                                    <span style="font-size:0.7rem; color:#64748b; white-space:nowrap;">{{ h.changed_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:#475569; margin-top:0.25rem;">
+                                    {{ h.get_action_display }}{% if h.change_summary %} — {{ h.change_summary }}{% endif %}
+                                    {% if h.status %} · {{ h.status }}{% endif %}
+                                    {% if h.generic_concept_code %} · {{ h.generic_concept_code }}{% endif %}
+                                </div>
+                                {% if h.changed_by %}
+                                <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">by {{ h.changed_by.get_full_name|default:h.changed_by.username }}</div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted" style="text-align:center;">No medication history yet.</p>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted" style="text-align:center;">No medication history yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Allergy Modal -->
+        <div id="allergyModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 560px;">
+                <div class="modal-header" style="background: #991b1b; border: none;">
+                    <h3 id="allergyModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-allergies"></i> Record Allergy
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('allergyModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem;">
+                    <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.85rem 0;">
+                        Record on the patient profile <strong>before prescribing</strong>. Search HPT for drug allergens (AC* substance preferred, then GE*).
+                        Free-text is allowed if no HPT match.
+                    </p>
+                    <form id="allergyForm">
+                        {% csrf_token %}
+                        {% if selected_visit %}<input type="hidden" name="visit_id" value="{{ selected_visit.pk }}">{% endif %}
+                        <input type="hidden" id="allergy_edit_id" value="">
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem; color:var(--clinical-text-muted);">Search HPT allergen</label>
+                            <input type="text" id="allergy_hpt_search" class="form-control" placeholder="e.g. penicillin" autocomplete="off">
+                            <div id="allergy_hpt_results" style="display:none; max-height:160px; overflow-y:auto; border:1px solid var(--clinical-border); border-radius:8px; margin-top:0.35rem;"></div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Allergen name *</label>
+                            {{ allergy_form.allergen_name }}
+                            {{ allergy_form.hpt_code }}
+                            {{ allergy_form.hpt_display }}
+                            {{ allergy_form.hpt_kind }}
+                            {{ allergy_form.icd11_code }}
+                            {{ allergy_form.icd11_display }}
+                        </div>
+                        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Type</label>
+                                {{ allergy_form.allergy_type }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Category</label>
+                                {{ allergy_form.category }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Clinical status</label>
+                                {{ allergy_form.clinical_status }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Criticality</label>
+                                {{ allergy_form.criticality }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Severity</label>
+                                {{ allergy_form.severity }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Onset date</label>
+                                {{ allergy_form.onset_date }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Reaction</label>
+                            {{ allergy_form.reaction }}
+                        </div>
+                        <div class="form-group mb-0">
+                            <label style="font-weight:700; font-size:0.75rem;">Notes</label>
+                            {{ allergy_form.notes }}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.25rem; gap:0.5rem;">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('allergyModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitAllergy()">Save Allergy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family History Modal (CPOE) -->
+        <div id="familyHistoryModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 560px;">
+                <div class="modal-header" style="background: #4338ca; border: none;">
+                    <h3 id="familyHistoryModalTitle" style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-sitemap"></i> Family History
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('familyHistoryModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem;">
+                    <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.85rem 0;">
+                        Record hereditary or familial conditions (e.g. diabetes, hypertension, cancers) by relative.
+                    </p>
+                    <form id="familyHistoryForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="fh_edit_id" value="">
+                        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Relationship *</label>
+                                {{ family_history_form.relationship }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Relative name</label>
+                                {{ family_history_form.relative_name }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Condition *</label>
+                            {{ family_history_form.condition }}
+                            {{ family_history_form.icd11_code }}
+                            {{ family_history_form.icd11_display }}
+                        </div>
+                        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Onset age (years)</label>
+                                {{ family_history_form.onset_age }}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label style="font-weight:700; font-size:0.75rem;">Status</label>
+                                {{ family_history_form.status }}
+                            </div>
+                        </div>
+                        <div class="form-row" style="display:flex; gap:1.25rem; margin-bottom:0.75rem;">
+                            <label style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem;">
+                                {{ family_history_form.is_deceased }} Deceased
+                            </label>
+                            <label style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem;">
+                                {{ family_history_form.contributed_to_death }} Contributed to death
+                            </label>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label style="font-weight:700; font-size:0.75rem;">Notes</label>
+                            {{ family_history_form.notes }}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.25rem; gap:0.5rem;">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('familyHistoryModal')">Cancel</button>
+                    <button class="modern-btn btn-primary" onclick="submitFamilyHistory()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Allergy History Modal -->
+        <div id="allergyHistoryModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 640px;">
+                <div class="modal-header" style="background: #334155; border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-history"></i> Allergy History
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('allergyHistoryModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem; max-height: 70vh; overflow-y: auto;">
+                    {% if allergy_history_entries %}
+                        {% for h in allergy_history_entries %}
+                            <div style="border-left:3px solid #dc2626; padding:0.65rem 0.85rem; margin-bottom:0.75rem; background:#f8fafc; border-radius:0 8px 8px 0;">
+                                <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                                    <strong style="font-size:0.85rem;">{{ h.allergy.allergen_name|truncatechars:60 }}</strong>
+                                    <span style="font-size:0.7rem; color:#64748b; white-space:nowrap;">{{ h.changed_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:#475569; margin-top:0.25rem;">
+                                    {{ h.get_action_display }}{% if h.change_summary %} — {{ h.change_summary }}{% endif %}
+                                    {% if h.clinical_status %} · {{ h.clinical_status }}{% endif %}
+                                    {% if h.hpt_code %} · {{ h.hpt_code }}{% endif %}
+                                </div>
+                                {% if h.changed_by %}
+                                <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">by {{ h.changed_by.get_full_name|default:h.changed_by.username }}</div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted" style="text-align:center;">No allergy history yet.</p>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted" style="text-align:center;">No allergy history yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Summary Generate Modal -->
+        <div id="clinicalSummaryModal" class="custom-modal">
+            <div class="modal-content" style="max-width: 560px;">
+                <div class="modal-header" style="background: #0f766e; border: none;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">
+                        <i class="fas fa-file-medical"></i> Generate Clinical Summary
+                    </h3>
+                    <button class="modern-btn btn-secondary btn-sm" onclick="closeModal('clinicalSummaryModal')" style="background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem;">
+                    <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.85rem 0; line-height:1.45;">
+                        Aggregates <strong>biodata</strong>, <strong>clinical information</strong> (problems, diagnoses, allergies, notes),
+                        <strong>active medications</strong>, <strong>visit prescriptions</strong>, and your <strong>care plan</strong>
+                        into a printable summary and Kenya HIE FHIR Composition document.
+                    </p>
+                    {% if selected_visit %}
+                    <form id="clinicalSummaryForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="ajax" value="1">
+                        <div class="form-group mb-3">
+                            <label style="font-weight:700; font-size:0.75rem;">Care plan / follow-up *</label>
+                            <textarea name="care_plan" id="cs_care_plan" class="form-control" rows="4"
+                                placeholder="e.g. Continue amlodipine; review BP in 2 weeks; return if chest pain…" required></textarea>
+                            <small style="color:#64748b;">Required for Care Plan checklist item. Pulled from IPD discharge plan when blank on regenerate.</small>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer;">
+                                <input type="checkbox" name="sync_hie" id="cs_sync_hie" value="1">
+                                Also sync to Kenya HIE now (FHIR bundle + encounter sync)
+                            </label>
+                        </div>
+                    </form>
+                    {% else %}
+                    <p class="text-muted">Select a visit filter first, then generate.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.25rem; gap:0.5rem;">
+                    <button class="modern-btn btn-secondary" onclick="closeModal('clinicalSummaryModal')">Cancel</button>
+                    {% if selected_visit %}
+                    <button class="modern-btn btn-primary" onclick="submitClinicalSummary()">Generate Summary</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <!-- Unified Message Modal -->
         <!-- Appointment Modal -->
         <div id="appointmentModal" class="custom-modal">
@@ -1554,6 +2504,7 @@
     {% endblock %}
     {% block extra_js %}
         {{ tb_screening_map|json_script:"tb-screening-map" }}
+        <script src="{% static 'home/js/icd11_diagnosis_picker.js' %}"></script>
         <script>
     const TB_SCREENING_REQUIRED = {{ tb_screening_required|yesno:"true,false" }};
     const TB_SCREENING_VISIT_ID = {{ tb_screening_visit_id|default:"null" }};
@@ -1861,8 +2812,35 @@
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
 
-    /* ---- Diagnosis Modal (Add / Edit) ---- */
+    /* ---- Diagnosis Modal (Add / Edit) — ICD-11 / KNHTS ---- */
     let diagnosisEditId = null;
+
+    function getDiagnosisPicker() {
+        return document.querySelector('#diagnosisModal .icd-diagnosis-picker');
+    }
+
+    function resetIcdPicker(picker, value) {
+        if (!picker) return;
+        const valueField = picker.querySelector('.icd-diagnosis-value');
+        const searchInput = picker.querySelector('.icd-diagnosis-search');
+        const selectedBox = picker.querySelector('.icd-diagnosis-selected');
+        const selectedLabel = picker.querySelector('.icd-diagnosis-selected-label');
+        const selectedMeta = picker.querySelector('.icd-diagnosis-selected-meta');
+        const statusEl = picker.querySelector('.icd-diagnosis-validate-status');
+        if (valueField) valueField.value = value || '';
+        if (searchInput) searchInput.value = '';
+        if (statusEl) {
+            statusEl.classList.add('hidden');
+            statusEl.textContent = '';
+        }
+        if (value) {
+            if (selectedLabel) selectedLabel.textContent = value;
+            if (selectedMeta) selectedMeta.textContent = 'ICD-11 selected';
+            if (selectedBox) selectedBox.classList.remove('hidden');
+        } else if (selectedBox) {
+            selectedBox.classList.add('hidden');
+        }
+    }
 
     function openDiagnosisModal(visitId) {
         if (!guardClinicalAction()) return;
@@ -1870,7 +2848,9 @@
         document.getElementById('diagnosis_edit_id').value = '';
         document.getElementById('diagnosis_visit_id').value = visitId;
         document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Add Diagnosis';
-        document.querySelector('#addDiagnosisForm textarea[name="data"]').value = '';
+        const addToList = document.getElementById('diagnosis_add_to_problem_list');
+        if (addToList) addToList.checked = true;
+        resetIcdPicker(getDiagnosisPicker(), '');
         showModal('diagnosisModal');
     }
 
@@ -1880,13 +2860,20 @@
         document.getElementById('diagnosis_edit_id').value = id;
         document.getElementById('diagnosis_visit_id').value = visitId;
         document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Edit Diagnosis';
-        document.querySelector('#addDiagnosisForm textarea[name="data"]').value = existingData;
+        const addToList = document.getElementById('diagnosis_add_to_problem_list');
+        if (addToList) addToList.checked = false;
+        resetIcdPicker(getDiagnosisPicker(), existingData || '');
         showModal('diagnosisModal');
     }
 
     function submitDiagnosis() {
         const form = document.getElementById('addDiagnosisForm');
         const formData = new FormData(form);
+        const dataVal = (formData.get('data') || '').trim();
+        if (!dataVal) {
+            showMessageModal('Error', 'Select an ICD-11 diagnosis from search.', null, 'error');
+            return;
+        }
         let url;
         if (diagnosisEditId) {
             url = `/home/diagnosis/${diagnosisEditId}/update/`;
@@ -1908,6 +2895,522 @@
                 }
             })
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    /* ---- Problem List (KNHTS) ---- */
+    let problemEditId = null;
+
+    function getProblemPicker() {
+        return document.querySelector('#problemModal .icd-diagnosis-picker');
+    }
+
+    function openProblemModal() {
+        problemEditId = null;
+        document.getElementById('problem_edit_id').value = '';
+        document.getElementById('problemModalTitle').innerHTML = '<i class="fas fa-notes-medical"></i> Record Problem';
+        const form = document.getElementById('problemForm');
+        if (form) form.reset();
+        resetIcdPicker(getProblemPicker(), '');
+        const status = form && form.querySelector('[name="clinical_status"]');
+        if (status) status.value = 'active';
+        const ver = form && form.querySelector('[name="verification_status"]');
+        if (ver) ver.value = 'confirmed';
+        const cat = form && form.querySelector('[name="category"]');
+        if (cat) cat.value = 'problem-list-item';
+        showModal('problemModal');
+    }
+
+    function openEditProblemModalFromBtn(btn) {
+        problemEditId = btn.dataset.problemId;
+        document.getElementById('problem_edit_id').value = problemEditId;
+        document.getElementById('problemModalTitle').innerHTML = '<i class="fas fa-notes-medical"></i> Update Problem';
+        const form = document.getElementById('problemForm');
+        resetIcdPicker(getProblemPicker(), btn.dataset.display || '');
+        if (form) {
+            const set = (name, val) => {
+                const el = form.querySelector(`[name="${name}"]`);
+                if (el) el.value = val || '';
+            };
+            set('clinical_status', btn.dataset.clinicalStatus);
+            set('verification_status', btn.dataset.verificationStatus);
+            set('category', btn.dataset.category);
+            set('severity', btn.dataset.severity);
+            set('onset_date', btn.dataset.onset);
+            set('abatement_date', btn.dataset.abatement);
+            set('notes', btn.dataset.notes);
+            set('display', btn.dataset.display);
+        }
+        showModal('problemModal');
+    }
+
+    function openProblemHistoryModal() {
+        showModal('problemHistoryModal');
+    }
+
+    function submitProblem() {
+        const form = document.getElementById('problemForm');
+        const formData = new FormData(form);
+        const display = (formData.get('display') || '').trim();
+        if (!display) {
+            showMessageModal('Error', 'Select an ICD-11 coded problem from search.', null, 'error');
+            return;
+        }
+        const url = problemEditId
+            ? `/home/problems/${problemEditId}/update/`
+            : "{% url 'home:add_problem' patient.pk %}";
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Success', problemEditId ? 'Problem updated.' : 'Problem recorded.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to save problem.', null, 'error');
+                }
+            })
+            .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    document.querySelectorAll('.btn-edit-problem').forEach(btn => {
+        btn.addEventListener('click', () => openEditProblemModalFromBtn(btn));
+    });
+
+    /* ---- Active Medications & Allergies (HPT) ---- */
+    const HPT_SEARCH_URL = "{% url 'home:hpt_search_api' %}";
+    const HPT_ALLERGY_SEARCH_URL = "{% url 'home:hpt_allergy_search_api' %}";
+    let medicationEditId = null;
+    let allergyEditId = null;
+    let medSearchTimer = null;
+    let allergySearchTimer = null;
+
+    function openMedicationModal() {
+        medicationEditId = null;
+        document.getElementById('medication_edit_id').value = '';
+        document.getElementById('medicationModalTitle').innerHTML = '<i class="fas fa-pills"></i> Add Active Medication';
+        const form = document.getElementById('patientMedicationForm');
+        if (form) form.reset();
+        const status = form && form.querySelector('[name="status"]');
+        if (status) status.value = 'active';
+        document.getElementById('med_hpt_results').style.display = 'none';
+        showModal('patientMedicationModal');
+    }
+
+    function openEditMedicationModalFromBtn(btn) {
+        medicationEditId = btn.dataset.medId;
+        document.getElementById('medication_edit_id').value = medicationEditId;
+        document.getElementById('medicationModalTitle').innerHTML = '<i class="fas fa-pills"></i> Update Medication';
+        const form = document.getElementById('patientMedicationForm');
+        const set = (name, val) => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (el) el.value = val || '';
+        };
+        set('display_name', btn.dataset.displayName);
+        set('generic_concept_code', btn.dataset.geCode);
+        set('generic_concept_display', btn.dataset.geDisplay);
+        set('actual_product_code', btn.dataset.phCode);
+        set('dose_text', btn.dataset.dose);
+        set('frequency', btn.dataset.frequency);
+        set('route', btn.dataset.route);
+        set('instructions', btn.dataset.instructions);
+        set('status', btn.dataset.status);
+        set('start_date', btn.dataset.start);
+        set('end_date', btn.dataset.end);
+        set('notes', btn.dataset.notes);
+        document.getElementById('med_hpt_results').style.display = 'none';
+        showModal('patientMedicationModal');
+    }
+
+    function openMedicationHistoryModal() {
+        showModal('medicationHistoryModal');
+    }
+
+    function selectMedHpt(item) {
+        const form = document.getElementById('patientMedicationForm');
+        form.querySelector('[name="display_name"]').value = item.title || item.display || '';
+        form.querySelector('[name="generic_concept_code"]').value = item.code || '';
+        form.querySelector('[name="generic_concept_display"]').value = item.title || '';
+        document.getElementById('med_hpt_results').style.display = 'none';
+        document.getElementById('med_hpt_search').value = item.title || '';
+    }
+
+    function bindMedHptSearch() {
+        const input = document.getElementById('med_hpt_search');
+        const box = document.getElementById('med_hpt_results');
+        if (!input || !box) return;
+        input.addEventListener('input', () => {
+            clearTimeout(medSearchTimer);
+            const q = input.value.trim();
+            if (q.length < 2) { box.style.display = 'none'; return; }
+            medSearchTimer = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`${HPT_SEARCH_URL}?q=${encodeURIComponent(q)}&prefer=ge&limit=15`);
+                    const data = await resp.json();
+                    const results = data.results || [];
+                    if (!results.length) {
+                        box.innerHTML = '<div style="padding:0.5rem; font-size:0.75rem; color:#64748b;">No HPT match — type name manually.</div>';
+                        box.style.display = 'block';
+                        return;
+                    }
+                    box.innerHTML = results.map((r, i) =>
+                        `<button type="button" class="med-hpt-pick" data-idx="${i}" style="display:block;width:100%;text-align:left;border:none;border-bottom:1px solid #e2e8f0;background:#fff;padding:0.45rem 0.65rem;cursor:pointer;font-size:0.8rem;">
+                            <strong>${r.code || ''}</strong> ${r.title || ''}
+                            <span style="color:#94a3b8; font-size:0.7rem;"> · ${r.kind || ''}</span>
+                        </button>`
+                    ).join('');
+                    box.querySelectorAll('.med-hpt-pick').forEach(btn => {
+                        btn.addEventListener('click', () => selectMedHpt(results[Number(btn.dataset.idx)]));
+                    });
+                    box.style.display = 'block';
+                } catch (e) {
+                    box.style.display = 'none';
+                }
+            }, 280);
+        });
+    }
+
+    function submitPatientMedication() {
+        const form = document.getElementById('patientMedicationForm');
+        const formData = new FormData(form);
+        const name = (formData.get('display_name') || '').trim();
+        if (!name) {
+            showMessageModal('Error', 'Medication name is required.', null, 'error');
+            return;
+        }
+        const url = medicationEditId
+            ? `/home/medications/${medicationEditId}/update/`
+            : "{% url 'home:add_patient_medication' patient.pk %}";
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Success', medicationEditId ? 'Medication updated.' : 'Medication added to Active List.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to save.', null, 'error');
+                }
+            })
+            .catch(() => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    function openAllergyModal() {
+        allergyEditId = null;
+        document.getElementById('allergy_edit_id').value = '';
+        document.getElementById('allergyModalTitle').innerHTML = '<i class="fas fa-allergies"></i> Record Allergy';
+        const form = document.getElementById('allergyForm');
+        if (form) form.reset();
+        const status = form && form.querySelector('[name="clinical_status"]');
+        if (status) status.value = 'active';
+        const cat = form && form.querySelector('[name="category"]');
+        if (cat) cat.value = 'medication';
+        document.getElementById('allergy_hpt_results').style.display = 'none';
+        showModal('allergyModal');
+    }
+
+    function openEditAllergyModalFromBtn(btn) {
+        allergyEditId = btn.dataset.allergyId;
+        document.getElementById('allergy_edit_id').value = allergyEditId;
+        document.getElementById('allergyModalTitle').innerHTML = '<i class="fas fa-allergies"></i> Update Allergy';
+        const form = document.getElementById('allergyForm');
+        const set = (name, val) => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (el) el.value = val || '';
+        };
+        set('allergen_name', btn.dataset.allergenName);
+        set('hpt_code', btn.dataset.hptCode);
+        set('hpt_display', btn.dataset.hptDisplay);
+        set('hpt_kind', btn.dataset.hptKind);
+        set('allergy_type', btn.dataset.type);
+        set('category', btn.dataset.category);
+        set('clinical_status', btn.dataset.clinicalStatus);
+        set('criticality', btn.dataset.criticality);
+        set('severity', btn.dataset.severity);
+        set('reaction', btn.dataset.reaction);
+        set('onset_date', btn.dataset.onset);
+        set('notes', btn.dataset.notes);
+        document.getElementById('allergy_hpt_results').style.display = 'none';
+        showModal('allergyModal');
+    }
+
+    function openAllergyHistoryModal() {
+        showModal('allergyHistoryModal');
+    }
+
+    function selectAllergyHpt(item) {
+        const form = document.getElementById('allergyForm');
+        form.querySelector('[name="allergen_name"]').value = item.title || item.display || '';
+        form.querySelector('[name="hpt_code"]').value = item.code || '';
+        form.querySelector('[name="hpt_display"]').value = item.title || '';
+        form.querySelector('[name="hpt_kind"]').value = item.kind || '';
+        document.getElementById('allergy_hpt_results').style.display = 'none';
+        document.getElementById('allergy_hpt_search').value = item.title || '';
+    }
+
+    function bindAllergyHptSearch() {
+        const input = document.getElementById('allergy_hpt_search');
+        const box = document.getElementById('allergy_hpt_results');
+        if (!input || !box) return;
+        input.addEventListener('input', () => {
+            clearTimeout(allergySearchTimer);
+            const q = input.value.trim();
+            if (q.length < 2) { box.style.display = 'none'; return; }
+            allergySearchTimer = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`${HPT_ALLERGY_SEARCH_URL}?q=${encodeURIComponent(q)}&limit=15`);
+                    const data = await resp.json();
+                    const results = data.results || [];
+                    if (!results.length) {
+                        box.innerHTML = '<div style="padding:0.5rem; font-size:0.75rem; color:#64748b;">No HPT match — enter free-text allergen.</div>';
+                        box.style.display = 'block';
+                        return;
+                    }
+                    box.innerHTML = results.map((r, i) =>
+                        `<button type="button" class="allergy-hpt-pick" data-idx="${i}" style="display:block;width:100%;text-align:left;border:none;border-bottom:1px solid #e2e8f0;background:#fff;padding:0.45rem 0.65rem;cursor:pointer;font-size:0.8rem;">
+                            <strong>${r.code || ''}</strong> ${r.title || ''}
+                            <span style="color:#94a3b8; font-size:0.7rem;"> · ${r.kind || ''}</span>
+                        </button>`
+                    ).join('');
+                    box.querySelectorAll('.allergy-hpt-pick').forEach(btn => {
+                        btn.addEventListener('click', () => selectAllergyHpt(results[Number(btn.dataset.idx)]));
+                    });
+                    box.style.display = 'block';
+                } catch (e) {
+                    box.style.display = 'none';
+                }
+            }, 280);
+        });
+    }
+
+    function submitAllergy() {
+        const form = document.getElementById('allergyForm');
+        const formData = new FormData(form);
+        const name = (formData.get('allergen_name') || '').trim();
+        if (!name) {
+            showMessageModal('Error', 'Allergen name is required.', null, 'error');
+            return;
+        }
+        const url = allergyEditId
+            ? `/home/allergies/${allergyEditId}/update/`
+            : "{% url 'home:add_patient_allergy' patient.pk %}";
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Success', allergyEditId ? 'Allergy updated.' : 'Allergy recorded.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to save.', null, 'error');
+                }
+            })
+            .catch(() => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    document.querySelectorAll('.btn-edit-med').forEach(btn => {
+        btn.addEventListener('click', () => openEditMedicationModalFromBtn(btn));
+    });
+    document.querySelectorAll('.btn-edit-allergy').forEach(btn => {
+        btn.addEventListener('click', () => openEditAllergyModalFromBtn(btn));
+    });
+    bindMedHptSearch();
+    bindAllergyHptSearch();
+
+    /* ---- Family History (CPOE) ---- */
+    let familyHistoryEditId = null;
+
+    function openFamilyHistoryModal() {
+        familyHistoryEditId = null;
+        document.getElementById('fh_edit_id').value = '';
+        document.getElementById('familyHistoryModalTitle').innerHTML = '<i class="fas fa-sitemap"></i> Add Family History';
+        const form = document.getElementById('familyHistoryForm');
+        if (form) form.reset();
+        const status = form && form.querySelector('[name="status"]');
+        if (status) status.value = 'active';
+        showModal('familyHistoryModal');
+    }
+
+    function openEditFamilyHistoryModalFromBtn(btn) {
+        familyHistoryEditId = btn.dataset.fhId;
+        document.getElementById('fh_edit_id').value = familyHistoryEditId;
+        document.getElementById('familyHistoryModalTitle').innerHTML = '<i class="fas fa-sitemap"></i> Update Family History';
+        const form = document.getElementById('familyHistoryForm');
+        const set = (name, val) => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (!el) return;
+            if (el.type === 'checkbox') el.checked = val === '1' || val === true || val === 'true';
+            else el.value = val || '';
+        };
+        set('relationship', btn.dataset.relationship);
+        set('relative_name', btn.dataset.relativeName);
+        set('condition', btn.dataset.condition);
+        set('icd11_code', btn.dataset.icdCode);
+        set('icd11_display', btn.dataset.icdDisplay);
+        set('onset_age', btn.dataset.onset);
+        set('is_deceased', btn.dataset.deceased);
+        set('contributed_to_death', btn.dataset.death);
+        set('notes', btn.dataset.notes);
+        set('status', btn.dataset.status || 'active');
+        showModal('familyHistoryModal');
+    }
+
+    function submitFamilyHistory() {
+        const form = document.getElementById('familyHistoryForm');
+        const formData = new FormData(form);
+        const condition = (formData.get('condition') || '').trim();
+        if (!condition) {
+            showMessageModal('Error', 'Condition is required.', null, 'error');
+            return;
+        }
+        if (!formData.get('relationship')) {
+            showMessageModal('Error', 'Relationship is required.', null, 'error');
+            return;
+        }
+        const url = familyHistoryEditId
+            ? `{% url 'home:update_family_history' 0 %}`.replace('/0/', `/${familyHistoryEditId}/`)
+            : "{% url 'home:add_family_history' patient.pk %}";
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal('Success', familyHistoryEditId ? 'Family history updated.' : 'Family history recorded.', () => location.reload(), 'success');
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to save.', null, 'error');
+                }
+            })
+            .catch(() => showMessageModal('Error', 'Network error.', null, 'error'));
+    }
+
+    document.querySelectorAll('.btn-edit-fh').forEach(btn => {
+        btn.addEventListener('click', () => openEditFamilyHistoryModalFromBtn(btn));
+    });
+
+    /* ---- BMI / Growth Chart SVG ---- */
+    function renderGrowthChart() {
+        const svg = document.getElementById('growthChartSvg');
+        const dataEl = document.getElementById('growth-chart-data');
+        if (!svg || !dataEl) return;
+        let data;
+        try { data = JSON.parse(dataEl.textContent); } catch (e) { return; }
+        const points = (data && data.points) || [];
+        if (!points.length) return;
+
+        const pad = { t: 12, r: 12, b: 28, l: 36 };
+        const W = 280, H = 140;
+        const innerW = W - pad.l - pad.r;
+        const innerH = H - pad.t - pad.b;
+        const weights = points.map(p => p.weight_kg);
+        let yMin = Math.min(...weights);
+        let yMax = Math.max(...weights);
+        points.forEach(p => {
+            if (p.wfa_neg2sd != null) yMin = Math.min(yMin, p.wfa_neg2sd);
+            if (p.wfa_pos2sd != null) yMax = Math.max(yMax, p.wfa_pos2sd);
+            if (p.wfa_median != null) {
+                yMin = Math.min(yMin, p.wfa_median);
+                yMax = Math.max(yMax, p.wfa_median);
+            }
+        });
+        const padY = Math.max(0.5, (yMax - yMin) * 0.12 || 1);
+        yMin -= padY; yMax += padY;
+        const xAt = (i) => pad.l + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+        const yAt = (v) => pad.t + innerH - ((v - yMin) / (yMax - yMin || 1)) * innerH;
+
+        let html = '';
+        // Y-axis ticks
+        [yMin, (yMin + yMax) / 2, yMax].forEach(v => {
+            const y = yAt(v);
+            html += `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/>`;
+            html += `<text x="${pad.l - 4}" y="${y + 3}" text-anchor="end" font-size="8" fill="#94a3b8">${v.toFixed(1)}</text>`;
+        });
+
+        // WHO ref bands (median dashed) when pediatric
+        if (data.has_pediatric_refs) {
+            const medPts = points.filter(p => p.wfa_median != null);
+            if (medPts.length >= 2) {
+                const line = (key, stroke, dash) => {
+                    const d = points.map((p, i) => p[key] != null ? `${i === 0 || points[i-1][key] == null ? 'M' : 'L'}${xAt(i)},${yAt(p[key])}` : '').filter(Boolean).join(' ');
+                    if (d) html += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1" stroke-dasharray="${dash || '0'}" opacity="0.7"/>`;
+                };
+                line('wfa_neg2sd', '#f87171', '3 2');
+                line('wfa_median', '#64748b', '4 3');
+                line('wfa_pos2sd', '#f87171', '3 2');
+            }
+        }
+
+        // Weight polyline
+        const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i)},${yAt(p.weight_kg)}`).join(' ');
+        html += `<path d="${pathD}" fill="none" stroke="#0f766e" stroke-width="2"/>`;
+        points.forEach((p, i) => {
+            html += `<circle cx="${xAt(i)}" cy="${yAt(p.weight_kg)}" r="3.5" fill="#0f766e"/>`;
+            const label = (p.date || '').slice(5); // MM-DD
+            html += `<text x="${xAt(i)}" y="${H - 8}" text-anchor="middle" font-size="7" fill="#94a3b8">${label}</text>`;
+        });
+        html += `<text x="8" y="10" font-size="8" fill="#64748b">kg</text>`;
+        svg.innerHTML = html;
+    }
+    renderGrowthChart();
+
+    /* ---- Clinical Summary Generation ---- */
+    function openClinicalSummaryModal() {
+        {% if not selected_visit %}
+        showMessageModal('Select visit', 'Choose a visit in the filter, then generate the clinical summary.', null, 'error');
+        return;
+        {% endif %}
+        const ta = document.getElementById('cs_care_plan');
+        if (ta && !ta.value) ta.value = '';
+        showModal('clinicalSummaryModal');
+    }
+
+    function submitClinicalSummary() {
+        {% if not selected_visit %}
+        showMessageModal('Error', 'No visit selected.', null, 'error');
+        return;
+        {% else %}
+        const form = document.getElementById('clinicalSummaryForm');
+        if (!form) return;
+        const formData = new FormData(form);
+        const plan = (formData.get('care_plan') || '').trim();
+        if (!plan) {
+            showMessageModal('Care plan required', 'Enter follow-up / care plan text before generating.', null, 'error');
+            return;
+        }
+        const url = "{% url 'home:generate_clinical_summary' selected_visit.pk %}";
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageModal(
+                        'Clinical Summary ready',
+                        'Human-readable + FHIR document created'
+                            + (data.hie_sync_status ? (' · HIE: ' + data.hie_sync_status) : '')
+                            + '.',
+                        () => { window.location.href = data.view_url || location.href; },
+                        'success'
+                    );
+                } else {
+                    showMessageModal('Error', data.error || 'Failed to generate.', null, 'error');
+                }
+            })
+            .catch(() => showMessageModal('Error', 'Network error.', null, 'error'));
+        {% endif %}
     }
 
     /**

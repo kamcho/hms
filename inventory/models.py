@@ -61,6 +61,12 @@ class InventoryItem(models.Model):
         return self.name
 
 class Medication(models.Model):
+    """
+    Local pharmaceutical master aligned to DHA HPT terminology.
+
+    Prescribe standard = GE* generic product (strength + form).
+    Ingredient ≈ AC*; optional preferred pack ≈ PH* (actual_product_code).
+    """
     FORMULATION_CHOICES = [
         ('Tablet', 'Tablet'),
         ('Capsule', 'Capsule'),
@@ -70,15 +76,87 @@ class Medication(models.Model):
         ('Ointment', 'Ointment'),
         ('Drops', 'Drops'),
         ('Inhaler', 'Inhaler'),
+        ('Suppository', 'Suppository'),
+        ('Cream', 'Cream'),
+        ('Suspension', 'Suspension'),
+        ('Solution', 'Solution'),
+        ('Other', 'Other'),
     ]
-    
+    STRENGTH_UNIT_CHOICES = [
+        ('mg', 'mg'),
+        ('g', 'g'),
+        ('ml', 'ml'),
+        ('mcg', 'mcg'),
+        ('IU', 'IU'),
+        ('%', '%'),
+        ('other', 'Other'),
+    ]
+
     item = models.OneToOneField(InventoryItem, on_delete=models.CASCADE, related_name='medication')
-    generic_name = models.CharField(max_length=200)
+    # Local / clinical labels (kept for UX; prefer DHA display when mapped)
+    generic_name = models.CharField(max_length=200, help_text="Active ingredient / INN (≈ DHA AC*)")
     drug_class = models.ForeignKey(DrugClass, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications')
     formulation = models.CharField(max_length=50, choices=FORMULATION_CHOICES)
 
+    # DHA HPT — generic product (GE*) used as eRx generic_concept_code
+    generic_concept_code = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="DHA HPT GE* code (e.g. GE10177)",
+    )
+    generic_concept_display = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="DHA fully specified name (e.g. Paracetamol 500 mg Oral Tablet)",
+    )
+    active_component_code = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="DHA HPT AC* active component code",
+    )
+    strength_amount = models.CharField(max_length=32, blank=True, help_text="e.g. 500")
+    strength_unit = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=STRENGTH_UNIT_CHOICES,
+        help_text="e.g. mg",
+    )
+    atc_code = models.CharField(max_length=16, blank=True, help_text="WHO ATC code from DHA")
+    dha_form_id = models.CharField(max_length=32, blank=True)
+    dha_route_id = models.CharField(max_length=32, blank=True)
+    # Preferred registered pack for this stocked item (dispense / actual_product_code)
+    actual_product_code = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="Optional DHA HPT PH* pack code for the product usually stocked",
+    )
+    dha_mapped_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
+        if self.generic_concept_display:
+            return self.generic_concept_display
+        if self.strength_amount and self.strength_unit:
+            return f"{self.generic_name} {self.strength_amount} {self.strength_unit} {self.formulation}"
         return f"{self.generic_name}"
+
+    @property
+    def is_dha_mapped(self) -> bool:
+        return bool((self.generic_concept_code or "").strip())
+
+    def standard_display_name(self) -> str:
+        """Prefer DHA FSN; otherwise compose local strength + form."""
+        if (self.generic_concept_display or "").strip():
+            return self.generic_concept_display.strip()
+        parts = [self.generic_name]
+        if self.strength_amount and self.strength_unit:
+            parts.append(f"{self.strength_amount} {self.strength_unit}")
+        if self.formulation:
+            parts.append(self.formulation)
+        return " ".join(p for p in parts if p).strip() or self.item.name
+
 
 class ConsumableDetail(models.Model):
     item = models.OneToOneField(InventoryItem, on_delete=models.CASCADE, related_name='consumable_detail')

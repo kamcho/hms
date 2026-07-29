@@ -46,6 +46,14 @@ urlpatterns = [
     # SHA Manager
     path('api/visit/set-sha/', views.set_visit_sha, name='set_visit_sha'),
     path('api/visit/bulk-set-sha/', views.bulk_set_visit_sha, name='bulk_set_visit_sha'),
+    path('api/sha/patient-by-id/', views.sha_patient_by_id_number, name='sha_patient_by_id'),
+    path('api/sha/eligibility/', views.sha_patient_by_id_number, name='sha_eligibility_api'),
+    path('api/sha/diagnostics/', views.sha_diagnostics_api, name='sha_diagnostics_api'),
+    path('api/sha/facility-by-code/', views.sha_facility_by_code, name='sha_facility_by_code'),
+    path('sha/eligibility/', views.sha_eligibility_page, name='sha_eligibility'),
+    path('sha/facility-search/', views.sha_facility_search_page, name='sha_facility_search'),
+    path('sha/claims/<int:visit_id>/', views.sha_claims_desk, name='sha_claims_desk'),
+    path('api/sha/claims/<int:visit_id>/', views.sha_claims_action, name='sha_claims_action'),
 
     # Superuser Invoice Manager
     path('manage-invoices/<int:visit_id>/', views.manage_visit_invoices, name='manage_visit_invoices'),

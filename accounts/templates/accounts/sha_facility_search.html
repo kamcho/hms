@@ -1,0 +1,267 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}SHA Facility Search · HMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .sha-facility-shell {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0.5rem 0.25rem 2rem;
+    }
+    .result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem 1.25rem;
+    }
+    .result-field label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+    .result-field div {
+        font-size: 0.95rem;
+        font-weight: 650;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+    .raw-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.75rem;
+        line-height: 1.45;
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .status-banner {
+        display: none;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 650;
+        margin-bottom: 1rem;
+    }
+    .status-banner.error {
+        background: rgba(220, 38, 38, 0.08);
+        border: 1px solid rgba(220, 38, 38, 0.25);
+        color: var(--danger);
+    }
+    .status-banner.ok {
+        background: rgba(5, 150, 105, 0.08);
+        border: 1px solid rgba(5, 150, 105, 0.25);
+        color: var(--success);
+    }
+    .status-banner.warn {
+        background: rgba(217, 119, 6, 0.08);
+        border: 1px solid rgba(217, 119, 6, 0.3);
+        color: #b45309;
+    }
+    @media (max-width: 700px) {
+        .result-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sha-facility-shell">
+    <div class="page-header">
+        <div>
+            <h1>SHA facility search</h1>
+            <p>Look up a facility on AfyaLink by registration / facility code.</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge badge-role">{{ base_url }}{{ facility_search_path }}</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.25rem;">
+        <form id="facilitySearchForm" class="filter-row" autocomplete="off">
+            <div class="form-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                <label class="form-label" for="facilityCode">Facility / registration code</label>
+                <input type="text" id="facilityCode" class="form-input" placeholder="e.g. facility registry code" required>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" id="searchBtn" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <div id="resultCard" class="card" style="padding: 1.5rem; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.15rem; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800;">Facility result</h3>
+                <p id="resultSub" style="margin: 0.2rem 0 0; color: var(--text-secondary); font-size: 0.85rem;"></p>
+            </div>
+            <span id="foundBadge" class="badge badge-muted">—</span>
+        </div>
+        <div id="facilityFields" class="result-grid"></div>
+        <details open style="margin-top: 1.15rem;">
+            <summary style="cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">API response (AfyaLink / HMIS)</summary>
+            <pre id="rawJson" class="raw-box"></pre>
+        </details>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('facilitySearchForm');
+    const codeInput = document.getElementById('facilityCode');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBanner = document.getElementById('statusBanner');
+    const resultCard = document.getElementById('resultCard');
+    const resultSub = document.getElementById('resultSub');
+    const foundBadge = document.getElementById('foundBadge');
+    const facilityFields = document.getElementById('facilityFields');
+    const rawJson = document.getElementById('rawJson');
+
+    const FIELD_LABELS = [
+        ['name', 'Facility name'],
+        ['facility_code', 'Facility code'],
+        ['registration_number', 'Registration number'],
+        ['id', 'Registry ID'],
+        ['level', 'Level'],
+        ['facility_type', 'Type'],
+        ['facility_category', 'Category'],
+        ['ownership', 'Owner'],
+        ['regulator', 'Regulator'],
+        ['status', 'Operational status'],
+        ['approved', 'Approved'],
+        ['license_expiry', 'License expiry'],
+        ['county', 'County'],
+        ['sub_county', 'Sub-county'],
+        ['ward', 'Ward'],
+        ['constituency', 'Constituency'],
+        ['address', 'Address'],
+        ['phone', 'Phone'],
+        ['email', 'Email'],
+    ];
+
+    function formatApiPayload(httpStatus, data) {
+        return JSON.stringify({
+            http_status: httpStatus,
+            hmis: {
+                success: data && data.success,
+                found: data && data.found,
+                facility_code: data && data.facility_code,
+                facility: data && data.facility,
+                debug: data && data.debug,
+            },
+            afyalink_raw: (data && data.raw) || {},
+            full_response: data || {},
+        }, null, 2);
+    }
+
+    function showStatus(type, message) {
+        statusBanner.className = 'status-banner ' + type;
+        statusBanner.textContent = message;
+        statusBanner.style.display = 'block';
+    }
+
+    function hideStatus() {
+        statusBanner.style.display = 'none';
+        statusBanner.textContent = '';
+    }
+
+    function renderFacility(facility) {
+        facilityFields.innerHTML = '';
+        let shown = 0;
+        FIELD_LABELS.forEach(([key, label]) => {
+            const value = facility && facility[key];
+            if (value === null || value === undefined || value === '') return;
+            shown += 1;
+            const el = document.createElement('div');
+            el.className = 'result-field';
+            el.innerHTML = `<label>${label}</label><div>${String(value)}</div>`;
+            facilityFields.appendChild(el);
+        });
+        if (!shown) {
+            facilityFields.innerHTML = '<div class="result-field"><label>Details</label><div>No normalized fields — check raw response.</div></div>';
+        }
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const code = codeInput.value.trim();
+        if (!code) {
+            showStatus('error', 'Enter a facility / registration code.');
+            return;
+        }
+
+        hideStatus();
+        resultCard.style.display = 'none';
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching…';
+
+        try {
+            const url = `{% url "accounts:sha_facility_by_code" %}?facility_code=${encodeURIComponent(code)}`;
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showStatus('error', data.error || 'Facility search failed.');
+                resultCard.style.display = 'block';
+                resultSub.textContent = `Query: ${code}`;
+                foundBadge.className = 'badge badge-danger';
+                foundBadge.textContent = 'Error';
+                facilityFields.innerHTML = '<div class="result-field"><label>Details</label><div>See API response below.</div></div>';
+                rawJson.textContent = formatApiPayload(res.status, data);
+                return;
+            }
+
+            resultCard.style.display = 'block';
+            resultSub.textContent = `Query: ${data.facility_code}`;
+            rawJson.textContent = formatApiPayload(res.status, data);
+
+            if (data.found) {
+                showStatus('ok', 'Facility found in SHA / DHA registry.');
+                foundBadge.className = 'badge badge-success';
+                foundBadge.textContent = 'Found';
+                renderFacility(data.facility || {});
+            } else {
+                showStatus('warn', 'No facility matched that code.');
+                foundBadge.className = 'badge badge-muted';
+                foundBadge.textContent = 'Not found';
+                facilityFields.innerHTML = '';
+            }
+        } catch (err) {
+            showStatus('error', 'Request failed: ' + (err && err.message ? err.message : err));
+            resultCard.style.display = 'block';
+            resultSub.textContent = 'Request failed';
+            foundBadge.className = 'badge badge-danger';
+            foundBadge.textContent = 'Error';
+            facilityFields.innerHTML = '';
+            rawJson.textContent = formatApiPayload(0, { network_error: String(err) });
+        } finally {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i> Search';
+        }
+    });
+
+    clearBtn.addEventListener('click', function () {
+        codeInput.value = '';
+        hideStatus();
+        resultCard.style.display = 'none';
+        codeInput.focus();
+    });
+});
+</script>
+{% endblock %}

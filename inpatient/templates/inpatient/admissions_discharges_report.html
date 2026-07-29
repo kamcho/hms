@@ -1,0 +1,502 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}Admissions & Discharges Report · HMS{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .report-shell {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0.5rem 0.25rem 2rem;
+    }
+    .report-charts {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 1.25rem;
+        margin-top: 1.5rem;
+    }
+    .chart-wrap {
+        position: relative;
+        height: 260px;
+        width: 100%;
+    }
+    .chart-wrap.sm {
+        height: 220px;
+    }
+    .ipd-stay {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+    .ipd-stay strong {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .ipd-stay span {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .view-tabs {
+        display: inline-flex;
+        gap: 0.35rem;
+        background: #f1f5f9;
+        padding: 0.3rem;
+        border-radius: 12px;
+    }
+    .view-tabs a {
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 0.45rem 0.9rem;
+        border-radius: 9px;
+    }
+    .view-tabs a.is-active {
+        background: #fff;
+        color: #0f172a;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.85rem;
+        align-items: end;
+    }
+    @media (max-width: 1100px) {
+        .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .report-charts { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+        .filter-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="report-shell">
+    <div class="page-header">
+        <div>
+            <h1>Admissions &amp; discharges</h1>
+            <p>Filter inpatient activity, review trends, and open case folders or summaries.</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <a href="{% url 'inpatient:dashboard' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <a href="{% url 'inpatient:new_admission' %}" class="btn btn-primary btn-sm"><i class="fas fa-user-plus"></i> New admission</a>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-sign-in-alt"></i></div>
+            <div>
+                <div class="metric-label">Admissions in range</div>
+                <div class="metric-value">{{ admissions_count }}</div>
+                <div class="metric-meta">Matching current filters</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-sign-out-alt"></i></div>
+            <div>
+                <div class="metric-label">Discharges in range</div>
+                <div class="metric-value" style="color: var(--success);">{{ discharges_count }}</div>
+                <div class="metric-meta">Formal discharge records</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-procedures"></i></div>
+            <div>
+                <div class="metric-label">Currently admitted</div>
+                <div class="metric-value">{{ currently_admitted }}</div>
+                <div class="metric-meta">Live ward census</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-clock"></i></div>
+            <div>
+                <div class="metric-label">Avg length of stay</div>
+                <div class="metric-value">{% if avg_los_days != None %}{{ avg_los_days }}{% else %}—{% endif %}</div>
+                <div class="metric-meta">{% if avg_los_days != None %}Days (completed stays){% else %}No completed stays in range{% endif %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics-grid" style="margin-top: 0;">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-baby-carriage"></i></div>
+            <div>
+                <div class="metric-label">Maternity admissions</div>
+                <div class="metric-value">{{ maternity_admissions }}</div>
+                <div class="metric-meta">Linked delivery records</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-ribbon"></i></div>
+            <div>
+                <div class="metric-label">Deceased in range</div>
+                <div class="metric-value" style="{% if deceased_count %}color: var(--danger);{% endif %}">{{ deceased_count }}</div>
+                <div class="metric-meta">Admission outcome = Deceased</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-hospital"></i></div>
+            <div>
+                <div class="metric-label">Wards touched</div>
+                <div class="metric-value">{{ ward_breakdown|length }}</div>
+                <div class="metric-meta">With admissions in filters</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-filter"></i></div>
+            <div>
+                <div class="metric-label">Period</div>
+                <div class="metric-value" style="font-size: 1.1rem;">{{ date_from|default:"—" }} → {{ date_to|default:"—" }}</div>
+                <div class="metric-meta">Default last 30 days</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <form method="get" class="filter-grid">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="date_from" class="form-label">From</label>
+                <input type="date" name="date_from" id="date_from" class="form-input" value="{{ date_from }}">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="date_to" class="form-label">To</label>
+                <input type="date" name="date_to" id="date_to" class="form-input" value="{{ date_to }}">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="ward" class="form-label">Ward</label>
+                <select name="ward" id="ward" class="form-input">
+                    <option value="">All wards</option>
+                    {% for ward in wards %}
+                    <option value="{{ ward.id }}" {% if ward_id == ward.id|stringformat:"s" %}selected{% endif %}>{{ ward.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-input">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="q" class="form-label">Search</label>
+                <input type="search" name="q" id="q" class="form-input" placeholder="Name, ID, phone, diagnosis…" value="{{ search_q }}">
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Apply filters</button>
+                <a href="{% url 'inpatient:admissions_discharges_report' %}?view={{ view_mode }}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="report-charts">
+        <div class="card" style="padding: 1.5rem;">
+            <div style="margin-bottom: 1rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 800;">Daily trend</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">Admissions vs discharges by day</p>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+        <div class="card" style="padding: 1.5rem;">
+            <div style="margin-bottom: 1rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 800;">Admission status</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">Outcomes in the selected period</p>
+            </div>
+            <div class="chart-wrap sm">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.5rem; margin-top: 1.25rem;">
+        <div style="margin-bottom: 1rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 800;">Admissions by ward</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">Top wards in the current filter set</p>
+        </div>
+        <div class="chart-wrap sm">
+            <canvas id="wardChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.75rem; margin-top: 1.5rem;">
+        <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 800;">
+                    {% if view_mode == 'discharges' %}Discharge records{% else %}Admission records{% endif %}
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">
+                    {% if view_mode == 'discharges' %}
+                        {{ discharges_count }} result{{ discharges_count|pluralize }}{% if records_truncated %} · showing first 200{% endif %}
+                    {% else %}
+                        {{ admissions_count }} result{{ admissions_count|pluralize }}{% if records_truncated %} · showing first 200{% endif %}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="view-tabs">
+                <a href="?view=admissions&date_from={{ date_from }}&date_to={{ date_to }}&ward={{ ward_id }}&status={{ status }}&q={{ search_q|urlencode }}" class="{% if view_mode == 'admissions' %}is-active{% endif %}">Admissions</a>
+                <a href="?view=discharges&date_from={{ date_from }}&date_to={{ date_to }}&ward={{ ward_id }}&status={{ status }}&q={{ search_q|urlencode }}" class="{% if view_mode == 'discharges' %}is-active{% endif %}">Discharges</a>
+            </div>
+        </div>
+
+        <div class="table-scroll">
+            {% if view_mode == 'discharges' %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Ward</th>
+                        <th>Admitted</th>
+                        <th>Discharged</th>
+                        <th>LOS</th>
+                        <th>Bill snapshot</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for discharge in records %}
+                    <tr class="table-row-hover">
+                        <td>
+                            <div class="staff-cell">
+                                <div class="staff-avatar">{{ discharge.admission.patient.first_name|first|upper }}{{ discharge.admission.patient.last_name|first|upper }}</div>
+                                <div>
+                                    <div class="staff-name">{{ discharge.admission.patient.full_name }}</div>
+                                    <div class="staff-meta">
+                                        Visit #{{ discharge.admission.visit.id }}{% if discharge.admission.patient.id_number %} · {{ discharge.admission.patient.id_number }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if discharge.admission.bed %}
+                            <span class="badge badge-success">{{ discharge.admission.bed.ward.name }}</span>
+                            {% else %}
+                            <span class="badge badge-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ipd-stay">
+                                <strong>{{ discharge.admission.admitted_at|date:"d M Y" }}</strong>
+                                <span>{{ discharge.admission.admitted_at|date:"H:i" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="ipd-stay">
+                                <strong>{{ discharge.discharge_date|date:"d M Y" }}</strong>
+                                <span>{{ discharge.discharge_date|date:"H:i" }} · {{ discharge.discharged_by.get_full_name|default:discharge.discharged_by }}</span>
+                            </div>
+                        </td>
+                        <td>{% if discharge.los_days != None %}{{ discharge.los_days }}d{% else %}—{% endif %}</td>
+                        <td style="font-variant-numeric: tabular-nums; font-weight: 700;">
+                            {{ discharge.total_bill_snapshot }}
+                        </td>
+                        <td style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                            <a href="{% url 'inpatient:discharge_summary' discharge.id %}" class="btn btn-secondary btn-sm">Summary</a>
+                            <a href="{% url 'inpatient:patient_case_folder' discharge.admission.id %}" class="btn btn-primary btn-sm">Case folder</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-file-export"></i>
+                            <div style="font-weight: 700;">No discharges in this range</div>
+                            <p style="font-size: 0.85rem; margin-top: 0.35rem;">Widen the dates or clear ward/status filters.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Status</th>
+                        <th>Ward / bed</th>
+                        <th>Admitted</th>
+                        <th>LOS</th>
+                        <th>Diagnosis</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admission in records %}
+                    <tr class="table-row-hover">
+                        <td>
+                            <div class="staff-cell">
+                                <div class="staff-avatar">{{ admission.patient.first_name|first|upper }}{{ admission.patient.last_name|first|upper }}</div>
+                                <div>
+                                    <div class="staff-name">{{ admission.patient.full_name }}</div>
+                                    <div class="staff-meta">
+                                        Visit #{{ admission.visit.id }}{% if admission.patient.id_number %} · {{ admission.patient.id_number }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if admission.status == 'Admitted' %}
+                            <span class="badge badge-warning">Admitted</span>
+                            {% elif admission.status == 'Discharged' %}
+                            <span class="badge badge-success">Discharged</span>
+                            {% elif admission.status == 'Deceased' %}
+                            <span class="badge badge-danger">Deceased</span>
+                            {% else %}
+                            <span class="badge badge-muted">{{ admission.status }}</span>
+                            {% endif %}
+                            {% if admission.delivery %}
+                            <span class="badge badge-info" style="margin-left: 0.25rem;">Maternity</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if admission.bed %}
+                            <div class="ipd-stay">
+                                <strong>{{ admission.bed.ward.name }}</strong>
+                                <span>{{ admission.bed.bed_number }}</span>
+                            </div>
+                            {% else %}
+                            <span class="badge badge-muted">No bed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ipd-stay">
+                                <strong>{{ admission.admitted_at|date:"d M Y" }}</strong>
+                                <span>{{ admission.admitted_at|date:"H:i" }}{% if admission.admitted_by %} · {{ admission.admitted_by.get_full_name|default:admission.admitted_by }}{% endif %}</span>
+                            </div>
+                        </td>
+                        <td>{% if admission.los_days != None %}{{ admission.los_days }}d{% else %}—{% endif %}</td>
+                        <td style="max-width: 220px; color: var(--text-secondary); font-size: 0.85rem;">
+                            {{ admission.provisional_diagnosis|truncatechars:80|default:"—" }}
+                        </td>
+                        <td style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                            <a href="{% url 'inpatient:patient_case_folder' admission.id %}" class="btn btn-primary btn-sm">Case folder</a>
+                            {% if admission.discharge_record %}
+                            <a href="{% url 'inpatient:discharge_summary' admission.discharge_record.id %}" class="btn btn-secondary btn-sm">Summary</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-procedures"></i>
+                            <div style="font-weight: 700;">No admissions in this range</div>
+                            <p style="font-size: 0.85rem; margin-top: 0.35rem;">Widen the dates or clear ward/status filters.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return;
+
+    var labels = {{ chart_labels_json|safe }};
+    var admits = {{ chart_admissions_json|safe }};
+    var discharges = {{ chart_discharges_json|safe }};
+    var statusLabels = {{ status_chart_labels_json|safe }};
+    var statusValues = {{ status_chart_values_json|safe }};
+    var wardLabels = {{ ward_chart_labels_json|safe }};
+    var wardValues = {{ ward_chart_values_json|safe }};
+
+    var trendEl = document.getElementById('trendChart');
+    if (trendEl) {
+        new Chart(trendEl.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Admissions',
+                        data: admits,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 2,
+                    },
+                    {
+                        label: 'Discharges',
+                        data: discharges,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
+                }
+            }
+        });
+    }
+
+    var statusEl = document.getElementById('statusChart');
+    if (statusEl) {
+        new Chart(statusEl.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels.length ? statusLabels : ['No data'],
+                datasets: [{
+                    data: statusValues.length ? statusValues : [1],
+                    backgroundColor: statusValues.length
+                        ? ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#94a3b8']
+                        : ['#e2e8f0'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    var wardEl = document.getElementById('wardChart');
+    if (wardEl) {
+        new Chart(wardEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: wardLabels.length ? wardLabels : ['No ward data'],
+                datasets: [{
+                    label: 'Admissions',
+                    data: wardValues.length ? wardValues : [0],
+                    backgroundColor: '#818cf8',
+                    borderRadius: 8,
+                    maxBarThickness: 42
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

@@ -3,436 +3,536 @@
 {% block title %}Reception Dashboard - HMS{% endblock %}
 {% block content %}
     <style>
+    /* Reception dashboard — light card layout (HMS context) */
     :root {
-        --reception-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --reception-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        --reception-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        --reception-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        --reception-bg: #0f172a;
-        --reception-card-bg: #1e293b;
-        --reception-border: rgba(148, 163, 184, 0.1);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.05);
+        --rx-bg: #f3f4f6;
+        --rx-card: #ffffff;
+        --rx-border: #e5e7eb;
+        --rx-text: #111827;
+        --rx-muted: #6b7280;
+        --rx-blue: #2563eb;
+        --rx-blue-soft: #eff6ff;
+        --rx-orange: #ea580c;
+        --rx-orange-soft: #fff7ed;
+        --rx-green: #16a34a;
+        --rx-green-soft: #f0fdf4;
+        --rx-slate: #334155;
+        --rx-slate-soft: #f1f5f9;
+        --rx-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05);
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --reception-border: #e5e7eb;
     }
 
-    body {
-        background: var(--reception-bg);
-        color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
+    .main-content,
+    .dashboard-container .main-content {
+        background: var(--rx-bg) !important;
     }
 
-    .container {
-        padding: 2rem;
-        max-width: 1600px;
+    .container.rx-dash {
+        padding: 1.5rem 1.75rem 2.5rem;
+        max-width: 1280px;
         margin: 0 auto;
-        animation: fadeIn 0.6s ease-out;
     }
 
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Hero Section */
-    .reception-hero {
-        background: var(--reception-gradient-1);
-        padding: 3rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
+    .rx-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        gap: 2rem;
-        box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.4);
-    }
-
-    .reception-hero::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 400px;
-        height: 400px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        filter: blur(80px);
-    }
-
-    .hero-content h1 {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: white;
-        margin: 0 0 0.5rem 0;
-        display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
     }
 
-    .hero-content p {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1.1rem;
+    .rx-top h1 {
         margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--rx-text);
+        letter-spacing: -0.02em;
     }
 
-    .hero-actions {
-        display: flex;
-        gap: 1rem;
-        position: relative;
-        z-index: 1;
+    .rx-top .rx-sub {
+        margin: 0.35rem 0 0;
+        font-size: 0.9rem;
+        color: var(--rx-muted);
     }
+
+    .rx-top-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+    }
+
+    .rx-date-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 0.85rem;
+        background: var(--rx-card);
+        border: 1px solid var(--rx-border);
+        border-radius: 999px;
+        font-size: 0.85rem;
+        color: var(--rx-text);
+        font-weight: 500;
+        box-shadow: var(--rx-shadow);
+    }
+
+    .rx-date-pill i { color: var(--rx-muted); }
 
     .quick-action-btn {
-        padding: 1rem 1.5rem;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 16px;
-        color: white;
-        text-decoration: none;
-        font-weight: 700;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
-        transition: all 0.3s;
+        gap: 0.4rem;
+        padding: 0.55rem 1rem;
+        background: var(--rx-blue);
+        border: 1px solid var(--rx-blue);
+        border-radius: 999px;
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
 
     .quick-action-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-4px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        background: #1d4ed8;
+        color: #fff;
     }
 
-    /* Analytics Grid */
     .analytics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2.5rem;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.25rem;
     }
 
     .stat-card {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 20px;
-        padding: 2rem;
+        background: var(--rx-card);
+        border: 1px solid var(--rx-border);
+        border-radius: 16px;
+        padding: 1.15rem 1.2rem;
+        box-shadow: var(--rx-shadow);
         display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        flex-direction: column;
+        gap: 0.85rem;
         position: relative;
-        overflow: hidden;
     }
 
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--gradient, var(--reception-gradient-1));
-    }
-
-    .stat-card:hover {
-        transform: translateY(-8px);
-        border-color: rgba(148, 163, 184, 0.3);
-        box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
-    }
+    .stat-card::before { display: none; }
+    .stat-card:hover { box-shadow: var(--rx-shadow); }
 
     .stat-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.75rem;
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
+        font-size: 0.95rem;
+        background: var(--rx-blue-soft);
+        color: var(--rx-blue);
+    }
+
+    .stat-card.tone-orange .stat-icon {
+        background: var(--rx-orange-soft);
+        color: var(--rx-orange);
+    }
+
+    .stat-card.tone-green .stat-icon {
+        background: var(--rx-green-soft);
+        color: var(--rx-green);
+    }
+
+    .stat-card.tone-slate .stat-icon {
+        background: var(--rx-slate-soft);
+        color: var(--rx-slate);
     }
 
     .stat-info h3 {
+        margin: 0;
         font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--rx-muted);
+        text-transform: none;
+        letter-spacing: 0;
+        order: 2;
     }
 
     .stat-info .number {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--rx-text);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        order: 1;
+        font-variant-numeric: tabular-nums;
     }
 
-    /* Layout Content Grid */
-    .content-grid {
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .stat-foot {
+        font-size: 0.75rem;
+        color: var(--rx-muted);
+        margin-top: 0.15rem;
+    }
+
+    .rx-mid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-        gap: 2rem;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
     }
 
-    .section {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 24px;
-        padding: 0;
-        overflow: hidden;
-        box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.3);
-        margin-bottom: 2rem;
+    .rx-panel {
+        background: var(--rx-card);
+        border: 1px solid var(--rx-border);
+        border-radius: 16px;
+        box-shadow: var(--rx-shadow);
+        padding: 1.15rem 1.25rem;
     }
 
-    .section-header {
-        padding: 1.75rem 2rem;
-        border-bottom: 1px solid var(--reception-border);
+    .rx-panel-head {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    .section-header h3 {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        display: flex;
-        align-items: center;
+        margin-bottom: 1rem;
         gap: 0.75rem;
     }
 
+    .rx-panel-head h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--rx-text);
+    }
+
+    .rx-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: var(--rx-green-soft);
+        color: var(--rx-green);
+        border: 1px solid #bbf7d0;
+    }
+
+    .rx-badge.warn {
+        background: var(--rx-orange-soft);
+        color: var(--rx-orange);
+        border-color: #fed7aa;
+    }
+
+    .rx-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .rx-mini-card {
+        border: 1px solid var(--rx-border);
+        border-radius: 12px;
+        padding: 0.85rem;
+        background: #fafafa;
+        min-height: 96px;
+    }
+
+    .rx-mini-card h4 {
+        margin: 0 0 0.45rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--rx-text);
+        line-height: 1.3;
+    }
+
+    .rx-mini-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.75rem;
+        color: var(--rx-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .rx-tag {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: var(--rx-blue-soft);
+        color: var(--rx-blue);
+    }
+
+    .rx-tag.pending { background: #fef3c7; color: #b45309; }
+    .rx-tag.partial { background: var(--rx-blue-soft); color: var(--rx-blue); }
+    .rx-tag.draft { background: var(--rx-slate-soft); color: var(--rx-slate); }
+
+    .rx-empty-mini {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        color: var(--rx-muted);
+        font-size: 0.875rem;
+    }
+
+    .rx-highlight {
+        background: linear-gradient(145deg, #1e3a5f 0%, #2563eb 100%);
+        border: none;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100%;
+    }
+
+    .rx-highlight h3 {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.85);
+    }
+
+    .rx-highlight .rx-hl-metric {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.15;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .rx-highlight p {
+        margin: 0 0 1.25rem;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.78);
+        line-height: 1.45;
+    }
+
+    .rx-hl-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        width: fit-content;
+    }
+
+    .rx-hl-btn:hover {
+        background: rgba(255,255,255,0.28);
+        color: #fff;
+    }
+
+    .content-grid,
+    .content-gid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .section {
+        background: var(--rx-card);
+        border: 1px solid var(--rx-border);
+        border-radius: 16px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: var(--rx-shadow);
+        margin-bottom: 0;
+    }
+
+    .section-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--rx-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--rx-text);
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .section-header h3 i { color: var(--rx-muted); font-size: 0.9rem; }
+
     .search-section {
-        padding: 1.25rem 2rem;
-        background: rgba(255, 255, 255, 0.01);
-        border-bottom: 1px solid var(--reception-border);
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--rx-border);
+        background: #fff;
     }
 
     .search-input {
         width: 100%;
-        padding: 1rem 1.25rem 1rem 3.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--reception-border);
-        border-radius: 16px;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        transition: all 0.3s;
+        padding: 0.65rem 0.85rem 0.65rem 2.4rem;
+        background: #f9fafb;
+        border: 1px solid var(--rx-border);
+        border-radius: 10px;
+        color: var(--rx-text);
+        font-size: 0.875rem;
+        font-family: inherit;
     }
 
     .search-input:focus {
         outline: none;
-        background: rgba(255, 255, 255, 0.08);
-        border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        background: #fff;
+        border-color: #93c5fd;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
 
-    /* Premium Table Styling */
     .premium-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: collapse;
     }
 
     .premium-table th {
-        padding: 1.25rem 2rem;
+        padding: 0.75rem 1.25rem;
         text-align: left;
         font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid var(--reception-border);
+        font-weight: 600;
+        color: var(--rx-muted);
+        text-transform: none;
+        letter-spacing: 0;
+        background: #fafafa;
+        border-bottom: 1px solid var(--rx-border);
     }
 
     .premium-table td {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--reception-border);
-        color: var(--text-primary);
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid #f3f4f6;
+        color: var(--rx-text);
         vertical-align: middle;
+        font-size: 0.875rem;
     }
 
-    .premium-table tr:hover td {
-        background: rgba(255, 255, 255, 0.03);
-    }
+    .premium-table tr:hover td { background: #f9fafb; }
+    .premium-table tr:last-child td { border-bottom: none; }
 
-    /* Badges & Tags */
     .invoice-status,
     .priority-badge-modern {
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.3rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
     }
 
-    .status-paid {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-    }
-
-    .status-unpaid {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
-
-    .status-pending {
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-    }
-
-    .status-partial {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366f1;
-    }
-
-    .priority-critical {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
-
-    .priority-high {
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-    }
-
-    .priority-medium {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366f1;
-    }
-
-    .priority-low {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-    }
+    .status-paid, .priority-low { background: var(--rx-green-soft); color: var(--rx-green); }
+    .status-unpaid, .priority-critical { background: #fef2f2; color: #dc2626; }
+    .status-pending, .priority-high { background: #fef3c7; color: #b45309; }
+    .status-partial, .priority-medium { background: var(--rx-blue-soft); color: var(--rx-blue); }
 
     .patient-profile-inline {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.75rem;
     }
 
     .avatar-initials {
-        width: 45px;
-        height: 45px;
-        border-radius: 12px;
-        background: var(--reception-gradient-1);
-        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--rx-blue-soft);
+        color: var(--rx-blue);
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 700;
-        font-size: 1rem;
-    }
-
-    .name-id {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .full-name {
-        font-weight: 700;
-        color: var(--text-primary);
-        font-size: 1rem;
-    }
-
-    .patient-id {
         font-size: 0.75rem;
-        color: var(--text-secondary);
+        flex-shrink: 0;
     }
 
-    .visit-time {
-        font-size: 0.75rem;
-        color: #10b981;
-        margin-top: 0.2rem;
-    }
+    .name-id { display: flex; flex-direction: column; gap: 0.1rem; }
+    .full-name { font-weight: 600; color: var(--rx-text); font-size: 0.875rem; }
+    .patient-id, .visit-time { font-size: 0.75rem; color: var(--rx-muted); margin: 0; }
 
-    /* Tabs Component */
     .tabs-header {
         display: flex;
-        gap: 1rem;
-        padding: 1rem 2rem 0;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid var(--reception-border);
+        gap: 0.25rem;
+        padding: 0.5rem 1.25rem 0;
+        background: #fff;
+        border-bottom: 1px solid var(--rx-border);
     }
 
     .dashboard-tab {
-        padding: 1rem 1.5rem;
+        padding: 0.75rem 0.9rem;
         border: none;
         background: none;
         cursor: pointer;
-        font-weight: 700;
-        color: var(--text-secondary);
-        border-bottom: 3px solid transparent;
-        transition: all 0.3s;
+        font-weight: 600;
+        font-size: 0.85rem;
+        font-family: inherit;
+        color: var(--rx-muted);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
     }
 
     .dashboard-tab.active {
-        color: white;
-        border-bottom-color: #6366f1;
+        color: var(--rx-blue);
+        border-bottom-color: var(--rx-blue);
     }
 
-    .tab-content {
-        display: none;
-        padding: 0;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .tab-content.active {
-        display: block;
-    }
-
-    /* Modern Modals */
     .clinical-modal {
         display: none;
         position: fixed;
         z-index: 99999;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(10px);
+        inset: 0;
+        background: rgba(17, 24, 39, 0.45);
         align-items: center;
         justify-content: center;
     }
 
     .modal-content {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 28px;
+        background: #fff;
+        border: 1px solid var(--rx-border);
+        border-radius: 16px;
         width: 90%;
         max-width: 650px;
-        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6);
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
         max-height: 90vh;
         overflow-y: auto;
         position: relative !important;
         z-index: 100000 !important;
         pointer-events: auto !important;
+        color: var(--rx-text);
     }
 
     .modal-header {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--reception-border);
-        background: rgba(255, 255, 255, 0.03);
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--rx-border);
+        background: #fafafa;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -440,67 +540,47 @@
 
     .modal-header h3 {
         margin: 0;
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: white;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--rx-text) !important;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
-    .modal-body {
-        padding: 2rem;
-    }
+    .modal-body { padding: 1.25rem; }
 
     .form-control,
-    .clinical-input {
-        background: #1a202c !important;
-        /* Ultimate dark background */
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 14px !important;
-        color: #ffffff !important;
-        /* Pure white text for max visibility */
-        padding: 0.875rem 1.25rem !important;
+    .clinical-input,
+    .clinical-modal input:not([type="checkbox"]):not([type="radio"]),
+    .clinical-modal select,
+    .clinical-modal textarea {
+        background: #fff !important;
+        border: 1px solid var(--rx-border) !important;
+        border-radius: 10px !important;
+        color: var(--rx-text) !important;
+        padding: 0.65rem 0.85rem !important;
         width: 100% !important;
-        transition: all 0.3s !important;
         font-family: inherit !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
+        font-size: 0.875rem !important;
         box-shadow: none !important;
-        cursor: pointer;
+        pointer-events: auto !important;
         position: relative;
         z-index: 100005;
-        pointer-events: auto !important;
     }
 
     .form-control:focus,
     .clinical-input:focus {
-        background: #242c3d !important;
-        border-color: #6366f1 !important;
+        border-color: #93c5fd !important;
         outline: none !important;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 
-    input,
-    select,
-    textarea,
-    .form-control,
-    .clinical-input {
-        background-image: none;
-        background-color: #1a202c !important;
-        color: #ffffff !important;
-        pointer-events: auto !important;
-    }
-
-    /* Restore native checkbox/radio appearance */
     input[type="checkbox"],
     input[type="radio"] {
         -webkit-appearance: auto !important;
         -moz-appearance: auto !important;
         appearance: auto !important;
-        background-color: transparent !important;
-        background-image: none !important;
         background: transparent !important;
         border: initial !important;
         border-radius: 0 !important;
@@ -508,219 +588,356 @@
         box-shadow: none !important;
         width: auto !important;
         position: static !important;
-        z-index: auto !important;
     }
 
-    /* Style for select dropdowns to ensure dark theme */
     select.form-control,
     select.clinical-input {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
         background-repeat: no-repeat !important;
-        background-position: right 1rem center !important;
-        background-size: 1.25rem !important;
-        padding-right: 3rem !important;
+        background-position: right 0.75rem center !important;
+        background-size: 1rem !important;
+        padding-right: 2.4rem !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
     }
 
     .form-control option,
     .clinical-input option {
-        background-color: #1a202c !important;
-        color: white !important;
+        background: #fff !important;
+        color: var(--rx-text) !important;
     }
 
     .form-grid-modern {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
     }
 
     .form-group label {
         display: block;
-        margin-bottom: 0.75rem;
-        font-weight: 600;
+        margin-bottom: 0.4rem;
+        font-weight: 500;
         font-size: 0.8rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: var(--rx-muted);
+        text-transform: none;
+        letter-spacing: 0;
     }
 
-    .btn-primary {
-        background: var(--reception-gradient-1);
-        color: white;
-        border: none;
-        padding: 0.875rem 1.75rem;
-        border-radius: 14px;
-        font-weight: 700;
+    .btn-primary,
+    #admitVisitBtn,
+    #generateInvoiceBtn,
+    #submitSplitPayment,
+    #printFullInvoiceBtn {
+        background: var(--rx-blue) !important;
+        color: #fff !important;
+        border: 1px solid var(--rx-blue) !important;
+        padding: 0.65rem 1.1rem !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        font-family: inherit;
         cursor: pointer;
-        transition: all 0.3s;
+        box-shadow: none !important;
         display: inline-flex;
         align-items: center;
-        gap: 0.6rem;
+        justify-content: center;
+        gap: 0.4rem;
         text-decoration: none;
     }
 
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+    .btn-primary:hover,
+    #admitVisitBtn:hover,
+    #generateInvoiceBtn:hover,
+    #submitSplitPayment:hover {
+        background: #1d4ed8 !important;
     }
 
     .btn-secondary {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border: none;
-        padding: 0.875rem 1.75rem;
-        border-radius: 14px;
-        font-weight: 700;
+        background: #fff;
+        color: var(--rx-text);
+        border: 1px solid var(--rx-border);
+        padding: 0.65rem 1.1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-family: inherit;
         cursor: pointer;
-        transition: all 0.3s;
         text-decoration: none;
     }
 
-    .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.15);
-    }
+    .btn-secondary:hover { background: #f9fafb; }
 
-    .close,
-    .close-payment,
-    .close-triage {
-        color: var(--text-secondary);
-        font-size: 1.75rem;
+    .close, .close-payment, .close-triage {
+        color: var(--rx-muted);
+        font-size: 1.35rem;
         cursor: pointer;
-        transition: all 0.3s;
+        line-height: 1;
     }
 
-    .close:hover {
-        color: white;
-        transform: rotate(90deg);
-    }
+    .close:hover, .close-payment:hover, .close-triage:hover { color: var(--rx-text); }
 
-    /* Miscellanous */
     .empty-state-small {
-        padding: 3rem;
+        padding: 2.5rem 1rem;
         text-align: center;
-        color: var(--text-secondary);
+        color: var(--rx-muted);
+        font-size: 0.875rem;
     }
 
     .empty-state-small i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-    }
-
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: var(--reception-bg);
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: #475569;
+        font-size: 2rem;
+        margin-bottom: 0.65rem;
+        opacity: 0.35;
+        color: var(--rx-muted);
+        display: block;
     }
 
     .reload-btn {
-        background: none;
-        border: 1px solid var(--reception-border);
-        color: var(--text-secondary);
-        padding: 0.5rem;
+        background: #fff;
+        border: 1px solid var(--rx-border);
+        color: var(--rx-muted);
+        padding: 0.4rem 0.55rem;
         border-radius: 8px;
         cursor: pointer;
-        transition: all 0.2s;
     }
 
     .reload-btn:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
+        background: #f9fafb;
+        color: var(--rx-blue);
+    }
+
+    #activeVisitCancel {
+        background: #fff !important;
+        border: 1px solid var(--rx-border) !important;
+        color: var(--rx-text) !important;
+        border-radius: 10px !important;
+    }
+
+    #activeVisitProceed {
+        background: #dc2626 !important;
+        border: 1px solid #dc2626 !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+    }
+
+    .search-results-info {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.85rem;
+        color: var(--rx-muted);
+        border-bottom: 1px solid var(--rx-border);
+        background: #fafafa;
+    }
+
+    .search-results-info strong { color: var(--rx-text); }
+
+    .clear-btn {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    .clinical-modal .patient-banner {
+        background: #fafafa !important;
+        border: 1px solid var(--rx-border) !important;
+        border-radius: 10px !important;
+    }
+
+    .btn-triage-start {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.85rem;
+        background: var(--rx-blue);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .btn-triage-start:hover { background: #1d4ed8; }
+
+    .visit-type-tag {
+        font-size: 0.75rem;
+        color: var(--rx-muted);
+        font-weight: 500;
+    }
+
+    .view-all-link {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--rx-blue);
+        text-decoration: none;
+    }
+
+    .view-all-link:hover { text-decoration: underline; }
+
+    @media (max-width: 1100px) {
+        .analytics-grid { grid-template-columns: repeat(2, 1fr); }
+        .rx-mid { grid-template-columns: 1fr; }
+        .rx-mini-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+        .analytics-grid { grid-template-columns: 1fr; }
+        .container.rx-dash { padding: 1rem; }
     }
     </style>
-    <div class="container">
-        <!-- Hero Section -->
-        <div class="reception-hero">
-            <div class="hero-content">
-                <h1>
-                    <i class="fas fa-hospital-user"></i> Reception Dashboard
-                </h1>
-                <p>Streamlined patient intake and coordination hub</p>
+    <div class="container rx-dash">
+        <div class="rx-top">
+            <div>
+                <h1>Reception Dashboard</h1>
+                <p class="rx-sub">Welcome back{% if user.get_full_name %}, {{ user.get_full_name }}{% elif user.email %}, {{ user.email }}{% endif %}</p>
             </div>
-            <div class="hero-actions">
+            <div class="rx-top-actions">
+                <span class="rx-date-pill">
+                    <i class="far fa-calendar"></i>
+                    {% now "M d, Y" %}
+                </span>
                 {% if user_role == 'Receptionist' or user_role == 'Admin' %}
                     <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
-                        <i class="fas fa-plus-circle"></i> Add New Patient
+                        <i class="fas fa-plus"></i> New patient
                     </a>
                 {% endif %}
             </div>
         </div>
-        <!-- Analytics Cards -->
+
         <div class="analytics-grid">
-            <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
-                <div class="stat-icon">
-                    <i class="fas fa-calendar-day"></i>
-                </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
                 <div class="stat-info">
-                    <h3>Today's Visits</h3>
                     <div class="number">{{ today_visits }}</div>
+                    <h3>Today's visits</h3>
                 </div>
             </div>
-            <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
+            <div class="stat-card tone-orange">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-info">
-                    <h3>Total Patients</h3>
                     <div class="number">{{ total_patients }}</div>
+                    <h3>Total patients</h3>
                 </div>
             </div>
             {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-                <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
-                    <div class="stat-icon">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                    </div>
+                <div class="stat-card tone-slate">
+                    <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                     <div class="stat-info">
-                        <h3>Unpaid Invoices</h3>
                         <div class="number">{{ unpaid_invoices }}</div>
+                        <h3>Unpaid invoices</h3>
+                        <div class="stat-foot">Due for today's visits</div>
+                    </div>
+                </div>
+                <div class="stat-card tone-green">
+                    <div class="stat-icon"><i class="fas fa-bed"></i></div>
+                    <div class="stat-info">
+                        <div class="number">{{ ipd_admissions|length }}</div>
+                        <h3>IPD admissions</h3>
+                        <div class="stat-foot">Currently admitted</div>
                     </div>
                 </div>
             {% elif user_role == 'Triage Nurse' or user_role == 'Nurse' %}
-                <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
-                    <div class="stat-icon">
-                        <i class="fas fa-clipboard-check"></i>
-                    </div>
+                <div class="stat-card tone-green">
+                    <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
                     <div class="stat-info">
-                        <h3>Today's Triage</h3>
                         <div class="number">{{ today_triage_entries }}</div>
+                        <h3>Today's triage</h3>
                     </div>
                 </div>
-                <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
-                    <div class="stat-icon">
-                        <i class="fas fa-user-clock"></i>
-                    </div>
+                <div class="stat-card tone-slate">
+                    <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
                     <div class="stat-info">
-                        <h3>Pending Triage</h3>
                         <div class="number">{{ pending_triage_count }}</div>
+                        <h3>Pending triage</h3>
+                        <div class="stat-foot">Waiting assessment</div>
                     </div>
                 </div>
             {% endif %}
         </div>
-        <div class="content-gid">
+
+        {% if user_role == 'Receptionist' or user_role == 'Admin' %}
+        <div class="rx-mid">
+            <div class="rx-panel">
+                <div class="rx-panel-head">
+                    <h3>Invoice overview</h3>
+                    <span class="rx-badge {% if unpaid_invoices %}warn{% endif %}">{% if unpaid_invoices %}{{ unpaid_invoices }} unpaid{% else %}All clear{% endif %}</span>
+                </div>
+                <div class="rx-mini-grid">
+                    {% for invoice in invoices|slice:":3" %}
+                        <div class="rx-mini-card invoice-row" style="cursor:pointer;" data-invoice-id="{{ invoice.pk }}" data-patient-name="{% if invoice.patient %}{{ invoice.patient.full_name }}{% else %}{{ invoice.deceased.full_name }}{% endif %}" data-service-name="{% for item in invoice.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% empty %}No services{% endfor %}" data-price="{{ invoice.balance }}" data-status="{{ invoice.status }}">
+                            <h4>{% if invoice.patient %}{{ invoice.patient.full_name }}{% elif invoice.deceased %}{{ invoice.deceased.full_name }}{% else %}Unknown{% endif %}</h4>
+                            <div class="rx-mini-meta">
+                                <i class="far fa-calendar"></i>
+                                {{ invoice.created_at|date:"M d, Y" }}
+                            </div>
+                            <span class="rx-tag {{ invoice.status|lower }}">{{ invoice.status }} · Ksh {{ invoice.balance|format_number:0 }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="rx-empty-mini">No unpaid invoices for today's visits.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="rx-panel rx-highlight">
+                <div>
+                    <h3>Collection focus</h3>
+                    <div class="rx-hl-metric">{{ unpaid_invoices }} unpaid</div>
+                    <p>Outstanding balances on today's outpatient visits. Click an invoice below to process payment.</p>
+                </div>
+                <a href="#invoiceSection" class="rx-hl-btn">View invoice list</a>
+            </div>
+        </div>
+        {% elif user_role == 'Triage Nurse' or user_role == 'Nurse' %}
+        <div class="rx-mid">
+            <div class="rx-panel">
+                <div class="rx-panel-head">
+                    <h3>Queue overview</h3>
+                    <span class="rx-badge {% if pending_triage_count %}warn{% endif %}">{% if pending_triage_count %}{{ pending_triage_count }} waiting{% else %}Queue clear{% endif %}</span>
+                </div>
+                <div class="rx-mini-grid">
+                    {% for visit in visits_without_triage|slice:":3" %}
+                        <div class="rx-mini-card">
+                            <h4>{{ visit.patient.full_name }}</h4>
+                            <div class="rx-mini-meta">
+                                <i class="far fa-clock"></i>
+                                {{ visit.visit_date|date:"H:i" }}
+                            </div>
+                            <span class="rx-tag">{{ visit.get_visit_type_display }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="rx-empty-mini">No visits waiting for triage.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="rx-panel rx-highlight">
+                <div>
+                    <h3>Triage progress</h3>
+                    <div class="rx-hl-metric">{{ today_triage_entries }} done</div>
+                    <p>{% if pending_triage_count %}{{ pending_triage_count }} patient{{ pending_triage_count|pluralize }} still waiting for assessment today.{% else %}All patients in queue have been triaged.{% endif %}</p>
+                </div>
+                <a href="#pendingTriageSection" class="rx-hl-btn">Open pending list</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="content-grid">
             {% if user_role == 'Receptionist' or user_role == 'Admin' %}
-                <div class="section">
+                <div class="section" id="invoiceSection">
                     <div class="section-header">
-                        <h3>
-                            <i class="fas fa-file-invoice-dollar"></i> Patient Service Invoices
-                        </h3>
-                        <button id="reloadInvoices" class="reload-btn" title="Reload Invoice Data">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
+                        <h3>Patient service invoices</h3>
+                        <div style="display:flex; align-items:center; gap:0.65rem;">
+                            <a href="{% url 'home:patient_list' %}" class="view-all-link">Patients</a>
+                            <button id="reloadInvoices" class="reload-btn" title="Reload Invoice Data">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="search-section">
                         <form method="GET" class="search-form">
                             <div class="search-container" style="position: relative;">
-                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <i class="fas fa-search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; font-size: 0.8rem;"></i>
                                 <input type="text" name="invoice_search" class="search-input" placeholder="Search by patient name or service name..." value="{{ invoice_search }}">
                                 {% if invoice_search %}
                                     <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
@@ -775,7 +992,7 @@
                                         <td class="service-name-cell">
                                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                                 {% for item in invoice.items.all %}
-                                                    <span style="font-size: 0.85rem; font-weight: 600; color: #6366f1;">{{ item.name }}</span>
+                                                    <span style="font-size: 0.85rem; font-weight: 500; color: #2c3e50;">{{ item.name }}</span>
                                                 {% empty %}
                                                     <span class="text-secondary">No services</span>
                                                 {% endfor %}
@@ -810,11 +1027,9 @@
                     </div>
                 </div>
             {% elif user_role == 'Triage Nurse' or user_role == 'Nurse' %}
-             <div class="section">
+                <div class="section" id="pendingTriageSection">
                     <div class="section-header">
-                        <h3>
-                            <i class="fas fa-hourglass-half"></i> Visits Pending Triage
-                        </h3>
+                        <h3>Visits pending triage</h3>
                         <button class="reload-btn" onclick="location.reload()" title="Refresh visits">
                             <i class="fas fa-sync-alt"></i>
                         </button>
@@ -822,7 +1037,7 @@
                     <div class="search-section">
                         <form method="GET" class="search-form">
                             <div class="search-container" style="position: relative;">
-                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <i class="fas fa-search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; font-size: 0.8rem;"></i>
                                 <input type="text" name="pending_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ pending_search }}">
                                 {% if pending_search %}
                                     <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
@@ -893,9 +1108,7 @@
                 </div>
                 <div class="section">
                     <div class="section-header">
-                        <h3>
-                            <i class="fas fa-clipboard-list"></i> Recent Triage Entries
-                        </h3>
+                        <h3>Recent triage entries</h3>
                         <button class="reload-btn" onclick="location.reload()" title="Refresh entries">
                             <i class="fas fa-sync-alt"></i>
                         </button>
@@ -903,7 +1116,7 @@
                     <div class="search-section">
                         <form method="GET" class="search-form">
                             <div class="search-container" style="position: relative;">
-                                <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.15rem; color: var(--text-secondary); pointer-events: none;"></i>
+                                <i class="fas fa-search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; font-size: 0.8rem;"></i>
                                 <input type="text" name="triage_search" class="search-input" placeholder="Search by patient name or phone..." value="{{ triage_search }}">
                                 {% if triage_search %}
                                     <a href="{% url 'home:reception_dashboard' %}" class="btn btn-secondary clear-btn">
@@ -995,52 +1208,44 @@
 {% block modals %}
     <!-- Active Visit Warning Modal -->
     <div id="activeVisitWarningModal" class="clinical-modal" style="z-index: 200000;">
-        <div class="modal-content" style="max-width: 600px; border-radius: 20px; border: 1px solid rgba(239,68,68,0.3); overflow: hidden;">
-            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.1)); border-bottom: 1px solid rgba(239,68,68,0.15); display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; flex-shrink: 0;">⚠️</div>
-                <div>
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ef4444;">Active Visit Warning</h3>
-                    <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">This patient already has an active visit</p>
-                </div>
+        <div class="modal-content" style="max-width: 560px; border: 1px solid #d8dee6; overflow: hidden;">
+            <div style="padding: 0.85rem 1.1rem; background: #fafbfc; border-bottom: 1px solid #d8dee6;">
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #c0392b;">Active visit warning</h3>
+                <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #6b7280;">This patient already has an active visit</p>
             </div>
-            <div style="padding: 1.5rem 2rem;">
-                <div id="activeVisitDetails" style="display: flex; flex-direction: column; gap: 1rem;"></div>
-                <div id="activeVisitUnpaidTotal" style="display: none; margin-top: 1rem; padding: 0.85rem 1rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #ef4444; font-weight: 800; font-size: 0.95rem; text-align: center;"></div>
-                <p style="margin: 1.25rem 0 0; padding: 0.85rem 1rem; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; color: #f59e0b; font-size: 0.85rem; font-weight: 600;">Creating a new visit will <strong>CLOSE</strong> all previous active visits.</p>
-                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button id="activeVisitCancel" style="flex: 1; padding: 0.85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: 0.2s;">Cancel</button>
-                    <button id="activeVisitProceed" style="flex: 1; padding: 0.85rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-weight: 700; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3); transition: 0.2s;">Proceed Anyway</button>
+            <div style="padding: 1.1rem;">
+                <div id="activeVisitDetails" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                <div id="activeVisitUnpaidTotal" style="display: none; margin-top: 0.75rem; padding: 0.65rem 0.85rem; background: #fdf2f2; border: 1px solid #f5c6cb; color: #c0392b; font-weight: 600; font-size: 0.875rem; text-align: center;"></div>
+                <p style="margin: 0.85rem 0 0; padding: 0.65rem 0.85rem; background: #fffbeb; border: 1px solid #f0e0b2; color: #92400e; font-size: 0.85rem;">Creating a new visit will <strong>close</strong> all previous active visits.</p>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button id="activeVisitCancel" style="flex: 1; padding: 0.55rem; border: 1px solid #d8dee6; background: #fff; color: #2c3e50; font-weight: 500; font-size: 0.875rem; cursor: pointer;">Cancel</button>
+                    <button id="activeVisitProceed" style="flex: 1; padding: 0.55rem; border: 1px solid #c0392b; background: #c0392b; color: white; font-weight: 500; font-size: 0.875rem; cursor: pointer;">Proceed anyway</button>
                 </div>
             </div>
         </div>
     </div>
     <!-- Patient Action Modal -->
     <div id="patientActionModal" class="clinical-modal">
-        <div class="modal-content" style="max-width: 950px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
-            <!-- Premium Header -->
-            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white; box-shadow: 0 4px 15px rgba(16,185,129,0.3);"><i class="fas fa-user-gear"></i></div>
-                    <div>
-                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: white; letter-spacing: 0.3px;">Patient Actions</h3>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select an action for <strong id="modalPatientName" style="color: #10b981;"></strong></p>
-                    </div>
+        <div class="modal-content" style="max-width: 900px; border: 1px solid #d8dee6; overflow: hidden;">
+            <div style="padding: 0.85rem 1.1rem; background: #fafbfc; border-bottom: 1px solid #d8dee6; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #2c3e50;">Patient actions</h3>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.8rem; color: #6b7280;">For <strong id="modalPatientName" style="color: #2c3e50;"></strong></p>
                 </div>
-                <span id="closePatientModal" class="close" style="cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.05); transition: 0.2s;">&times;</span>
+                <span id="closePatientModal" class="close" style="cursor: pointer; font-size: 1.35rem; color: #6b7280;">&times;</span>
             </div>
             <!-- Two-Column Body -->
             <div style="display: grid; grid-template-columns: 1fr 1px 1fr; padding: 0;">
                 <!-- LEFT: Admit for Consultation -->
                 <div style="padding: 2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.75rem;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></div>
-                        <h4 style="margin: 0; color: #10b981; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Admit for Consultation</h4>
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: #2c3e50; font-size: 0.9rem; font-weight: 600;">Admit for consultation</h4>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
                         <div class="form-group">
-                            <label for="admitConsultation" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Consultation Type</label>
-                            <select id="admitConsultation" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
-                                <option value="">-- Select Consultation --</option>
+                            <label for="admitConsultation">Consultation type</label>
+                            <select id="admitConsultation" class="clinical-input">
+                                <option value="">-- Select consultation --</option>
                                 {% for service in services %}
                                     {% if service.name == "MCH" or service.name == "OPD Consultation" %}
                                         <option value="{{ service.pk }}" data-price="{{ service.price|format_number:0 }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>
@@ -1049,53 +1254,51 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="admitPaymentMethod" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Payment Method</label>
-                            <select id="admitPaymentMethod" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
-                                <option value="">-- Select Payment Method --</option>
+                            <label for="admitPaymentMethod">Payment method</label>
+                            <select id="admitPaymentMethod" class="clinical-input">
+                                <option value="">-- Select payment method --</option>
                                 <option value="Cash">Cash</option>
                                 <option value="M-Pesa">M-Pesa</option>
                                 <option value="Insurance">Insurance (SHA)</option>
                                 <option value="Free Visit">Free Visit (Revisit)</option>
                             </select>
                         </div>
-                        <!-- OPD Billing Components -->
-                        <div id="opdBillingOptions" style="display: none; background: rgba(16,185,129,0.04); padding: 1rem; border-radius: 12px; border: 1px dashed rgba(16,185,129,0.2);">
-                            <span style="display: block; font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px;">Service Components</span>
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.7rem 0.85rem; border-radius: 10px;">
-                                    <input type="checkbox" id="admitBillBook" checked style="width: 18px; height: 18px; min-width: 18px; cursor: pointer; accent-color: #10b981;">
-                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Book</strong><small style="color: var(--text-secondary); font-size: 0.75rem; display: block;">Filing Fee — Ksh 50</small></span>
+                        <div id="opdBillingOptions" style="display: none; background: #fafbfc; padding: 0.85rem; border: 1px solid #d8dee6;">
+                            <span style="display: block; font-size: 0.8rem; color: #6b7280; font-weight: 500; margin-bottom: 0.65rem;">Service components</span>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem; background: #fff; border: 1px solid #d8dee6; padding: 0.55rem 0.7rem;">
+                                    <input type="checkbox" id="admitBillBook" checked style="width: 16px; height: 16px; min-width: 16px; cursor: pointer;">
+                                    <span style="flex: 1;"><strong style="color: #2c3e50; font-size: 0.85rem;">OPD Book</strong><small style="color: #6b7280; font-size: 0.75rem; display: block;">Filing fee — Ksh 50</small></span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.7rem 0.85rem; border-radius: 10px;">
-                                    <input type="checkbox" id="admitBillConsult" checked style="width: 18px; height: 18px; min-width: 18px; cursor: pointer; accent-color: #10b981;">
-                                    <span style="flex: 1;"><strong id="opdConsultationLabel" style="color: white; font-size: 0.85rem;">OPD Consultation</strong><small id="opdConsultationDesc" style="color: var(--text-secondary); font-size: 0.75rem; display: block;">Clinical Assessment</small></span>
+                                <div style="display: flex; align-items: center; gap: 0.65rem; background: #fff; border: 1px solid #d8dee6; padding: 0.55rem 0.7rem;">
+                                    <input type="checkbox" id="admitBillConsult" checked style="width: 16px; height: 16px; min-width: 16px; cursor: pointer;">
+                                    <span style="flex: 1;"><strong id="opdConsultationLabel" style="color: #2c3e50; font-size: 0.85rem;">OPD Consultation</strong><small id="opdConsultationDesc" style="color: #6b7280; font-size: 0.75rem; display: block;">Clinical assessment</small></span>
                                 </div>
                             </div>
                         </div>
                         <div class="form-group" id="admitPatientPortionGroup" style="display: none;">
-                            <label for="admitPatientPaymentMethod" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Patient Portion Method</label>
-                            <select id="admitPatientPaymentMethod" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                            <label for="admitPatientPaymentMethod">Patient portion method</label>
+                            <select id="admitPatientPaymentMethod" class="clinical-input">
                                 <option value="Cash">Cash</option>
                                 <option value="M-Pesa">M-Pesa</option>
                             </select>
                         </div>
-                        <button id="admitVisitBtn" type="button" class="btn-primary" style="width: 100%; justify-content: center; padding: 1.1rem; border-radius: 14px; font-weight: 800; font-size: 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 8px 25px -5px rgba(16,185,129,0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto; border: none; color: white; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
-                            <i class="fas fa-check-circle"></i> Complete Admission
+                        <button id="admitVisitBtn" type="button" class="btn-primary" style="width: 100%; position: relative; z-index: 100006; pointer-events: auto;">
+                            Complete admission
                         </button>
                     </div>
                 </div>
                 <!-- Vertical Divider -->
-                <div style="background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.1) 80%, transparent);"></div>
+                <div style="background: #d8dee6;"></div>
                 <!-- RIGHT: Quick Service Invoice -->
                 <div style="padding: 2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.75rem;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #6366f1; box-shadow: 0 0 8px #6366f1;"></div>
-                        <h4 style="margin: 0; color: #6366f1; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Quick Service Invoice</h4>
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: #2c3e50; font-size: 0.9rem; font-weight: 600;">Quick service invoice</h4>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
                         <div class="form-group">
-                            <label for="quickService" style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Select Service / Item</label>
-                            <select id="quickService" class="clinical-input" style="cursor: pointer; padding: 0.75rem 1rem; font-size: 0.9rem;">
+                            <label for="quickService">Service / item</label>
+                            <select id="quickService" class="clinical-input">
                                 <option value="">-- Choose a service --</option>
                                 {% regroup services by department as services_by_dept %}
                                 {% for dept in services_by_dept %}
@@ -1110,8 +1313,8 @@
                             </select>
                         </div>
                         <div style="flex: 1;"></div>
-                        <button id="generateInvoiceBtn" type="button" class="btn-primary" onclick="submitQuickInvoice()" style="width: 100%; justify-content: center; padding: 1.1rem; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); font-weight: 800; font-size: 1rem; box-shadow: 0 8px 25px -5px rgba(99,102,241,0.4); cursor: pointer; position: relative; z-index: 100006; pointer-events: auto; border: none; color: white; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
-                            <i class="fas fa-file-invoice-dollar"></i> Process Quick Invoice
+                        <button id="generateInvoiceBtn" type="button" class="btn-primary" onclick="submitQuickInvoice()" style="width: 100%; position: relative; z-index: 100006; pointer-events: auto;">
+                            Process invoice
                         </button>
                     </div>
                 </div>
@@ -1120,32 +1323,27 @@
     </div>
     <!-- Payment Processing Modal -->
     <div id="paymentModal" class="clinical-modal">
-        <div class="modal-content" style="max-width: 550px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
-            <!-- Header -->
-            <div style="padding: 1.5rem 2rem; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(16,185,129,0.1)); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white;"><i class="fas fa-credit-card"></i></div>
-                    <div>
-                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: white;">Process Payment</h3>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Split across payment methods</p>
-                    </div>
+        <div class="modal-content" style="max-width: 520px; border: 1px solid #d8dee6; overflow: hidden;">
+            <div style="padding: 0.85rem 1.1rem; background: #fafbfc; border-bottom: 1px solid #d8dee6; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #2c3e50;">Process payment</h3>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.8rem; color: #6b7280;">Split across payment methods</p>
                 </div>
-                <span class="close-payment" style="cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.05);">&times;</span>
+                <span class="close-payment" style="cursor: pointer; font-size: 1.35rem; color: #6b7280;">&times;</span>
             </div>
-            <div style="padding: 1.5rem 2rem;">
-                <!-- Invoice Summary -->
-                <div style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.06);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: var(--text-secondary); font-size: 0.8rem;">Patient</span>
-                        <strong id="paymentPatientName" style="color: white; font-size: 0.9rem;"></strong>
+            <div style="padding: 1.1rem;">
+                <div style="background: #fafbfc; padding: 0.9rem 1rem; margin-bottom: 1rem; border: 1px solid #d8dee6;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                        <span style="color: #6b7280; font-size: 0.8rem;">Patient</span>
+                        <strong id="paymentPatientName" style="color: #2c3e50; font-size: 0.875rem;"></strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
-                        <span style="color: var(--text-secondary); font-size: 0.8rem;">Service</span>
-                        <span id="paymentServiceName" style="font-weight: 600; color: #6366f1; font-size: 0.9rem;"></span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.55rem;">
+                        <span style="color: #6b7280; font-size: 0.8rem;">Service</span>
+                        <span id="paymentServiceName" style="font-weight: 500; color: #2c3e50; font-size: 0.875rem;"></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
-                        <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.85rem;">AMOUNT DUE</span>
-                        <strong id="paymentAmount" style="font-size: 1.4rem; color: #10b981;"></strong>
+                    <div style="display: flex; justify-content: space-between; padding-top: 0.55rem; border-top: 1px solid #d8dee6;">
+                        <span style="color: #6b7280; font-weight: 600; font-size: 0.8rem;">Amount due</span>
+                        <strong id="paymentAmount" style="font-size: 1.1rem; color: #2c3e50;"></strong>
                     </div>
                 </div>
 
@@ -1153,31 +1351,24 @@
                 <div class="payment-options">
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <!-- M-Pesa -->
-                        <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15); border-radius: 14px; padding: 1rem 1.25rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                    <i class="fas fa-mobile-screen-button" style="font-size: 1.1rem; color: #10b981;"></i>
-                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">M-Pesa</span>
-                                </div>
-                                <button type="button" class="pay-full-btn" data-target="mpesaAmount" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.1); color: #10b981; cursor: pointer; font-weight: 600;">Full Amount</button>
+                        <div style="background: #fafbfc; border: 1px solid #d8dee6; padding: 0.85rem 1rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                <span style="font-weight: 600; color: #2c3e50; font-size: 0.875rem;">M-Pesa</span>
+                                <button type="button" class="pay-full-btn" data-target="mpesaAmount" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border: 1px solid #d8dee6; background: #fff; color: #2c3e50; cursor: pointer;">Full amount</button>
                             </div>
                             <div style="position: relative;">
-                                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-weight: 600; font-size: 0.85rem;">Ksh</span>
-                                <input type="number" id="mpesaAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 45px; font-size: 1.1rem; font-weight: 700;">
+                                <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-weight: 500; font-size: 0.85rem;">Ksh</span>
+                                <input type="number" id="mpesaAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 42px !important; font-size: 1rem; font-weight: 600;">
                             </div>
                         </div>
-                        <!-- Cash -->
-                        <div style="background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.15); border-radius: 14px; padding: 1rem 1.25rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                    <i class="fas fa-money-bill-wave" style="font-size: 1.1rem; color: #6366f1;"></i>
-                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">Cash</span>
-                                </div>
-                                <button type="button" class="pay-full-btn" data-target="cashAmount" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.1); color: #6366f1; cursor: pointer; font-weight: 600;">Full Amount</button>
+                        <div style="background: #fafbfc; border: 1px solid #d8dee6; padding: 0.85rem 1rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                <span style="font-weight: 600; color: #2c3e50; font-size: 0.875rem;">Cash</span>
+                                <button type="button" class="pay-full-btn" data-target="cashAmount" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border: 1px solid #d8dee6; background: #fff; color: #2c3e50; cursor: pointer;">Full amount</button>
                             </div>
                             <div style="position: relative;">
-                                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-weight: 600; font-size: 0.85rem;">Ksh</span>
-                                <input type="number" id="cashAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 45px; font-size: 1.1rem; font-weight: 700;">
+                                <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-weight: 500; font-size: 0.85rem;">Ksh</span>
+                                <input type="number" id="cashAmount" class="clinical-input split-amount" value="0" min="0" step="1" style="padding-left: 42px !important; font-size: 1rem; font-weight: 600;">
                             </div>
                         </div>
                     </div>
@@ -1189,18 +1380,15 @@
                     </div>
 
                     <!-- Submit -->
-                    <button id="submitSplitPayment" type="button" style="width: 100%; margin-top: 1.25rem; padding: 1rem; border-radius: 14px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 6px 20px rgba(16,185,129,0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: 0.2s;">
-                        <i class="fas fa-check-circle"></i> Confirm Payment
+                    <button id="submitSplitPayment" type="button" style="width: 100%; margin-top: 1rem;">
+                        Confirm payment
                     </button>
                 </div>
-                <div class="already-paid" style="display: none; text-align: center; padding: 2rem;">
-                    <div style="background: rgba(16,185,129,0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
-                        <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981;"></i>
-                    </div>
-                    <h4 style="color: #10b981; font-size: 1.5rem; margin-bottom: 0.5rem;">Payment Complete</h4>
-                    <p style="color: var(--text-secondary);">This invoice has been fully paid.</p>
-                    <button id="printFullInvoiceBtn" type="button" class="btn-primary" style="margin-top: 1.5rem; background: #6366f1; border: none; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
-                        <i class="fas fa-print"></i> Print Full Statement
+                <div class="already-paid" style="display: none; text-align: center; padding: 1.5rem 0.5rem;">
+                    <h4 style="color: #1e7e34; font-size: 1.1rem; margin-bottom: 0.35rem; font-weight: 600;">Payment complete</h4>
+                    <p style="color: #6b7280; font-size: 0.875rem;">This invoice has been fully paid.</p>
+                    <button id="printFullInvoiceBtn" type="button" class="btn-primary" style="margin-top: 1rem;">
+                        Print statement
                     </button>
                 </div>
             </div>
@@ -1210,28 +1398,23 @@
     <div id="triageModal" class="clinical-modal">
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>
-                    <i class="fas fa-heart-pulse"></i> Clinical Triage Assessment
-                </h3>
+                <h3>Clinical triage assessment</h3>
                 <span class="close-triage">&times;</span>
             </div>
             <div class="modal-body">
                 <form id="triageForm">
-                    <div class="patient-banner" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 16px; margin-bottom: 2rem;">
+                    <div class="patient-banner" style="display: flex; justify-content: space-between; gap: 1rem; background: #fafbfc; padding: 0.85rem 1rem; margin-bottom: 1rem; border: 1px solid #d8dee6;">
                         <div>
-                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Patient
-                            Name</span>
-                            <strong id="triagePatientName" style="font-size: 1.1rem; color: white;"></strong>
+                            <span style="display: block; font-size: 0.75rem; color: #6b7280; font-weight: 500;">Patient</span>
+                            <strong id="triagePatientName" style="font-size: 0.95rem; color: #2c3e50;"></strong>
                         </div>
                         <div>
-                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
-                            Activity</span>
-                            <span id="triageVisitServices" style="font-weight: 600; color: #6366f1;"></span>
+                            <span style="display: block; font-size: 0.75rem; color: #6b7280; font-weight: 500;">Visit activity</span>
+                            <span id="triageVisitServices" style="font-weight: 500; color: #2c3e50;"></span>
                         </div>
                         <div>
-                            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Visit
-                            Time</span>
-                            <span id="triageVisitDate" style="color: white;"></span>
+                            <span style="display: block; font-size: 0.75rem; color: #6b7280; font-weight: 500;">Visit time</span>
+                            <span id="triageVisitDate" style="color: #2c3e50;"></span>
                         </div>
                     </div>
                     <div class="form-grid-modern">
@@ -1293,7 +1476,7 @@
                         </div>
                         <div class="form-group">
                             <label>Assignment Room</label>
-                            <select name="send_to" id="send_to" class="clinical-input" required style="border-color: #6366f1 !important;">
+                            <select name="send_to" id="send_to" class="clinical-input" required>
                                 <option value="">-- Select Destination --</option>
                                 <option value="1">Consultation Room 1</option>
                                 <option value="2">Consultation Room 2</option>
@@ -1544,28 +1727,28 @@
                             const invLabel = v.invoice_id ? `INV-${v.invoice_id}` : 'No Invoice';
                             const balanceColor = v.balance > 0 ? '#ef4444' : '#10b981';
                             const card = document.createElement('div');
-                            card.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem 1.25rem;';
+                            card.style.cssText = 'background: #fafbfc; border: 1px solid #d8dee6; padding: 0.75rem 0.9rem;';
                             card.innerHTML = `
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-                                    <span style="font-weight: 700; color: white; font-size: 0.9rem;">${v.visit_type}</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">${v.visit_date}</span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #2c3e50; font-size: 0.875rem;">${v.visit_type}</span>
+                                    <span style="font-size: 0.75rem; color: #6b7280;">${v.visit_date}</span>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem;">
-                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Invoice</div>
-                                        <div style="font-weight: 700; color: #6366f1; font-size: 0.85rem;">${invLabel}</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.4rem;">
+                                    <div style="text-align: left; padding: 0.4rem 0;">
+                                        <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 0.1rem;">Invoice</div>
+                                        <div style="font-weight: 600; color: #2c3e50; font-size: 0.8rem;">${invLabel}</div>
                                     </div>
-                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Total</div>
-                                        <div style="font-weight: 700; color: white; font-size: 0.85rem;">Ksh ${v.invoice_total.toLocaleString()}</div>
+                                    <div style="text-align: left; padding: 0.4rem 0;">
+                                        <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 0.1rem;">Total</div>
+                                        <div style="font-weight: 600; color: #2c3e50; font-size: 0.8rem;">Ksh ${v.invoice_total.toLocaleString()}</div>
                                     </div>
-                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Paid</div>
-                                        <div style="font-weight: 700; color: #10b981; font-size: 0.85rem;">Ksh ${v.paid_amount.toLocaleString()}</div>
+                                    <div style="text-align: left; padding: 0.4rem 0;">
+                                        <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 0.1rem;">Paid</div>
+                                        <div style="font-weight: 600; color: #1e7e34; font-size: 0.8rem;">Ksh ${v.paid_amount.toLocaleString()}</div>
                                     </div>
-                                    <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.2rem;">Balance</div>
-                                        <div style="font-weight: 700; color: ${balanceColor}; font-size: 0.85rem;">Ksh ${v.balance.toLocaleString()}</div>
+                                    <div style="text-align: left; padding: 0.4rem 0;">
+                                        <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 0.1rem;">Balance</div>
+                                        <div style="font-weight: 600; color: ${balanceColor}; font-size: 0.8rem;">Ksh ${v.balance.toLocaleString()}</div>
                                     </div>
                                 </div>
                             `;

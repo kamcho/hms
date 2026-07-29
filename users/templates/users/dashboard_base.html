@@ -7,11 +7,23 @@
         <title>
             {% block title %}HMS Dashboard{% endblock %}
         </title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="{% static 'users/css/dashboard.css' %}">
         <link rel="stylesheet" href="{% static 'users/vendor/fontawesome/css/all.min.css' %}">
         <link rel="stylesheet" href="{% static 'users/css/tailwind.css' %}">
         {% block extra_css %}
         <style>
+            /* Global HMS typeface (do not force on icon classes) */
+            html, body {
+                font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+            code, pre, kbd, .font-mono, .amount-cell {
+                font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+            }
             .role-selector-dropdown {
                 position: absolute;
                 top: calc(100% + 10px);
@@ -137,6 +149,11 @@
                            class="menu-item {% if request.resolver_match.url_name == 'appointments_dashboard' %}active{% endif %}">
                             <i class="fas fa-calendar-check"></i>
                             <span>Appointments</span>
+                        </a>
+                        <a href="{% url 'home:icd11_search' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'icd11_search' %}active{% endif %}">
+                            <i class="fas fa-book-medical"></i>
+                            <span>ICD-11</span>
                         </a>
                         <a href="{% url 'inpatient:dashboard' %}" 
                           
@@ -428,6 +445,13 @@
                             </a>
                         </div>
                     {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'Pharmacist' %}
+                        <a href="{% url 'reports:malaria_hub' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'malaria_hub' or 'moh645' in request.resolver_match.url_name|default:'' or 'moh743' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+                            <i class="fas fa-bug"></i>
+                            <span>Malaria Reports</span>
+                        </a>
+                    {% endif %}
                     {% if user.role == 'Admin' or user.role == 'Nurse' or user.role == 'Doctor' or user.role == 'Accountant' or user.role == 'SHA Manager' or user.role == 'SHA' %}
                         <a href="{% url 'reports:hub' %}"
                            class="menu-item {% if request.resolver_match.namespace == 'reports' %}active{% endif %}">
@@ -466,7 +490,19 @@
                         </a>
                         
                     {% endif %}
+                    {% if user.role == 'Admin' or user.role == 'SHA Manager' or user.role == 'SHA' or user.role == 'Receptionist' or user.role == 'Nurse' or user.role == 'Doctor' or user.role == 'Accountant' or user.is_superuser %}
+                        <a href="{% url 'accounts:sha_eligibility' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'sha_eligibility' %}active{% endif %}">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>SHA Eligibility</span>
+                        </a>
+                    {% endif %}
                     {% if user.role == 'Admin' or user.role == 'SHA Manager' or user.is_superuser %}
+                        <a href="{% url 'accounts:sha_facility_search' %}"
+                           class="menu-item {% if request.resolver_match.url_name == 'sha_facility_search' %}active{% endif %}">
+                            <i class="fas fa-hospital"></i>
+                            <span>SHA Facility Search</span>
+                        </a>
                         <a href="{% url 'inpatient:clean_admissions' %}"
                            class="menu-item {% if request.resolver_match.url_name == 'clean_admissions' %}active{% endif %}">
                             <i class="fas fa-broom"></i>

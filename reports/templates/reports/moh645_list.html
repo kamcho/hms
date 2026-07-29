@@ -1,0 +1,63 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+            <a href="{% url 'reports:malaria_hub' %}" class="text-xs font-bold text-emerald-600 uppercase"><i class="fas fa-arrow-left"></i> Malaria Reports</a>
+            <h1 class="text-2xl font-black text-slate-800 mt-1">{{ title }}</h1>
+            <p class="text-xs text-slate-500">MOH 645 — Daily register for malaria commodities</p>
+        </div>
+        <a href="{% url 'reports:moh645_create' %}" class="px-5 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase">New daily register</a>
+    </div>
+    <form method="get" class="flex flex-wrap gap-2 mb-6">
+        <select name="month" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold">
+            <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+            <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+            <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+            <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+            <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+            <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+            <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+            <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+            <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+            <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+        </select>
+        <input type="number" name="year" value="{{ year }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold w-24">
+        <button type="submit" class="px-4 py-2 bg-slate-100 rounded-lg text-xs font-black uppercase">Filter</button>
+    </form>
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-500">
+                <tr>
+                    <th class="text-left p-4">Date</th>
+                    <th class="text-left p-4">Facility</th>
+                    <th class="text-left p-4">Page</th>
+                    <th class="text-left p-4">Status</th>
+                    <th class="text-right p-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reports %}
+                <tr class="border-t hover:bg-slate-50">
+                    <td class="p-4 font-bold">{{ r.report_date }}</td>
+                    <td class="p-4">{{ r.facility_name }}</td>
+                    <td class="p-4">{{ r.page_number }}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-[10px] font-black uppercase {% if r.status == 'submitted' %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ r.get_status_display }}</span>
+                    </td>
+                    <td class="p-4 text-right space-x-3">
+                        <a href="{% url 'reports:moh645_edit' r.pk %}" class="text-emerald-600 font-bold text-xs uppercase">Edit</a>
+                        <a href="{% url 'reports:moh645_print' r.pk %}" target="_blank" class="text-slate-500 font-bold text-xs uppercase">Print</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="p-12 text-center text-slate-400 italic">No daily registers for {{ month_name }} {{ year }}.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

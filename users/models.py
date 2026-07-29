@@ -50,6 +50,37 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
 
+    # DHA practitioner registry fields (for eRx / claims)
+    REGULATION_BODY_CHOICES = [
+        ('KMPDC', 'KMPDC'),
+        ('COC', 'COC'),
+        ('NCK', 'NCK'),
+        ('PPB', 'PPB'),
+    ]
+    PRACTITIONER_ID_TYPE_CHOICES = [
+        ('registration_number', 'Registration number'),
+        ('National ID', 'National ID'),
+        ('Alien ID', 'Alien ID'),
+        ('Refugee ID', 'Refugee ID'),
+    ]
+    practitioner_identification_type = models.CharField(
+        max_length=40,
+        choices=PRACTITIONER_ID_TYPE_CHOICES,
+        blank=True,
+        default='registration_number',
+    )
+    practitioner_licence_number = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='KMPDC/NCK/etc registration number used on SHA eClaims',
+    )
+    practitioner_regulation_body = models.CharField(
+        max_length=16,
+        choices=REGULATION_BODY_CHOICES,
+        blank=True,
+        default='KMPDC',
+    )
+
     USERNAME_FIELD = 'id_number'
     REQUIRED_FIELDS = []
 

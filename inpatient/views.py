@@ -22,8 +22,11 @@ from home.models import (
 from home.forms import PrescriptionItemForm
 from django.forms import inlineformset_factory
 from django.db.models import Count, Q, Sum, F, Exists, OuterRef
+from django.db.models.functions import TruncDate
 from django.utils import timezone
+from datetime import datetime, timedelta, time as dt_time
 import math
+import json
 from accounts.models import Service, Invoice, InvoiceItem
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
@@ -38,19 +41,30 @@ from home.discharge_codes import validate_discharge_code
 def dashboard(request):
     # Analytics
     active_admissions = Admission.objects.filter(status='Admitted').select_related(
-        'patient', 'bed', 'bed__ward'
+        'patient', 'visit', 'bed', 'bed__ward'
     ).prefetch_related('vitals', 'delivery')
-    
-    total_admitted = active_admissions.count()
-    
+
+    q = (request.GET.get('q') or '').strip()
+    if q:
+        active_admissions = active_admissions.filter(
+            Q(patient__first_name__icontains=q)
+            | Q(patient__last_name__icontains=q)
+            | Q(patient__id_number__icontains=q)
+            | Q(patient__phone__icontains=q)
+            | Q(bed__bed_number__icontains=q)
+            | Q(bed__ward__name__icontains=q)
+        )
+
+    total_admitted = Admission.objects.filter(status='Admitted').count()
+
     total_beds = Bed.objects.count()
     occupied_beds = Bed.objects.filter(is_occupied=True).count()
     occupancy_rate = (occupied_beds / total_beds * 100) if total_beds > 0 else 0
-    
+
     ward_stats = Ward.objects.annotate(
         occupied=Count('beds', filter=Q(beds__is_occupied=True)),
         total=Count('beds')
-    )
+    ).order_by('name')
 
     # Recent Discharges
     recent_discharges = InpatientDischarge.objects.select_related(
@@ -65,8 +79,12 @@ def dashboard(request):
         'active_admissions': active_admissions,
         'recent_discharges': recent_discharges,
         'total_admitted': total_admitted,
+        'occupied_beds': occupied_beds,
+        'total_beds': total_beds,
         'occupancy_rate': round(occupancy_rate, 1),
         'ward_stats': ward_stats,
+        'today': timezone.localdate(),
+        'search_q': q,
     })
 
 @login_required
@@ -1418,8 +1436,11 @@ def move_to_morgue(request, admission_id):
 
         patient = admission.patient
 
-        # Map patient gender to Deceased sex choices
-        sex_map = {'M': 'MALE', 'F': 'FEMALE', 'O': 'OTHER', 'N': 'OTHER'}
+        # Map patient KNHTS gender to Deceased sex choices
+        sex_map = {
+            'male': 'MALE', 'female': 'FEMALE', 'other': 'OTHER', 'unknown': 'OTHER',
+            'M': 'MALE', 'F': 'FEMALE', 'O': 'OTHER', 'N': 'OTHER',
+        }
         sex = sex_map.get(patient.gender, 'OTHER')
 
         # Auto-generate a unique tag
@@ -1447,9 +1468,9 @@ def move_to_morgue(request, admission_id):
             surname=patient.last_name,
             other_names=patient.first_name,
             sex=sex,
-            id_number=patient.id_number or '',
-            id_type='NATIONAL_ID' if patient.id_number else '',
-            physical_address=patient.location or '',
+            id_number=patient.id_number or patient.national_id or '',
+            id_type=patient.id_type or ('NATIONAL_ID' if patient.id_number else ''),
+            physical_address=patient.postal_address or patient.location or '',
             residence=patient.location or '',
             town='',
             date_of_death=death_date,
@@ -1797,4 +1818,224 @@ def api_ipd_consumable_delete(request, consumable_id):
     return JsonResponse({
         'success': True,
         'message': f'Removed {item_name} from the IPD chart.',
+    })
+
+
+def _parse_report_date(value, *, end_of_day=False):
+    """Parse YYYY-MM-DD into an aware datetime, or None."""
+    if not value:
+        return None
+    try:
+        d = datetime.strptime(value.strip(), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return None
+    wall = dt_time.max if end_of_day else dt_time.min
+    return timezone.make_aware(datetime.combine(d, wall))
+
+
+@login_required
+def admissions_discharges_report(request):
+    """Admissions & discharges report with analytics and filters."""
+    today = timezone.localdate()
+    default_from = today - timedelta(days=30)
+
+    date_from_raw = (request.GET.get('date_from') or default_from.isoformat()).strip()
+    date_to_raw = (request.GET.get('date_to') or today.isoformat()).strip()
+    ward_id = (request.GET.get('ward') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+    view_mode = (request.GET.get('view') or 'admissions').strip().lower()
+    q = (request.GET.get('q') or '').strip()
+
+    if view_mode not in ('admissions', 'discharges'):
+        view_mode = 'admissions'
+
+    date_from_dt = _parse_report_date(date_from_raw) or timezone.make_aware(
+        datetime.combine(default_from, dt_time.min)
+    )
+    date_to_dt = _parse_report_date(date_to_raw, end_of_day=True) or timezone.make_aware(
+        datetime.combine(today, dt_time.max)
+    )
+    if date_from_dt > date_to_dt:
+        date_from_dt, date_to_dt = date_to_dt.replace(hour=0, minute=0, second=0, microsecond=0), date_from_dt.replace(
+            hour=23, minute=59, second=59, microsecond=999999
+        )
+        date_from_raw, date_to_raw = date_to_raw, date_from_raw
+
+    admissions_qs = Admission.objects.filter(
+        admitted_at__gte=date_from_dt,
+        admitted_at__lte=date_to_dt,
+    ).select_related(
+        'patient', 'visit', 'bed', 'bed__ward', 'admitted_by', 'discharged_by', 'discharge_record', 'delivery',
+    )
+
+    discharges_qs = InpatientDischarge.objects.filter(
+        discharge_date__gte=date_from_dt,
+        discharge_date__lte=date_to_dt,
+    ).select_related(
+        'admission',
+        'admission__patient',
+        'admission__visit',
+        'admission__bed',
+        'admission__bed__ward',
+        'discharged_by',
+    )
+
+    if ward_id.isdigit():
+        admissions_qs = admissions_qs.filter(bed__ward_id=int(ward_id))
+        discharges_qs = discharges_qs.filter(admission__bed__ward_id=int(ward_id))
+
+    if status:
+        admissions_qs = admissions_qs.filter(status=status)
+        if status == 'Discharged':
+            # Keep discharges list aligned when filtering to discharged only
+            pass
+        elif status == 'Admitted':
+            discharges_qs = discharges_qs.none()
+        else:
+            discharges_qs = discharges_qs.filter(admission__status=status)
+
+    if q:
+        name_q = (
+            Q(patient__first_name__icontains=q)
+            | Q(patient__last_name__icontains=q)
+            | Q(patient__id_number__icontains=q)
+            | Q(patient__phone__icontains=q)
+            | Q(bed__bed_number__icontains=q)
+            | Q(bed__ward__name__icontains=q)
+            | Q(provisional_diagnosis__icontains=q)
+        )
+        admissions_qs = admissions_qs.filter(name_q)
+        discharges_qs = discharges_qs.filter(
+            Q(admission__patient__first_name__icontains=q)
+            | Q(admission__patient__last_name__icontains=q)
+            | Q(admission__patient__id_number__icontains=q)
+            | Q(admission__patient__phone__icontains=q)
+            | Q(admission__bed__bed_number__icontains=q)
+            | Q(admission__bed__ward__name__icontains=q)
+            | Q(final_diagnosis__icontains=q)
+        )
+
+    admissions_qs = admissions_qs.order_by('-admitted_at')
+    discharges_qs = discharges_qs.order_by('-discharge_date')
+
+    admissions_count = admissions_qs.count()
+    discharges_count = discharges_qs.count()
+    currently_admitted = Admission.objects.filter(status='Admitted').count()
+
+    # Average length of stay for discharges in range (hours -> days)
+    completed = admissions_qs.filter(
+        status__in=['Discharged', 'Deceased'],
+        discharged_at__isnull=False,
+    )
+    avg_los_days = None
+    if completed.exists():
+        durations = []
+        for adm in completed.values_list('admitted_at', 'discharged_at'):
+            admitted_at, discharged_at = adm
+            if admitted_at and discharged_at and discharged_at >= admitted_at:
+                durations.append((discharged_at - admitted_at).total_seconds() / 86400.0)
+        if durations:
+            avg_los_days = round(sum(durations) / len(durations), 1)
+
+    maternity_admissions = admissions_qs.filter(delivery__isnull=False).distinct().count()
+    deceased_count = admissions_qs.filter(status='Deceased').count()
+
+    # Status breakdown
+    status_breakdown = list(
+        admissions_qs.values('status').annotate(count=Count('id')).order_by('-count')
+    )
+
+    # Ward breakdown (admissions)
+    ward_breakdown = list(
+        admissions_qs.filter(bed__ward__isnull=False)
+        .values('bed__ward__name')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:8]
+    )
+
+    # Daily trend (admissions vs discharges)
+    admit_by_day = {
+        row['day'].date() if hasattr(row['day'], 'date') else row['day']: row['count']
+        for row in admissions_qs.annotate(day=TruncDate('admitted_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+        if row['day']
+    }
+    discharge_by_day = {
+        row['day'].date() if hasattr(row['day'], 'date') else row['day']: row['count']
+        for row in discharges_qs.annotate(day=TruncDate('discharge_date'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+        if row['day']
+    }
+
+    start_d = date_from_dt.date()
+    end_d = date_to_dt.date()
+    trend_labels = []
+    trend_admissions = []
+    trend_discharges = []
+    cursor = start_d
+    # Cap daily buckets for chart readability
+    max_days = min((end_d - start_d).days + 1, 90)
+    for i in range(max_days):
+        d = start_d + timedelta(days=i)
+        if d > end_d:
+            break
+        trend_labels.append(d.strftime('%d %b'))
+        trend_admissions.append(admit_by_day.get(d, 0))
+        trend_discharges.append(discharge_by_day.get(d, 0))
+
+    wards = Ward.objects.order_by('name')
+    records = admissions_qs[:200] if view_mode == 'admissions' else discharges_qs[:200]
+
+    # Precompute LOS display on admission rows
+    if view_mode == 'admissions':
+        now = timezone.now()
+        for adm in records:
+            end = adm.discharged_at or now
+            if adm.admitted_at and end >= adm.admitted_at:
+                adm.los_days = round((end - adm.admitted_at).total_seconds() / 86400.0, 1)
+            else:
+                adm.los_days = None
+    else:
+        for disc in records:
+            adm = disc.admission
+            if adm and adm.admitted_at and disc.discharge_date and disc.discharge_date >= adm.admitted_at:
+                disc.los_days = round(
+                    (disc.discharge_date - adm.admitted_at).total_seconds() / 86400.0, 1
+                )
+            else:
+                disc.los_days = None
+
+    return render(request, 'inpatient/admissions_discharges_report.html', {
+        'today': today,
+        'date_from': date_from_raw,
+        'date_to': date_to_raw,
+        'ward_id': ward_id,
+        'status': status,
+        'view_mode': view_mode,
+        'search_q': q,
+        'wards': wards,
+        'status_choices': Admission.STATUS_CHOICES,
+        'admissions_count': admissions_count,
+        'discharges_count': discharges_count,
+        'currently_admitted': currently_admitted,
+        'avg_los_days': avg_los_days,
+        'maternity_admissions': maternity_admissions,
+        'deceased_count': deceased_count,
+        'status_breakdown': status_breakdown,
+        'ward_breakdown': ward_breakdown,
+        'records': records,
+        'records_truncated': (
+            (admissions_count if view_mode == 'admissions' else discharges_count) > 200
+        ),
+        'chart_labels_json': json.dumps(trend_labels),
+        'chart_admissions_json': json.dumps(trend_admissions),
+        'chart_discharges_json': json.dumps(trend_discharges),
+        'status_chart_labels_json': json.dumps([r['status'] for r in status_breakdown]),
+        'status_chart_values_json': json.dumps([r['count'] for r in status_breakdown]),
+        'ward_chart_labels_json': json.dumps([r['bed__ward__name'] for r in ward_breakdown]),
+        'ward_chart_values_json': json.dumps([r['count'] for r in ward_breakdown]),
     })

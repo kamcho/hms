@@ -48,12 +48,28 @@ class Admission(models.Model):
     admitted_at = models.DateTimeField(auto_now_add=True, editable=True)
     admitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='admissions_processed')
     provisional_diagnosis = models.TextField()
+    provisional_icd11_code = models.CharField(max_length=32, blank=True, db_index=True)
+    provisional_icd11_entry = models.ForeignKey(
+        'home.Icd11Code',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admission_provisionals',
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
     
     # Discharge fields (consolidated for ease)
     discharged_at = models.DateTimeField(null=True, blank=True)
     discharged_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='discharges_processed')
     final_diagnosis = models.TextField(blank=True, null=True)
+    final_icd11_code = models.CharField(max_length=32, blank=True, db_index=True)
+    final_icd11_entry = models.ForeignKey(
+        'home.Icd11Code',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admission_finals',
+    )
     discharge_summary = models.TextField(blank=True, null=True)
 
     def __str__(self):
@@ -173,7 +189,23 @@ class InpatientDischarge(models.Model):
     
     # Clinical Summary
     provisional_diagnosis = models.TextField(blank=True, null=True)
+    provisional_icd11_code = models.CharField(max_length=32, blank=True, db_index=True)
+    provisional_icd11_entry = models.ForeignKey(
+        'home.Icd11Code',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='discharge_provisionals',
+    )
     final_diagnosis = models.TextField()
+    final_icd11_code = models.CharField(max_length=32, blank=True, db_index=True)
+    final_icd11_entry = models.ForeignKey(
+        'home.Icd11Code',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='discharge_finals',
+    )
     other_problems = models.TextField(blank=True, null=True)
     operations_procedures = models.TextField(blank=True, null=True)
     presenting_complaints = models.TextField(blank=True, null=True)

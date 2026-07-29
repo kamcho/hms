@@ -140,11 +140,9 @@ def dispense_medication(request, item_id):
                 'error': f'Insufficient stock for {prescription_item.medication.name}'
             })
         
-        # Mark as dispensed
-        prescription_item.dispensed = True
-        prescription_item.dispensed_at = timezone.now()
-        prescription_item.dispensed_by = request.user
-        prescription_item.save()
+        # Mark as dispensed (+ snapshot DHA pack code when available)
+        from accounts.sha_claims_service import mark_rx_item_dispensed
+        mark_rx_item_dispensed(prescription_item, request.user)
         
         # Reduce stock
         available_stock.quantity -= prescription_item.quantity

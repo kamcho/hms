@@ -1,563 +1,390 @@
 {% extends 'users/dashboard_base.html' %}
-{% load custom_filters %}
-{% block title %}Patient Directory - HMS{% endblock %}
+{% load static custom_filters %}
+{% block title %}Patients · HMS{% endblock %}
+
 {% block content %}
-    <style>
-    :root {
-        --reception-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --reception-gradient-2: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        --reception-gradient-3: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        --reception-gradient-4: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        --reception-bg: #0f172a;
-        --reception-card-bg: #1e293b;
-        --reception-border: rgba(148, 163, 184, 0.1);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.05);
-    }
-
-    body {
-        background: var(--reception-bg);
-        color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
-    }
-
-    .container-list {
-        padding: 2rem;
-        max-width: 1600px;
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .patients-hr-shell {
+        max-width: 1400px;
         margin: 0 auto;
-        animation: fadeIn 0.6s ease-out;
+        padding: 0.5rem 0.25rem 2rem;
     }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    .contact-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
     }
-
-    /* Hero Section */
-    .reception-hero {
-        background: var(--reception-gradient-1);
-        padding: 2.5rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2rem;
-        position: relative;
+    .contact-stack .line {
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    .contact-stack .sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    /* Light HR-styled action modals (replaces dark clinical skins) */
+    .patients-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(6px);
+    }
+    .patients-modal.open { display: flex; }
+    .patients-modal-panel {
+        width: min(920px, 100%);
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        box-shadow: var(--shadow-premium);
         overflow: hidden;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .patients-modal-panel.narrow { width: min(560px, 100%); }
+    .patients-modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 2rem;
-        box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.4);
-    }
-
-    .hero-content h1 {
-        font-size: 2.2rem;
-        font-weight: 900;
-        color: white;
-        margin: 0 0 0.5rem 0;
-        display: flex;
-        align-items: center;
         gap: 1rem;
+        padding: 1.15rem 1.35rem;
+        border-bottom: 1px solid var(--border-color);
+        background: #f8fafc;
     }
-
-    .hero-content p {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1rem;
+    .patients-modal-header h3 {
         margin: 0;
-    }
-
-    .quick-action-btn {
-        padding: 0.85rem 1.5rem;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 16px;
-        color: white;
-        text-decoration: none;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        transition: all 0.3s;
-    }
-
-    .quick-action-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-4px);
-    }
-
-    /* Stats Grid */
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.25rem;
-        margin-bottom: 2.5rem;
-    }
-
-    .stat-card {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 20px;
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-        transition: all 0.3s;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; height: 4px;
-        background: var(--gradient, var(--reception-gradient-1));
-    }
-
-    .stat-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-    }
-
-    .stat-info h3 {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-info .number {
-        font-size: 1.75rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-    }
-
-    /* Section & Table */
-    .section {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.3);
-    }
-
-    .section-header {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--reception-border);
-        background: rgba(255,255,255,0.02);
-    }
-
-    .section-header h3 {
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        display: flex;
-        align-items: center; gap: 0.75rem;
     }
-
-    .search-section {
-        padding: 1.25rem 2rem;
-        background: rgba(255,255,255,0.01);
-        border-bottom: 1px solid var(--reception-border);
-    }
-
-    .search-container { position: relative; width: 100%; }
-
-    .search-input {
-        width: 100%;
-        padding: 1rem 1.25rem 1rem 3.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--reception-border);
-        border-radius: 16px;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        transition: all 0.3s;
-    }
-
-    .search-input:focus {
-        outline: none;
-        background: rgba(255, 255, 255, 0.08);
-        border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-    }
-
-    .premium-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .premium-table th {
-        padding: 1.25rem 2rem;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 700;
+    .patients-modal-header p {
+        margin: 0.2rem 0 0;
+        font-size: 0.8rem;
         color: var(--text-secondary);
+    }
+    .patients-modal-close {
+        border: none;
+        background: transparent;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--text-muted);
+        cursor: pointer;
+    }
+    .patients-modal-split {
+        display: grid;
+        grid-template-columns: 1fr 1px 1fr;
+    }
+    .patients-modal-col { padding: 1.35rem; }
+    .patients-modal-col h4 {
+        margin: 0 0 1rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid var(--reception-border);
+        font-weight: 800;
     }
-
-    .premium-table td {
-        padding: 1.25rem 2rem;
-        border-bottom: 1px solid var(--reception-border);
-        color: var(--text-primary);
-        vertical-align: middle;
+    .patients-modal-col.admit h4 { color: var(--success); }
+    .patients-modal-col.invoice h4 { color: var(--primary); }
+    .patients-modal-divider { background: var(--border-color); }
+    .patients-billing-box {
+        display: none;
+        margin-top: 0.25rem;
+        padding: 0.9rem;
+        border-radius: 10px;
+        border: 1px dashed rgba(5, 150, 105, 0.35);
+        background: rgba(5, 150, 105, 0.05);
     }
-
-    .patient-row { transition: all 0.2s; cursor: pointer; }
-    .patient-row:hover td { background: rgba(255, 255, 255, 0.03); }
-
-    .patient-profile-inline { display: flex; align-items: center; gap: 1rem; }
-
-    .avatar-initials {
-        width: 45px; height: 45px; border-radius: 12px;
-        background: var(--reception-gradient-1);
-        color: white; display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 1rem;
+    .patients-check {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        margin-bottom: 0.7rem;
     }
-
-    .name-id { display: flex; flex-direction: column; }
-    .full-name { font-weight: 700; color: var(--text-primary); font-size: 1rem; }
-    .patient-id { font-size: 0.75rem; color: var(--text-secondary); }
-
-    .status-badge {
-        padding: 0.4rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
+    .patients-check:last-child { margin-bottom: 0; }
+    .patients-check input { margin-top: 0.2rem; }
+    .warning-banner {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(220, 38, 38, 0.2);
+        background: rgba(220, 38, 38, 0.08);
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
     }
-    .status-active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .status-none { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
-
-    /* Modals */
-    .clinical-modal {
-        display: none; position: fixed; z-index: 99999;
-        left: 0; top: 0; width: 100%; height: 100%;
-        background-color: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(10px);
-        align-items: center; justify-content: center;
+    .warning-banner h3 { margin: 0; color: var(--danger); font-size: 1rem; font-weight: 800; }
+    .warning-banner p { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--text-secondary); }
+    .active-visit-card {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        margin-bottom: 0.75rem;
     }
-
-    .modal-content {
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        border-radius: 28px;
-        width: 90%; max-width: 850px;
-        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6);
-        max-height: 90vh; overflow-y: auto;
+    @media (max-width: 820px) {
+        .patients-modal-split { grid-template-columns: 1fr; }
+        .patients-modal-divider { display: none; }
     }
+</style>
 
-    .modal-header {
-        padding: 1.5rem 2rem; border-bottom: 1px solid var(--reception-border);
-        display: flex; justify-content: space-between; align-items: center;
-        background: rgba(255,255,255,0.03);
-    }
-
-    .modal-body { padding: 2rem; }
-
-    .clinical-input {
-        background: #1a202c !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
-        color: white !important;
-        padding: 0.75rem 1rem !important;
-        width: 100% !important;
-    }
-
-    .btn-primary {
-        background: var(--reception-gradient-1);
-        color: white; border: none; padding: 0.75rem 1.5rem;
-        border-radius: 12px; font-weight: 700; cursor: pointer;
-    }
-
-    .btn-secondary {
-        background: rgba(255, 255, 255, 0.1);
-        color: white; border: none; padding: 0.75rem 1.5rem;
-        border-radius: 12px; font-weight: 700; cursor: pointer;
-    }
-
-    /* Pagination */
-    .pagination-modern {
-        display: flex; justify-content: center; gap: 0.5rem; padding: 2rem;
-    }
-    .page-link-modern {
-        padding: 0.5rem 1rem; border-radius: 10px;
-        background: var(--reception-card-bg);
-        border: 1px solid var(--reception-border);
-        color: var(--text-primary);
-        text-decoration: none; transition: 0.3s;
-    }
-    .page-link-modern.active { background: #6366f1; border-color: #6366f1; }
-    .page-link-modern:hover:not(.active) { background: rgba(255,255,255,0.05); }
-    </style>
-
-    <div class="container-list">
-        <!-- Hero Section -->
-        <div class="reception-hero">
-            <div class="hero-content">
-                <h1><i class="fas fa-users"></i> Patient Directory</h1>
-                <p>Comprehensive patient records and centralized coordination</p>
-            </div>
-            <div class="hero-actions">
-                <a href="{% url 'home:patient_create' %}" class="quick-action-btn">
-                    <i class="fas fa-user-plus"></i> Add New Patient
-                </a>
-            </div>
+<div class="patients-hr-shell">
+    <div class="page-header">
+        <div>
+            <h1>Patients</h1>
+            <p>Search records, open a profile, or start consultation and billing actions.</p>
         </div>
-
-        <!-- Stats Grid -->
-        <div class="analytics-grid">
-            <div class="stat-card" style="--gradient: var(--reception-gradient-1)">
-                <div class="stat-icon"><i class="fas fa-users-viewfinder"></i></div>
-                <div class="stat-info">
-                    <h3>Total Patients</h3>
-                    <div class="number">{{ stats.total }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--reception-gradient-4)">
-                <div class="stat-icon"><i class="fas fa-user-plus"></i></div>
-                <div class="stat-info">
-                    <h3>New Today</h3>
-                    <div class="number">{{ stats.new_today }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--reception-gradient-2)">
-                <div class="stat-icon"><i class="fas fa-mars"></i></div>
-                <div class="stat-info">
-                    <h3>Male</h3>
-                    <div class="number">{{ stats.male }}</div>
-                </div>
-            </div>
-            <div class="stat-card" style="--gradient: var(--reception-gradient-3)">
-                <div class="stat-icon"><i class="fas fa-venus"></i></div>
-                <div class="stat-info">
-                    <h3>Female</h3>
-                    <div class="number">{{ stats.female }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Directory Section -->
-        <div class="section">
-            <div class="section-header">
-                <h3><i class="fas fa-address-book"></i> Registry Records</h3>
-            </div>
-            <div class="search-section">
-                <form method="GET">
-                    <div class="search-container">
-                        <i class="fas fa-search" style="position: absolute; left: 1.25rem; top: 1.1rem; color: var(--text-secondary); pointer-events: none;"></i>
-                        <input type="text" name="search" class="search-input" placeholder="Search name, ID, phone, or location..." value="{{ request.GET.search }}">
-                    </div>
-                </form>
-            </div>
-
-            <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Patient Information</th>
-                            <th>Contact / Location</th>
-                            <th>Medical Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in patients_with_last_visit %}
-                        <tr class="patient-row" data-patient-id="{{ item.patient.pk }}" data-patient-name="{{ item.patient.full_name }}">
-                            <td>
-                                <div class="patient-profile-inline">
-                                    <div class="avatar-initials" data-name="{{ item.patient.first_name }}">
-                                        {{ item.patient.first_name|first }}{{ item.patient.last_name|first }}
-                                    </div>
-                                    <div class="name-id">
-                                        <span class="full-name">{{ item.patient.full_name }}</span>
-                                        <span class="patient-id">#PAT-{{ item.patient.pk|stringformat:"05d" }} • {{ item.patient.age }} yrs • {{ item.patient.get_gender_display }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                    <span style="font-size: 0.85rem;"><i class="fas fa-phone-alt" style="color: #10b981; margin-right: 0.5rem; width: 14px;"></i>{{ item.patient.phone }}</span>
-                                    <span style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fas fa-map-marker-alt" style="margin-right: 0.5rem; width: 14px;"></i>{{ item.patient.location }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                {% if item.last_visit %}
-                                <span class="status-badge status-active">
-                                    <i class="fas fa-clock-rotate-left" style="margin-right: 4px;"></i>
-                                    Last: {{ item.last_visit.visit_date|date:"d M Y" }}
-                                </span>
-                                <span style="display: block; font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.3rem;">{{ item.last_visit.get_visit_type_display }}</span>
-                                {% else %}
-                                <span class="status-badge status-none">No Previous Visits</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn-secondary" style="padding: 0.5rem 0.85rem; font-size: 0.8rem;" onclick="event.stopPropagation();">
-                                        <i class="fas fa-eye"></i> View Profile
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4">
-                                <div class="empty-state-p" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                                    <i class="fas fa-user-slash" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
-                                    <p>No patients found matching your search.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {% if is_paginated %}
-            <div class="pagination-modern">
-                {% if page_obj.has_previous %}
-                    <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">&laquo; First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Prev</a>
-                {% endif %}
-                
-                <span class="page-link-modern active">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link-modern">Last &raquo;</a>
-                {% endif %}
-            </div>
-            {% endif %}
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{% url 'home:opd_dashboard' %}" class="btn btn-secondary btn-sm"><i class="fas fa-stethoscope"></i> OPD queue</a>
+            <a href="{% url 'home:patient_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-user-plus"></i> Add patient</a>
         </div>
     </div>
+
+    <div class="metrics-grid">
+        <div class="card metric-card">
+            <div class="metric-icon indigo"><i class="fas fa-users"></i></div>
+            <div>
+                <div class="metric-label">Total patients</div>
+                <div class="metric-value">{{ stats.total }}</div>
+                <div class="metric-meta">All registered records</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon green"><i class="fas fa-user-plus"></i></div>
+            <div>
+                <div class="metric-label">New today</div>
+                <div class="metric-value" style="color: var(--success);">{{ stats.new_today }}</div>
+                <div class="metric-meta">Registered since midnight</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon cyan"><i class="fas fa-mars"></i></div>
+            <div>
+                <div class="metric-label">Male</div>
+                <div class="metric-value">{{ stats.male }}</div>
+                <div class="metric-meta">Gender distribution</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-icon amber"><i class="fas fa-venus"></i></div>
+            <div>
+                <div class="metric-label">Female</div>
+                <div class="metric-value">{{ stats.female }}</div>
+                <div class="metric-meta">Gender distribution</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <form method="get" class="filter-row">
+            <div class="form-group" style="flex: 1; min-width: 240px; margin-bottom: 0;">
+                <label for="search" class="form-label">Search patients</label>
+                <input type="search" name="search" id="search" class="form-input" placeholder="Name, national ID, phone, or patient #" value="{{ request.GET.search }}">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Apply</button>
+                <a href="{% url 'home:patient_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card" style="padding: 1.75rem;">
+        <div style="margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 800;">Patient roster</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem;">
+                {{ patients_with_last_visit|length }} result{{ patients_with_last_visit|length|pluralize }}{% if request.GET.search %} for “{{ request.GET.search }}”{% endif %}
+                · click a row for admit / invoice actions
+            </p>
+        </div>
+
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Contact</th>
+                        <th>Location</th>
+                        <th>Last visit</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in patients_with_last_visit %}
+                    <tr class="table-row-hover patient-row"
+                        data-patient-id="{{ item.patient.pk }}"
+                        data-patient-name="{{ item.patient.full_name }}">
+                        <td>
+                            <div class="staff-cell">
+                                <div class="staff-avatar">{{ item.patient.first_name|first|upper }}{{ item.patient.last_name|first|upper }}</div>
+                                <div>
+                                    <div class="staff-name">{{ item.patient.full_name }}</div>
+                                    <div class="staff-meta">
+                                        #{{ item.patient.pk|stringformat:"05d" }}
+                                        · {{ item.patient.age }} yrs
+                                        · {{ item.patient.get_gender_display }}
+                                        {% if item.patient.id_number %} · ID {{ item.patient.id_number }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="contact-stack">
+                                <span class="line">{{ item.patient.phone|default:"—" }}</span>
+                                <span class="sub">Phone</span>
+                            </div>
+                        </td>
+                        <td style="color: var(--text-secondary); font-weight: 600; max-width: 220px;">
+                            {{ item.patient.location|default:"—" }}
+                        </td>
+                        <td>
+                            {% if item.last_visit %}
+                            <div class="contact-stack">
+                                <span class="line">{{ item.last_visit.visit_date|date:"d M Y" }}</span>
+                                <span class="sub">{{ item.last_visit.get_visit_type_display }}</span>
+                            </div>
+                            {% else %}
+                            <span style="color: var(--text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.last_visit and item.last_visit.is_active %}
+                            <span class="badge badge-success">Active visit</span>
+                            {% elif item.last_visit %}
+                            <span class="badge badge-role">Seen before</span>
+                            {% else %}
+                            <span class="badge badge-muted">New record</span>
+                            {% endif %}
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <a href="{% url 'home:patient_detail' item.patient.pk %}" class="btn btn-secondary btn-sm">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-user-slash"></i>
+                            <div style="font-weight: 700;">No patients found</div>
+                            <p style="font-size: 0.85rem; margin-top: 0.35rem;">Try another search, or register a new patient.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        {% include 'hr/includes/pagination.html' with page_obj=page_obj page_param='page' %}
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
 
 {% block modals %}
-    <!-- Patient Action Modal -->
-    <div id="patientActionModal" class="clinical-modal">
-        <div class="modal-content" style="max-width: 900px;">
-            <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user-gear"></i></div>
-                    <div>
-                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">Patient Actions</h3>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select an action for <strong id="modalPatientName" style="color: #10b981;"></strong></p>
-                    </div>
-                </div>
-                <span id="closePatientModal" class="close" style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+<div id="patientActionModal" class="patients-modal" aria-hidden="true">
+    <div class="patients-modal-panel">
+        <div class="patients-modal-header">
+            <div>
+                <h3>Patient actions</h3>
+                <p>Choose an action for <strong id="modalPatientName" style="color: var(--success);"></strong></p>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1px 1fr; padding: 0;">
-                <!-- Left: Admission -->
-                <div style="padding: 2rem;">
-                    <h4 style="color: #10b981; margin-top: 0; font-weight: 800; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; margin-bottom: 1.5rem;">Admit for Consultation</h4>
-                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Consultation Type</label>
-                            <select id="admitConsultation" class="clinical-input">
-                                <option value="">-- Select Consultation --</option>
-                                {% for service in services %}
-                                    {% if service.name == "MCH" or service.name == "OPD Consultation" %}
-                                        <option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:0 }})</option>
-                                    {% endif %}
-                                {% endfor %}
-                            </select>
+            <button type="button" id="closePatientModal" class="patients-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="patients-modal-split">
+            <div class="patients-modal-col admit">
+                <h4>Admit for consultation</h4>
+                <div class="form-group">
+                    <label class="form-label" for="admitConsultation">Consultation type</label>
+                    <select id="admitConsultation" class="form-input">
+                        <option value="">-- Select consultation --</option>
+                        {% for service in services %}
+                            {% if service.name == "MCH" or service.name == "OPD Consultation" %}
+                            <option value="{{ service.pk }}">{{ service.name }} (KES {{ service.price|format_number:0 }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="admitPaymentMethod">Payment method</label>
+                    <select id="admitPaymentMethod" class="form-input">
+                        <option value="">-- Select payment method --</option>
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Insurance">Insurance (SHA)</option>
+                        <option value="Free Visit">Free Visit (Revisit)</option>
+                    </select>
+                </div>
+                <div id="opdBillingOptions" class="patients-billing-box">
+                    <div class="patients-check">
+                        <input type="checkbox" id="admitBillBook" checked>
+                        <div>
+                            <strong>OPD Book</strong>
+                            <div class="staff-meta">Filing fee</div>
                         </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Payment Method</label>
-                            <select id="admitPaymentMethod" class="clinical-input">
-                                <option value="">-- Select Payment Method --</option>
-                                <option value="Cash">Cash</option>
-                                <option value="M-Pesa">M-Pesa</option>
-                                <option value="Insurance">Insurance (SHA)</option>
-                                <option value="Free Visit">Free Visit (Revisit)</option>
-                            </select>
+                    </div>
+                    <div class="patients-check">
+                        <input type="checkbox" id="admitBillConsult" checked>
+                        <div>
+                            <strong>OPD Consultation</strong>
+                            <div class="staff-meta">Clinical assessment</div>
                         </div>
-
-                        <div id="opdBillingOptions" style="display: none; background: rgba(16,185,129,0.04); padding: 1rem; border-radius: 12px; border: 1px dashed rgba(16,185,129,0.2);">
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <input type="checkbox" id="admitBillBook" checked style="width: 18px; height: 18px; accent-color: #10b981;">
-                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Book</strong><small style="color: var(--text-secondary); font-size: 0.7rem; display: block;">Filing Fee — Ksh 50</small></span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <input type="checkbox" id="admitBillConsult" checked style="width: 18px; height: 18px; accent-color: #10b981;">
-                                    <span style="flex: 1;"><strong style="color: white; font-size: 0.85rem;">OPD Consultation</strong><small style="color: var(--text-secondary); font-size: 0.7rem; display: block;">Clinical Assessment</small></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button id="admitVisitBtn" type="button" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; background: linear-gradient(135deg, #10b981, #059669);">
-                            Complete Admission
-                        </button>
                     </div>
                 </div>
-                <!-- Vertical Divider -->
-                <div style="background: rgba(255,255,255,0.05);"></div>
-                <!-- Right: Quick Invoice -->
-                <div style="padding: 2rem;">
-                    <h4 style="color: #6366f1; margin-top: 0; font-weight: 800; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; margin-bottom: 1.5rem;">Quick Service Invoice</h4>
-                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Select Service / Item</label>
-                            <select id="quickService" class="clinical-input">
-                                <option value="">-- Choose a service --</option>
-                                {% regroup services by department as services_by_dept %}
-                                {% for dept in services_by_dept %}
-                                    <optgroup label="{{ dept.grouper.name }}">
-                                        {% for service in dept.list %}
-                                            {% if "Consultation" not in service.name %}<option value="{{ service.pk }}">{{ service.name }} (Ksh {{ service.price|format_number:2 }})</option>{% endif %}
-                                        {% endfor %}
-                                    </optgroup>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div style="flex: 1;"></div>
-                        <button id="generateInvoiceBtn" type="button" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                            Process Quick Invoice
-                        </button>
-                    </div>
+                <button id="admitVisitBtn" type="button" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    Complete admission
+                </button>
+            </div>
+            <div class="patients-modal-divider"></div>
+            <div class="patients-modal-col invoice">
+                <h4>Quick service invoice</h4>
+                <div class="form-group">
+                    <label class="form-label" for="quickService">Service / item</label>
+                    <select id="quickService" class="form-input">
+                        <option value="">-- Choose a service --</option>
+                        {% regroup services by department as services_by_dept %}
+                        {% for dept in services_by_dept %}
+                        <optgroup label="{{ dept.grouper.name }}">
+                            {% for service in dept.list %}
+                                {% if "Consultation" not in service.name %}
+                                <option value="{{ service.pk }}">{{ service.name }} (KES {{ service.price|format_number:2 }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
                 </div>
+                <button id="generateInvoiceBtn" type="button" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    Process quick invoice
+                </button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Active Visit Warning -->
-    <div id="activeVisitWarningModal" class="clinical-modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div style="padding: 1.5rem 2rem; border-bottom: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; gap: 1rem;">
-                <div style="font-size: 1.5rem;">⚠️</div>
-                <div>
-                    <h3 style="margin: 0; color: #ef4444; font-size: 1.1rem; font-weight: 800;">Active Visit Warning</h3>
-                    <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">This patient already has an active visit</p>
-                </div>
+<div id="activeVisitWarningModal" class="patients-modal" aria-hidden="true">
+    <div class="patients-modal-panel narrow">
+        <div class="warning-banner">
+            <div style="font-size: 1.4rem;">⚠️</div>
+            <div>
+                <h3>Active visit warning</h3>
+                <p>This patient already has an active visit</p>
             </div>
-            <div style="padding: 2rem;">
-                <div id="activeVisitDetails" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;"></div>
-                <div id="activeVisitUnpaidTotal" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 12px; color: #ef4444; font-weight: 800; text-align: center; margin-bottom: 1.5rem;"></div>
-                <p style="margin: 0; color: #f59e0b; font-size: 0.85rem; font-weight: 600; text-align: center;">Starting a new visit will automatically CLOSE existing active visits.</p>
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button id="activeVisitCancel" class="btn-secondary" style="flex: 1;">Cancel</button>
-                    <button id="activeVisitProceed" class="btn-primary" style="flex: 1; background: #ef4444;">Proceed Anyway</button>
-                </div>
+        </div>
+        <div style="padding: 1.25rem 1.35rem;">
+            <div id="activeVisitDetails"></div>
+            <div id="activeVisitUnpaidTotal" style="display: none; padding: 0.85rem; background: rgba(220,38,38,0.08); border-radius: 10px; color: var(--danger); font-weight: 800; text-align: center; margin: 0.75rem 0;"></div>
+            <p style="margin: 0; color: var(--warning); font-size: 0.85rem; font-weight: 650; text-align: center;">
+                Starting a new visit will automatically close existing active visits.
+            </p>
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+                <button id="activeVisitCancel" type="button" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                <button id="activeVisitProceed" type="button" class="btn btn-primary" style="flex: 1; background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: none;">Proceed anyway</button>
             </div>
         </div>
     </div>
-{% endblock modals %}
+</div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -568,96 +395,98 @@ document.addEventListener('DOMContentLoaded', function () {
     const admitVisitBtn = document.getElementById('admitVisitBtn');
     const generateInvoiceBtn = document.getElementById('generateInvoiceBtn');
     const closeBtn = document.getElementById('closePatientModal');
-    
+
     let currentPatientId = null;
 
-    // Handle Payment Method change to show/hide OPD billing options
+    function openModal(el) {
+        el.style.display = 'flex';
+        el.classList.add('open');
+        el.setAttribute('aria-hidden', 'false');
+    }
+    function closeModal(el) {
+        el.style.display = 'none';
+        el.classList.remove('open');
+        el.setAttribute('aria-hidden', 'true');
+    }
+
     const admitPaymentMethod = document.getElementById('admitPaymentMethod');
     const opdBillingOptions = document.getElementById('opdBillingOptions');
     if (admitPaymentMethod) {
-        admitPaymentMethod.addEventListener('change', function() {
-            if (this.value === 'Cash' || this.value === 'M-Pesa') {
-                opdBillingOptions.style.display = 'block';
-            } else {
-                opdBillingOptions.style.display = 'none';
-            }
+        admitPaymentMethod.addEventListener('change', function () {
+            opdBillingOptions.style.display = (this.value === 'Cash' || this.value === 'M-Pesa') ? 'block' : 'none';
         });
     }
 
-    // Row click functionality
     document.addEventListener('click', function (e) {
         const patientRow = e.target.closest('.patient-row');
-        if (patientRow && !e.target.closest('.btn-secondary')) {
-            const patientId = patientRow.dataset.patientId;
-            const patientName = patientRow.dataset.patientName;
-
-            currentPatientId = patientId;
-            modalPatientName.textContent = patientName;
-            patientActionModal.style.display = 'flex';
+        if (patientRow && !e.target.closest('a, button')) {
+            currentPatientId = patientRow.dataset.patientId;
+            modalPatientName.textContent = patientRow.dataset.patientName;
+            openModal(patientActionModal);
         }
     });
 
     closeBtn.addEventListener('click', () => {
-        patientActionModal.style.display = 'none';
+        closeModal(patientActionModal);
         currentPatientId = null;
     });
 
     window.addEventListener('click', (e) => {
         if (e.target === patientActionModal) {
-            patientActionModal.style.display = 'none';
+            closeModal(patientActionModal);
             currentPatientId = null;
+        }
+        if (e.target === warningModal) {
+            closeModal(warningModal);
         }
     });
 
-    // Admission Logic
     admitVisitBtn.addEventListener('click', async function () {
         if (!currentPatientId) return;
 
         const consultationId = document.getElementById('admitConsultation').value;
         const paymentMethod = document.getElementById('admitPaymentMethod').value;
-
         if (!consultationId || !paymentMethod) {
             alert('Please select both consultation type and payment method.');
             return;
         }
 
-        // Check for active visits
         try {
             const checkRes = await fetch(`{% url "home:check_active_visit" %}?patient_id=${currentPatientId}`);
             const checkData = await checkRes.json();
-
             if (checkData.has_active) {
                 const detailsDiv = document.getElementById('activeVisitDetails');
                 detailsDiv.innerHTML = '';
                 checkData.visits.forEach(v => {
                     const card = document.createElement('div');
-                    card.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem;';
+                    card.className = 'active-visit-card';
                     card.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <div style="display:flex;justify-content:space-between;font-weight:700;">
                             <span>${v.visit_type}</span>
-                            <span style="color: var(--text-secondary);">${v.visit_date}</span>
+                            <span style="color:var(--text-secondary);">${v.visit_date}</span>
                         </div>
-                        <div style="margin-top: 0.5rem; font-size: 0.85rem;">Balance: <strong>Ksh ${v.balance.toLocaleString()}</strong></div>
+                        <div style="margin-top:0.45rem;font-size:0.85rem;">Balance: <strong>KES ${Number(v.balance).toLocaleString()}</strong></div>
                     `;
                     detailsDiv.appendChild(card);
                 });
-
                 const unpaidDiv = document.getElementById('activeVisitUnpaidTotal');
                 if (checkData.unpaid_total > 0) {
-                    unpaidDiv.textContent = `⚠️ TOTAL UNPAID BALANCE: Ksh ${checkData.unpaid_total.toLocaleString()}`;
+                    unpaidDiv.textContent = `TOTAL UNPAID BALANCE: KES ${Number(checkData.unpaid_total).toLocaleString()}`;
                     unpaidDiv.style.display = 'block';
+                } else {
+                    unpaidDiv.style.display = 'none';
                 }
-
-                warningModal.style.display = 'flex';
+                openModal(warningModal);
                 const proceed = await new Promise(resolve => {
-                    document.getElementById('activeVisitProceed').onclick = () => { warningModal.style.display = 'none'; resolve(true); };
-                    document.getElementById('activeVisitCancel').onclick = () => { warningModal.style.display = 'none'; resolve(false); };
+                    document.getElementById('activeVisitProceed').onclick = () => { closeModal(warningModal); resolve(true); };
+                    document.getElementById('activeVisitCancel').onclick = () => { closeModal(warningModal); resolve(false); };
                 });
                 if (!proceed) return;
             }
-        } catch (err) { console.error('Check failed', err); }
+        } catch (err) {
+            console.error('Check failed', err);
+        }
 
-        // Start Admission
         this.disabled = true;
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Admitting...';
 
@@ -680,12 +509,11 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             alert('Error: ' + (data.error || 'Failed to admit patient'));
             this.disabled = false;
-            this.innerHTML = 'Complete Admission';
+            this.innerHTML = 'Complete admission';
         }
     });
 
-    // Quick Invoice Logic
-    generateInvoiceBtn.addEventListener('click', async function() {
+    generateInvoiceBtn.addEventListener('click', async function () {
         if (!currentPatientId) return;
         const serviceId = document.getElementById('quickService').value;
         if (!serviceId) { alert('Please select a service.'); return; }
@@ -710,25 +538,9 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             alert('Error: ' + (data.error || 'Failed to create invoice'));
             this.disabled = false;
-            this.innerHTML = 'Process Quick Invoice';
+            this.innerHTML = 'Process quick invoice';
         }
     });
 });
-
-// Helper for CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
 </script>
 {% endblock %}

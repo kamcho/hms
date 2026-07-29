@@ -349,3 +349,223 @@ class Moh717ReportLine(models.Model):
     @property
     def total_count(self) -> int:
         return self.new_count + self.re_att_count
+
+
+class Moh645DailyReport(models.Model):
+    """MOH 645 — Health Facility Daily Activity Register for Malaria Commodities."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+    ]
+
+    facility_name = models.CharField(max_length=200)
+    report_date = models.DateField()
+    page_number = models.PositiveSmallIntegerField(default=1)
+    receipt_date = models.DateField(null=True, blank=True)
+    receipt_reference = models.CharField(max_length=120, blank=True)
+    balance_previous = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Balance from previous page (A)')
+    qty_received = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Quantities received (B)')
+    losses = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Losses (D)')
+    remarks = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='moh645_reports_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-report_date', '-page_number']
+        verbose_name = 'MOH 645 Daily Malaria Register'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['facility_name', 'report_date', 'page_number'],
+                name='unique_moh645_facility_date_page',
+            ),
+        ]
+
+    def __str__(self):
+        return f'MOH 645 {self.facility_name} — {self.report_date} p{self.page_number}'
+
+    @property
+    def total_stock_available(self):
+        return self.balance_previous + self.qty_received
+
+    @property
+    def total_dispensed(self):
+        return sum(entry.total_dispensed_qty for entry in self.entries.all())
+
+    @property
+    def balance_end(self):
+        return self.total_stock_available - self.total_dispensed - self.losses
+
+
+class Moh645DailyEntry(models.Model):
+    """One patient row on MOH 645."""
+
+    VISIT_TYPE_CHOICES = [('IP', 'In-Patient'), ('OP', 'Out-Patient')]
+    TEST_METHOD_CHOICES = [
+        ('none', 'No test done'),
+        ('microscopy', 'Microscopy'),
+        ('mrdt', 'mRDT'),
+    ]
+    TEST_RESULT_CHOICES = [
+        ('', '—'),
+        ('positive', 'Positive'),
+        ('negative', 'Negative'),
+        ('invalid', 'Invalid'),
+    ]
+    AL_BAND_CHOICES = [
+        ('', '—'),
+        ('lt15', '<15 Kg (<3 yrs)'),
+        ('bw15_25', '15 to <25 Kg (3 to <8 yrs)'),
+        ('bw25_35', '25 to <35 Kg (8 to <12 yrs)'),
+        ('gte35', '35+ Kg (≥12 yrs)'),
+    ]
+
+    report = models.ForeignKey(Moh645DailyReport, on_delete=models.CASCADE, related_name='entries')
+    visit = models.ForeignKey('home.Visit', on_delete=models.SET_NULL, null=True, blank=True)
+    patient_name = models.CharField(max_length=200, blank=True)
+    visit_type = models.CharField(max_length=2, choices=VISIT_TYPE_CHOICES, default='OP')
+    test_method = models.CharField(max_length=20, choices=TEST_METHOD_CHOICES, default='none')
+    test_result = models.CharField(max_length=10, choices=TEST_RESULT_CHOICES, blank=True, default='')
+    al_weight_band = models.CharField(max_length=10, choices=AL_BAND_CHOICES, blank=True, default='')
+    qty_rdts = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    qty_al_6 = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    qty_al_12 = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    qty_al_18 = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    qty_al_24 = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    qty_artesunate = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    source = models.CharField(max_length=20, default='manual')
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        return f'{self.patient_name or "Entry"} — {self.report.report_date}'
+
+    @property
+    def total_dispensed_qty(self):
+        return (
+            self.qty_rdts + self.qty_al_6 + self.qty_al_12
+            + self.qty_al_18 + self.qty_al_24 + self.qty_artesunate
+        )
+
+
+class Moh743CommodityDefinition(models.Model):
+    """Catalog row for MOH 743 commodity lines."""
+
+    row_key = models.CharField(max_length=32, unique=True)
+    commodity_name = models.CharField(max_length=200)
+    basic_unit = models.CharField(max_length=40)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['sort_order']
+
+    def __str__(self):
+        return self.commodity_name
+
+
+class Moh743MonthlyReport(models.Model):
+    """MOH 743 — Health Facility Monthly Summary Report for Malaria Commodities."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+    ]
+    MONTH_CHOICES = [(i, i) for i in range(1, 13)]
+    FACILITY_LEVEL_CHOICES = [(str(i), f'Level {i}') for i in range(2, 7)]
+
+    facility_name = models.CharField(max_length=200)
+    kmhfl_code = models.CharField(max_length=50, blank=True)
+    county = models.CharField(max_length=120, blank=True)
+    sub_county = models.CharField(max_length=120, blank=True)
+    facility_level = models.CharField(max_length=2, choices=FACILITY_LEVEL_CHOICES, blank=True)
+    month = models.PositiveSmallIntegerField(choices=MONTH_CHOICES)
+    year = models.PositiveIntegerField()
+    period_begin = models.DateField(null=True, blank=True)
+    period_end = models.DateField(null=True, blank=True)
+
+    al_stockout_days = models.PositiveIntegerField(default=0)
+    iptp_pregnant_women = models.PositiveIntegerField(default=0)
+    comments = models.TextField(blank=True)
+
+    diagnostics_data = models.JSONField(default=dict, blank=True)
+    al_weight_data = models.JSONField(default=dict, blank=True)
+
+    prepared_by = models.CharField(max_length=200, blank=True)
+    prepared_signature = models.CharField(max_length=200, blank=True)
+    prepared_date = models.DateField(null=True, blank=True)
+    prepared_phone = models.CharField(max_length=30, blank=True)
+    reviewed_by = models.CharField(max_length=200, blank=True)
+    reviewed_signature = models.CharField(max_length=200, blank=True)
+    reviewed_date = models.DateField(null=True, blank=True)
+    reviewed_phone = models.CharField(max_length=30, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='moh743_reports_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-year', '-month']
+        verbose_name = 'MOH 743 Monthly Malaria Summary'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['facility_name', 'month', 'year'],
+                name='unique_moh743_facility_month',
+            ),
+        ]
+
+    def __str__(self):
+        return f'MOH 743 {self.facility_name} — {self.month}/{self.year}'
+
+    @property
+    def month_name(self):
+        import calendar
+        return calendar.month_name[self.month]
+
+
+class Moh743CommodityLine(models.Model):
+    """One commodity row on MOH 743 with columns A–J."""
+
+    report = models.ForeignKey(Moh743MonthlyReport, on_delete=models.CASCADE, related_name='lines')
+    line_definition = models.ForeignKey(
+        Moh743CommodityDefinition,
+        on_delete=models.PROTECT,
+        related_name='report_lines',
+    )
+    col_a = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Beginning balance')
+    col_b = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Received')
+    col_c = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Dispensed')
+    col_d = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Losses')
+    col_e = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Positive adjustments')
+    col_f = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Negative adjustments')
+    col_g = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Physical count')
+    col_h = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Expired')
+    col_i = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='6 months to expiry')
+    col_j = models.PositiveIntegerField(default=0, verbose_name='Days out of stock')
+
+    class Meta:
+        unique_together = [['report', 'line_definition']]
+        ordering = ['line_definition__sort_order']
+
+    def __str__(self):
+        return f'{self.report} — {self.line_definition}'
+
+    @property
+    def quantity_to_reorder(self):
+        return max(self.col_c, 0)

@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Service, Invoice, InvoiceItem, Payment, MpesaPayment, 
-    ExpenseCategory, Expense, InventoryPurchase, SupplierInvoice, SupplierPayment, InvoiceItem
+    ExpenseCategory, Expense, InventoryPurchase, SupplierInvoice, SupplierPayment,
+    ShaClaimSession,
 )
 
 @admin.register(SupplierInvoice)
@@ -56,3 +57,13 @@ class MpesaPaymentAdmin(admin.ModelAdmin):
     search_fields = ('phone_number', 'mpesa_receipt_number', 'checkout_request_id')
 
 admin.site.register(InvoiceItem)
+
+
+@admin.register(ShaClaimSession)
+class ShaClaimSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'visit', 'status', 'service_type', 'consent_token', 'claim_id', 'eligible', 'updated_at',
+    )
+    list_filter = ('status', 'service_type', 'eligible')
+    search_fields = ('consent_token', 'claim_id', 'patient_cr_id', 'patient_id_number')
+    readonly_fields = ('created_at', 'updated_at', 'eligibility_raw', 'erx_raw', 'preauth_raw', 'submit_raw')

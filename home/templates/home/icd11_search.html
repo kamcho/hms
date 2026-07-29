@@ -1,0 +1,257 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}ICD-11 Search · HMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .icd-shell {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0.5rem 0.25rem 2rem;
+    }
+    .status-banner {
+        display: none;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 650;
+        margin-bottom: 1rem;
+    }
+    .status-banner.error {
+        background: rgba(220, 38, 38, 0.08);
+        border: 1px solid rgba(220, 38, 38, 0.25);
+        color: var(--danger);
+    }
+    .status-banner.warn {
+        background: rgba(217, 119, 6, 0.08);
+        border: 1px solid rgba(217, 119, 6, 0.3);
+        color: #b45309;
+    }
+    .result-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 0.85rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row:hover { background: rgba(99, 102, 241, 0.04); margin: 0 -0.75rem; padding-left: 0.75rem; padding-right: 0.75rem; border-radius: 10px; }
+    .result-title { font-weight: 700; color: var(--text-primary, #0f172a); }
+    .result-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .raw-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: ui-monospace, monospace;
+        font-size: 0.75rem;
+        max-height: 280px;
+        overflow: auto;
+        white-space: pre-wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="icd-shell">
+    <div class="page-header">
+        <div>
+            <h1>ICD-11 search</h1>
+            <p>Look up WHO ICD-11 MMS codes and titles for diagnosis coding.</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge badge-role">Release {{ release }}</span>
+            <span class="badge badge-info">{{ linearization|upper }} · {{ language }}</span>
+        </div>
+    </div>
+
+    {% if uses_local_db and has_local_data %}
+    <div class="status-banner" style="display: block; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: #047857;">
+        Searching local database ({{ local_count|floatformat:0 }} ICD-11 entries). Run <code>python manage.py sync_icd11</code> to refresh.
+    </div>
+    {% elif uses_local_db %}
+    <div class="status-banner warn" style="display: block;">
+        Local ICD-11 database is empty. Run <code>python manage.py sync_icd11</code> once to import the WHO release file (no API credentials needed).
+    </div>
+    {% elif not has_credentials %}
+    <div class="status-banner warn" style="display: block;">
+        Add <code>ICD11_CLIENT_ID</code> and <code>ICD11_CLIENT_SECRET</code> to your <code>.env</code>
+        (register at <a href="https://icd.who.int/icdapi" target="_blank" rel="noopener">icd.who.int/icdapi</a>).
+    </div>
+    {% endif %}
+
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.25rem;">
+        <form id="icdSearchForm" class="filter-row" autocomplete="off">
+            <div class="form-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                <label class="form-label" for="icdQuery">Search term</label>
+                <input type="search" id="icdQuery" class="form-input" placeholder="e.g. type 2 diabetes, cholera, hypertension…" required>
+            </div>
+            <div class="form-group" style="width: 140px; margin-bottom: 0;">
+                <label class="form-label" for="icdCode">Or code</label>
+                <input type="text" id="icdCode" class="form-input" placeholder="1A00">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+                <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <div id="resultsCard" class="card" style="padding: 1.5rem; display: none;">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800;">Results</h3>
+                <p id="resultsSub" style="margin: 0.2rem 0 0; color: var(--text-secondary); font-size: 0.85rem;"></p>
+            </div>
+            <span id="resultsCount" class="badge badge-role">0</span>
+        </div>
+        <div id="resultsList"></div>
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">Raw API response</summary>
+            <pre id="rawJson" class="raw-box"></pre>
+        </details>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('icdSearchForm');
+    const queryInput = document.getElementById('icdQuery');
+    const codeInput = document.getElementById('icdCode');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBanner = document.getElementById('statusBanner');
+    const resultsCard = document.getElementById('resultsCard');
+    const resultsList = document.getElementById('resultsList');
+    const resultsSub = document.getElementById('resultsSub');
+    const resultsCount = document.getElementById('resultsCount');
+    const rawJson = document.getElementById('rawJson');
+
+    function showStatus(type, message) {
+        statusBanner.className = 'status-banner ' + type;
+        statusBanner.textContent = message;
+        statusBanner.style.display = 'block';
+    }
+
+    function hideStatus() {
+        statusBanner.style.display = 'none';
+    }
+
+    function renderResults(items) {
+        resultsList.innerHTML = '';
+        if (!items || !items.length) {
+            resultsList.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><i class="fas fa-book-medical"></i><div style="font-weight:700;">No matches</div></div>';
+            return;
+        }
+        items.forEach(function (item) {
+            const row = document.createElement('div');
+            row.className = 'result-row';
+            const code = item.code ? `<span class="badge badge-success">${item.code}</span>` : '';
+            const id = item.id ? `ID ${item.id}` : '';
+            row.innerHTML = `
+                <div>
+                    <div class="result-title">${item.title || 'Untitled'}</div>
+                    <div class="result-meta">${[code, id, item.chapter].filter(Boolean).join(' · ')}</div>
+                </div>
+                ${item.id ? `<button type="button" class="btn btn-secondary btn-sm" data-entity="${item.id}">Details</button>` : ''}
+            `;
+            resultsList.appendChild(row);
+        });
+        resultsList.querySelectorAll('[data-entity]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                loadEntity(btn.getAttribute('data-entity'));
+            });
+        });
+    }
+
+    async function loadEntity(id) {
+        try {
+            const res = await fetch(`{% url "home:icd11_entity_api" %}?id=${encodeURIComponent(id)}`);
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showStatus('error', data.error || 'Entity lookup failed.');
+                return;
+            }
+            rawJson.textContent = JSON.stringify(data.raw || data, null, 2);
+            resultsCard.style.display = 'block';
+            const ent = data.entity || {};
+            resultsSub.textContent = `Entity: ${ent.title || id}`;
+            renderResults([{
+                title: ent.title,
+                code: ent.code,
+                id: ent.id,
+            }]);
+        } catch (err) {
+            showStatus('error', 'Entity request failed.');
+        }
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideStatus();
+        const code = codeInput.value.trim();
+        const query = queryInput.value.trim();
+
+        if (!code && !query) {
+            showStatus('error', 'Enter a search term or ICD-11 code.');
+            return;
+        }
+
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching…';
+        resultsCard.style.display = 'none';
+
+        try {
+            let url;
+            if (code) {
+                url = `{% url "home:icd11_code_api" %}?code=${encodeURIComponent(code)}`;
+            } else {
+                url = `{% url "home:icd11_search_api" %}?q=${encodeURIComponent(query)}`;
+            }
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showStatus('error', data.error || 'ICD-11 search failed.');
+                return;
+            }
+
+            resultsCard.style.display = 'block';
+            rawJson.textContent = JSON.stringify(data.raw || data, null, 2);
+
+            if (code) {
+                const ent = data.entity || {};
+                resultsSub.textContent = `Code lookup: ${data.code}`;
+                resultsCount.textContent = '1';
+                renderResults([{ title: ent.title, code: ent.code || data.code, id: ent.id }]);
+            } else {
+                const items = data.results || [];
+                resultsSub.textContent = `Search: ${data.query}`;
+                resultsCount.textContent = String(items.length);
+                renderResults(items);
+            }
+        } catch (err) {
+            showStatus('error', 'Request failed: ' + (err && err.message ? err.message : err));
+        } finally {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i> Search';
+        }
+    });
+
+    clearBtn.addEventListener('click', function () {
+        queryInput.value = '';
+        codeInput.value = '';
+        hideStatus();
+        resultsCard.style.display = 'none';
+        queryInput.focus();
+    });
+});
+</script>
+{% endblock %}

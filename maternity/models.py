@@ -594,6 +594,14 @@ class MaternityDischarge(models.Model):
     baby_condition_at_discharge = models.CharField(max_length=100, help_text="Summary of newborn(s) status")
     
     final_diagnosis = models.TextField(blank=True)
+    final_icd11_code = models.CharField(max_length=32, blank=True, db_index=True)
+    final_icd11_entry = models.ForeignKey(
+        'home.Icd11Code',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='maternity_discharges',
+    )
     discharge_summary = models.TextField(help_text="Clinical summary of the maternity episode")
     follow_up_plan = models.TextField(help_text="Instructions for postnatal care and return visits")
     
@@ -742,4 +750,25 @@ class CwcGrowthRecord(models.Model):
 
     def __str__(self):
         return f"CWC growth {self.patient} — {self.measured_date} ({self.weight_kg} kg)"
+
+    @property
+    def bmi(self):
+        from home.bmi_growth import calc_bmi
+        return calc_bmi(self.weight_kg, self.height_cm)
+
+    @property
+    def bmi_category(self):
+        from home.bmi_growth import bmi_category
+        age = getattr(self.patient, 'age', None)
+        return bmi_category(self.bmi, age_years=age)
+
+    @property
+    def weight_for_age_status(self):
+        from home.bmi_growth import age_in_months, classify_weight_for_age
+        months = age_in_months(self.patient.date_of_birth, self.measured_date)
+        if months is None:
+            return ''
+        return classify_weight_for_age(
+            self.weight_kg, months, sex=self.patient.gender or 'male',
+        )
 

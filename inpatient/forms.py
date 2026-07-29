@@ -25,8 +25,30 @@ class AdmissionForm(forms.ModelForm):
         model = Admission
         fields = ['ward', 'bed', 'provisional_diagnosis']
         widgets = {
-            'provisional_diagnosis': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Enter the reason for admission...'}),
+            'provisional_diagnosis': forms.Textarea(attrs={
+                'rows': 2,
+                'class': 'icd-diagnosis-value hidden',
+                'placeholder': 'ICD-11 diagnosis will be set from search…',
+            }),
         }
+
+    def clean_provisional_diagnosis(self):
+        from home.icd11_diagnosis import validate_and_resolve_diagnosis
+
+        value = self.cleaned_data.get('provisional_diagnosis')
+        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
+        self._provisional_icd11_entry = entry
+        return display
+
+    def save(self, commit=True):
+        admission = super().save(commit=False)
+        entry = getattr(self, '_provisional_icd11_entry', None)
+        if entry:
+            admission.provisional_icd11_code = entry.code
+            admission.provisional_icd11_entry = entry
+        if commit:
+            admission.save()
+        return admission
 
     def __init__(self, *args, **kwargs):
         patient = kwargs.pop('patient', None)
@@ -82,14 +104,57 @@ class InpatientDischargeForm(forms.ModelForm):
             'clinical_management_summary', 'discharge_care_plan'
         ]
         widgets = {
-            'provisional_diagnosis': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Provisional Diagnosis on admission...'}),
-            'final_diagnosis': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Final Discharge Diagnosis...'}),
+            'provisional_diagnosis': forms.Textarea(attrs={
+                'rows': 2,
+                'class': 'icd-diagnosis-value hidden',
+                'placeholder': 'ICD-11 diagnosis will be set from search…',
+            }),
+            'final_diagnosis': forms.Textarea(attrs={
+                'rows': 2,
+                'class': 'icd-diagnosis-value hidden',
+                'placeholder': 'ICD-11 diagnosis will be set from search…',
+            }),
             'other_problems': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Other medical problems noted...'}),
             'operations_procedures': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Operations or surgical procedures done...'}),
             'presenting_complaints': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Chief complaints...'}),
             'clinical_management_summary': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Brief clinical summary of management...'}),
             'discharge_care_plan': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Care plan and follow-up instructions...'}),
         }
+
+    def clean_provisional_diagnosis(self):
+        from home.icd11_diagnosis import validate_and_resolve_diagnosis
+
+        value = self.cleaned_data.get('provisional_diagnosis')
+        if not (value or '').strip():
+            return ''
+        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
+        self._provisional_icd11_entry = entry
+        return display
+
+    def clean_final_diagnosis(self):
+        from home.icd11_diagnosis import validate_and_resolve_diagnosis
+
+        value = self.cleaned_data.get('final_diagnosis')
+        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
+        self._final_icd11_entry = entry
+        return display
+
+    def save(self, commit=True):
+        discharge = super().save(commit=False)
+        provisional_entry = getattr(self, '_provisional_icd11_entry', None)
+        final_entry = getattr(self, '_final_icd11_entry', None)
+        if provisional_entry:
+            discharge.provisional_icd11_code = provisional_entry.code
+            discharge.provisional_icd11_entry = provisional_entry
+        elif not (discharge.provisional_diagnosis or '').strip():
+            discharge.provisional_icd11_code = ''
+            discharge.provisional_icd11_entry = None
+        if final_entry:
+            discharge.final_icd11_code = final_entry.code
+            discharge.final_icd11_entry = final_entry
+        if commit:
+            discharge.save()
+        return discharge
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -204,3 +204,87 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# SHA / DHA HIE integration settings (AfyaLink)
+SHA_HIE_BASE_URL = os.getenv('SHA_HIE_BASE_URL', 'https://uat.dha.go.ke')
+SHA_HIE_USERNAME = os.getenv('SHA_HIE_USERNAME', '')
+SHA_HIE_PASSWORD = os.getenv('SHA_HIE_PASSWORD', '')
+# Agent ID (Basic Auth section) + Token Auth Key/Secret from DHA portal.
+SHA_HIE_AGENT_ID = os.getenv('SHA_HIE_AGENT_ID', '')
+SHA_HIE_CONSUMER_KEY = os.getenv('SHA_HIE_CONSUMER_KEY', '')
+SHA_HIE_CONSUMER_SECRET = os.getenv('SHA_HIE_CONSUMER_SECRET', '')
+SHA_HIE_TIMEOUT_SECONDS = int(os.getenv('SHA_HIE_TIMEOUT_SECONDS', '45'))
+SHA_HIE_VERIFY_SSL = os.getenv('SHA_HIE_VERIFY_SSL', 'true').lower() == 'true'
+SHA_HIE_TOKEN_PATH = os.getenv('SHA_HIE_TOKEN_PATH', '/v1/hie-auth')
+SHA_HIE_CLIENT_VERIFY_PATH = os.getenv(
+    'SHA_HIE_CLIENT_VERIFY_PATH',
+    '/v3/client-registry/fetch-client',
+)
+SHA_HIE_ELIGIBILITY_PATH = os.getenv(
+    'SHA_HIE_ELIGIBILITY_PATH',
+    '/v2/eligibility',
+)
+SHA_HIE_FACILITY_SEARCH_PATH = os.getenv(
+    'SHA_HIE_FACILITY_SEARCH_PATH',
+    '/v2/facility-search',
+)
+# DHA Terminology Service — ICD-11 validate/search (AfyaLink / ILM middleware)
+# Auth still uses SHA_HIE_BASE_URL (/v1/hie-auth); terminology routes live on the middleware host.
+SHA_HIE_TERMINOLOGY_BASE_URL = os.getenv(
+    'SHA_HIE_TERMINOLOGY_BASE_URL',
+    'https://ilm-dev.dha.go.ke/uat-middleware/api/v1',
+)
+SHA_HIE_ICD11_SEARCH_PATH = os.getenv(
+    'SHA_HIE_ICD11_SEARCH_PATH',
+    '/clinical/concepts',
+)
+SHA_HIE_ICD11_OWNER = os.getenv('SHA_HIE_ICD11_OWNER', 'WHO')
+SHA_HIE_ICD11_SOURCE = os.getenv('SHA_HIE_ICD11_SOURCE', 'ICD-11')
+# DHA HPT (Health Products & Technologies) — PPB generic/product concepts for eRx
+SHA_HIE_HPT_OWNER = os.getenv('SHA_HIE_HPT_OWNER', 'MOH-PPB')
+SHA_HIE_HPT_SOURCE = os.getenv('SHA_HIE_HPT_SOURCE', 'HPT')
+# On prescribe: suggest/require DHA generic_concept_code (GE*) after local drug select
+HPT_DHA_SUGGEST_ON_SELECT = os.getenv('HPT_DHA_SUGGEST_ON_SELECT', 'true').lower() == 'true'
+HPT_DHA_REQUIRE_CODE = os.getenv('HPT_DHA_REQUIRE_CODE', 'false').lower() == 'true'
+
+# Facility identity for eClaims / eRx (X-Facility-Id headers)
+SHA_HIE_FACILITY_FR_CODE = os.getenv('SHA_HIE_FACILITY_FR_CODE', '')
+SHA_HIE_FACILITY_ID_TYPE = os.getenv('SHA_HIE_FACILITY_ID_TYPE', 'fr-code')
+SHA_HIE_FACILITY_NAME = os.getenv('SHA_HIE_FACILITY_NAME', '')
+SHA_HIE_DEFAULT_INTERVENTION_OPD = os.getenv('SHA_HIE_DEFAULT_INTERVENTION_OPD', 'SHA-18-005')
+SHA_HIE_DEFAULT_INTERVENTION_IPD = os.getenv('SHA_HIE_DEFAULT_INTERVENTION_IPD', 'SHA-11-001')
+# When true, insurance desk also pushes claim submit to DHA after local payment
+SHA_HIE_AUTO_SUBMIT_ON_INSURANCE = os.getenv('SHA_HIE_AUTO_SUBMIT_ON_INSURANCE', 'false').lower() == 'true'
+
+# Clinical Summary / Shared Encounter (Kenya HIE)
+SHA_HIE_CLINICAL_FHIR_BUNDLE_PATH = os.getenv(
+    'SHA_HIE_CLINICAL_FHIR_BUNDLE_PATH',
+    '/clinical/fhir/bundle',
+)
+SHA_HIE_ENCOUNTER_SYNC_PATH = os.getenv(
+    'SHA_HIE_ENCOUNTER_SYNC_PATH',
+    '/api/v1/encounter/sync',
+)
+
+# WHO ICD-11 API (https://icd.who.int/docs/icd-api/APIDoc-Version2/)
+ICD11_API_BASE_URL = os.getenv('ICD11_API_BASE_URL', 'https://id.who.int')
+ICD11_TOKEN_URL = os.getenv(
+    'ICD11_TOKEN_URL',
+    'https://icdaccessmanagement.who.int/connect/token',
+)
+ICD11_CLIENT_ID = os.getenv('ICD11_CLIENT_ID', '')
+ICD11_CLIENT_SECRET = os.getenv('ICD11_CLIENT_SECRET', '')
+ICD11_RELEASE = os.getenv('ICD11_RELEASE', '2024-01')
+ICD11_LINEARIZATION = os.getenv('ICD11_LINEARIZATION', 'mms')
+ICD11_LANGUAGE = os.getenv('ICD11_LANGUAGE', 'en')
+ICD11_TIMEOUT_SECONDS = int(os.getenv('ICD11_TIMEOUT_SECONDS', '20'))
+ICD11_VERIFY_SSL = os.getenv('ICD11_VERIFY_SSL', 'true').lower() == 'true'
+ICD11_USE_LOCAL_DB = os.getenv('ICD11_USE_LOCAL_DB', 'true').lower() == 'true'
+# On select: search local DB, then cross-check code+title with DHA terminology API
+ICD11_DHA_VALIDATE_ON_SELECT = os.getenv('ICD11_DHA_VALIDATE_ON_SELECT', 'true').lower() == 'true'
+# If true, reject selection when DHA is unreachable; if false, allow with warning
+ICD11_DHA_VALIDATE_STRICT = os.getenv('ICD11_DHA_VALIDATE_STRICT', 'false').lower() == 'true'
+ICD11_TABULATION_URL = os.getenv(
+    'ICD11_TABULATION_URL',
+    'https://icdcdn.who.int/static/releasefiles/{release}/SimpleTabulation-ICD-11-MMS-{language}.zip',
+)

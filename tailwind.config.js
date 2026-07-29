@@ -5,7 +5,12 @@ module.exports = {
     "./**/static/**/*.js",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Quicksand"', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+        mono: ['ui-monospace', 'Cascadia Code', 'Segoe UI Mono', 'Menlo', 'Consolas', 'monospace'],
+      },
+    },
   },
   plugins: [],
 }

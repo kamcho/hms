@@ -44,8 +44,10 @@
                         <label>Gender</label>
                         <select name="gender">
                             <option value="all">All Genders</option>
-                            <option value="M" {% if request.GET.gender == 'M' %}selected{% endif %}>Male</option>
-                            <option value="F" {% if request.GET.gender == 'F' %}selected{% endif %}>Female</option>
+                            <option value="male" {% if request.GET.gender == 'male' or request.GET.gender == 'M' %}selected{% endif %}>Male</option>
+                            <option value="female" {% if request.GET.gender == 'female' or request.GET.gender == 'F' %}selected{% endif %}>Female</option>
+                            <option value="other" {% if request.GET.gender == 'other' %}selected{% endif %}>Other</option>
+                            <option value="unknown" {% if request.GET.gender == 'unknown' %}selected{% endif %}>Unknown</option>
                         </select>
                     </div>
                 </div>

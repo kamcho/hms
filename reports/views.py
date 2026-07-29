@@ -1,5 +1,6 @@
 import calendar
 import json
+from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -8,8 +9,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import Moh705bReportHeaderForm, Moh717ReportHeaderForm, NvipReportHeaderForm
+from .forms import (
+    Moh645DailyReportForm,
+    Moh705bReportHeaderForm,
+    Moh717ReportHeaderForm,
+    Moh743MonthlyReportForm,
+    NvipReportHeaderForm,
+)
 from .models import (
+    Moh645DailyEntry,
+    Moh645DailyReport,
     Moh705bColumnDefinition,
     Moh705bLineDefinition,
     Moh705bMonthlyReport,
@@ -17,9 +26,16 @@ from .models import (
     Moh717LineDefinition,
     Moh717MonthlyReport,
     Moh717ReportLine,
+    Moh743CommodityLine,
+    Moh743MonthlyReport,
     NvipLineDefinition,
     NvipMonthlyReport,
     NvipReportLine,
+)
+from .malaria_services import (
+    ensure_moh743_report_lines,
+    sync_moh645_from_hms,
+    sync_moh743_from_hms,
 )
 from .moh717_lines import MOH717_FORM_NOTE
 from .services import apply_immunization_counts_to_report
@@ -29,6 +45,12 @@ def _can_access_reports(user):
     return user.is_authenticated and (
         user.is_superuser
         or getattr(user, 'role', None) in ('Admin', 'Nurse', 'Doctor', 'Accountant', 'SHA Manager', 'SHA')
+    )
+
+
+def _can_access_malaria_reports(user):
+    return user.is_authenticated and (
+        user.is_superuser or getattr(user, 'role', None) in ('Admin', 'Pharmacist')
     )
 
 
@@ -528,4 +550,339 @@ def moh717_report_print(request, pk):
         'grid': grid,
         'col_totals': col_totals,
         'form_note': MOH717_FORM_NOTE,
+    })
+
+
+@login_required
+def malaria_reports_hub(request):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    return render(request, 'reports/malaria_hub.html', {
+        'title': 'Malaria Commodity Reports',
+    })
+
+
+@login_required
+def moh645_report_list(request):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    try:
+        year = int(year) if year else timezone.localdate().year
+        month = int(month) if month else timezone.localdate().month
+    except ValueError:
+        today = timezone.localdate()
+        year, month = today.year, today.month
+    reports = Moh645DailyReport.objects.filter(
+        report_date__year=year,
+        report_date__month=month,
+    ).order_by('-report_date', '-page_number')
+    return render(request, 'reports/moh645_list.html', {
+        'reports': reports,
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'title': 'MOH 645 — Daily Malaria Register',
+    })
+
+
+@login_required
+def moh645_report_create(request):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    if request.method == 'POST':
+        form = Moh645DailyReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_by = request.user
+            report.save()
+            messages.success(request, 'Daily malaria register created.')
+            return redirect('reports:moh645_edit', pk=report.pk)
+    else:
+        today = timezone.localdate()
+        form = Moh645DailyReportForm(initial={
+            'report_date': today,
+            'facility_name': 'Health Facility',
+            'page_number': 1,
+        })
+    return render(request, 'reports/moh645_create.html', {
+        'form': form,
+        'title': 'New MOH 645 Daily Register',
+    })
+
+
+@login_required
+def moh645_report_edit(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh645DailyReport, pk=pk)
+    entries = report.entries.all()
+    return render(request, 'reports/moh645_edit.html', {
+        'report': report,
+        'entries': entries,
+        'test_method_choices': Moh645DailyEntry.TEST_METHOD_CHOICES,
+        'test_result_choices': Moh645DailyEntry.TEST_RESULT_CHOICES,
+        'visit_type_choices': Moh645DailyEntry.VISIT_TYPE_CHOICES,
+        'al_band_choices': Moh645DailyEntry.AL_BAND_CHOICES,
+        'title': f'MOH 645 — {report.report_date}',
+    })
+
+
+@login_required
+@require_POST
+def moh645_report_save(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    report = get_object_or_404(Moh645DailyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'})
+
+    header = payload.get('header') or {}
+    for field in ('balance_previous', 'qty_received', 'losses', 'remarks', 'receipt_reference'):
+        if field in header:
+            setattr(report, field, header[field])
+    if 'receipt_date' in header:
+        report.receipt_date = header.get('receipt_date') or None
+    if payload.get('submit'):
+        report.status = 'submitted'
+    report.save()
+
+    existing_ids = set()
+    for idx, row in enumerate(payload.get('entries') or []):
+        entry_id = row.get('id')
+        defaults = {
+            'patient_name': str(row.get('patient_name', ''))[:200],
+            'visit_type': row.get('visit_type') or 'OP',
+            'test_method': row.get('test_method') or 'none',
+            'test_result': row.get('test_result') or '',
+            'al_weight_band': row.get('al_weight_band') or '',
+            'qty_rdts': row.get('qty_rdts') or 0,
+            'qty_al_6': row.get('qty_al_6') or 0,
+            'qty_al_12': row.get('qty_al_12') or 0,
+            'qty_al_18': row.get('qty_al_18') or 0,
+            'qty_al_24': row.get('qty_al_24') or 0,
+            'qty_artesunate': row.get('qty_artesunate') or 0,
+            'sort_order': idx,
+            'source': 'manual',
+        }
+        if entry_id:
+            try:
+                entry = Moh645DailyEntry.objects.get(pk=int(entry_id), report=report)
+                for k, v in defaults.items():
+                    setattr(entry, k, v)
+                entry.save()
+                existing_ids.add(entry.pk)
+            except (ValueError, Moh645DailyEntry.DoesNotExist):
+                pass
+        else:
+            entry = Moh645DailyEntry.objects.create(report=report, **defaults)
+            existing_ids.add(entry.pk)
+
+    if payload.get('replace_entries'):
+        report.entries.exclude(pk__in=existing_ids).delete()
+
+    return JsonResponse({
+        'success': True,
+        'status': report.status,
+        'total_dispensed': float(report.total_dispensed),
+        'balance_end': float(report.balance_end),
+    })
+
+
+@login_required
+@require_POST
+def moh645_sync_from_hms(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    report = get_object_or_404(Moh645DailyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+    stats = sync_moh645_from_hms(report)
+    messages.success(
+        request,
+        f"Synced {stats['entries_created']} row(s) from {stats['lab_tests']} lab test(s).",
+    )
+    return redirect('reports:moh645_edit', pk=report.pk)
+
+
+@login_required
+def moh645_report_print(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh645DailyReport, pk=pk)
+    return render(request, 'reports/moh645_print.html', {
+        'report': report,
+        'entries': report.entries.all(),
+    })
+
+
+@login_required
+def moh743_report_list(request):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    year = request.GET.get('year')
+    try:
+        year = int(year) if year else timezone.localdate().year
+    except ValueError:
+        year = timezone.localdate().year
+    reports = Moh743MonthlyReport.objects.filter(year=year).order_by('-month')
+    return render(request, 'reports/moh743_list.html', {
+        'reports': reports,
+        'year': year,
+        'years': range(timezone.localdate().year, timezone.localdate().year - 5, -1),
+        'title': 'MOH 743 — Monthly Malaria Summary',
+    })
+
+
+@login_required
+def moh743_report_create(request):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    if request.method == 'POST':
+        form = Moh743MonthlyReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_by = request.user
+            if not report.period_begin or not report.period_end:
+                first, last = calendar.monthrange(report.year, report.month)
+                report.period_begin = date(report.year, report.month, 1)
+                report.period_end = date(report.year, report.month, last)
+            report.save()
+            ensure_moh743_report_lines(report)
+            messages.success(request, 'MOH 743 monthly report created.')
+            return redirect('reports:moh743_edit', pk=report.pk)
+    else:
+        today = timezone.localdate()
+        first, last = calendar.monthrange(today.year, today.month)
+        form = Moh743MonthlyReportForm(initial={
+            'month': today.month,
+            'year': today.year,
+            'facility_name': 'Health Facility',
+            'period_begin': today.replace(day=1),
+            'period_end': today.replace(day=last),
+        })
+    return render(request, 'reports/moh743_create.html', {
+        'form': form,
+        'title': 'New MOH 743 Monthly Report',
+    })
+
+
+def _moh743_context(report):
+    ensure_moh743_report_lines(report)
+    lines = list(report.lines.select_related('line_definition').order_by('line_definition__sort_order'))
+    diagnostics = report.diagnostics_data or {}
+    al_weight = report.al_weight_data or {}
+    period_days = 0
+    if report.period_begin and report.period_end:
+        period_days = (report.period_end - report.period_begin).days + 1
+    grid = []
+    for line in lines:
+        days_in_stock = max(period_days - line.col_j, 1) if period_days else 1
+        adjusted = 0
+        if line.col_c and days_in_stock:
+            adjusted = float(line.col_c) * (period_days / days_in_stock) if period_days else float(line.col_c)
+        grid.append({
+            'line': line,
+            'adjusted_consumption': round(adjusted, 2),
+            'reorder_qty': float(line.quantity_to_reorder),
+        })
+    return {
+        'grid': grid,
+        'diagnostics': diagnostics,
+        'al_weight': al_weight,
+        'period_days': period_days,
+    }
+
+
+@login_required
+def moh743_report_edit(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh743MonthlyReport, pk=pk)
+    ctx = _moh743_context(report)
+    return render(request, 'reports/moh743_edit.html', {
+        'report': report,
+        'title': f'MOH 743 — {report.month_name} {report.year}',
+        **ctx,
+    })
+
+
+@login_required
+@require_POST
+def moh743_report_save(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    report = get_object_or_404(Moh743MonthlyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'})
+
+    for line_id, cells in (payload.get('lines') or {}).items():
+        try:
+            line = Moh743CommodityLine.objects.get(pk=int(line_id), report=report)
+        except (ValueError, Moh743CommodityLine.DoesNotExist):
+            continue
+        for col in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'):
+            key = f'col_{col}'
+            if col in cells:
+                setattr(line, key, cells[col] or 0)
+        if 'j' in cells:
+            line.col_j = max(0, int(cells['j'] or 0))
+        line.save()
+
+    header = payload.get('header') or {}
+    for field in (
+        'al_stockout_days', 'iptp_pregnant_women', 'comments',
+        'prepared_by', 'prepared_signature', 'prepared_phone',
+        'reviewed_by', 'reviewed_signature', 'reviewed_phone',
+    ):
+        if field in header:
+            setattr(report, field, header[field])
+    if 'prepared_date' in header:
+        report.prepared_date = header.get('prepared_date') or None
+    if 'reviewed_date' in header:
+        report.reviewed_date = header.get('reviewed_date') or None
+    if 'diagnostics' in payload:
+        report.diagnostics_data = payload['diagnostics']
+    if 'al_weight' in payload:
+        report.al_weight_data = payload['al_weight']
+    if payload.get('submit'):
+        report.status = 'submitted'
+    report.save()
+    return JsonResponse({'success': True, 'status': report.status})
+
+
+@login_required
+@require_POST
+def moh743_sync_from_hms(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    report = get_object_or_404(Moh743MonthlyReport, pk=pk)
+    if report.status == 'submitted':
+        return JsonResponse({'success': False, 'error': 'Report is submitted and locked.'})
+    stats = sync_moh743_from_hms(report)
+    messages.success(
+        request,
+        f"Synced dispensed totals and diagnostics from {stats['daily_entries']} daily entry row(s).",
+    )
+    return redirect('reports:moh743_edit', pk=report.pk)
+
+
+@login_required
+def moh743_report_print(request, pk):
+    if not _can_access_malaria_reports(request.user):
+        return HttpResponseForbidden('Access denied.')
+    report = get_object_or_404(Moh743MonthlyReport, pk=pk)
+    ctx = _moh743_context(report)
+    return render(request, 'reports/moh743_print.html', {
+        'report': report,
+        **ctx,
     })

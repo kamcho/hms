@@ -1,0 +1,442 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}SHA Eligibility · HMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .sha-elig-shell {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0.5rem 0.25rem 2rem;
+    }
+    .result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem 1.25rem;
+    }
+    .result-field label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+    .result-field div {
+        font-size: 0.95rem;
+        font-weight: 650;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+    .raw-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.75rem;
+        line-height: 1.45;
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .status-banner {
+        display: none;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 650;
+        margin-bottom: 1rem;
+    }
+    .status-banner.error {
+        background: rgba(220, 38, 38, 0.08);
+        border: 1px solid rgba(220, 38, 38, 0.25);
+        color: var(--danger);
+    }
+    .status-banner.ok {
+        background: rgba(5, 150, 105, 0.08);
+        border: 1px solid rgba(5, 150, 105, 0.25);
+        color: var(--success);
+    }
+    .status-banner.warn {
+        background: rgba(217, 119, 6, 0.08);
+        border: 1px solid rgba(217, 119, 6, 0.3);
+        color: #b45309;
+    }
+    .dependents-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+    }
+    .dependents-table th,
+    .dependents-table td {
+        text-align: left;
+        padding: 0.55rem 0.65rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .dependents-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+    }
+    @media (max-width: 700px) {
+        .result-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sha-elig-shell">
+    <div class="page-header">
+        <div>
+            <h1>SHA eligibility check</h1>
+            <p>Verify patient coverage on AfyaLink by national ID.</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge badge-role">{{ base_url }}{{ eligibility_path }}</span>
+            <button type="button" id="diagBtn" class="btn btn-secondary btn-sm">
+                <i class="fas fa-stethoscope"></i> Connectivity report
+            </button>
+            <a href="{% url 'accounts:sha_facility_search' %}" class="btn btn-secondary btn-sm">Facility search</a>
+        </div>
+    </div>
+
+    <div class="status-banner warn" style="display: block; margin-bottom: 1rem;">
+        If eligibility returns <strong>HTTP 522</strong>, UAT auth may work but the eligibility service is down upstream.
+        You can email DHA directly at
+        <a href="mailto:{{ dha_support_email }}?subject=UAT%20eligibility%20HTTP%20522">{{ dha_support_email }}</a>
+        with the <strong>Connectivity report</strong> (no portal ticket needed).
+    </div>
+
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.25rem;">
+        <form id="eligibilityForm" class="filter-row" autocomplete="off">
+            <div class="form-group" style="width: 200px; margin-bottom: 0;">
+                <label class="form-label" for="idType">ID type</label>
+                <select id="idType" class="form-input">
+                    <option value="National ID" selected>National ID</option>
+                    <option value="Passport">Passport</option>
+                    <option value="Birth Certificate">Birth Certificate</option>
+                    <option value="Alien ID">Alien ID</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                <label class="form-label" for="idNumber">Identification number</label>
+                <input type="text" id="idNumber" class="form-input" placeholder="e.g. 24241581" inputmode="numeric" required>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" id="checkBtn" class="btn btn-primary">
+                    <i class="fas fa-shield-alt"></i> Check eligibility
+                </button>
+                <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <div id="resultCard" class="card" style="padding: 1.5rem; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.15rem; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800;">Eligibility result</h3>
+                <p id="resultSub" style="margin: 0.2rem 0 0; color: var(--text-secondary); font-size: 0.85rem;"></p>
+            </div>
+            <span id="eligBadge" class="badge badge-muted">—</span>
+        </div>
+        <div id="patientFields" class="result-grid"></div>
+
+        <div id="dependentsBlock" style="display: none; margin-top: 1.5rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 0.35rem;">Dependents</h4>
+            <div class="table-scroll">
+                <table class="dependents-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Gender</th>
+                            <th>DOB</th>
+                            <th>Relationship</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dependentsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <details open style="margin-top: 1.15rem;">
+            <summary style="cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">API response (AfyaLink / HMIS)</summary>
+            <pre id="rawJson" class="raw-box"></pre>
+        </details>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('eligibilityForm');
+    const idNumberInput = document.getElementById('idNumber');
+    const idTypeSelect = document.getElementById('idType');
+    const checkBtn = document.getElementById('checkBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBanner = document.getElementById('statusBanner');
+    const resultCard = document.getElementById('resultCard');
+    const resultSub = document.getElementById('resultSub');
+    const eligBadge = document.getElementById('eligBadge');
+    const patientFields = document.getElementById('patientFields');
+    const dependentsBlock = document.getElementById('dependentsBlock');
+    const dependentsBody = document.getElementById('dependentsBody');
+    const rawJson = document.getElementById('rawJson');
+
+    const FIELD_LABELS = [
+        ['full_name', 'Full name'],
+        ['first_name', 'First name'],
+        ['last_name', 'Last name'],
+        ['id_number', 'ID number'],
+        ['identification_type', 'ID type'],
+        ['gender', 'Gender'],
+        ['date_of_birth', 'Date of birth'],
+        ['phone', 'Phone'],
+        ['email', 'Email'],
+        ['county', 'County'],
+        ['sub_county', 'Sub-county'],
+        ['scheme', 'Scheme'],
+        ['eligible', 'Eligible flag'],
+        ['eligibility_status', 'Eligibility status'],
+        ['eligibility_message', 'Message'],
+        ['possible_solution', 'Possible solution'],
+        ['coverage_end_date', 'Coverage end'],
+        ['cr_id', 'Client registry ID'],
+    ];
+
+    function formatApiPayload(httpStatus, data) {
+        return JSON.stringify({
+            http_status: httpStatus,
+            hmis: {
+                success: data && data.success,
+                found: data && data.found,
+                id_number: data && data.id_number,
+                eligibility_error: data && data.eligibility_error,
+                client_registry_error: data && data.client_registry_error,
+                patient: data && data.patient,
+                dependents: data && data.dependents,
+                debug: data && data.debug,
+            },
+            afyalink_raw: (data && data.raw) || {},
+            full_response: data || {},
+        }, null, 2);
+    }
+
+    function showStatus(type, message) {
+        statusBanner.className = 'status-banner ' + type;
+        statusBanner.textContent = message;
+        statusBanner.style.display = 'block';
+    }
+
+    function hideStatus() {
+        statusBanner.style.display = 'none';
+        statusBanner.textContent = '';
+    }
+
+    function isEligible(patient) {
+        if (!patient) return null;
+        if (patient.eligible === 1 || patient.eligible === '1' || patient.eligible === true) return true;
+        if (patient.eligible === 0 || patient.eligible === '0' || patient.eligible === false) return false;
+        const status = String(patient.eligibility_status || '').toLowerCase();
+        if (status === 'eligible') return true;
+        if (status === 'not_eligible' || status === 'ineligible') return false;
+        return null;
+    }
+
+    function renderPatient(patient) {
+        patientFields.innerHTML = '';
+        let shown = 0;
+        FIELD_LABELS.forEach(([key, label]) => {
+            const value = patient && patient[key];
+            if (value === null || value === undefined || value === '') return;
+            shown += 1;
+            const el = document.createElement('div');
+            el.className = 'result-field';
+            el.innerHTML = `<label>${label}</label><div>${String(value)}</div>`;
+            patientFields.appendChild(el);
+        });
+        if (!shown) {
+            patientFields.innerHTML = '<div class="result-field"><label>Details</label><div>No normalized fields — check raw response.</div></div>';
+        }
+    }
+
+    function renderDependents(list) {
+        dependentsBody.innerHTML = '';
+        if (!list || !list.length) {
+            dependentsBlock.style.display = 'none';
+            return;
+        }
+        dependentsBlock.style.display = 'block';
+        list.forEach((dep) => {
+            const tr = document.createElement('tr');
+            const name = dep.full_name || [dep.first_name, dep.last_name].filter(Boolean).join(' ') || '—';
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${dep.id_number || '—'}</td>
+                <td>${dep.gender || '—'}</td>
+                <td>${dep.date_of_birth || '—'}</td>
+                <td>${dep.relationship || dep.relation || '—'}</td>
+            `;
+            dependentsBody.appendChild(tr);
+        });
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const idNumber = idNumberInput.value.trim();
+        if (!idNumber) {
+            showStatus('error', 'Enter a national ID or other identification number.');
+            return;
+        }
+
+        hideStatus();
+        resultCard.style.display = 'none';
+        dependentsBlock.style.display = 'none';
+        checkBtn.disabled = true;
+        checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
+
+        try {
+            const params = new URLSearchParams({
+                id_number: idNumber,
+                identification_type: idTypeSelect.value,
+            });
+            const url = `{% url "accounts:sha_eligibility_api" %}?${params.toString()}`;
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                let msg = data.error || 'Eligibility check failed.';
+                if (res.status === 502) {
+                    msg += ' The SHA UAT service may be unavailable (e.g. Cloudflare 522).';
+                }
+                showStatus('error', msg);
+                resultCard.style.display = 'block';
+                resultSub.textContent = `Query: ${idNumber}`;
+                eligBadge.className = 'badge badge-danger';
+                eligBadge.textContent = 'Error';
+                patientFields.innerHTML = '<div class="result-field"><label>Details</label><div>See API response below.</div></div>';
+                rawJson.textContent = formatApiPayload(res.status, data);
+                return;
+            }
+
+            const patient = data.patient || {};
+            const eligible = isEligible(patient);
+            resultCard.style.display = 'block';
+            resultSub.textContent = `Query: ${data.id_number || idNumber}`;
+            rawJson.textContent = formatApiPayload(res.status, data);
+            renderPatient(patient);
+            renderDependents(data.dependents || []);
+
+            if (!data.found) {
+                showStatus('warn', 'No matching patient found in SHA / DHA registries.');
+                eligBadge.className = 'badge badge-muted';
+                eligBadge.textContent = 'Not found';
+            } else if (eligible === true) {
+                showStatus('ok', 'Patient is eligible for SHA coverage.');
+                eligBadge.className = 'badge badge-success';
+                eligBadge.textContent = 'Eligible';
+            } else if (eligible === false) {
+                showStatus('warn', patient.eligibility_message || 'Patient is not currently eligible.');
+                eligBadge.className = 'badge badge-danger';
+                eligBadge.textContent = 'Not eligible';
+            } else {
+                const note = [];
+                if (data.eligibility_error) note.push('Eligibility API: ' + data.eligibility_error);
+                if (data.client_registry_error) note.push('Client registry: ' + data.client_registry_error);
+                showStatus(
+                    note.length ? 'warn' : 'ok',
+                    note.length
+                        ? ('Partial result. ' + note.join(' '))
+                        : 'Patient found. Review status details below.'
+                );
+                eligBadge.className = 'badge badge-info';
+                eligBadge.textContent = patient.eligibility_status || 'Found';
+            }
+        } catch (err) {
+            showStatus('error', 'Request failed: ' + (err && err.message ? err.message : err));
+            resultCard.style.display = 'block';
+            resultSub.textContent = 'Request failed';
+            eligBadge.className = 'badge badge-danger';
+            eligBadge.textContent = 'Error';
+            patientFields.innerHTML = '';
+            rawJson.textContent = formatApiPayload(0, { network_error: String(err) });
+        } finally {
+            checkBtn.disabled = false;
+            checkBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Check eligibility';
+        }
+    });
+
+    clearBtn.addEventListener('click', function () {
+        idNumberInput.value = '';
+        hideStatus();
+        resultCard.style.display = 'none';
+        idNumberInput.focus();
+    });
+
+    const diagBtn = document.getElementById('diagBtn');
+    if (diagBtn) {
+        diagBtn.addEventListener('click', async function () {
+            diagBtn.disabled = true;
+            const original = diagBtn.innerHTML;
+            diagBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
+            showStatus('warn', 'Running AfyaLink connectivity checks (may take up to 60s)…');
+            try {
+                const sampleId = (idNumberInput.value || '').trim() || '2897398';
+                const params = new URLSearchParams({
+                    sample_id: sampleId,
+                    identification_type: idTypeSelect.value || 'National ID',
+                });
+                const res = await fetch(`{% url "accounts:sha_diagnostics_api" %}?${params.toString()}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    showStatus('error', data.error || 'Diagnostics failed.');
+                    return;
+                }
+                const report = data.report || '';
+                try {
+                    await navigator.clipboard.writeText(report);
+                    showStatus(
+                        'ok',
+                        (data.summary || 'Report ready.') + ' Full report copied to clipboard — paste into email to {{ dha_support_email }}.'
+                    );
+                } catch (clipErr) {
+                    showStatus('warn', (data.summary || '') + ' Copy failed — report shown in raw panel below.');
+                }
+                resultCard.style.display = 'block';
+                resultSub.textContent = 'AfyaLink connectivity diagnostic (share with DHA)';
+                eligBadge.className = data.eligibility_ok ? 'badge badge-success' : 'badge badge-danger';
+                eligBadge.textContent = data.eligibility_ok ? 'Eligibility OK' : 'Eligibility issue';
+                patientFields.innerHTML = `
+                    <div class="result-field"><label>Auth</label><div>${data.auth_ok ? 'OK' : 'Failed'}</div></div>
+                    <div class="result-field"><label>Client registry</label><div>${data.client_registry_ok ? 'OK' : 'Failed'}</div></div>
+                    <div class="result-field"><label>Eligibility</label><div>${data.eligibility_ok ? 'OK' : 'Failed / timeout'}</div></div>
+                    <div class="result-field"><label>DHA email</label><div><a href="mailto:{{ dha_support_email }}">{{ dha_support_email }}</a></div></div>
+                    <div class="result-field"><label>Recommendation</label><div>${data.recommendation || '—'}</div></div>
+                `;
+                dependentsBlock.style.display = 'none';
+                rawJson.textContent = report;
+            } catch (err) {
+                showStatus('error', 'Diagnostics request failed: ' + (err && err.message ? err.message : err));
+            } finally {
+                diagBtn.disabled = false;
+                diagBtn.innerHTML = original;
+            }
+        });
+    }
+
+    idNumberInput.focus();
+});
+</script>
+{% endblock %}

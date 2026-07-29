@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.conf import settings
 from .utils import get_or_create_invoice
 from django.db.models import Sum, Count, Q, F
 from django.db import transaction
@@ -19,6 +20,12 @@ from .forms import (
 )
 from home.models import Patient, Departments, Visit
 from home.discharge_codes import get_or_create_discharge_code_payload
+from .sha_hie_service import (
+    ShaHieConfigError,
+    ShaHieRequestError,
+    get_facility_by_code,
+    get_patient_info_by_id_number,
+)
 from morgue.models import Deceased, MorgueAdmission
 from inpatient.models import Admission, Ward, MedicationChart, ServiceAdmissionLink
 from inventory.models import StockRecord, Supplier
@@ -72,6 +79,17 @@ def _get_ipd_per_diem_info(invoice):
 
 def is_billing_staff(user):
     return user.is_authenticated and (user.role in ['Accountant', 'Receptionist', 'SHA Manager', 'SHA'] or user.is_superuser)
+
+
+def can_query_sha_client_registry(user):
+    """Staff allowed to verify patients against the national SHA client registry."""
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.role in [
+            'Admin', 'Receptionist', 'SHA Manager', 'SHA',
+            'Nurse', 'Doctor', 'Accountant',
+        ]
+    )
 
 
 def can_view_invoice(user):
@@ -381,6 +399,246 @@ def insurance_manager(request):
 
 
 @login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_patient_by_id_number(request):
+    """
+    GET /accounts/api/sha/patient-by-id/?id_number=12345678
+    GET /accounts/api/sha/eligibility/?id_number=12345678&identification_type=National ID
+    Looks up a patient in the SHA/DHA eligibility registry.
+    """
+    import logging
+    import traceback
+
+    logger = logging.getLogger(__name__)
+    id_number = (request.GET.get('id_number') or request.GET.get('national_id') or '').strip()
+    identification_type = (
+        request.GET.get('identification_type')
+        or request.GET.get('id_type')
+        or 'National ID'
+    ).strip() or 'National ID'
+    skip_eligibility = request.GET.get('skip_eligibility', '').strip() in ('1', 'true', 'yes')
+    debug = {
+        'step': 'start',
+        'id_number': id_number,
+        'identification_type': identification_type,
+        'skip_eligibility': skip_eligibility,
+        'user': getattr(request.user, 'username', None),
+        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', None),
+        'has_username': bool(getattr(settings, 'SHA_HIE_USERNAME', '')),
+        'has_password': bool(getattr(settings, 'SHA_HIE_PASSWORD', '')),
+        'has_consumer_key': bool(getattr(settings, 'SHA_HIE_CONSUMER_KEY', '')),
+        'agent_id': getattr(settings, 'SHA_HIE_AGENT_ID', '') or None,
+    }
+    print(f"[SHA DEBUG] lookup requested by={debug['user']} id={id_number} skip_eligibility={skip_eligibility}")
+    logger.info("SHA patient lookup start: %s", debug)
+
+    if not id_number:
+        debug['step'] = 'validation_failed'
+        print("[SHA DEBUG] missing id_number")
+        return JsonResponse(
+            {'success': False, 'error': 'id_number is required.', 'debug': debug},
+            status=400,
+        )
+
+    try:
+        debug['step'] = 'calling_hie'
+        print("[SHA DEBUG] calling get_patient_info_by_id_number...")
+        payload = get_patient_info_by_id_number(
+            id_number,
+            identification_type=identification_type,
+            skip_eligibility=skip_eligibility,
+        )
+        debug['step'] = 'success'
+        debug['found'] = payload.get('found')
+        debug['dependents_count'] = len(payload.get('dependents') or [])
+        debug['eligibility_error'] = payload.get('eligibility_error')
+        debug['client_registry_error'] = payload.get('client_registry_error')
+        print(
+            f"[SHA DEBUG] lookup success found={payload.get('found')} "
+            f"dependents={debug['dependents_count']} patient={payload.get('patient')}"
+        )
+        return JsonResponse({
+            'success': True,
+            'found': payload['found'],
+            'id_number': payload['id_number'],
+            'patient': payload['patient'],
+            'dependents': payload.get('dependents') or [],
+            'raw': payload['raw'],
+            'eligibility_error': payload.get('eligibility_error'),
+            'client_registry_error': payload.get('client_registry_error'),
+            'debug': debug,
+        })
+    except ValueError as exc:
+        debug['step'] = 'value_error'
+        debug['error'] = str(exc)
+        print(f"[SHA DEBUG] ValueError: {exc}")
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=400)
+    except ShaHieConfigError as exc:
+        debug['step'] = 'config_error'
+        debug['error'] = str(exc)
+        print(f"[SHA DEBUG] ConfigError: {exc}")
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=503)
+    except ShaHieRequestError as exc:
+        debug['step'] = 'request_error'
+        debug['error'] = str(exc)
+        print(f"[SHA DEBUG] RequestError: {exc}")
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=502)
+    except Exception as exc:
+        debug['step'] = 'unexpected_error'
+        debug['error'] = str(exc)
+        debug['traceback'] = traceback.format_exc()
+        print(f"[SHA DEBUG] UnexpectedError: {exc}")
+        print(debug['traceback'])
+        return JsonResponse(
+            {'success': False, 'error': f'Unexpected SHA lookup error: {exc}', 'debug': debug},
+            status=500,
+        )
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_eligibility_page(request):
+    """UI to check SHA patient eligibility by national ID."""
+    from .sha_diagnostics import DHA_SUPPORT_EMAIL
+
+    return render(request, 'accounts/sha_eligibility_check.html', {
+        'title': 'SHA Eligibility Check',
+        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', ''),
+        'eligibility_path': getattr(
+            settings,
+            'SHA_HIE_ELIGIBILITY_PATH',
+            '/v2/eligibility',
+        ),
+        'dha_support_email': DHA_SUPPORT_EMAIL,
+    })
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_diagnostics_api(request):
+    """GET /accounts/api/sha/diagnostics/ — AfyaLink connectivity report for DHA escalation."""
+    from .sha_diagnostics import format_sha_diagnostics_report, run_sha_connectivity_diagnostics
+
+    sample_id = (request.GET.get('sample_id') or '2897398').strip()
+    id_type = (request.GET.get('identification_type') or 'National ID').strip()
+    data = run_sha_connectivity_diagnostics(
+        sample_id=sample_id or '2897398',
+        identification_type=id_type or 'National ID',
+    )
+    return JsonResponse({
+        'success': True,
+        'report': format_sha_diagnostics_report(data),
+        'summary': data.get('summary'),
+        'recommendation': data.get('recommendation'),
+        'dha_support_email': data.get('dha_support_email'),
+        'auth_ok': data.get('auth_ok'),
+        'eligibility_ok': data.get('eligibility_ok'),
+        'client_registry_ok': data.get('client_registry_ok'),
+        'checks': data.get('checks'),
+    })
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_facility_search_page(request):
+    """Small UI to look up a facility by registry / registration code."""
+    return render(request, 'accounts/sha_facility_search.html', {
+        'title': 'SHA Facility Search',
+        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', ''),
+        'facility_search_path': getattr(
+            settings,
+            'SHA_HIE_FACILITY_SEARCH_PATH',
+            '/v2/facility-search',
+        ),
+    })
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_facility_by_code(request):
+    """
+    GET /accounts/api/sha/facility-by-code/?facility_code=XXXX
+
+    Proxies AfyaLink:
+        GET {{base_url}}/v2/facility-search?facility_code={{facility_code}}
+    """
+    import logging
+    import traceback
+
+    logger = logging.getLogger(__name__)
+    facility_code = (
+        request.GET.get('facility_code')
+        or request.GET.get('registration_number')
+        or request.GET.get('code')
+        or ''
+    ).strip()
+    debug = {
+        'step': 'start',
+        'facility_code': facility_code,
+        'user': getattr(request.user, 'username', None),
+        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', None),
+        'facility_search_path': getattr(
+            settings,
+            'SHA_HIE_FACILITY_SEARCH_PATH',
+            '/v2/facility-search',
+        ),
+        'has_username': bool(getattr(settings, 'SHA_HIE_USERNAME', '')),
+        'has_password': bool(getattr(settings, 'SHA_HIE_PASSWORD', '')),
+        'has_consumer_key': bool(getattr(settings, 'SHA_HIE_CONSUMER_KEY', '')),
+        'agent_id': getattr(settings, 'SHA_HIE_AGENT_ID', '') or None,
+    }
+    print(f"[SHA DEBUG] facility search requested by={debug['user']} code={facility_code}")
+    logger.info("SHA facility search start: %s", debug)
+
+    if not facility_code:
+        debug['step'] = 'validation_failed'
+        return JsonResponse(
+            {'success': False, 'error': 'facility_code is required.', 'debug': debug},
+            status=400,
+        )
+
+    try:
+        debug['step'] = 'calling_hie'
+        payload = get_facility_by_code(facility_code)
+        debug['step'] = 'success'
+        debug['found'] = payload.get('found')
+        return JsonResponse({
+            'success': True,
+            'found': payload['found'],
+            'facility_code': payload['facility_code'],
+            'facility': payload['facility'],
+            'raw': payload['raw'],
+            'debug': debug,
+        })
+    except ValueError as exc:
+        debug['step'] = 'value_error'
+        debug['error'] = str(exc)
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=400)
+    except ShaHieConfigError as exc:
+        debug['step'] = 'config_error'
+        debug['error'] = str(exc)
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=503)
+    except ShaHieRequestError as exc:
+        debug['step'] = 'request_error'
+        debug['error'] = str(exc)
+        return JsonResponse({'success': False, 'error': str(exc), 'debug': debug}, status=502)
+    except Exception as exc:
+        debug['step'] = 'unexpected_error'
+        debug['error'] = str(exc)
+        debug['traceback'] = traceback.format_exc()
+        print(f"[SHA DEBUG] facility UnexpectedError: {exc}")
+        print(debug['traceback'])
+        return JsonResponse(
+            {
+                'success': False,
+                'error': f'Unexpected SHA facility search error: {exc}',
+                'debug': debug,
+            },
+            status=500,
+        )
+
+
+@login_required
 @user_passes_test(is_billing_staff)
 def get_discharge_code(request, visit_id):
     visit = get_object_or_404(Visit, pk=visit_id)
@@ -514,12 +772,39 @@ def process_insurance_claim(request):
             notes=f"Insurance claim for items: {', '.join([item.name for item in selected_items])}",
             created_by=request.user
         )
+
+        dha_result = None
+        from django.conf import settings as django_settings
+        if getattr(django_settings, 'SHA_HIE_AUTO_SUBMIT_ON_INSURANCE', False) and invoice.visit_id:
+            try:
+                from accounts.sha_claims_service import (
+                    get_or_create_claim_session,
+                    submit_claim,
+                )
+                session = get_or_create_claim_session(invoice.visit, request.user)
+                if session.consent_token:
+                    session = submit_claim(
+                        session,
+                        invoice=invoice,
+                        notes=f'Local insurance payment #{payment.id}',
+                    )
+                    dha_result = {
+                        'status': session.status,
+                        'claim_id': session.claim_id,
+                        'workflow_state': session.workflow_state,
+                    }
+                    if session.claim_id and not claim_id:
+                        payment.transaction_reference = session.claim_id
+                        payment.save(update_fields=['transaction_reference'])
+            except Exception as dha_exc:  # noqa: BLE001
+                dha_result = {'error': str(dha_exc)}
         
         return JsonResponse({
             'success': True, 
             'payment_id': payment.id,
             'amount': float(claim_amount),
-            'adjustment': float(invoice.insurance_adjustment)
+            'adjustment': float(invoice.insurance_adjustment),
+            'dha': dha_result,
         })
     except Exception as e:
         import traceback
@@ -1609,3 +1894,166 @@ def manage_visit_invoices(request, visit_id):
         'title': f'Manage Invoice — Visit #{visit.id}',
     }
     return render(request, 'accounts/manage_visit_invoices.html', context)
+
+@login_required
+def sha_claims_desk(request, visit_id):
+    """End-to-end SHA eClaims desk for a visit."""
+    from home.models import Visit, Diagnosis, PrescriptionItem
+    from accounts.models import ShaClaimSession, Invoice
+    from accounts.sha_claims_service import get_or_create_claim_session
+    from django.conf import settings as django_settings
+
+    visit = get_object_or_404(Visit, pk=visit_id)
+    if request.user.role not in (
+        'Admin', 'SHA Manager', 'Accountant', 'Doctor', 'Receptionist'
+    ) and not request.user.is_superuser:
+        messages.error(request, 'You do not have access to the SHA claims desk.')
+        return redirect('home:patient_detail', pk=visit.patient_id)
+
+    session = get_or_create_claim_session(visit, request.user)
+    invoice = Invoice.objects.filter(visit=visit).order_by('-id').first()
+    diagnoses = Diagnosis.objects.filter(visit=visit).order_by('-id')[:20]
+    rx_items = PrescriptionItem.objects.filter(
+        prescription__visit=visit
+    ).select_related('medication', 'medication__medication')
+
+    return render(request, 'accounts/sha_claims_desk.html', {
+        'visit': visit,
+        'patient': visit.patient,
+        'session': session,
+        'invoice': invoice,
+        'diagnoses': diagnoses,
+        'rx_items': rx_items,
+        'facility_fr': getattr(django_settings, 'SHA_HIE_FACILITY_FR_CODE', ''),
+        'default_intervention': (session.intervention_codes or [None])[0],
+    })
+
+
+@login_required
+@require_POST
+def sha_claims_action(request, visit_id):
+    """JSON actions: eligibility, start_visit, erx, dispense, preauth, submit, close."""
+    from home.models import Visit
+    from accounts.sha_claims_service import (
+        get_or_create_claim_session,
+        refresh_eligibility,
+        start_visit_with_otp,
+        submit_erx_for_visit,
+        submit_erx_dispense,
+        create_normal_preauth,
+        submit_claim,
+    )
+    from accounts.sha_hie_service import ShaHieClient, ShaHieError
+    from accounts.models import Invoice
+    import json as _json
+
+    visit = get_object_or_404(Visit, pk=visit_id)
+    if request.user.role not in (
+        'Admin', 'SHA Manager', 'Accountant', 'Doctor', 'Receptionist'
+    ) and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    try:
+        data = _json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        data = {}
+    action = (data.get('action') or request.POST.get('action') or '').strip()
+    session = get_or_create_claim_session(visit, request.user)
+
+    # Allow updating intervention codes / practitioner before start
+    if data.get('intervention_codes'):
+        codes = data.get('intervention_codes')
+        if isinstance(codes, str):
+            codes = [c.strip() for c in codes.split(',') if c.strip()]
+        session.intervention_codes = codes
+        session.save(update_fields=['intervention_codes', 'updated_at'])
+    for field in (
+        'practitioner_identification_type',
+        'practitioner_identification_number',
+        'practitioner_regulation_body',
+        'service_type',
+    ):
+        if data.get(field):
+            setattr(session, field, str(data.get(field)).strip())
+            session.save(update_fields=[field, 'updated_at'])
+
+    try:
+        if action == 'eligibility':
+            session = refresh_eligibility(session)
+        elif action == 'send_otp':
+            client = ShaHieClient()
+            raw = client.send_claim_otp(
+                patient_id=session.patient_cr_id or visit.patient.cr_id or '',
+                phone=getattr(visit.patient, 'phone', None),
+            )
+            session.status = 'otp_sent'
+            session.last_error = ''
+            session.save(update_fields=['status', 'last_error', 'updated_at'])
+            return JsonResponse({'success': True, 'action': action, 'otp_response': raw, 'session': _session_payload(session)})
+        elif action == 'start_visit':
+            otp = (data.get('otp') or '').strip()
+            if not otp:
+                return JsonResponse({'success': False, 'error': 'OTP is required.'}, status=400)
+            session = start_visit_with_otp(session, otp=otp, practitioner=request.user)
+        elif action == 'erx':
+            session = submit_erx_for_visit(session, practitioner=request.user)
+        elif action == 'dispense':
+            session = submit_erx_dispense(session, practitioner=request.user)
+        elif action == 'preauth':
+            session = create_normal_preauth(
+                session,
+                unit_price=str(data.get('unit_price') or '0'),
+                icd_code=(data.get('icd_code') or '').strip(),
+            )
+        elif action == 'submit':
+            invoice = None
+            if data.get('invoice_id'):
+                invoice = Invoice.objects.filter(pk=data.get('invoice_id'), visit=visit).first()
+            else:
+                invoice = Invoice.objects.filter(visit=visit).order_by('-id').first()
+            session = submit_claim(
+                session,
+                otp=(data.get('otp') or None),
+                invoice=invoice,
+                notes=(data.get('notes') or ''),
+            )
+        elif action == 'close':
+            client = ShaHieClient()
+            raw = client.close_virtual_claim(
+                consent_token=session.consent_token,
+                cancel_reason_type=(data.get('cancel_reason_type') or 'OTHER_REASONS'),
+                cancel_reason_text=(data.get('cancel_reason_text') or 'Closed from HMS'),
+            )
+            session.status = 'closed'
+            session.submit_raw = {**(session.submit_raw or {}), 'close': raw}
+            session.save()
+        elif action == 'status':
+            if not session.claim_id:
+                return JsonResponse({'success': False, 'error': 'No claim_id yet.'}, status=400)
+            raw = ShaHieClient().get_claim_status(session.claim_id)
+            return JsonResponse({'success': True, 'action': action, 'status_raw': raw, 'session': _session_payload(session)})
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown action: {action}'}, status=400)
+    except (ShaHieError, ValueError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc), 'session': _session_payload(session)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+    return JsonResponse({'success': True, 'action': action, 'session': _session_payload(session)})
+
+
+def _session_payload(session):
+    return {
+        'id': session.id,
+        'status': session.status,
+        'service_type': session.service_type,
+        'intervention_codes': session.intervention_codes,
+        'patient_cr_id': session.patient_cr_id,
+        'eligible': session.eligible,
+        'consent_token': session.consent_token,
+        'claim_id': session.claim_id,
+        'edi_claim_guid': session.edi_claim_guid,
+        'workflow_state': session.workflow_state,
+        'last_error': session.last_error,
+        'practitioner_identification_number': session.practitioner_identification_number,
+    }

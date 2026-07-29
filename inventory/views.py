@@ -206,6 +206,23 @@ def update_item_details(request, item_id):
     
     return redirect('inventory:item_list')
 
+from .dha_align import apply_dha_generic_product
+
+
+def _enrich_medication_from_dha_code(medication, *, sync_item_name: bool = False) -> None:
+    """If GE* code is present, fill strength/ATC/display from DHA OCL."""
+    code = (medication.generic_concept_code or "").strip()
+    if not code:
+        return
+    apply_dha_generic_product(
+        medication,
+        code=code,
+        title=(medication.generic_concept_display or "").strip(),
+        enrich=True,
+        sync_item_name=sync_item_name,
+    )
+
+
 @login_required
 def add_item(request):
     if request.method == 'POST':
@@ -225,6 +242,9 @@ def add_item(request):
                     item = item_form.save()
                     medication = med_form.save(commit=False)
                     medication.item = item
+                    _enrich_medication_from_dha_code(medication, sync_item_name=True)
+                    if medication.item.name != item.name:
+                        medication.item.save(update_fields=['name'])
                     medication.save()
                 else:
                     messages.error(request, 'Please fill in all required medication details.')
@@ -992,7 +1012,9 @@ def inventory_distribution(request, item_id):
             if med_form and med_form.is_valid():
                 medication = med_form.save(commit=False)
                 medication.item = item
+                _enrich_medication_from_dha_code(medication, sync_item_name=True)
                 medication.save()
+                item.save(update_fields=['name'])
             
             if con_form and con_form.is_valid():
                 consumable = con_form.save(commit=False)

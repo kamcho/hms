@@ -1,0 +1,239 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}SHA Claims — {{ patient.full_name }}{% endblock %}
+{% block content %}
+<style>
+.sha-claims { max-width: 960px; margin: 0 auto; font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif); }
+.sha-claims h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 .35rem; }
+.sha-claims .meta { color: #64748b; font-size: .875rem; margin-bottom: 1.25rem; }
+.sha-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1rem; }
+.sha-card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin: 0 0 .75rem; }
+.sha-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.sha-row label { display: block; font-size: .7rem; font-weight: 600; color: #64748b; margin-bottom: .25rem; }
+.sha-row input, .sha-row select, .sha-row textarea {
+  width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: .5rem .65rem; font-size: .875rem;
+}
+.sha-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .85rem; }
+.sha-actions button {
+  border: 0; border-radius: 8px; padding: .55rem .9rem; font-size: .8rem; font-weight: 600; cursor: pointer;
+  background: #1e3a8a; color: #fff;
+}
+.sha-actions button.secondary { background: #fff; color: #1e3a8a; border: 1px solid #cbd5e1; }
+.sha-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.sha-status { display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .55rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .75rem; font-weight: 700; }
+.sha-log { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: .75rem; font-size: .75rem; max-height: 220px; overflow: auto; white-space: pre-wrap; }
+.sha-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.sha-table th, .sha-table td { text-align: left; padding: .4rem .35rem; border-bottom: 1px solid #f1f5f9; }
+.ok { color: #059669; } .bad { color: #dc2626; }
+@media (max-width: 700px) { .sha-row { grid-template-columns: 1fr; } }
+</style>
+
+<div class="sha-claims">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <h1>SHA / DHA claims desk</h1>
+      <p class="meta">
+        {{ patient.full_name }} · Visit #{{ visit.id }} · {{ visit.visit_type }} ·
+        Payment: {{ visit.payment_method }}
+      </p>
+    </div>
+    <span class="sha-status" id="statusBadge">{{ session.status }}</span>
+  </div>
+
+  {% if not facility_fr %}
+  <div class="sha-card" style="border-color:#fde68a;background:#fffbeb;">
+    <strong>Configure facility.</strong> Set <code>SHA_HIE_FACILITY_FR_CODE</code> in <code>.env</code> (Facility Registry / FR code) for eClaims headers.
+  </div>
+  {% endif %}
+
+  <div class="sha-card">
+    <h2>1. Session & practitioner</h2>
+    <div class="sha-row">
+      <div>
+        <label>Patient CR ID</label>
+        <input id="patientCrId" value="{{ session.patient_cr_id|default:patient.cr_id }}" readonly>
+      </div>
+      <div>
+        <label>Service type</label>
+        <select id="serviceType">
+          {% for val, label in session.SERVICE_TYPE_CHOICES %}
+          <option value="{{ val }}" {% if session.service_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Intervention code(s)</label>
+        <input id="interventionCodes" value="{{ session.intervention_codes|join:', ' }}">
+      </div>
+      <div>
+        <label>Practitioner licence #</label>
+        <input id="pracLicence" value="{{ session.practitioner_identification_number|default:request.user.practitioner_licence_number }}">
+      </div>
+      <div>
+        <label>ID type</label>
+        <select id="pracIdType">
+          <option value="registration_number">registration_number</option>
+          <option value="National ID">National ID</option>
+        </select>
+      </div>
+      <div>
+        <label>Regulation body</label>
+        <select id="pracBody">
+          <option value="KMPDC">KMPDC</option>
+          <option value="NCK">NCK</option>
+          <option value="COC">COC</option>
+          <option value="PPB">PPB</option>
+        </select>
+      </div>
+    </div>
+    <div class="sha-actions">
+      <button type="button" data-action="eligibility">Check eligibility</button>
+      <button type="button" class="secondary" data-action="send_otp">Send OTP</button>
+    </div>
+  </div>
+
+  <div class="sha-card">
+    <h2>2. Start virtual claim (consent)</h2>
+    <div class="sha-row">
+      <div>
+        <label>OTP from patient phone</label>
+        <input id="otpInput" placeholder="6-digit OTP" autocomplete="one-time-code">
+      </div>
+      <div>
+        <label>Consent token</label>
+        <input id="consentToken" value="{{ session.consent_token }}" readonly>
+      </div>
+    </div>
+    <div class="sha-actions">
+      <button type="button" data-action="start_visit">Start visit / create claim</button>
+    </div>
+  </div>
+
+  <div class="sha-card">
+    <h2>3. Clinical coding on this visit</h2>
+    <table class="sha-table">
+      <thead><tr><th>ICD-11</th><th>Diagnosis</th></tr></thead>
+      <tbody>
+        {% for d in diagnoses %}
+        <tr><td>{{ d.icd11_code|default:"—" }}</td><td>{{ d.data|truncatechars:80 }}</td></tr>
+        {% empty %}
+        <tr><td colspan="2">No diagnoses yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <table class="sha-table" style="margin-top:.75rem;">
+      <thead><tr><th>Drug</th><th>GE*</th><th>PH*</th><th>Dispensed</th></tr></thead>
+      <tbody>
+        {% for r in rx_items %}
+        <tr>
+          <td>{{ r.medication.name }}</td>
+          <td class="{% if r.generic_concept_code %}ok{% else %}bad{% endif %}">{{ r.generic_concept_code|default:"missing" }}</td>
+          <td class="{% if r.actual_product_code %}ok{% elif r.medication.medication.actual_product_code %}ok{% else %}bad{% endif %}">
+            {% if r.actual_product_code %}{{ r.actual_product_code }}{% elif r.medication.medication %}{{ r.medication.medication.actual_product_code|default:"missing" }}{% else %}missing{% endif %}
+          </td>
+          <td>{% if r.dispensed %}yes{% else %}no{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No prescription items</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="sha-actions">
+      <button type="button" data-action="preauth">Submit preauth</button>
+      <button type="button" data-action="erx">Submit eRx (GE* + clinical package)</button>
+      <button type="button" data-action="dispense">Submit eRx dispense (PH*)</button>
+    </div>
+  </div>
+
+  <div class="sha-card">
+    <h2>4. Dispatch claim</h2>
+    <div class="sha-row">
+      <div>
+        <label>Invoice</label>
+        <input value="{% if invoice %}#{{ invoice.id }} — {{ invoice.status }}{% else %}No invoice{% endif %}" readonly>
+      </div>
+      <div>
+        <label>Submit OTP (if required)</label>
+        <input id="submitOtp" placeholder="Optional OTP for submit">
+      </div>
+    </div>
+    <div class="sha-actions">
+      <button type="button" data-action="submit">Submit claim to SHA</button>
+      <button type="button" class="secondary" data-action="status">Refresh claim status</button>
+      <button type="button" class="secondary" data-action="close">Close claim</button>
+    </div>
+  </div>
+
+  <div class="sha-card">
+    <h2>Activity log</h2>
+    <div class="sha-log" id="claimsLog">Ready.</div>
+  </div>
+</div>
+
+<script>
+const ACTION_URL = "{% url 'accounts:sha_claims_action' visit.id %}";
+const CSRF = "{{ csrf_token }}";
+const logEl = document.getElementById('claimsLog');
+const badge = document.getElementById('statusBadge');
+
+function log(msg, obj) {
+  const line = typeof obj === 'undefined' ? msg : msg + '\n' + JSON.stringify(obj, null, 2);
+  logEl.textContent = line + '\n\n' + logEl.textContent;
+}
+
+function basePayload() {
+  return {
+    service_type: document.getElementById('serviceType').value,
+    intervention_codes: document.getElementById('interventionCodes').value,
+    practitioner_identification_number: document.getElementById('pracLicence').value,
+    practitioner_identification_type: document.getElementById('pracIdType').value,
+    practitioner_regulation_body: document.getElementById('pracBody').value,
+  };
+}
+
+async function runAction(action) {
+  const body = { ...basePayload(), action };
+  if (action === 'start_visit') body.otp = document.getElementById('otpInput').value.trim();
+  if (action === 'submit') {
+    body.otp = document.getElementById('submitOtp').value.trim() || null;
+    body.invoice_id = {% if invoice %}{{ invoice.id }}{% else %}null{% endif %};
+  }
+  if (action === 'close') {
+    body.cancel_reason_type = 'OTHER_REASONS';
+    body.cancel_reason_text = 'Closed from HMS claims desk';
+  }
+  log('→ ' + action + '…');
+  try {
+    const resp = await fetch(ACTION_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.session) {
+      badge.textContent = data.session.status;
+      if (data.session.consent_token) {
+        document.getElementById('consentToken').value = data.session.consent_token;
+      }
+      if (data.session.patient_cr_id) {
+        document.getElementById('patientCrId').value = data.session.patient_cr_id;
+      }
+    }
+    if (!data.success) {
+      log('✗ ' + action, data);
+      return;
+    }
+    log('✓ ' + action, data);
+  } catch (e) {
+    log('✗ network', { error: String(e) });
+  }
+}
+
+document.querySelectorAll('[data-action]').forEach((btn) => {
+  btn.addEventListener('click', () => runAction(btn.dataset.action));
+});
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOH 743 — {{ report.month_name }} {{ report.year }}</title>
+    <style>
+        @page { size: landscape; margin: 8mm; }
+        body { font-family: Arial, sans-serif; font-size: 8px; margin: 0; padding: 10px; }
+        h1 { font-size: 11px; text-align: center; margin: 0; text-transform: uppercase; }
+        .sub { text-align: center; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #000; padding: 2px 3px; text-align: center; }
+        th { background: #eee; }
+        .left { text-align: left; }
+        .side { display: flex; gap: 16px; }
+        .side table { width: 48%; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <button class="no-print" onclick="window.print()">Print</button>
+    <h1>Republic of Kenya — Ministry of Health</h1>
+    <div class="sub"><strong>MOH 743</strong> — Health Facility Monthly Summary Report for Malaria Commodities<br>
+        {{ report.facility_name }} · {{ report.county|default:"—" }} / {{ report.sub_county|default:"—" }} · {{ report.month_name }} {{ report.year }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="left">Commodity</th><th>Unit</th>
+                <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th>
+                <th>Adj. cons.</th><th>Reorder</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr>
+                <td class="left">{{ row.line.line_definition.commodity_name }}</td>
+                <td>{{ row.line.line_definition.basic_unit }}</td>
+                <td>{{ row.line.col_a }}</td><td>{{ row.line.col_b }}</td><td>{{ row.line.col_c }}</td>
+                <td>{{ row.line.col_d }}</td><td>{{ row.line.col_e }}</td><td>{{ row.line.col_f }}</td>
+                <td>{{ row.line.col_g }}</td><td>{{ row.line.col_h }}</td><td>{{ row.line.col_i }}</td>
+                <td>{{ row.line.col_j }}</td>
+                <td>{{ row.adjusted_consumption }}</td><td>{{ row.reorder_qty }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="side">
+        <table>
+            <tr><th colspan="2">Patients on AL by weight band</th></tr>
+            <tr><td class="left">&lt;15 Kg</td><td>{{ al_weight.lt15|default:0 }}</td></tr>
+            <tr><td class="left">15 to &lt;25 Kg</td><td>{{ al_weight.bw15_25|default:0 }}</td></tr>
+            <tr><td class="left">25 to &lt;35 Kg</td><td>{{ al_weight.bw25_35|default:0 }}</td></tr>
+            <tr><td class="left">35+ Kg</td><td>{{ al_weight.gte35|default:0 }}</td></tr>
+        </table>
+        <table>
+            <tr><th>Result</th><th>Microscopy</th><th>RDT</th></tr>
+            <tr><td class="left">Positive</td><td>{{ diagnostics.microscopy.positive|default:0 }}</td><td>{{ diagnostics.mrdt.positive|default:0 }}</td></tr>
+            <tr><td class="left">Negative</td><td>{{ diagnostics.microscopy.negative|default:0 }}</td><td>{{ diagnostics.mrdt.negative|default:0 }}</td></tr>
+            <tr><td class="left">Invalid</td><td>—</td><td>{{ diagnostics.mrdt.invalid|default:0 }}</td></tr>
+            <tr><td class="left">Not tested</td><td colspan="2">{{ diagnostics.not_tested|default:0 }}</td></tr>
+        </table>
+    </div>
+    <p>AL stockout days: {{ report.al_stockout_days }} · IPTp pregnant women: {{ report.iptp_pregnant_women }}</p>
+    {% if report.comments %}<p>Comments: {{ report.comments }}</p>{% endif %}
+    <p>Prepared: {{ report.prepared_by|default:"—" }} · {{ report.prepared_date|default:"—" }} · {{ report.prepared_phone|default:"—" }}</p>
+    <p>Reviewed: {{ report.reviewed_by|default:"—" }} · {{ report.reviewed_date|default:"—" }} · {{ report.reviewed_phone|default:"—" }}</p>
+</body>
+</html>

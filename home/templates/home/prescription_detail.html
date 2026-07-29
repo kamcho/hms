@@ -242,6 +242,72 @@
                 <p style="color: #64748b;">No medications prescribed.</p>
             {% endfor %}
         </div>
+
+        <div class="medications-section">
+            <h3 class="section-title"><i class="fas fa-notes-medical"></i> Problem List (in eRx package)</h3>
+            {% if erx_problems %}
+                <ul style="margin:0; padding-left:1.2rem;">
+                    {% for p in erx_problems %}
+                    <li style="margin-bottom:0.35rem;">{{ p.display }}{% if p.icd11_code %} <strong>[{{ p.icd11_code }}]</strong>{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color:#64748b;">Not included — regenerate/edit after adding problems on the patient profile.</p>
+            {% endif %}
+        </div>
+
+        <div class="medications-section">
+            <h3 class="section-title"><i class="fas fa-list"></i> Medication Lists (active snapshot)</h3>
+            {% if erx_medications %}
+                <ul style="margin:0; padding-left:1.2rem;">
+                    {% for m in erx_medications %}
+                    <li style="margin-bottom:0.35rem;">{{ m.display_name }}{% if m.generic_concept_code %} [{{ m.generic_concept_code }}]{% endif %}{% if m.dose_text or m.frequency %} — {{ m.dose_text }} {{ m.frequency }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color:#64748b;">No active medication list snapshot on this prescription.</p>
+            {% endif %}
+        </div>
+
+        <div class="medications-section">
+            <h3 class="section-title"><i class="fas fa-vial"></i> Diagnostic Tests</h3>
+            {% if erx_diagnostics %}
+                <ul style="margin:0; padding-left:1.2rem;">
+                    {% for d in erx_diagnostics %}
+                    <li style="margin-bottom:0.35rem;">{{ d.name }}{% if d.department %} ({{ d.department }}){% endif %}{% if d.status %} — {{ d.status }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color:#64748b;">No diagnostic tests included with this prescription.</p>
+            {% endif %}
+        </div>
+
+        <div class="medications-section" style="padding:1rem; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+            <h3 class="section-title" style="margin-bottom:0.5rem;"><i class="fas fa-broadcast-tower"></i> Electronic Transmission</h3>
+            <p style="font-size:0.875rem; color:#64748b; margin:0 0 0.75rem;">
+                {% if prescription.erx_transmitted_at %}
+                    Transmitted {{ prescription.erx_transmitted_at|date:"M d, Y H:i" }}.
+                {% else %}
+                    Not yet transmitted to SHA eRx.
+                    {% if sha_claim_ready %}Consent is ready.{% else %}Start SHA visit on Claims Desk first (OTP).{% endif %}
+                {% endif %}
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.75rem;">
+                <span style="padding:0.2rem 0.45rem; border-radius:6px; background:{% if prescription.includes_problem_list %}#ecfdf5;color:#065f46{% else %}#f1f5f9;color:#64748b{% endif %};">Problem List</span>
+                <span style="padding:0.2rem 0.45rem; border-radius:6px; background:{% if prescription.includes_medication_list %}#ecfdf5;color:#065f46{% else %}#f1f5f9;color:#64748b{% endif %};">Medication Lists</span>
+                <span style="padding:0.2rem 0.45rem; border-radius:6px; background:{% if prescription.includes_diagnostic_tests %}#ecfdf5;color:#065f46{% else %}#f1f5f9;color:#64748b{% endif %};">Diagnostic Tests</span>
+            </div>
+            {% if request.user.role == 'Doctor' or request.user.role == 'Admin' or request.user.role == 'Pharmacist' or request.user.is_superuser %}
+            <form method="post" action="{% url 'home:transmit_prescription_erx' prescription.pk %}" style="margin-top:0.85rem;">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background:linear-gradient(135deg,#0f766e,#14b8a6); color:white;">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    {% if prescription.erx_transmitted_at %}Re-transmit eRx{% else %}Transmit electronically{% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
         <div style="margin-top: 2rem; display: flex; gap: 1rem;">
             <a href="{% url 'home:patient_detail' patient.pk %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Patient

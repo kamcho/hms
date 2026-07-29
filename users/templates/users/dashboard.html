@@ -1,517 +1,1407 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Admin Dashboard - HMS{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 {% block content %}
-    <div class="p-6 lg:p-10 space-y-10">
-        <!-- Header Section -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="admin-dash">
+    <!-- Header -->
+    <div class="ad-header">
+        <div class="ad-header-left">
+            <div class="ad-title-icon">
+                <i class="fas fa-chart-pie"></i>
+            </div>
             <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">System Overview</h1>
-                <p class="text-slate-500 font-medium">Real-time clinical and operational analytics</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span class="text-xs font-black text-slate-700 uppercase tracking-widest">Live Updates</span>
-                </div>
-                <button onclick="location.reload()" class="p-2 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-600 hover:text-indigo-600 transition-all">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
+                <h1 class="ad-title">Dashboard</h1>
+                <p class="ad-subtitle">
+                    {{ greeting }}{% if user.first_name %}, {{ user.first_name }}{% endif %}
+                    · {{ range_end|date:"D, d M Y" }}
+                </p>
             </div>
         </div>
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Patient Stat -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                        <i class="fas fa-user-injured text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">+{{ new_patients_30d }} New</span>
-                </div>
-                <div class="text-3xl font-black text-slate-900 mb-1">{{ total_patients }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Patients</div>
+        <div class="ad-header-actions">
+            <div class="ad-date-chip">
+                <i class="fas fa-calendar-alt"></i>
+                <span>{{ range_start|date:"d M Y" }} — {{ range_end|date:"d M Y" }}</span>
             </div>
-            <!-- Deceased Stat -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-all">
-                        <i class="fas fa-skull-crossbones text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ currently_admitted_deceased }} Occupied</span>
-                </div>
-                <div class="text-3xl font-black text-slate-900 mb-1">{{ total_deceased }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Morgue Records</div>
-            </div>
-            <!-- Released Stat -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                        <i class="fas fa-check-circle text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ released_deceased_30d }} (30d)</span>
-                </div>
-                <div class="text-3xl font-black text-slate-900 mb-1">{{ released_deceased_30d }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Recent Releases</div>
-            </div>
-            <!-- Financial Stat -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                        <i class="fas fa-file-invoice-dollar text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ total_pending_invoices }} Pending</span>
-                </div>
-                <div class="text-2xl font-black text-slate-900 mb-1">${{ total_pending_amount|floatformat:2 }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Outstanding Revenue</div>
-            </div>
-            <!-- Active Inpatients Stat (NEW) -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white transition-all">
-                        <i class="fas fa-bed text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-cyan-50 text-cyan-600 rounded-lg text-[10px] font-black uppercase tracking-wider">Active</span>
-                </div>
-                <div class="text-3xl font-black text-slate-900 mb-1">{{ active_inpatient_count }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Inpatients</div>
-            </div>
-            <!-- On The Table Stat (NEW) -->
-            <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition-all">
-                        <i class="fas fa-procedures text-xl"></i>
-                    </div>
-                    <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase tracking-wider">On
-                    Table</span>
-                </div>
-                <div class="text-3xl font-black text-slate-900 mb-1">{{ on_the_table_count }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Bodies on Table</div>
-            </div>
+            <button type="button" class="ad-btn ad-btn-ghost" onclick="location.reload()" title="Refresh">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+            <a href="{% url 'accounts:accountant_dashboard' %}" class="ad-btn ad-btn-primary">
+                <i class="fas fa-file-export"></i>
+                <span>Accounts</span>
+            </a>
         </div>
-        <br>
-        <br>
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Patient Trends -->
-            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Registration Trends</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-indigo-600"></span>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Patients</span>
-                    </div>
+    </div>
+
+    <!-- Top grid: KPI stack + Overview + Occupancy -->
+    <div class="ad-top-grid">
+        <!-- Stacked summary cards -->
+        <div class="ad-kpi-stack">
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-blue">
+                    <i class="fas fa-user-injured"></i>
                 </div>
-                <div class="h-[300px] w-full">
-                    <canvas id="patientTrendChart"></canvas>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Total Patients</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value">{{ total_patients }}</span>
+                        {% if patients_change_pct != None %}
+                        <span class="ad-trend {% if patients_change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {% if patients_change_pct >= 0 %}+{% endif %}{{ patients_change_pct }}%
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="ad-kpi-hint">{{ new_patients_30d }} new in 30 days</span>
                 </div>
             </div>
-            <!-- Mortuary Trends -->
-            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Morgue Admissions</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-rose-500"></span>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deceased</span>
-                    </div>
+
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-teal">
+                    <i class="fas fa-bed"></i>
                 </div>
-                <div class="h-[300px] w-full">
-                    <canvas id="morgueTrendChart"></canvas>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Active Inpatients</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value">{{ active_inpatient_count }}</span>
+                        <span class="ad-trend neutral">{{ bed_occupancy_pct }}% beds</span>
+                    </div>
+                    <span class="ad-kpi-hint">{{ occupied_beds }}/{{ total_beds }} beds occupied</span>
+                </div>
+            </div>
+
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-amber">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Outstanding</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value ad-kpi-value-sm">KES {{ total_pending_amount|floatformat:0 }}</span>
+                        <span class="ad-trend down">{{ total_pending_invoices }} open</span>
+                    </div>
+                    <span class="ad-kpi-hint">Collected 30d: KES {{ collected_30d|floatformat:0 }}</span>
                 </div>
             </div>
         </div>
-        <!-- Distribution Charts Section (NEW) -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-            <!-- Ward Occupancy -->
-            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Ward Occupancy</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-cyan-500"></span>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Patients</span>
-                    </div>
+
+        <!-- Overview chart -->
+        <div class="ad-card ad-overview-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-chart-column"></i>
+                    <span>Activity Overview</span>
                 </div>
-                <div class="h-[300px] w-full">
-                    <canvas id="wardOccupancyChart"></canvas>
+                <div class="ad-segmented" id="overviewRange">
+                    <button type="button" class="active" data-range="7">7 days</button>
+                    <button type="button" data-range="visits">Visits</button>
+                    <button type="button" data-range="admits">Admits</button>
                 </div>
             </div>
-            <!-- Storage Distribution -->
-            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Morgue Storage Area</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-slate-500"></span>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deceased</span>
-                    </div>
-                </div>
-                <div class="h-[300px] w-full">
-                    <canvas id="storageDistributionChart"></canvas>
-                </div>
+            <div class="ad-chart-wrap">
+                <canvas id="overviewChart"></canvas>
+            </div>
+            <div class="ad-legend">
+                <span><i class="dot" style="background:#2563eb"></i> Registrations</span>
+                <span><i class="dot" style="background:#94a3b8"></i> Visits</span>
+                <span><i class="dot" style="background:#0d9488"></i> Admissions</span>
             </div>
         </div>
-        <br>
-        <br>
-        <!-- Tables Section -->
-        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-            <!-- Tabs Header -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-slate-100 pb-6">
-                <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-2xl">
-                    <button onclick="switchTab('patients-tab')" id="btn-patients-tab" class="dashboard-tab active">Patients</button>
-                    <button onclick="switchTab('deceased-tab')" id="btn-deceased-tab" class="dashboard-tab">Morgue</button>
-                    <button onclick="switchTab('invoices-tab')" id="btn-invoices-tab" class="dashboard-tab">Invoices</button>
+
+        <!-- Occupancy + quick links -->
+        <div class="ad-side-col">
+            <div class="ad-card ad-occupancy-card">
+                <div class="ad-card-head">
+                    <div class="ad-card-title">
+                        <i class="fas fa-hospital"></i>
+                        <span>Bed Occupancy</span>
+                    </div>
                 </div>
-                <div class="relative max-w-md w-full">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="dashboardSearch" onkeyup="filterActiveTable()" placeholder="Search active records..." class="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-600/20 transition-all">
+                <div class="ad-gauge-wrap">
+                    <canvas id="occupancyGauge"></canvas>
+                    <div class="ad-gauge-center">
+                        <strong>{{ bed_occupancy_pct }}%</strong>
+                        <span>Occupied</span>
+                    </div>
                 </div>
-            </div>
-            <!-- Patients Tab Content -->
-            <div id="patients-tab" class="tab-content">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left" id="patientsTable">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    ID /
-                                    Card
-                                </th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Registered</th>
-                                <th class="px-4 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            {% for patient in recent_patients %}
-                                <tr class="hover:bg-slate-50/50 transition-colors group">
-                                    <td class="px-4 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs uppercase">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
-                                            <div>
-                                                <div class="text-sm font-black text-slate-900">
-                                                    {{ patient.first_name }} {{ patient.last_name }}
-                                                </div>
-                                                <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                                    {{ patient.get_gender_display }} • {{ patient.age }} yrs
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-4 font-mono text-xs font-bold text-slate-500">
-                                        ID: {{ patient.id_number|default:"N/A" }}
-                                    </td>
-                                    <td class="px-4 py-4 text-xs font-black text-slate-900">{{ patient.phone }}</td>
-                                    <td class="px-4 py-4 text-xs text-slate-400">{{ patient.created_at|date:"d M, H:i" }}</td>
-                                    <td class="px-4 py-4 text-right">
-                                        <a href="{% url 'home:patient_detail' patient.pk %}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-600 hover:text-indigo-600 transition-all">
-                                            <i class="fas fa-arrow-right text-[10px]"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="ad-occupancy-stats">
+                    <div>
+                        <strong>{{ occupied_beds }}</strong>
+                        <span>In use</span>
+                    </div>
+                    <div>
+                        <strong>{{ available_beds }}</strong>
+                        <span>Available</span>
+                    </div>
+                    <div>
+                        <strong>{{ currently_admitted_deceased }}</strong>
+                        <span>Morgue</span>
+                    </div>
                 </div>
             </div>
-            <!-- Deceased Tab Content -->
-            <div id="deceased-tab" class="tab-content hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left" id="deceasedTable">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Deceased</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Death
-                                    Info
-                                </th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th class="px-4 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            {% for record in recent_deceased %}
-                                <tr class="hover:bg-slate-50/50 transition-colors group">
-                                    <td class="px-4 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-xs uppercase">{{ record.first_name|first }}{{ record.last_name|first }}</div>
-                                            <div>
-                                                <div class="text-sm font-black text-slate-900">
-                                                    {{ record.first_name }} {{ record.last_name }}
-                                                </div>
-                                                <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                                    {{ record.get_sex_display }} • {{ record.get_deceased_type_display }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-4 text-xs font-bold text-slate-500">
-                                        {{ record.town }}, {{ record.residence }}
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <div class="text-xs font-black text-slate-900">{{ record.date_of_death|date:"d M Y" }}</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                            {{ record.cause_of_death|truncatechars:20 }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        {% if record.is_released %}
-                                            <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">Released</span>
-                                        {% else %}
-                                            <span class="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-wider">In
-                                            Custody</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-4 py-4 text-right">
-                                        <a href="{% url 'morgue:deceased_detail' record.pk %}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-600 hover:text-indigo-600 transition-all">
-                                            <i class="fas fa-arrow-right text-[10px]"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Invoices Tab Content -->
-            <div id="invoices-tab" class="tab-content hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left" id="invoicesTable">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient / Deceased</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice ID</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                <th class="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th class="px-4 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            {% for invoice in pending_invoices %}
-                                <tr class="hover:bg-slate-50/50 transition-colors group">
-                                    <td class="px-4 py-4">
-                                        <div class="text-sm font-black text-slate-900">
-                                            {% if invoice.patient %}
-                                                {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}
-                                            {% elif invoice.deceased %}
-                                                {{ invoice.deceased.first_name }} {{ invoice.deceased.last_name }}
-                                            {% endif %}
-                                        </div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase">
-                                            Created {{ invoice.created_at|date:"d M Y" }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-4 font-mono text-xs font-bold text-indigo-600 uppercase">
-                                        INV-{{ invoice.id }}
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <div class="text-sm font-black text-slate-900">${{ invoice.balance|floatformat:2 }}</div>
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase">Outstanding</div>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider">{{ invoice.get_status_display }}</span>
-                                    </td>
-                                    <td class="px-4 py-4 text-right">
-                                        <a href="{% url 'accounts:invoice_detail' invoice.pk %}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-600 hover:text-indigo-600 transition-all">
-                                            <i class="fas fa-arrow-right text-[10px]"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+
+            <div class="ad-card ad-quick-card">
+                <p class="ad-quick-title">Quick actions</p>
+                <div class="ad-quick-links">
+                    <a href="{% url 'home:patient_create' %}">
+                        <i class="fas fa-user-plus"></i> Register patient
+                    </a>
+                    <a href="{% url 'home:reception_dashboard' %}">
+                        <i class="fas fa-desktop"></i> Reception
+                    </a>
+                    <a href="{% url 'inpatient:dashboard' %}">
+                        <i class="fas fa-procedures"></i> Inpatient
+                    </a>
+                    <a href="{% url 'morgue:dashboard' %}">
+                        <i class="fas fa-clinic-medical"></i> Morgue
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-    <style>
-    .dashboard-tab {
-        @apply px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all;
+
+    <!-- Metric strip -->
+    <div class="ad-metric-row">
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Visits today</span>
+                <i class="fas fa-info-circle" title="Outpatient and inpatient visits recorded today"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num">{{ visits_today }}</span>
+                {% if visits_change_pct != None %}
+                <span class="ad-trend {% if visits_change_pct >= 0 %}up{% else %}down{% endif %}">
+                    {% if visits_change_pct >= 0 %}+{% endif %}{{ visits_change_pct }}% vs yesterday
+                </span>
+                {% endif %}
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>Active</span><strong>{{ active_visits }}</strong></div>
+                <div><span>Appts today</span><strong>{{ appointments_today }}</strong></div>
+            </div>
+        </div>
+
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Patient mix</span>
+                <i class="fas fa-info-circle" title="Registered patients by gender"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num">{{ total_patients }}</span>
+                <span class="ad-trend up">+{{ new_patients_30d }} / 30d</span>
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>Male</span><strong>{{ male_patients }}</strong></div>
+                <div><span>Female</span><strong>{{ female_patients }}</strong></div>
+            </div>
+        </div>
+
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Morgue status</span>
+                <i class="fas fa-info-circle" title="Current mortuary caseload"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num">{{ currently_admitted_deceased }}</span>
+                <span class="ad-trend neutral">in custody</span>
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>On table</span><strong>{{ on_the_table_count }}</strong></div>
+                <div><span>Released 30d</span><strong>{{ released_deceased_30d }}</strong></div>
+            </div>
+        </div>
+
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Collections (30d)</span>
+                <i class="fas fa-info-circle" title="Payments received in the last 30 days"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num ad-metric-num-sm">KES {{ collected_30d|floatformat:0 }}</span>
+                {% if collected_change_pct != None %}
+                <span class="ad-trend {% if collected_change_pct >= 0 %}up{% else %}down{% endif %}">
+                    {% if collected_change_pct >= 0 %}+{% endif %}{{ collected_change_pct }}% vs prior
+                </span>
+                {% endif %}
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>Pending inv.</span><strong>{{ total_pending_invoices }}</strong></div>
+                <div><span>Upcoming appts</span><strong>{{ pending_appointments }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="ad-charts-row">
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Registration Trends</span>
+                </div>
+                <div class="ad-legend compact">
+                    <span><i class="dot" style="background:#2563eb"></i> Patients</span>
+                    <span><i class="dot" style="background:#e11d48"></i> Morgue</span>
+                </div>
+            </div>
+            <div class="ad-chart-wrap sm">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Ward Occupancy</span>
+                </div>
+            </div>
+            <div class="ad-chart-wrap sm">
+                <canvas id="wardChart"></canvas>
+            </div>
+        </div>
+
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-box"></i>
+                    <span>Morgue Storage</span>
+                </div>
+            </div>
+            <div class="ad-chart-wrap sm">
+                <canvas id="storageChart"></canvas>
+            </div>
+            {% if not storage_data_json or storage_data_json == '[]' %}
+            <p class="ad-empty-chart">No occupied storage areas</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="ad-card ad-table-card">
+        <div class="ad-table-toolbar">
+            <div class="ad-table-title">
+                <i class="fas fa-users"></i>
+                <span>Recent Records</span>
+            </div>
+            <div class="ad-table-tools">
+                <div class="ad-tabs" role="tablist">
+                    <button type="button" class="active" data-tab="patients-tab">Patients</button>
+                    <button type="button" data-tab="deceased-tab">Morgue</button>
+                    <button type="button" data-tab="invoices-tab">Invoices</button>
+                </div>
+                <div class="ad-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="dashboardSearch" placeholder="Search records…" autocomplete="off">
+                </div>
+            </div>
+        </div>
+
+        <div id="patients-tab" class="tab-content">
+            <div class="ad-table-scroll">
+                <table class="ad-table" id="patientsTable">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>ID / Card</th>
+                            <th>Phone</th>
+                            <th>Registered</th>
+                            <th class="right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in recent_patients %}
+                        <tr>
+                            <td>
+                                <div class="ad-person">
+                                    <div class="ad-avatar indigo">{{ patient.first_name|first }}{{ patient.last_name|first }}</div>
+                                    <div>
+                                        <div class="name">{{ patient.first_name }} {{ patient.last_name }}</div>
+                                        <div class="meta">{{ patient.get_gender_display }} · {{ patient.age }} yrs</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="mono">{{ patient.id_number|default:"N/A" }}</td>
+                            <td>{{ patient.phone|default:"—" }}</td>
+                            <td class="muted">{{ patient.created_at|date:"d M Y, H:i" }}</td>
+                            <td class="right">
+                                <a href="{% url 'home:patient_detail' patient.pk %}" class="ad-icon-btn" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="ad-empty">No patients yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="deceased-tab" class="tab-content hidden">
+            <div class="ad-table-scroll">
+                <table class="ad-table" id="deceasedTable">
+                    <thead>
+                        <tr>
+                            <th>Deceased</th>
+                            <th>Location</th>
+                            <th>Death info</th>
+                            <th>Status</th>
+                            <th class="right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in recent_deceased %}
+                        <tr>
+                            <td>
+                                <div class="ad-person">
+                                    <div class="ad-avatar rose">{{ record.first_name|first }}{{ record.last_name|first }}</div>
+                                    <div>
+                                        <div class="name">{{ record.first_name }} {{ record.last_name }}</div>
+                                        <div class="meta">{{ record.get_sex_display }} · {{ record.get_deceased_type_display }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ record.town }}, {{ record.residence }}</td>
+                            <td>
+                                <div class="name">{{ record.date_of_death|date:"d M Y" }}</div>
+                                <div class="meta">{{ record.cause_of_death|truncatechars:28 }}</div>
+                            </td>
+                            <td>
+                                {% if record.is_released %}
+                                <span class="ad-badge green">Released</span>
+                                {% else %}
+                                <span class="ad-badge amber">In custody</span>
+                                {% endif %}
+                            </td>
+                            <td class="right">
+                                <a href="{% url 'morgue:deceased_detail' record.pk %}" class="ad-icon-btn" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="ad-empty">No morgue records</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="invoices-tab" class="tab-content hidden">
+            <div class="ad-table-scroll">
+                <table class="ad-table" id="invoicesTable">
+                    <thead>
+                        <tr>
+                            <th>Patient / Deceased</th>
+                            <th>Invoice</th>
+                            <th>Amount due</th>
+                            <th>Status</th>
+                            <th class="right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in pending_invoices %}
+                        <tr>
+                            <td>
+                                <div class="name">
+                                    {% if invoice.patient %}
+                                        {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}
+                                    {% elif invoice.deceased %}
+                                        {{ invoice.deceased.first_name }} {{ invoice.deceased.last_name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </div>
+                                <div class="meta">Created {{ invoice.created_at|date:"d M Y" }}</div>
+                            </td>
+                            <td class="mono accent">INV-{{ invoice.id }}</td>
+                            <td>
+                                <div class="name">KES {{ invoice.balance|floatformat:2 }}</div>
+                                <div class="meta">Outstanding</div>
+                            </td>
+                            <td><span class="ad-badge rose">{{ invoice.get_status_display }}</span></td>
+                            <td class="right">
+                                <a href="{% url 'accounts:invoice_detail' invoice.pk %}" class="ad-icon-btn" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="ad-empty">No pending invoices</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-dash {
+    --ad-bg: #f4f6f9;
+    --ad-card: #ffffff;
+    --ad-border: #e5eaf0;
+    --ad-text: #111827;
+    --ad-muted: #6b7280;
+    --ad-blue: #1e3a8a;
+    --ad-blue-dark: #172554;
+    --ad-teal: #0d9488;
+    --ad-amber: #d97706;
+    --ad-rose: #e11d48;
+    --ad-radius: 16px;
+    --ad-radius-sm: 8px;
+    --ad-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+    padding: 1.5rem 1.75rem 2.5rem;
+    background: var(--ad-bg);
+    min-height: calc(100vh - 70px);
+    font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    color: var(--ad-text);
+}
+
+.ad-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ad-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.ad-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--ad-radius-sm);
+    background: var(--ad-blue);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+}
+
+.ad-title {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+}
+
+.ad-subtitle {
+    margin: 0.15rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--ad-muted);
+    font-weight: 400;
+}
+
+.ad-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.ad-date-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    box-shadow: var(--ad-shadow);
+}
+
+.ad-date-chip i { color: var(--ad-blue); }
+
+.ad-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--ad-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.15s ease;
+    font-family: inherit;
+}
+
+.ad-btn-ghost {
+    background: var(--ad-card);
+    border-color: var(--ad-border);
+    color: #374151;
+    box-shadow: var(--ad-shadow);
+}
+
+.ad-btn-ghost:hover { border-color: #cbd5e1; color: var(--ad-blue); }
+
+.ad-btn-primary {
+    background: var(--ad-blue);
+    color: #fff !important;
+}
+
+.ad-btn-primary:hover { background: var(--ad-blue-dark); }
+
+.ad-top-grid {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) 260px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ad-kpi-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ad-kpi-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1rem 1.1rem;
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+
+.ad-kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--ad-radius-sm);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.ad-kpi-icon-blue { background: #eff6ff; color: #2563eb; }
+.ad-kpi-icon-teal { background: #f0fdfa; color: #0d9488; }
+.ad-kpi-icon-amber { background: #fffbeb; color: #d97706; }
+
+.ad-kpi-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+    margin-bottom: 0.2rem;
+}
+
+.ad-kpi-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ad-kpi-value {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.ad-kpi-value-sm { font-size: 1.1rem; }
+
+.ad-kpi-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.ad-trend {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ad-trend.up { background: #ecfdf5; color: #059669; }
+.ad-trend.down { background: #fff1f2; color: #e11d48; }
+.ad-trend.neutral { background: #f1f5f9; color: #475569; }
+
+.ad-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1.15rem 1.25rem;
+}
+
+.ad-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.ad-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-card-title i { color: var(--ad-blue); font-size: 0.85rem; }
+
+.ad-segmented {
+    display: inline-flex;
+    background: #f3f4f6;
+    border-radius: var(--ad-radius-sm);
+    padding: 3px;
+    gap: 2px;
+}
+
+.ad-segmented button {
+    border: none;
+    background: transparent;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ad-segmented button.active {
+    background: #fff;
+    color: var(--ad-blue);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    font-weight: 600;
+}
+
+.ad-chart-wrap {
+    position: relative;
+    height: 260px;
+    width: 100%;
+}
+
+.ad-chart-wrap.sm { height: 220px; }
+
+.ad-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+}
+
+.ad-legend.compact { margin: 0; justify-content: flex-end; }
+
+.ad-legend .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.ad-side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ad-occupancy-card { flex: 1; }
+
+.ad-gauge-wrap {
+    position: relative;
+    height: 140px;
+    max-width: 180px;
+    margin: 0 auto;
+}
+
+.ad-gauge-center {
+    position: absolute;
+    left: 50%;
+    top: 58%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.ad-gauge-center strong {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    line-height: 1;
+}
+
+.ad-gauge-center span {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ad-occupancy-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    text-align: center;
+}
+
+.ad-occupancy-stats strong {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ad-text);
+}
+
+.ad-occupancy-stats span {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #9ca3af;
+}
+
+.ad-quick-title {
+    margin: 0 0 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ad-muted);
+}
+
+.ad-quick-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ad-quick-links a {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--ad-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    text-decoration: none;
+    transition: 0.15s ease;
+}
+
+.ad-quick-links a:hover {
+    background: #eff6ff;
+    color: var(--ad-blue);
+}
+
+.ad-quick-links i {
+    width: 18px;
+    text-align: center;
+    color: var(--ad-blue);
+    opacity: 0.85;
+}
+
+.ad-metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ad-metric-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1.1rem 1.2rem;
+}
+
+.ad-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.55rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+}
+
+.ad-metric-top i { color: #d1d5db; font-size: 0.8rem; }
+
+.ad-metric-main {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.85rem;
+}
+
+.ad-metric-num {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.ad-metric-num-sm { font-size: 1.2rem; }
+
+.ad-metric-subs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.ad-metric-subs span {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #9ca3af;
+    margin-bottom: 0.15rem;
+}
+
+.ad-metric-subs strong {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ad-charts-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ad-empty-chart {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    margin: -1.5rem 0 0.5rem;
+}
+
+.ad-table-card { padding: 0; overflow: hidden; }
+
+.ad-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid var(--ad-border);
+}
+
+.ad-table-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-table-title i { color: var(--ad-blue); }
+
+.ad-table-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ad-tabs {
+    display: inline-flex;
+    background: #f3f4f6;
+    border-radius: var(--ad-radius-sm);
+    padding: 3px;
+}
+
+.ad-tabs button {
+    border: none;
+    background: transparent;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ad-tabs button.active {
+    background: #fff;
+    color: var(--ad-blue);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    font-weight: 600;
+}
+
+.ad-search {
+    position: relative;
+}
+
+.ad-search i {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.ad-search input {
+    width: min(260px, 70vw);
+    padding: 0.5rem 0.85rem 0.5rem 2.2rem;
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius-sm);
+    background: #f9fafb;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ad-text);
+    outline: none;
+    font-family: inherit;
+}
+
+.ad-search input:focus {
+    border-color: #93c5fd;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ad-table-scroll { overflow-x: auto; }
+
+.ad-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.ad-table th {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--ad-border);
+    white-space: nowrap;
+}
+
+.ad-table td {
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.ad-table tr:hover td { background: #f9fafb; }
+
+.ad-table th.right,
+.ad-table td.right { text-align: right; }
+
+.ad-person {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ad-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.ad-avatar.indigo { background: #eff6ff; color: #2563eb; }
+.ad-avatar.rose { background: #fff1f2; color: #e11d48; }
+
+.ad-table .name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-table .meta {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #9ca3af;
+    margin-top: 0.1rem;
+}
+
+.ad-table .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.ad-table .mono.accent { color: #2563eb; }
+.ad-table .muted { color: #9ca3af; font-size: 0.8125rem; font-weight: 400; }
+
+.ad-badge {
+    display: inline-block;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.ad-badge.green { background: #ecfdf5; color: #059669; }
+.ad-badge.amber { background: #fffbeb; color: #d97706; }
+.ad-badge.rose { background: #fff1f2; color: #e11d48; }
+
+.ad-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--ad-radius-sm);
+    border: 1px solid var(--ad-border);
+    color: #9ca3af;
+    text-decoration: none;
+    transition: 0.15s ease;
+}
+
+.ad-icon-btn:hover {
+    border-color: #93c5fd;
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.ad-empty {
+    text-align: center;
+    padding: 2.5rem !important;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.hidden { display: none !important; }
+
+@media (max-width: 1200px) {
+    .ad-top-grid {
+        grid-template-columns: 1fr 1fr;
     }
-
-    .dashboard-tab.active {
-        @apply bg-white text-indigo-600 shadow-sm;
+    .ad-kpi-stack {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
     }
+    .ad-side-col { grid-column: 2; }
+    .ad-overview-card { grid-column: 1; }
+    .ad-metric-row { grid-template-columns: 1fr 1fr; }
+    .ad-charts-row { grid-template-columns: 1fr; }
+}
 
-    .dashboard-tab:not(.active) {
-        @apply text-slate-400 hover:text-slate-600;
+@media (max-width: 768px) {
+    .admin-dash { padding: 1rem; }
+    .ad-top-grid,
+    .ad-kpi-stack,
+    .ad-metric-row {
+        grid-template-columns: 1fr;
     }
-    </style>
-    <script>
-    function switchTab(tabId) {
-        // Hide all content
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        // Show target content
-        document.getElementById(tabId).classList.remove('hidden');
+    .ad-side-col,
+    .ad-overview-card { grid-column: auto; }
+}
+</style>
 
-        // Update menu buttons
-        document.querySelectorAll('.dashboard-tab').forEach(el => el.classList.remove('active'));
-        document.getElementById('btn-' + tabId).classList.add('active');
+<script>
+(function () {
+    const labels = {{ chart_labels_json|safe }};
+    const patientTrends = {{ patient_trends_json|safe }};
+    const deceasedTrends = {{ deceased_trends_json|safe }};
+    const visitTrends = {{ visit_trends_json|safe }};
+    const admissionTrends = {{ admission_trends_json|safe }};
+    const wardLabels = {{ ward_labels_json|safe }};
+    const wardData = {{ ward_data_json|safe }};
+    const storageLabels = {{ storage_labels_json|safe }};
+    const storageData = {{ storage_data_json|safe }};
+    const occupied = {{ occupied_beds|default:0 }};
+    const available = {{ available_beds|default:0 }};
 
-        // Clear search
-        document.getElementById('dashboardSearch').value = '';
-        filterActiveTable();
-    }
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#0f172a',
+                titleFont: { weight: '700', size: 12 },
+                bodyFont: { weight: '600', size: 11 },
+                padding: 10,
+                cornerRadius: 8,
+            }
+        }
+    };
 
-    function filterActiveTable() {
-        const input = document.getElementById('dashboardSearch');
-        const filter = input.value.toLowerCase();
-
-        // Find visible tab
-        const activeTab = document.querySelector('.tab-content:not(.hidden)');
-        const table = activeTab.querySelector('table');
-        const tr = table.getElementsByTagName('tr');
-
-        for (let i = 1; i < tr.length; i++) {
-            let found = false;
-            const td = tr[i].getElementsByTagName('td');
-            for (let j = 0; j < td.length; j++) {
-                if (td[j]) {
-                    const text = td[j].textContent || td[j].innerText;
-                    if (text.toLowerCase().indexOf(filter) > -1) {
-                        found = true;
-                        break;
+    document.addEventListener('DOMContentLoaded', function () {
+        // Overview stacked / combo chart
+        const overviewCtx = document.getElementById('overviewChart').getContext('2d');
+        const overviewChart = new Chart(overviewCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Visits',
+                        data: visitTrends,
+                        backgroundColor: 'rgba(148, 163, 184, 0.35)',
+                        borderRadius: 6,
+                        barThickness: 18,
+                        order: 2,
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Admissions',
+                        data: admissionTrends,
+                        backgroundColor: 'rgba(13, 148, 136, 0.55)',
+                        borderRadius: 6,
+                        barThickness: 18,
+                        order: 2,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Registrations',
+                        data: patientTrends,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#2563eb',
+                        pointBorderWidth: 2,
+                        order: 1,
+                    }
+                ]
+            },
+            options: {
+                ...chartDefaults,
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { weight: '600', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { color: '#94a3b8', font: { weight: '600', size: 11 }, precision: 0 }
                     }
                 }
             }
-            tr[i].style.display = found ? '' : 'none';
-        }
-    }
+        });
 
-    // Chart.js Configuration
-    document.addEventListener('DOMContentLoaded', function () {
-        const patientCtx = document.getElementById('patientTrendChart').getContext('2d');
-        const morgueCtx = document.getElementById('morgueTrendChart').getContext('2d');
+        document.querySelectorAll('#overviewRange button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#overviewRange button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.range;
+                overviewChart.data.datasets[0].hidden = mode === 'admits';
+                overviewChart.data.datasets[1].hidden = mode === 'visits';
+                overviewChart.data.datasets[2].hidden = false;
+                overviewChart.update();
+            });
+        });
 
-        new Chart(patientCtx, {
-            type: 'line',
+        // Occupancy doughnut gauge
+        new Chart(document.getElementById('occupancyGauge').getContext('2d'), {
+            type: 'doughnut',
             data: {
-                labels: {{ chart_labels| safe }},
-        datasets: [{
-            label: 'Trend',
-            data: {{ patient_trends| safe }},
-        borderColor: '#4f46e5',
-        backgroundColor: 'rgba(79, 70, 229, 0.05)',
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: '#4f46e5',
-        pointBorderWidth: 2
+                labels: ['Occupied', 'Available'],
+                datasets: [{
+                    data: [occupied || 0, available || (occupied ? 0 : 1)],
+                    backgroundColor: ['#2563eb', '#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 4,
                 }]
             },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: '#f8fafc' },
-                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
-            },
-            x: {
-                grid: { display: false },
-                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+            options: {
+                ...chartDefaults,
+                cutout: '76%',
+                rotation: -90,
+                circumference: 180,
             }
-        }
-    }
         });
 
-    new Chart(morgueCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ chart_labels| safe }},
-        datasets: [{
-            label: 'Admissions',
-            data: {{ deceased_trends| safe }},
-        backgroundColor: '#f43f5e',
-        borderRadius: 8,
-        barThickness: 20
-                }]
+        // Trend line + bars
+        new Chart(document.getElementById('trendChart').getContext('2d'), {
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Patients',
+                        data: patientTrends,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#2563eb',
+                        pointBorderWidth: 2,
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Morgue',
+                        data: deceasedTrends,
+                        backgroundColor: 'rgba(225, 29, 72, 0.75)',
+                        borderRadius: 5,
+                        barThickness: 14,
+                    }
+                ]
             },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: '#f8fafc' },
-                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
-            },
-            x: {
-                grid: { display: false },
-                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
-            }
-        }
-    }
-        });
-
-    // Ward Occupancy Chart (NEW)
-    const wardCtx = document.getElementById('wardOccupancyChart').getContext('2d');
-    new Chart(wardCtx, {
-        type: 'doughnut',
-        data: {
-            labels: {{ ward_labels| safe }},
-        datasets: [{
-            data: {{ ward_data| safe }},
-        backgroundColor: [
-            '#06b6d4', '#4f46e5', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'
-        ],
-        borderWidth: 0,
-        hoverOffset: 20
-                }]
-            },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: {
-                position: 'bottom',
-                labels: {
-                    usePointStyle: true,
-                    padding: 20,
-                    font: { weight: 'bold', size: 10 }
+            options: {
+                ...chartDefaults,
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { weight: '600', size: 10 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { color: '#94a3b8', font: { weight: '600', size: 10 }, precision: 0 }
+                    }
                 }
             }
-        }
-    }
         });
 
-    // Storage Distribution Chart (NEW)
-    const storageCtx = document.getElementById('storageDistributionChart').getContext('2d');
-    new Chart(storageCtx, {
-        type: 'doughnut',
-        data: {
-            labels: {{ storage_labels| safe }},
-        datasets: [{
-            data: {{ storage_data| safe }},
-        backgroundColor: [
-            '#334155', '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'
-        ],
-        borderWidth: 0,
-        hoverOffset: 20
+        // Ward doughnut
+        const wardColors = ['#2563eb', '#0d9488', '#7c3aed', '#ea580c', '#db2777', '#0891b2', '#65a30d'];
+        new Chart(document.getElementById('wardChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: wardLabels.length ? wardLabels : ['No wards'],
+                datasets: [{
+                    data: wardData.length ? wardData : [1],
+                    backgroundColor: wardLabels.length ? wardColors.slice(0, wardLabels.length) : ['#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 8,
                 }]
             },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: {
-                position: 'bottom',
-                labels: {
-                    usePointStyle: true,
-                    padding: 20,
-                    font: { weight: 'bold', size: 10 }
+            options: {
+                ...chartDefaults,
+                cutout: '68%',
+                plugins: {
+                    ...chartDefaults.plugins,
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            padding: 12,
+                            font: { size: 10, weight: '700' },
+                            color: '#64748b',
+                        }
+                    }
                 }
             }
-        }
-    }
+        });
+
+        // Storage doughnut
+        new Chart(document.getElementById('storageChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: storageLabels.length ? storageLabels : ['Empty'],
+                datasets: [{
+                    data: storageData.length ? storageData : [1],
+                    backgroundColor: storageLabels.length
+                        ? ['#1e293b', '#475569', '#64748b', '#94a3b8', '#cbd5e1']
+                        : ['#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                ...chartDefaults,
+                cutout: '68%',
+                plugins: {
+                    ...chartDefaults.plugins,
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            padding: 12,
+                            font: { size: 10, weight: '700' },
+                            color: '#64748b',
+                        }
+                    }
+                }
+            }
         });
     });
-    </script>
+
+    // Tabs
+    document.querySelectorAll('.ad-tabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.ad-tabs button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(btn.dataset.tab).classList.remove('hidden');
+            const search = document.getElementById('dashboardSearch');
+            search.value = '';
+            filterActiveTable();
+        });
+    });
+
+    document.getElementById('dashboardSearch').addEventListener('keyup', filterActiveTable);
+
+    function filterActiveTable() {
+        const filter = document.getElementById('dashboardSearch').value.toLowerCase();
+        const activeTab = document.querySelector('.tab-content:not(.hidden)');
+        if (!activeTab) return;
+        const rows = activeTab.querySelectorAll('tbody tr');
+        rows.forEach(tr => {
+            if (tr.querySelector('.ad-empty')) return;
+            const text = tr.textContent.toLowerCase();
+            tr.style.display = text.includes(filter) ? '' : 'none';
+        });
+    }
+})();
+</script>
 {% endblock %}

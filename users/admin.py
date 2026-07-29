@@ -15,11 +15,20 @@ class UserAdmin(BaseUserAdmin):
         (None, {'fields': ('id_number', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'phone')}),
         (_('Access'), {'fields': ('role', 'is_active')}),
+        (_('DHA practitioner'), {'fields': (
+            'practitioner_identification_type',
+            'practitioner_licence_number',
+            'practitioner_regulation_body',
+        )}),
     )
     
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('id_number', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'password1', 'password2'),
+            'fields': (
+                'id_number', 'first_name', 'last_name', 'phone', 'role', 'is_active',
+                'practitioner_licence_number', 'practitioner_regulation_body',
+                'password1', 'password2',
+            ),
         }),
     )

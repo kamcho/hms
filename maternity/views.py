@@ -2555,7 +2555,7 @@ def api_search_patients(request):
         Q(first_name__icontains=query) | 
         Q(last_name__icontains=query) | 
         Q(id_number__icontains=query),
-        gender='F'
+        gender='female'
     ).order_by('first_name')[:10]
     
     results = []

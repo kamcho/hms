@@ -1,212 +1,822 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Create Prescription - {{ patient.full_name }} - HMS{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
-    <style>
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
+<style>
+.rx-page {
+    --rx-bg: #f4f6f9;
+    --rx-card: #ffffff;
+    --rx-border: #e5eaf0;
+    --rx-text: #111827;
+    --rx-muted: #6b7280;
+    --rx-blue: #1e3a8a;
+    --rx-blue-dark: #172554;
+    --rx-accent: #2563eb;
+    --rx-radius: 16px;
+    --rx-radius-sm: 8px;
+    --rx-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+    font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    background: var(--rx-bg);
+    min-height: calc(100vh - 70px);
+    color: var(--rx-text);
+    padding: 1.5rem 1.75rem 3rem;
+}
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+.rx-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.rx-split {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.55fr);
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.rx-split > .rx-card {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+.rx-consumables-sticky {
+    position: sticky;
+    top: 1rem;
+}
+
+.rx-med-table-wrap {
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius-sm);
+    overflow: hidden;
+    margin-bottom: 1rem;
+    background: #fff;
+}
+
+.rx-med-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.rx-med-table th {
+    padding: 0.7rem 0.85rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--rx-border);
+    white-space: nowrap;
+}
+
+.rx-med-table td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.8125rem;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.rx-med-table tr:last-child td { border-bottom: none; }
+.rx-med-table tr:hover td { background: #f9fafb; }
+
+.rx-med-table .drug-name {
+    font-weight: 600;
+    color: var(--rx-text);
+}
+
+.rx-med-table .drug-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.15rem;
+}
+
+.rx-meds-empty {
+    margin: 0;
+    padding: 1.25rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #9ca3af;
+}
+
+.rx-composer {
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius-sm);
+    padding: 1rem;
+    background: #f8fafc;
+}
+
+.rx-composer-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.85rem;
+}
+
+#medication-formset .medication-entry.is-committed {
+    display: none !important;
+}
+
+#medication-formset-store {
+    display: none;
+}
+
+.rx-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.35rem;
+}
+
+.rx-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.rx-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--rx-radius-sm);
+    background: var(--rx-blue);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+}
+
+.rx-title {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+}
+
+.rx-subtitle {
+    margin: 0.2rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--rx-muted);
+    font-weight: 400;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.rx-subtitle .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #cbd5e1;
+}
+
+.rx-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--rx-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.15s ease;
+    font-family: inherit;
+    background: none;
+}
+
+.rx-btn-ghost {
+    background: var(--rx-card);
+    border-color: var(--rx-border);
+    color: #374151;
+    box-shadow: var(--rx-shadow);
+}
+
+.rx-btn-ghost:hover {
+    border-color: #cbd5e1;
+    color: var(--rx-accent);
+}
+
+.rx-btn-primary {
+    background: var(--rx-blue);
+    color: #fff !important;
+}
+
+.rx-btn-primary:hover:not(:disabled) {
+    background: var(--rx-blue-dark);
+}
+
+.rx-btn-primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.rx-card {
+    background: var(--rx-card);
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius);
+    box-shadow: var(--rx-shadow);
+    padding: 1.35rem 1.4rem;
+    margin-bottom: 1rem;
+}
+
+.rx-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.15rem;
+    flex-wrap: wrap;
+}
+
+.rx-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--rx-text);
+    margin: 0;
+}
+
+.rx-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--rx-radius-sm);
+    display: grid;
+    place-items: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.rx-icon-blue { background: #eff6ff; color: #2563eb; }
+.rx-icon-amber { background: #fffbeb; color: #d97706; }
+.rx-icon-teal { background: #f0fdfa; color: #0d9488; }
+
+.rx-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--rx-muted);
+    margin-bottom: 0.4rem;
+}
+
+.rx-page input[type="text"],
+.rx-page input[type="number"],
+.rx-page select,
+.rx-page textarea,
+.rx-page .med-search-input,
+.rx-page .icd-diagnosis-search {
+    width: 100% !important;
+    background: #f9fafb !important;
+    border: 1px solid var(--rx-border) !important;
+    border-radius: var(--rx-radius-sm) !important;
+    padding: 0.6rem 0.85rem !important;
+    font-size: 0.8125rem !important;
+    font-weight: 400 !important;
+    color: var(--rx-text) !important;
+    font-family: inherit !important;
+    outline: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+    box-sizing: border-box !important;
+}
+
+.rx-page input:focus,
+.rx-page select:focus,
+.rx-page textarea:focus,
+.rx-page .med-search-input:focus,
+.rx-page .icd-diagnosis-search:focus {
+    border-color: #93c5fd !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+.rx-page textarea {
+    min-height: 88px;
+    resize: vertical;
+}
+
+.rx-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--rx-radius-sm);
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #1e3a8a;
+}
+
+.rx-notice i { margin-top: 0.15rem; color: #2563eb; }
+.rx-notice a { color: #1d4ed8; font-weight: 600; }
+
+.rx-panel {
+    background: #f8fafc;
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius-sm);
+    padding: 1rem;
+}
+
+.rx-panel-hint {
+    margin: 0 0 0.85rem;
+    font-size: 0.8125rem;
+    color: var(--rx-muted);
+    font-weight: 400;
+}
+
+.rx-med {
+    background: #fff;
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius-sm);
+    padding: 1.1rem;
+    margin-bottom: 0.85rem;
+}
+
+.rx-med-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.rx-med-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #4b5563;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.rx-med-saved {
+    margin-left: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #059669;
+}
+
+.rx-remove {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--rx-radius-sm);
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    color: #e11d48;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.rx-remove:hover {
+    background: #ffe4e6;
+}
+
+.rx-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.rx-span-4 { grid-column: span 4; }
+.rx-span-2 { grid-column: span 2; }
+
+.rx-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 0.5rem;
+    padding-bottom: 1rem;
+}
+
+.rx-field { margin-bottom: 0; }
+
+.rx-page .whole-dispense-notice {
+    display: none;
+    margin-top: 0.65rem;
+    padding: 0.75rem 0.85rem;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: var(--rx-radius-sm);
+    gap: 0.65rem;
+}
+
+.rx-page .whole-dispense-notice.is-visible {
+    display: flex;
+}
+
+.rx-page .med-details-hint {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.rx-dha-panel {
+    margin-top: 0.65rem;
+    border: 1px solid var(--rx-border);
+    border-radius: var(--rx-radius-sm);
+    background: #f8fafc;
+    padding: 0.65rem 0.75rem;
+}
+
+.rx-dha-panel.is-loading {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.rx-dha-panel.is-ok {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+.rx-dha-panel.is-warn {
+    border-color: #fde68a;
+    background: #fffbeb;
+}
+
+.rx-dha-panel.is-error {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.rx-dha-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+}
+
+.rx-dha-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.rx-dha-status {
+    font: inherit;
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.rx-dha-selected {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #065f46;
+    line-height: 1.35;
+}
+
+.rx-dha-selected code {
+    font-size: 0.75rem;
+    background: #d1fae5;
+    color: #047857;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    margin-right: 0.35rem;
+}
+
+.rx-dha-results {
+    display: none;
+    margin-top: 0.4rem;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.rx-dha-results.is-open { display: block; }
+
+.rx-dha-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.55rem 0.65rem;
+    border: 0;
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    cursor: pointer;
+}
+
+.rx-dha-item:last-child { border-bottom: 0; }
+.rx-dha-item:hover { background: #f8fafc; }
+
+.rx-dha-item-code {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #1d4ed8;
+}
+
+.rx-dha-item-title {
+    font-size: 0.78rem;
+    color: #111827;
+    margin-top: 0.1rem;
+}
+
+.rx-dha-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.rx-dha-actions button {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+}
+
+.rx-dha-manual {
+    display: none;
+    margin-top: 0.4rem;
+}
+
+.rx-dha-manual.is-open { display: block; }
+
+.rx-dha-manual input {
+    width: 100%;
+    font-size: 0.8rem !important;
+}
+
+.rx-page .med-search-results {
+    border-radius: var(--rx-radius-sm) !important;
+    border-color: var(--rx-border) !important;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1) !important;
+}
+
+.rx-page .icd-diagnosis-selected > div,
+.rx-page .icd-diagnosis-checking > div {
+    border-radius: var(--rx-radius-sm) !important;
+}
+
+@media (max-width: 1100px) {
+    .rx-split {
+        grid-template-columns: 1fr;
     }
-
-    .animate-fade-in {
-        animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    .rx-consumables-sticky {
+        position: static;
     }
+}
 
-    :root {
-        --indigo-primary: #6366f1;
-        --indigo-dark: #4f46e5;
-        --slate-bg: #f8fafc;
-        --glass-border: rgba(226, 232, 240, 0.5);
-    }
+@media (max-width: 900px) {
+    .rx-grid { grid-template-columns: 1fr 1fr; }
+    .rx-span-4 { grid-column: span 2; }
+}
 
-    .prescription-container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-    }
+@media (max-width: 640px) {
+    .rx-page { padding: 1rem; }
+    .rx-grid { grid-template-columns: 1fr; }
+    .rx-span-4, .rx-span-2 { grid-column: span 1; }
+}
+</style>
 
-    /* Premium Cards */
-    .premium-card {
-        background: white;
-        border: 1px solid var(--glass-border);
-        border-radius: 2rem;
-        padding: 2.5rem;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-    }
-
-    .premium-card:hover {
-        border-color: rgba(99, 102, 241, 0.2);
-        box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.08);
-    }
-
-    /* Inputs */
-    input[type="text"],
-    input[type="number"],
-    select,
-    textarea {
-        width: 100% !important;
-        background: #ffffff !important;
-        border: 2px solid #e2e8f0 !important;
-        border-radius: 1rem !important;
-        padding: 1rem 1.25rem !important;
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        color: #1e293b !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        outline: none !important;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-        border-color: var(--indigo-primary) !important;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05) !important;
-    }
-
-    /* Medication Items */
-    .medication-rows-container {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .medication-entry {
-        background: #fdfdfd;
-        border: 2px solid #f1f5f9;
-        border-radius: 1.5rem;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        position: relative;
-    }
-
-    .medication-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.5rem;
-    }
-
-    .med-badge {
-        background: #f1f5f9;
-        color: #64748b;
-        padding: 0.4rem 1rem;
-        border-radius: 0.75rem;
-        font-size: 0.7rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-    }
-
-    /* Buttons */
-    .btn-action {
-        padding: 1rem 2rem;
-        border-radius: 1rem;
-        font-size: 0.85rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .btn-indigo {
-        background: var(--indigo-primary);
-        color: white;
-        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
-    }
-
-    .btn-indigo:hover:not(:disabled) {
-        background: var(--indigo-dark);
-        transform: translateY(-2px);
-        box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.4);
-    }
-
-    .btn-action:disabled {
-        opacity: 0.65;
-        cursor: not-allowed;
-        transform: none !important;
-        pointer-events: none;
-    }
-
-    .btn-ghost {
-        background: transparent;
-        color: #64748b;
-        border: 2px solid #f1f5f9;
-    }
-
-    .btn-ghost:hover {
-        background: #f8fafc;
-        color: #1e293b;
-        border-color: #e2e8f0;
-    }
-
-    .remove-btn {
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 0.75rem;
-        background: #fff1f2;
-        color: #e11d48;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .remove-btn:hover {
-        background: #ffe4e6;
-        transform: rotate(90deg);
-    }
-    </style>
-
-    <div class="bg-[#f8fafc] min-h-screen">
-        <div class="prescription-container animate-fade-in">
-            <!-- Header -->
-            <div class="flex items-center justify-between mb-12">
+<div class="rx-page">
+    <div class="rx-wrap">
+        <div class="rx-header">
+            <div class="rx-header-left">
+                <div class="rx-title-icon"><i class="fas fa-prescription"></i></div>
                 <div>
-                    <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">Create Prescription</h1>
-                    <div class="flex items-center gap-4 text-slate-500 font-bold text-sm">
-                        <span class="flex items-center gap-2">
-                            <i class="fas fa-user-circle text-indigo-500"></i>
-                            {{ patient.full_name }}
-                        </span>
-                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span>{{ patient.age }} Years</span>
-                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span class="uppercase tracking-widest text-[10px]">{{ patient.get_gender_display }}</span>
+                    <h1 class="rx-title">Create Prescription</h1>
+                    <p class="rx-subtitle">
+                        <span>{{ patient.full_name }}</span>
+                        <span class="dot"></span>
+                        <span>{{ patient.age }} yrs</span>
+                        <span class="dot"></span>
+                        <span>{{ patient.get_gender_display }}</span>
+                        {% if visit.visit_type %}
+                        <span class="dot"></span>
+                        <span>{{ visit.visit_type }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'home:patient_detail' patient.pk %}" class="rx-btn rx-btn-ghost">
+                <i class="fas fa-arrow-left"></i>
+                Back to profile
+            </a>
+        </div>
+
+        {% if existing_prescription %}
+        <div class="rx-notice">
+            <i class="fas fa-info-circle"></i>
+            <p>
+                A prescription already exists for this visit. New medications will be added to
+                <a href="{% url 'home:prescription_detail' existing_prescription.id %}">prescription #{{ existing_prescription.id }}</a>.
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="rx-notice">
+            <i class="fas fa-compass"></i>
+            <p>
+                <strong>Active Medication List</strong> lives on the
+                <a href="{% url 'home:patient_detail' patient.pk %}">patient profile</a>
+                (chronic / home meds). Saving this prescription also syncs items there.
+                Record <strong>allergies</strong> on the same profile before prescribing.
+            </p>
+        </div>
+
+        {% if cds and cds.alerts %}
+        <div class="rx-card" style="border:1px solid {% if cds.summary.critical %}#fecaca{% elif cds.summary.high %}#fed7aa{% else %}#99f6e4{% endif %}; margin-bottom:1rem;">
+            <div class="rx-card-head">
+                <h2 class="rx-card-title">
+                    <span class="rx-icon" style="background:{% if cds.summary.critical %}#fef2f2;color:#b91c1c{% elif cds.summary.high %}#fff7ed;color:#c2410c{% else %}#f0fdfa;color:#0f766e{% endif %};">
+                        <i class="fas fa-brain"></i>
+                    </span>
+                    Clinical Decision Support
+                </h2>
+                <span style="font-size:0.7rem; color:#64748b;">
+                    Uses Problem List · HPT · Allergies · Demographics · Labs · Vitals
+                </span>
+            </div>
+            <div style="padding:0 1.25rem 1rem;">
+                {% if active_patient_allergies %}
+                <p style="font-size:0.75rem; margin:0 0 0.75rem; color:#92400e;">
+                    <i class="fas fa-allergies"></i>
+                    Active allergies:
+                    {% for a in active_patient_allergies %}
+                        <strong>{{ a.allergen_name }}</strong>{% if a.hpt_code %} ({{ a.hpt_code }}){% endif %}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+                <div id="cds-alert-list" style="display:flex; flex-direction:column; gap:0.55rem; max-height:220px; overflow-y:auto;">
+                    {% for alert in cds.alerts %}
+                    {% if forloop.counter <= 10 %}
+                    <div style="padding:0.55rem 0.7rem; border-radius:8px; background:#f8fafc; border-left:3px solid {% if alert.severity == 'critical' %}#dc2626{% elif alert.severity == 'high' %}#ea580c{% elif alert.severity == 'moderate' %}#d97706{% else %}#64748b{% endif %};">
+                        <div style="font-size:0.8rem; font-weight:700;">{{ alert.title }}
+                            <span style="font-size:0.65rem; font-weight:600; color:#64748b; text-transform:uppercase; margin-left:0.35rem;">{{ alert.severity }}</span>
+                            {% if alert.blocking %}<span style="font-size:0.65rem; color:#b91c1c; margin-left:0.35rem;">BLOCKS SAVE</span>{% endif %}
+                        </div>
+                        <div style="font-size:0.75rem; color:#475569; margin-top:0.2rem;">{{ alert.intervention }}</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div id="cds-live-check" style="margin-top:0.75rem; display:none;"></div>
+                <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.85rem; font-size:0.75rem; color:#64748b;">
+                    <input type="checkbox" name="cds_override" value="1" id="cds_override">
+                    Clinician override CDS blocking alerts (document in notes)
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" id="prescription-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_token" value="{{ form_token }}">
+
+            <div class="rx-card">
+                <div class="rx-card-head">
+                    <h2 class="rx-card-title">
+                        <span class="rx-icon rx-icon-blue"><i class="fas fa-stethoscope"></i></span>
+                        Diagnosis &amp; assessment
+                    </h2>
+                </div>
+                <div class="space-y-5">
+                    <div class="rx-field relative">
+                        <label class="rx-label">Clinical diagnosis *</label>
+                        {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=form.diagnosis %}
+                        {% if form.diagnosis.errors %}
+                        <p class="text-rose-600 text-xs font-medium mt-2">{{ form.diagnosis.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="rx-field">
+                        <label class="rx-label">Internal notes (optional)</label>
+                        {{ form.notes }}
                     </div>
                 </div>
-                <a href="{% url 'home:patient_detail' patient.pk %}" class="btn-action btn-ghost">
-                    <i class="fas fa-arrow-left"></i>
-                    Back to Profile
-                </a>
             </div>
 
-                 <!-- Dispense Consumables Section -->
-                <div class="premium-card">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
-                            <i class="fas fa-box-open text-lg"></i>
+            <!-- Electronic prescribing clinical context -->
+            <div class="rx-card">
+                <div class="rx-card-head">
+                    <h2 class="rx-card-title">
+                        <span class="rx-icon" style="background:#ecfdf5;color:#065f46;"><i class="fas fa-file-medical"></i></span>
+                        eRx clinical package
+                    </h2>
+                    <span style="font-size:0.7rem;color:#64748b;">Problem List · Medication List · Diagnostic Tests</span>
+                </div>
+                <div style="padding:0 1.25rem 1.25rem; display:grid; gap:1rem;">
+                    <p style="font-size:0.75rem; color:#64748b; margin:0; line-height:1.45;">
+                        Electronic prescribing packages these with your drug orders. DHA <code>/prescriptions</code> transmits HPT medication items;
+                        problem list, active meds, and diagnostics are snapshotted into the eRx package for continuity and claims desk transmission.
+                    </p>
+
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
+                            <i class="fas fa-notes-medical"></i> Problem List
+                            <a href="{% url 'home:patient_detail' patient.pk %}" style="font-weight:500; margin-left:0.35rem;">Manage on profile</a>
                         </div>
-                        <h2 class="text-xl font-black text-slate-900">Dispense Consumables</h2>
+                        {% if erx_active_problems %}
+                        <div style="display:flex; flex-direction:column; gap:0.35rem; max-height:140px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:0.5rem;">
+                            {% for p in erx_active_problems %}
+                            <label style="display:flex; gap:0.5rem; align-items:flex-start; font-size:0.8rem; cursor:pointer;">
+                                <input type="checkbox" name="erx_problem_ids" value="{{ p.pk }}" checked style="margin-top:0.2rem;">
+                                <span>{{ p.display }}{% if p.icd11_code %} <strong style="color:#3730a3;">[{{ p.icd11_code }}]</strong>{% endif %}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active problems — add on patient profile before prescribing when possible.</p>
+                        {% endif %}
                     </div>
-                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                        <p class="text-sm text-slate-500 font-bold mb-6">
-                            <i class="fas fa-info-circle mr-2"></i> Dispense items required for this prescription (e.g.
-                            Syringes, Canulas).
+
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
+                            <i class="fas fa-pills"></i> Medication Lists (active)
+                        </div>
+                        <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; margin-bottom:0.45rem;">
+                            <input type="checkbox" name="erx_include_medication_list" value="1" checked>
+                            Include Active Medication List in eRx package
+                        </label>
+                        {% if erx_active_medications %}
+                        <ul style="margin:0; padding-left:1.1rem; font-size:0.8rem; color:#475569; max-height:120px; overflow-y:auto;">
+                            {% for m in erx_active_medications %}
+                            <li>{{ m.display_name }}{% if m.generic_concept_code %} [{{ m.generic_concept_code }}]{% endif %}{% if m.dose_text or m.frequency %} — {{ m.dose_text }} {{ m.frequency }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active meds yet — this Rx will sync into the list on save.</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
+                            <i class="fas fa-vial"></i> Diagnostic Tests
+                        </div>
+                        {% if erx_visit_labs %}
+                        <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.35rem;">Already ordered this visit:</p>
+                        <ul style="margin:0 0 0.65rem; padding-left:1.1rem; font-size:0.78rem; color:#475569;">
+                            {% for lab in erx_visit_labs %}
+                            <li>{{ lab.service.name }}{% if lab.service.department %} ({{ lab.service.department.name }}){% endif %} — {{ lab.status }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.35rem;">Order / include with this prescription:</p>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.35rem; max-height:160px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:0.5rem;">
+                            {% for svc in erx_diagnostic_catalog %}
+                            <label style="display:flex; gap:0.4rem; align-items:flex-start; font-size:0.75rem; cursor:pointer;">
+                                <input type="checkbox" name="erx_diagnostic_tests" value="{{ svc.pk }}" style="margin-top:0.15rem;">
+                                <span>{{ svc.name }}{% if svc.department %} <span style="color:#94a3b8;">· {{ svc.department.name }}</span>{% endif %}</span>
+                            </label>
+                            {% empty %}
+                            <span style="font-size:0.8rem; color:#94a3b8;">No lab/imaging services configured.</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px solid #e5eaf0; padding-top:0.85rem;">
+                        <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; font-weight:600;">
+                            <input type="checkbox" name="transmit_erx" value="1" {% if sha_claim_ready %}checked{% endif %}>
+                            Electronically transmit to SHA eRx after save
+                            {% if sha_claim_ready %}
+                            <span style="font-weight:500; color:#065f46;">(consent ready)</span>
+                            {% else %}
+                            <span style="font-weight:500; color:#9a3412;">(needs Claims Desk OTP / start visit)</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rx-split">
+                <div class="rx-card rx-consumables-sticky">
+                    <div class="rx-card-head">
+                        <h2 class="rx-card-title">
+                            <span class="rx-icon rx-icon-amber"><i class="fas fa-box-open"></i></span>
+                            Dispense consumables
+                        </h2>
+                    </div>
+                    <div class="rx-panel">
+                        <p class="rx-panel-hint">
+                            <i class="fas fa-info-circle"></i>
+                            Optional items (e.g. syringes, cannulas).
                         </p>
                         {% if user.role == 'Nurse' %}
                         {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Mini Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
@@ -215,577 +825,996 @@
                         {% endif %}
                     </div>
                 </div>
-            {% if existing_prescription %}
-            <div class="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">
-                <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
-                <p class="text-sm font-bold text-indigo-900">
-                    A prescription already exists for this visit. New medications will be added to
-                    <a href="{% url 'home:prescription_detail' existing_prescription.id %}" class="underline">prescription #{{ existing_prescription.id }}</a>.
-                </p>
-            </div>
-            {% endif %}
 
-            <form method="post" id="prescription-form">
-                {% csrf_token %}
-                <input type="hidden" name="form_token" value="{{ form_token }}">
-                <!-- Diagnosis Section -->
-                <div class="premium-card">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <i class="fas fa-stethoscope text-lg"></i>
-                        </div>
-                        <h2 class="text-xl font-black text-slate-900">Diagnosis & Assessment</h2>
+                <div class="rx-card">
+                    <div class="rx-card-head">
+                        <h2 class="rx-card-title">
+                            <span class="rx-icon rx-icon-teal"><i class="fas fa-pills"></i></span>
+                            Medications
+                        </h2>
                     </div>
-                    <div class="grid grid-cols-1 gap-8">
-                        <div class="space-y-3">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                Clinical
-                                Diagnosis *
-                            </label>
-                            {{ form.diagnosis }}
-                            {% if form.diagnosis.errors %}<p class="text-rose-500 text-xs font-bold mt-2 ml-2">{{ form.diagnosis.errors.0 }}</p>{% endif %}
-                        </div>
-                        <div class="space-y-3">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                Internal
-                                Notes (Optional)
-                            </label>
-                            {{ form.notes }}
-                        </div>
+
+                    <div class="rx-med-table-wrap">
+                        <table class="rx-med-table" id="meds-table">
+                            <thead>
+                                <tr>
+                                    <th>Drug</th>
+                                    <th>Dose</th>
+                                    <th>Frequency</th>
+                                    <th>Days</th>
+                                    <th>Qty</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="meds-table-body"></tbody>
+                        </table>
+                        <p class="rx-meds-empty" id="meds-empty">No medicines added yet</p>
                     </div>
-                </div>
-            
-                <!-- Medications Section -->
-                <div class="premium-card">
-                    <div class="flex items-center justify-between mb-10">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                                <i class="fas fa-pills text-lg"></i>
-                            </div>
-                            <h2 class="text-xl font-black text-slate-900">Medications</h2>
-                        </div>
-                        <button type="button" class="btn-action btn-indigo" onclick="addMedication()">
-                            <i class="fas fa-plus"></i>
-                            Add Drug
-                        </button>
-                    </div>
+
                     {{ formset.management_form }}
-                    <div id="medication-formset" class="space-y-6">
+                    <div id="medication-formset-store"></div>
+                    <div id="medication-formset" class="rx-composer">
+                        <div class="rx-card-head" style="margin-bottom: 0.85rem;">
+                            <h3 class="rx-card-title" style="font-size: 0.875rem;">
+                                <span class="rx-icon rx-icon-teal" style="width:28px;height:28px;font-size:0.75rem;"><i class="fas fa-plus"></i></span>
+                                Add medicine
+                            </h3>
+                        </div>
                         {% for form in formset %}
-                            <div class="medication-entry">
-                                <div class="medication-header">
-                                    <div class="flex items-center gap-3">
-                                        <span class="med-badge">Drug #{{ forloop.counter }}</span>
-                                        {% if form.instance.pk %}<span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Saved</span>{% endif %}
-                                    </div>
-                                    {% if not forloop.first %}
-                                        <button type="button" class="remove-btn" onclick="removeMedication(this)" title="Remove Drug">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    {% endif %}
+                        <div class="medication-entry rx-med" data-form-index="{{ forloop.counter0 }}" style="background:transparent;border:none;padding:0;margin:0;">
+                            <div class="medication-header rx-med-header" style="display:none;">
+                                <div class="flex items-center">
+                                    <span class="med-badge rx-med-badge">Drug #{{ forloop.counter }}</span>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                    <div class="md:col-span-2 lg:col-span-4 space-y-2 search-container">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Drug
-                                            Name *
-                                        </label>
-                                        {{ form.medication }}
-                                        <div class="med-details-hint mt-2 ml-2 flex gap-2"></div>
-                                        <div class="whole-dispense-notice mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl flex gap-3 hidden">
-                                            <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
-                                            <p class="text-[9px] font-black text-amber-900 uppercase tracking-tight leading-tight">Note: This item is usually prescribed as a whole package.</p>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Units /
-                                            Dose *
-                                        </label>
-                                        <div class="flex gap-2">
-                                            {{ form.dose_count }}
-                                            <div class="dose-unit-container hidden w-1/2">
-                                                {{ form.dose_unit }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Frequency
-                                            *
-                                        </label>
-                                        {{ form.frequency }}
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Days
-                                            *
-                                        </label>
-                                        {{ form.number_of_days }}
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Total
-                                            Quantity *
-                                        </label>
-                                        {{ form.quantity }}
-                                    </div>
-                                    <div class="md:col-span-2 lg:col-span-4 space-y-2">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                                            Specific
-                                            Instructions
-                                        </label>
-                                        {{ form.instructions }}
-                                    </div>
-                                </div>
-                                <div class="hidden">{{ form.DELETE }}</div>
+                                <button type="button" class="remove-btn rx-remove" onclick="removeMedication(this)" title="Remove drug" style="display:none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
+
+                            <div class="rx-grid">
+                                <div class="rx-span-4 search-container relative">
+                                    <label class="rx-label">Drug name *</label>
+                                    {{ form.medication }}
+                                    {{ form.generic_concept_code }}
+                                    {{ form.generic_concept_display }}
+                                    <div class="med-details-hint"></div>
+                                    <div class="whole-dispense-notice">
+                                        <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
+                                        <p class="text-[11px] font-semibold text-amber-900 leading-snug">Note: This item is usually prescribed as a whole package.</p>
+                                    </div>
+                                    <div class="rx-dha-panel" hidden>
+                                        <div class="rx-dha-head">
+                                            <span class="rx-dha-title">DHA terminology</span>
+                                            <span class="rx-dha-status"></span>
+                                        </div>
+                                        <div class="rx-dha-selected"></div>
+                                        <div class="rx-dha-results"></div>
+                                        <div class="rx-dha-manual">
+                                            <input type="text" class="dha-manual-search" placeholder="Search DHA generic product…" autocomplete="off">
+                                        </div>
+                                        <div class="rx-dha-actions">
+                                            <button type="button" class="dha-change-btn" hidden>Change</button>
+                                            <button type="button" class="dha-manual-btn" hidden>Search DHA</button>
+                                            <button type="button" class="dha-clear-btn" hidden>Clear</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="rx-label">Units / dose *</label>
+                                    <div class="flex gap-2">
+                                        {{ form.dose_count }}
+                                        <div class="dose-unit-container hidden w-1/2">
+                                            {{ form.dose_unit }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="rx-label">Frequency *</label>
+                                    {{ form.frequency }}
+                                </div>
+                                <div>
+                                    <label class="rx-label">Days *</label>
+                                    {{ form.number_of_days }}
+                                </div>
+                                <div>
+                                    <label class="rx-label">Total quantity *</label>
+                                    {{ form.quantity }}
+                                </div>
+                                <div class="rx-span-4">
+                                    <label class="rx-label">Specific instructions</label>
+                                    {{ form.instructions }}
+                                </div>
+                            </div>
+                            <div class="hidden">{{ form.DELETE }}</div>
+                        </div>
                         {% endfor %}
+                        <div class="rx-composer-actions">
+                            <button type="button" class="rx-btn rx-btn-primary" onclick="commitMedication()">
+                                <i class="fas fa-plus"></i>
+                                Add to list
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <!-- Global Actions -->
-                <div class="flex items-center justify-end gap-4 mt-12 pb-20">
-                    <button type="submit" name="action" value="prescribe" class="btn-action btn-indigo prescribe-submit-btn">
-                        <i class="fas fa-check prescribe-submit-icon"></i>
-                        <span class="prescribe-submit-label">Prescribe</span>
-                    </button>
-                    <!-- <button type="submit" name="action" value="prescribe_close" class="btn-action bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-500/30">
-                        <i class="fas fa-check-double"></i>
-                        Prescribe & Close Visit
-                    </button> -->
-                </div>
-            </form>
-        </div>
+            </div>
+
+            <div class="rx-actions">
+                <button type="submit" name="action" value="prescribe" class="rx-btn rx-btn-primary prescribe-submit-btn">
+                    <i class="fas fa-check prescribe-submit-icon"></i>
+                    <span class="prescribe-submit-label">Prescribe</span>
+                </button>
+            </div>
+        </form>
     </div>
+</div>
 {% endblock %}
+
 {% block extra_js %}
-    <script>
-    const medMetadata = {{ med_metadata_json| safe }};
+<script src="{% static 'home/js/icd11_diagnosis_picker.js' %}"></script>
+<script>
+const medMetadata = {{ med_metadata_json|safe }};
+const HPT_SUGGEST_URL = "{% url 'home:hpt_suggest_api' %}";
+const HPT_SEARCH_URL = "{% url 'home:hpt_search_api' %}";
+const HPT_SUGGEST_ENABLED = {{ hpt_suggest_enabled|yesno:"true,false" }};
+const HPT_REQUIRE_CODE = {{ hpt_require_code|yesno:"true,false" }};
+const CDS_CHECK_URL = "{{ cds_check_url|default:'' }}?visit_id={{ visit.pk }}";
 
-    function initializeSearchWidget(entry) {
-        const select = entry.querySelector('select[name$="-medication"]');
-        const container = entry.querySelector('.search-container');
-
-        // Hide original select
-        select.classList.add('hidden');
-
-        // Create Search UI if not exists
-        if (!container.querySelector('.med-search-input')) {
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.className = 'med-search-input w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all';
-            searchInput.placeholder = 'Search by Name, Generic, or Class...';
-
-            const resultsDiv = document.createElement('div');
-            resultsDiv.className = 'med-search-results absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto hidden';
-
-            // Insert after label, before hidden select
-            container.insertBefore(searchInput, select);
-            container.appendChild(resultsDiv);
-
-            // Interaction Logic
-            searchInput.addEventListener('input', (e) => handleSearch(e, resultsDiv, select));
-            searchInput.addEventListener('focus', (e) => handleSearch(e, resultsDiv, select));
-
-            // Close dropdown on click outside
-            document.addEventListener('click', (e) => {
-                if (!container.contains(e.target)) {
-                    resultsDiv.classList.add('hidden');
-                }
-            });
-
-            // Pre-fill if value exists
-            if (select.value && medMetadata[select.value]) {
-                searchInput.value = medMetadata[select.value].name;
-                updateMedDetails(select);
-            }
-        }
-    }
-
-    function handleSearch(e, resultsDiv, select) {
-        const query = e.target.value.toLowerCase();
-        resultsDiv.innerHTML = '';
-        resultsDiv.classList.remove('hidden');
-
-        const matched = Object.entries(medMetadata).filter(([id, data]) => {
-            return data.name.toLowerCase().includes(query) ||
-                data.generic_name.toLowerCase().includes(query) ||
-                data.drug_class.toLowerCase().includes(query);
+async function runCdsMedicationCheck(payload) {
+    const box = document.getElementById('cds-live-check');
+    if (!box || !CDS_CHECK_URL) return;
+    try {
+        const resp = await fetch(CDS_CHECK_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('#prescription-form [name=csrfmiddlewaretoken]')?.value || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
         });
-
-        if (matched.length === 0) {
-            resultsDiv.innerHTML = '<div class="p-4 text-xs font-bold text-slate-400 text-center">No medications found.</div>';
+        const data = await resp.json();
+        const alerts = data.allergy_alerts || [];
+        if (!alerts.length) {
+            box.style.display = 'none';
+            box.innerHTML = '';
             return;
         }
+        box.style.display = 'block';
+        box.innerHTML = alerts.map(a => `
+            <div style="padding:0.55rem 0.7rem; border-radius:8px; background:#fef2f2; border-left:3px solid #dc2626; margin-top:0.4rem;">
+                <div style="font-size:0.8rem; font-weight:700; color:#991b1b;">${a.title || 'Allergy / CDS alert'}</div>
+                <div style="font-size:0.75rem; color:#7f1d1d; margin-top:0.2rem;">${a.message || a.intervention || ''}</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.warn('CDS check failed', err);
+    }
+}
 
-        matched.slice(0, 50).forEach(([id, data]) => {
-            const isOutOfStock = data.stock_quantity <= 0;
-            const itemDiv = document.createElement('div');
-            itemDiv.className = `p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex justify-between items-center ${isOutOfStock && data.visit_type === 'OUT-PATIENT' ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`;
+function getDhaFields(entry) {
+    return {
+        code: entry.querySelector('input[name$="-generic_concept_code"]'),
+        display: entry.querySelector('input[name$="-generic_concept_display"]'),
+        panel: entry.querySelector('.rx-dha-panel'),
+        status: entry.querySelector('.rx-dha-status'),
+        selected: entry.querySelector('.rx-dha-selected'),
+        results: entry.querySelector('.rx-dha-results'),
+        manual: entry.querySelector('.rx-dha-manual'),
+        manualInput: entry.querySelector('.dha-manual-search'),
+        changeBtn: entry.querySelector('.dha-change-btn'),
+        manualBtn: entry.querySelector('.dha-manual-btn'),
+        clearBtn: entry.querySelector('.dha-clear-btn'),
+    };
+}
 
-            itemDiv.innerHTML = `
-                <div>
-                    <div class="font-bold text-slate-700 text-sm flex items-center gap-2">
-                        ${data.name}
-                        ${data.is_dispensed_as_whole ? '<span class="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">Whole Unit</span>' : ''}
-                    </div>
-                    <div class="flex gap-2 mt-1">
-                        ${data.generic_name ? `<span class="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">${data.generic_name}</span>` : ''}
-                        ${data.drug_class ? `<span class="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${data.drug_class}</span>` : ''}
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-[10px] font-black uppercase tracking-widest ${isOutOfStock ? 'text-rose-500' : 'text-emerald-500'}">
-                        ${isOutOfStock ? 'Out of Stock' : `${data.stock_quantity} Available`}
-                    </div>
-                    <div class="text-[10px] font-bold text-slate-400">KES ${data.selling_price} / ${data.dispensing_unit || 'Unit'}</div>
-                </div>
-            `;
+function clearDhaSelection(entry) {
+    const dha = getDhaFields(entry);
+    if (dha.code) dha.code.value = '';
+    if (dha.display) dha.display.value = '';
+    if (dha.panel) {
+        dha.panel.hidden = true;
+        dha.panel.classList.remove('is-loading', 'is-ok', 'is-warn', 'is-error');
+    }
+    if (dha.status) dha.status.textContent = '';
+    if (dha.selected) dha.selected.innerHTML = '';
+    if (dha.results) {
+        dha.results.innerHTML = '';
+        dha.results.classList.remove('is-open');
+    }
+    if (dha.manual) dha.manual.classList.remove('is-open');
+    if (dha.changeBtn) dha.changeBtn.hidden = true;
+    if (dha.manualBtn) dha.manualBtn.hidden = true;
+    if (dha.clearBtn) dha.clearBtn.hidden = true;
+}
 
-            if (!isOutOfStock || data.visit_type !== 'OUT-PATIENT') {
-                itemDiv.addEventListener('click', () => {
-                    select.value = id;
-                    e.target.value = data.name; // Set input text
-                    resultsDiv.classList.add('hidden');
-                    updateMedDetails(select); // Trigger updates
-                    // Manually fire change event for other listeners
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
-                });
-            }
+function setDhaSelection(entry, item) {
+    const dha = getDhaFields(entry);
+    if (!dha.code || !item) return;
+    dha.code.value = item.code || '';
+    dha.display.value = item.title || '';
+    dha.panel.hidden = false;
+    dha.panel.classList.remove('is-loading', 'is-warn', 'is-error');
+    dha.panel.classList.add('is-ok');
+    dha.status.textContent = 'Matched';
+    dha.selected.innerHTML = `<code>${item.code || ''}</code>${item.title || ''}`;
+    dha.results.classList.remove('is-open');
+    dha.results.innerHTML = '';
+    dha.manual.classList.remove('is-open');
+    dha.changeBtn.hidden = false;
+    dha.manualBtn.hidden = false;
+    dha.clearBtn.hidden = false;
+    const select = entry.querySelector('select[name$="-medication"]');
+    const meta = select && medMetadata[select.value] ? medMetadata[select.value] : {};
+    runCdsMedicationCheck({
+        name: meta.name || item.title || '',
+        generic_concept_code: item.code || '',
+        generic_concept_display: item.title || '',
+        actual_product_code: '',
+        visit_id: {{ visit.pk }},
+    });
+}
 
-            resultsDiv.appendChild(itemDiv);
+function showDhaChoices(entry, results, message, stateClass) {
+    const dha = getDhaFields(entry);
+    dha.panel.hidden = false;
+    dha.panel.classList.remove('is-loading', 'is-ok', 'is-warn', 'is-error');
+    dha.panel.classList.add(stateClass || 'is-warn');
+    dha.status.textContent = message || 'Select a DHA code';
+    dha.selected.innerHTML = '';
+    dha.results.innerHTML = '';
+    (results || []).slice(0, 20).forEach((item) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rx-dha-item';
+        btn.innerHTML = `
+            <div class="rx-dha-item-code">${item.code || ''}</div>
+            <div class="rx-dha-item-title">${item.title || ''}</div>
+        `;
+        btn.addEventListener('click', () => setDhaSelection(entry, item));
+        dha.results.appendChild(btn);
+    });
+    dha.results.classList.toggle('is-open', !!(results && results.length));
+    dha.changeBtn.hidden = true;
+    dha.manualBtn.hidden = false;
+    dha.clearBtn.hidden = false;
+}
+
+async function resolveDhaMedication(entry) {
+    if (!HPT_SUGGEST_ENABLED) return;
+    const select = entry.querySelector('select[name$="-medication"]');
+    const dha = getDhaFields(entry);
+    if (!select || !select.value || !dha.panel) {
+        clearDhaSelection(entry);
+        return;
+    }
+    const data = medMetadata[select.value] || {};
+
+    // Prefer inventory master GE* code when already standardized
+    if (data.generic_concept_code) {
+        setDhaSelection(entry, {
+            code: data.generic_concept_code,
+            title: data.generic_concept_display || data.name || '',
+        });
+        dha.status.textContent = 'From inventory master';
+        return;
+    }
+
+    dha.panel.hidden = false;
+    dha.panel.classList.remove('is-ok', 'is-warn', 'is-error');
+    dha.panel.classList.add('is-loading');
+    dha.status.textContent = 'Checking with DHA…';
+    dha.selected.innerHTML = '';
+    dha.results.classList.remove('is-open');
+    dha.changeBtn.hidden = true;
+    dha.manualBtn.hidden = true;
+    dha.clearBtn.hidden = true;
+
+    const params = new URLSearchParams({
+        name: data.name || '',
+        generic_name: data.generic_name || '',
+        formulation: data.formulation || '',
+    });
+    try {
+        const resp = await fetch(`${HPT_SUGGEST_URL}?${params.toString()}`, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        });
+        const payload = await resp.json();
+        if (!payload.success) {
+            showDhaChoices(entry, [], payload.message || payload.error || 'DHA unavailable', 'is-error');
+            dha.manualBtn.hidden = false;
+            return;
+        }
+        if (payload.auto_selected && payload.suggested) {
+            setDhaSelection(entry, payload.suggested);
+            dha.status.textContent = 'Auto-matched';
+            return;
+        }
+        if ((payload.results || []).length) {
+            showDhaChoices(entry, payload.results, payload.message || 'Choose DHA product', 'is-warn');
+            return;
+        }
+        showDhaChoices(entry, [], payload.message || 'No DHA match', 'is-warn');
+    } catch (err) {
+        showDhaChoices(entry, [], 'Could not reach DHA terminology', 'is-error');
+        dha.manualBtn.hidden = false;
+    }
+}
+
+function initDhaPanel(entry) {
+    const dha = getDhaFields(entry);
+    if (!dha.panel || dha.panel.dataset.bound === '1') return;
+    dha.panel.dataset.bound = '1';
+
+    if (dha.changeBtn) {
+        dha.changeBtn.addEventListener('click', () => {
+            if (dha.code) dha.code.value = '';
+            if (dha.display) dha.display.value = '';
+            resolveDhaMedication(entry);
         });
     }
+    if (dha.clearBtn) {
+        dha.clearBtn.addEventListener('click', () => clearDhaSelection(entry));
+    }
+    if (dha.manualBtn) {
+        dha.manualBtn.addEventListener('click', () => {
+            dha.manual.classList.add('is-open');
+            if (dha.manualInput) dha.manualInput.focus();
+        });
+    }
+    if (dha.manualInput) {
+        let timer = null;
+        dha.manualInput.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+                const q = dha.manualInput.value.trim();
+                if (q.length < 2) return;
+                dha.status.textContent = 'Searching…';
+                try {
+                    const resp = await fetch(
+                        `${HPT_SEARCH_URL}?q=${encodeURIComponent(q)}&prefer=ge&limit=20`,
+                        { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' }
+                    );
+                    const payload = await resp.json();
+                    showDhaChoices(
+                        entry,
+                        payload.results || [],
+                        payload.message || 'Select a concept',
+                        payload.success ? 'is-warn' : 'is-error'
+                    );
+                    dha.manual.classList.add('is-open');
+                } catch (err) {
+                    showDhaChoices(entry, [], 'Search failed', 'is-error');
+                }
+            }, 280);
+        });
+    }
+}
 
-    function updatePricePreview(entry) {
-        const select = entry.querySelector('select[name$="-medication"]');
-        if (!select.value) return;
+function initializeSearchWidget(entry) {
+    const select = entry.querySelector('select[name$="-medication"]');
+    const container = entry.querySelector('.search-container');
 
-        const data = medMetadata[select.value];
-        const quantityInput = entry.querySelector('input[name$="-quantity"]');
-        
-        // --- AUTO-CALCULATION LOGIC ---
-        const doseInput = entry.querySelector('input[name$="-dose_count"]');
-        const freqSelect = entry.querySelector('select[name$="-frequency"]');
-        const daysInput = entry.querySelector('input[name$="-number_of_days"]');
-        
-        const dose = parseFloat(doseInput.value) || 0;
-        const freq = freqSelect.value;
-        const days = parseInt(daysInput.value) || 0;
+    select.classList.add('hidden');
 
-        const freqMap = {
-            'Once Daily': 1,
-            'Twice Daily': 2,
-            'Thrice Daily': 3,
-            'Four Times Daily': 4,
-            'Every 6 Hours': 4,
-            'Every 8 Hours': 3,
-            'Every 12 Hours': 2,
-            'Every 24 Hours': 1
-        };
+    if (!container.querySelector('.med-search-input')) {
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'med-search-input';
+        searchInput.placeholder = 'Search by name, generic, or class…';
 
-        const isWhole = data.is_dispensed_as_whole;
-        const isAsNeeded = freq === 'As Needed';
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'med-search-results absolute z-50 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-xl mt-2 max-h-60 overflow-y-auto hidden';
 
-        if (!isWhole && !isAsNeeded && dose > 0 && days > 0 && freqMap[freq]) {
-            const calculatedQty = dose * freqMap[freq] * days;
-            quantityInput.value = calculatedQty;
-            quantityInput.readOnly = true;
-            quantityInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
-        } else {
-            quantityInput.readOnly = false;
-            quantityInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
-        }
-        // --- END AUTO-CALCULATION ---
+        container.insertBefore(searchInput, select);
+        container.appendChild(resultsDiv);
 
-        const quant = parseFloat(quantityInput.value) || 0;
-        const hintDiv = entry.querySelector('.med-details-hint');
+        searchInput.addEventListener('input', (e) => handleSearch(e, resultsDiv, select));
+        searchInput.addEventListener('focus', (e) => handleSearch(e, resultsDiv, select));
 
-        // Validation: Stock Check
-        if (data && quant > data.stock_quantity) {
-            quantityInput.setCustomValidity(`Cannot prescribe more than available stock (${data.stock_quantity}).`);
-            quantityInput.reportValidity();
-            quantityInput.classList.add('border-rose-500', 'focus:border-rose-500');
-        } else {
-            quantityInput.setCustomValidity('');
-            quantityInput.classList.remove('border-rose-500', 'focus:border-rose-500');
-        }
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                resultsDiv.classList.add('hidden');
+            }
+        });
 
-        // Remove existing price badge if any
-        const oldPrice = hintDiv.querySelector('.price-badge');
-        if (oldPrice) oldPrice.remove();
-
-        if (data && quant > 0) {
-            const price = (parseFloat(data.selling_price) * quant).toFixed(2);
-            const pBadge = document.createElement('span');
-            pBadge.className = 'price-badge px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black border border-emerald-100 flex items-center gap-1';
-            pBadge.innerHTML = `<i class="fas fa-tag opacity-50"></i> EST. KES ${price}`;
-            hintDiv.appendChild(pBadge);
+        if (select.value && medMetadata[select.value]) {
+            searchInput.value = medMetadata[select.value].name;
+            updateMedDetails(select);
         }
     }
+    initDhaPanel(entry);
+}
 
-    function updateMedDetails(select) {
-        const entry = select.closest('.medication-entry');
-        const hintDiv = entry.querySelector('.med-details-hint');
-        const drugId = select.value;
-        const data = medMetadata[drugId];
-        const quantityInput = entry.querySelector('input[name$="-quantity"]');
-        const quantityLabel = entry.querySelector('label[for$="-quantity"]') || quantityInput.previousElementSibling; // Fallback
+function handleSearch(e, resultsDiv, select) {
+    const query = e.target.value.toLowerCase();
+    resultsDiv.innerHTML = '';
+    resultsDiv.classList.remove('hidden');
 
-        hintDiv.innerHTML = '';
-        if (data) {
-            // Add Generic Name Badge
-            if (data.generic_name) {
-                const gBadge = document.createElement('span');
-                gBadge.className = 'px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black border border-indigo-100';
-                gBadge.textContent = data.generic_name;
-                hintDiv.appendChild(gBadge);
-            }
-            // Add Formulation Badge
-            if (data.formulation) {
-                const fBadge = document.createElement('span');
-                fBadge.className = 'px-2 py-0.5 bg-slate-50 text-slate-600 rounded text-[9px] font-black border border-slate-100';
-                fBadge.textContent = data.formulation;
-                hintDiv.appendChild(fBadge);
-            }
-            // Add Stock Badge
-            const sBadge = document.createElement('span');
-            const isLow = data.stock_quantity < 10;
-            sBadge.className = `px-2 py-0.5 rounded text-[9px] font-black border ${isLow ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`;
-            sBadge.textContent = `${data.stock_quantity} ${data.dispensing_unit || 'Units'} in Stock`;
-            hintDiv.appendChild(sBadge);
+    const matched = Object.entries(medMetadata).filter(([id, data]) => {
+        return data.name.toLowerCase().includes(query) ||
+            data.generic_name.toLowerCase().includes(query) ||
+            data.drug_class.toLowerCase().includes(query);
+    });
 
+    if (matched.length === 0) {
+        resultsDiv.innerHTML = '<div class="p-4 text-xs font-medium text-slate-400 text-center">No medications found.</div>';
+        return;
+    }
+
+    matched.slice(0, 50).forEach(([id, data]) => {
+        const isOutOfStock = data.stock_quantity <= 0;
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex justify-between items-center ${isOutOfStock && data.visit_type === 'OUT-PATIENT' ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`;
+
+        itemDiv.innerHTML = `
+            <div>
+                <div class="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                    ${data.name}
+                    ${data.is_dispensed_as_whole ? '<span class="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Whole unit</span>' : ''}
+                </div>
+                <div class="flex gap-2 mt-1">
+                    ${data.generic_name ? `<span class="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">${data.generic_name}</span>` : ''}
+                    ${data.drug_class ? `<span class="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${data.drug_class}</span>` : ''}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-[11px] font-semibold ${isOutOfStock ? 'text-rose-500' : 'text-emerald-600'}">
+                    ${isOutOfStock ? 'Out of stock' : `${data.stock_quantity} available`}
+                </div>
+                <div class="text-[11px] font-medium text-slate-400">KES ${data.selling_price} / ${data.dispensing_unit || 'Unit'}</div>
+            </div>
+        `;
+
+        if (!isOutOfStock || data.visit_type !== 'OUT-PATIENT') {
+            itemDiv.addEventListener('click', () => {
+                select.value = id;
+                e.target.value = data.name;
+                resultsDiv.classList.add('hidden');
+                updateMedDetails(select);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+
+        resultsDiv.appendChild(itemDiv);
+    });
+}
+
+function updatePricePreview(entry) {
+    const select = entry.querySelector('select[name$="-medication"]');
+    if (!select.value) return;
+
+    const data = medMetadata[select.value];
+    const quantityInput = entry.querySelector('input[name$="-quantity"]');
+
+    const doseInput = entry.querySelector('input[name$="-dose_count"]');
+    const freqSelect = entry.querySelector('select[name$="-frequency"]');
+    const daysInput = entry.querySelector('input[name$="-number_of_days"]');
+
+    const dose = parseFloat(doseInput.value) || 0;
+    const freq = freqSelect.value;
+    const days = parseInt(daysInput.value) || 0;
+
+    const freqMap = {
+        'Once Daily': 1,
+        'Twice Daily': 2,
+        'Thrice Daily': 3,
+        'Four Times Daily': 4,
+        'Every 6 Hours': 4,
+        'Every 8 Hours': 3,
+        'Every 12 Hours': 2,
+        'Every 24 Hours': 1
+    };
+
+    const isWhole = data.is_dispensed_as_whole;
+    const isAsNeeded = freq === 'As Needed';
+
+    if (!isWhole && !isAsNeeded && dose > 0 && days > 0 && freqMap[freq]) {
+        const calculatedQty = dose * freqMap[freq] * days;
+        quantityInput.value = calculatedQty;
+        quantityInput.readOnly = true;
+        quantityInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+    } else {
+        quantityInput.readOnly = false;
+        quantityInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+    }
+
+    const quant = parseFloat(quantityInput.value) || 0;
+    const hintDiv = entry.querySelector('.med-details-hint');
+
+    if (data && quant > data.stock_quantity) {
+        quantityInput.setCustomValidity(`Cannot prescribe more than available stock (${data.stock_quantity}).`);
+        quantityInput.reportValidity();
+        quantityInput.classList.add('border-rose-500', 'focus:border-rose-500');
+    } else {
+        quantityInput.setCustomValidity('');
+        quantityInput.classList.remove('border-rose-500', 'focus:border-rose-500');
+    }
+
+    const oldPrice = hintDiv.querySelector('.price-badge');
+    if (oldPrice) oldPrice.remove();
+
+    if (data && quant > 0) {
+        const price = (parseFloat(data.selling_price) * quant).toFixed(2);
+        const pBadge = document.createElement('span');
+        pBadge.className = 'price-badge px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold border border-emerald-100 inline-flex items-center gap-1';
+        pBadge.innerHTML = `<i class="fas fa-tag opacity-50"></i> Est. KES ${price}`;
+        hintDiv.appendChild(pBadge);
+    }
+}
+
+function hideWholeDispenseNotice(entry) {
+    const wholeNotice = entry && entry.querySelector('.whole-dispense-notice');
+    if (!wholeNotice) return;
+    wholeNotice.classList.remove('is-visible');
+    wholeNotice.innerHTML = `
+        <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
+        <p class="text-[11px] font-semibold text-amber-900 leading-snug">Note: This item is usually prescribed as a whole package.</p>
+    `;
+}
+
+function showWholeDispenseNotice(entry, data) {
+    const wholeNotice = entry && entry.querySelector('.whole-dispense-notice');
+    if (!wholeNotice || !data) return;
+    wholeNotice.innerHTML = `
+        <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
+        <div>
+            <p class="text-xs font-semibold text-amber-900 mb-0.5">Whole unit dispensing</p>
+            <p class="text-xs text-amber-800">
+                Dispensed as a whole <b>${data.dispensing_unit || 'unit'}</b>. Enter number of ${data.dispensing_unit || 'unit'}s, not tablets/ml.
+            </p>
+        </div>
+    `;
+    wholeNotice.classList.add('is-visible');
+}
+
+function updateMedDetails(select) {
+    const entry = select.closest('.medication-entry');
+    const hintDiv = entry.querySelector('.med-details-hint');
+    const drugId = select.value;
+    const data = medMetadata[drugId];
+    const quantityInput = entry.querySelector('input[name$="-quantity"]');
+    const quantityLabel = quantityInput
+        ? (entry.querySelector(`label[for="${quantityInput.id}"]`) || quantityInput.closest('div')?.querySelector('.rx-label'))
+        : null;
+
+    hintDiv.innerHTML = '';
+    if (!drugId || !data) {
+        hideWholeDispenseNotice(entry);
+        clearDhaSelection(entry);
+        return;
+    }
+
+    if (data.generic_name) {
+        const gBadge = document.createElement('span');
+        gBadge.className = 'px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-semibold border border-indigo-100';
+        gBadge.textContent = data.generic_name;
+        hintDiv.appendChild(gBadge);
+    }
+    if (data.formulation) {
+        const fBadge = document.createElement('span');
+        fBadge.className = 'px-2 py-0.5 bg-slate-50 text-slate-600 rounded text-[10px] font-semibold border border-slate-100';
+        fBadge.textContent = data.formulation;
+        hintDiv.appendChild(fBadge);
+    }
+    const sBadge = document.createElement('span');
+    const isLow = data.stock_quantity < 10;
+    sBadge.className = `px-2 py-0.5 rounded text-[10px] font-semibold border ${isLow ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`;
+    sBadge.textContent = `${data.stock_quantity} ${data.dispensing_unit || 'Units'} in stock`;
+    hintDiv.appendChild(sBadge);
+
+    updatePricePreview(entry);
+    initDhaPanel(entry);
+    resolveDhaMedication(entry);
+
+    const doseInput = entry.querySelector('input[name$="-dose_count"]');
+    const doseUnitContainer = entry.querySelector('.dose-unit-container');
+
+    if (data.is_dispensed_as_whole) {
+        showWholeDispenseNotice(entry, data);
+        quantityInput.step = "1";
+        quantityInput.min = "1";
+        if (!quantityInput.value || quantityInput.value == 0) {
+            quantityInput.value = 1;
+        }
+        doseInput.step = "any";
+        if (quantityLabel) quantityLabel.textContent = `Total quantity (${data.dispensing_unit}) *`;
+    } else {
+        hideWholeDispenseNotice(entry);
+        quantityInput.step = "1";
+        quantityInput.min = "1";
+        if (quantityLabel) quantityLabel.textContent = 'Total quantity *';
+        doseInput.step = "1";
+        if (doseInput.value) {
+            const roundedDose = Math.round(parseFloat(doseInput.value) || 0) || 1;
+            if (doseInput.value != roundedDose) doseInput.value = roundedDose;
+        }
+        if (doseUnitContainer) doseUnitContainer.classList.add('hidden');
+    }
+}
+
+document.addEventListener('change', (e) => {
+    if (e.target.matches('select[name$="-medication"]')) {
+        updateMedDetails(e.target);
+    }
+});
+
+document.addEventListener('input', (e) => {
+    if (e.target.matches('input[name$="-quantity"], input[name$="-dose_count"], input[name$="-number_of_days"]')) {
+        const entry = e.target.closest('.medication-entry');
+        if (entry) {
             updatePricePreview(entry);
-
-            // Toggle whole dispense notice and enforce integer steps
-            const wholeNotice = entry.querySelector('.whole-dispense-notice');
-            const doseInput = entry.querySelector('input[name$="-dose_count"]');
-            const doseUnitContainer = entry.querySelector('.dose-unit-container');
-
-            if (data.is_dispensed_as_whole) {
-                if (wholeNotice) {
-                    wholeNotice.classList.remove('hidden');
-                    wholeNotice.innerHTML = `
-                        <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
-                        <div>
-                            <p class="text-[10px] font-black text-amber-900 uppercase tracking-tight leading-tight mb-1">
-                                Whole Unit Dispensing
-                            </p>
-                            <p class="text-xs text-amber-800">
-                                This item is dispensed as a <b>whole ${data.dispensing_unit}</b>. Please enter the number of ${data.dispensing_unit}s (e.g., 1, 2), NOT tablets/ml.
-                            </p>
-                        </div>
-                     `;
+            if (e.target.name.endsWith('-dose_count')) {
+                const val = e.target.value;
+                const unitContainer = entry.querySelector('.dose-unit-container');
+                if (val.includes('.') && parseFloat(val) % 1 !== 0) {
+                    unitContainer.classList.remove('hidden');
+                } else {
+                    unitContainer.classList.add('hidden');
                 }
-                quantityInput.step = "1";
-                quantityInput.min = "1";
-                if (!quantityInput.value || quantityInput.value == 0) {
-                    quantityInput.value = 1;
+            }
+        }
+    }
+});
+
+document.addEventListener('change', (e) => {
+    if (e.target.matches('select[name$="-frequency"]')) {
+        const entry = e.target.closest('.medication-entry');
+        if (entry) updatePricePreview(entry);
+    }
+});
+
+document.addEventListener('keypress', (e) => {
+    if (e.target.matches('input[name$="-dose_count"], input[name$="-quantity"], input[name$="-number_of_days"]')) {
+        if (e.target.step === "1" && (e.key === "." || e.key === "," || e.key === "e" || e.key === "E")) {
+            e.preventDefault();
+        }
+    }
+});
+
+document.querySelectorAll('.medication-entry').forEach(entry => {
+    initializeSearchWidget(entry);
+});
+initAllIcd11DiagnosisPickers();
+refreshMedsTable();
+
+function getComposerEntry() {
+    return document.querySelector('#medication-formset > .medication-entry:not(.is-committed)');
+}
+
+function refreshMedsTable() {
+    const tbody = document.getElementById('meds-table-body');
+    const empty = document.getElementById('meds-empty');
+    const table = document.getElementById('meds-table');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const committed = document.querySelectorAll('.medication-entry.is-committed');
+    const visible = Array.from(committed).filter(entry => {
+        const del = entry.querySelector('input[name$="-DELETE"]');
+        return !(del && del.checked);
+    });
+
+    if (!visible.length) {
+        if (empty) empty.style.display = '';
+        if (table) table.style.display = 'none';
+        return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    if (table) table.style.display = '';
+
+    visible.forEach((entry) => {
+        const select = entry.querySelector('select[name$="-medication"]');
+        const dose = entry.querySelector('input[name$="-dose_count"]');
+        const doseUnit = entry.querySelector('input[name$="-dose_unit"]');
+        const freq = entry.querySelector('select[name$="-frequency"]');
+        const days = entry.querySelector('input[name$="-number_of_days"]');
+        const qty = entry.querySelector('input[name$="-quantity"]');
+        const instructions = entry.querySelector('textarea[name$="-instructions"]');
+        const dhaCode = entry.querySelector('input[name$="-generic_concept_code"]');
+        const dhaDisplay = entry.querySelector('input[name$="-generic_concept_display"]');
+        const data = medMetadata[select.value] || {};
+        const unitPart = doseUnit && doseUnit.value ? ` ${doseUnit.value}` : '';
+        const doseText = `${dose.value || '—'}${unitPart}`;
+        const freqText = freq.options[freq.selectedIndex] ? freq.options[freq.selectedIndex].text : (freq.value || '—');
+        const dhaMeta = dhaCode && dhaCode.value
+            ? `${dhaCode.value}${dhaDisplay && dhaDisplay.value ? ' · ' + dhaDisplay.value : ''}`
+            : '';
+
+        const tr = document.createElement('tr');
+        tr.dataset.entryId = entry.dataset.entryKey || '';
+        tr.innerHTML = `
+            <td>
+                <div class="drug-name">${data.name || select.options[select.selectedIndex]?.text || 'Medicine'}</div>
+                <div class="drug-meta">${[
+                    data.generic_name || '',
+                    dhaMeta,
+                    instructions && instructions.value ? instructions.value : ''
+                ].filter(Boolean).join(' · ') || '—'}</div>
+            </td>
+            <td>${doseText}</td>
+            <td>${freqText}</td>
+            <td>${days.value || '—'}</td>
+            <td>${qty.value || '—'}</td>
+            <td style="text-align:right;">
+                <button type="button" class="rx-remove" title="Remove" aria-label="Remove medicine">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+        tr.querySelector('button').addEventListener('click', () => removeCommittedMedication(entry));
+        tbody.appendChild(tr);
+    });
+}
+
+function commitMedication() {
+    const entry = getComposerEntry();
+    if (!entry) return;
+
+    const select = entry.querySelector('select[name$="-medication"]');
+    const dose = entry.querySelector('input[name$="-dose_count"]');
+    const freq = entry.querySelector('select[name$="-frequency"]');
+    const days = entry.querySelector('input[name$="-number_of_days"]');
+    const qty = entry.querySelector('input[name$="-quantity"]');
+
+    if (!select.value) {
+        select.setCustomValidity('Select a medicine');
+        select.reportValidity();
+        const search = entry.querySelector('.med-search-input');
+        if (search) search.focus();
+        return;
+    }
+    select.setCustomValidity('');
+
+    if (!dose.value || Number(dose.value) <= 0) {
+        dose.reportValidity();
+        dose.focus();
+        return;
+    }
+    if (!freq.value) {
+        freq.reportValidity();
+        freq.focus();
+        return;
+    }
+    if (!days.value || Number(days.value) <= 0) {
+        days.reportValidity();
+        days.focus();
+        return;
+    }
+    if (!qty.value || Number(qty.value) <= 0) {
+        qty.reportValidity();
+        qty.focus();
+        return;
+    }
+
+    const data = medMetadata[select.value];
+    if (data && Number(qty.value) > data.stock_quantity) {
+        qty.setCustomValidity(`Cannot prescribe more than available stock (${data.stock_quantity}).`);
+        qty.reportValidity();
+        return;
+    }
+    qty.setCustomValidity('');
+
+    const dhaCode = entry.querySelector('input[name$="-generic_concept_code"]');
+    if (HPT_REQUIRE_CODE && (!dhaCode || !dhaCode.value)) {
+        if (dhaCode) {
+            dhaCode.setCustomValidity('Select a DHA generic product code for this medicine');
+            dhaCode.reportValidity();
+        }
+        const panel = entry.querySelector('.rx-dha-panel');
+        if (panel) {
+            panel.hidden = false;
+            panel.classList.add('is-error');
+        }
+        return;
+    }
+    if (dhaCode) dhaCode.setCustomValidity('');
+
+    entry.classList.add('is-committed');
+    entry.dataset.entryKey = 'med-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    document.getElementById('medication-formset-store').appendChild(entry);
+    refreshMedsTable();
+    addMedication();
+}
+
+function removeCommittedMedication(entry) {
+    const deleteCheckbox = entry.querySelector('input[name$="-DELETE"]');
+    if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+    }
+    entry.classList.add('is-committed');
+    entry.style.display = 'none';
+    if (!entry.parentElement || entry.parentElement.id !== 'medication-formset-store') {
+        document.getElementById('medication-formset-store').appendChild(entry);
+    }
+    refreshMedsTable();
+}
+
+function addMedication() {
+    const composer = document.getElementById('medication-formset');
+    const store = document.getElementById('medication-formset-store');
+    const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+    const currentCount = parseInt(totalForms.value, 10);
+
+    const template =
+        store.querySelector('.medication-entry') ||
+        composer.querySelector('.medication-entry') ||
+        document.querySelector('.medication-entry');
+    if (!template) return;
+
+    const newEntry = template.cloneNode(true);
+    newEntry.classList.remove('is-committed');
+    newEntry.style.display = '';
+    newEntry.style.background = 'transparent';
+    newEntry.style.border = 'none';
+    newEntry.style.padding = '0';
+    newEntry.style.margin = '0';
+    newEntry.dataset.formIndex = String(currentCount);
+    newEntry.dataset.entryKey = '';
+
+    newEntry.innerHTML = newEntry.innerHTML.replace(/items-\d+-/g, `items-${currentCount}-`);
+
+    const badge = newEntry.querySelector('.med-badge');
+    if (badge) badge.textContent = `Drug #${currentCount + 1}`;
+    const hint = newEntry.querySelector('.med-details-hint');
+    if (hint) hint.innerHTML = '';
+
+    const dhaPanel = newEntry.querySelector('.rx-dha-panel');
+    if (dhaPanel) {
+        delete dhaPanel.dataset.bound;
+        dhaPanel.hidden = true;
+        dhaPanel.classList.remove('is-loading', 'is-ok', 'is-warn', 'is-error');
+    }
+    newEntry.querySelectorAll('input[name$="-generic_concept_code"], input[name$="-generic_concept_display"]').forEach((el) => {
+        el.value = '';
+    });
+    const dhaSelected = newEntry.querySelector('.rx-dha-selected');
+    if (dhaSelected) dhaSelected.innerHTML = '';
+    const dhaResults = newEntry.querySelector('.rx-dha-results');
+    if (dhaResults) {
+        dhaResults.innerHTML = '';
+        dhaResults.classList.remove('is-open');
+    }
+    const dhaManual = newEntry.querySelector('.rx-dha-manual');
+    if (dhaManual) dhaManual.classList.remove('is-open');
+    const dhaManualInput = newEntry.querySelector('.dha-manual-search');
+    if (dhaManualInput) dhaManualInput.value = '';
+
+    const existingSearch = newEntry.querySelector('.med-search-input');
+    if (existingSearch) existingSearch.remove();
+    const existingResults = newEntry.querySelector('.med-search-results');
+    if (existingResults) existingResults.remove();
+
+    const select = newEntry.querySelector('select');
+    if (select) select.classList.remove('hidden');
+
+    newEntry.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+        if (el.name && el.name.endsWith('-DELETE')) {
+            el.checked = false;
+            return;
+        }
+        el.value = '';
+        el.readOnly = false;
+        if (el.name && el.name.endsWith('-quantity')) {
+            el.type = 'number';
+            el.classList.remove('border-rose-500', 'focus:border-rose-500');
+            el.setCustomValidity('');
+        }
+        el.classList.remove('bg-slate-50', 'opacity-60', 'opacity-80', 'font-black', 'text-slate-500', 'cursor-not-allowed', 'text-center');
+    });
+
+    const wholeNotice = newEntry.querySelector('.whole-dispense-notice');
+    if (wholeNotice) {
+        wholeNotice.classList.remove('is-visible', 'hidden');
+        wholeNotice.innerHTML = `
+            <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
+            <p class="text-[11px] font-semibold text-amber-900 leading-snug">Note: This item is usually prescribed as a whole package.</p>
+        `;
+    }
+
+    // Keep only one live composer form in the composer box
+    Array.from(composer.querySelectorAll('.medication-entry')).forEach(el => {
+        if (!el.classList.contains('is-committed')) {
+            store.appendChild(el);
+            el.classList.add('is-committed');
+            el.style.display = 'none';
+            const del = el.querySelector('input[name$="-DELETE"]');
+            const med = el.querySelector('select[name$="-medication"]');
+            if (del && med && !med.value) {
+                del.checked = true;
+            }
+        }
+    });
+
+    const actions = composer.querySelector('.rx-composer-actions');
+    if (actions) composer.insertBefore(newEntry, actions);
+    else composer.appendChild(newEntry);
+
+    initializeSearchWidget(newEntry);
+    totalForms.value = currentCount + 1;
+
+    const search = newEntry.querySelector('.med-search-input');
+    if (search) search.focus();
+}
+
+function removeMedication(btn) {
+    const entry = btn.closest('.medication-entry');
+    if (entry) removeCommittedMedication(entry);
+}
+
+// Promote any prefilled formset rows (validation redisplay) into the table
+(function hydrateCommittedFromServer() {
+    document.querySelectorAll('#medication-formset .medication-entry').forEach((entry, idx) => {
+        const select = entry.querySelector('select[name$="-medication"]');
+        if (select && select.value) {
+            entry.classList.add('is-committed');
+            entry.dataset.entryKey = 'server-' + idx;
+            document.getElementById('medication-formset-store').appendChild(entry);
+        }
+    });
+    if (!getComposerEntry()) {
+        addMedication();
+    } else {
+        refreshMedsTable();
+    }
+})();
+
+(function initPrescriptionSubmitGuard() {
+    const form = document.getElementById('prescription-form');
+    if (!form) return;
+
+    let submitting = false;
+
+    form.addEventListener('submit', function (e) {
+        const composer = getComposerEntry();
+        if (composer) {
+            const select = composer.querySelector('select[name$="-medication"]');
+            if (select && select.value) {
+                // User filled the composer but didn't click Add — commit it first
+                const dose = composer.querySelector('input[name$="-dose_count"]');
+                const freq = composer.querySelector('select[name$="-frequency"]');
+                const days = composer.querySelector('input[name$="-number_of_days"]');
+                const qty = composer.querySelector('input[name$="-quantity"]');
+                if (!dose.value || !freq.value || !days.value || !qty.value) {
+                    e.preventDefault();
+                    commitMedication();
+                    return;
                 }
-                
-                // Allow decimals for dose_count if whole unit (e.g., ml)
-                doseInput.step = "any";
-                
-                if (quantityLabel) quantityLabel.innerHTML = `Total Quantity (${data.dispensing_unit}) *`;
+                composer.classList.add('is-committed');
+                composer.dataset.entryKey = 'med-auto-' + Date.now();
+                document.getElementById('medication-formset-store').appendChild(composer);
+                refreshMedsTable();
             } else {
-                if (wholeNotice) wholeNotice.classList.add('hidden');
-                quantityInput.step = "1";
-                quantityInput.min = "1";
-                if (quantityLabel) quantityLabel.innerHTML = `Total Quantity *`;
-                
-                // RESTRICT decimals for dose_count if NOT whole unit (e.g., tablets)
-                doseInput.step = "1";
-                if (doseInput.value) {
-                    const roundedDose = Math.round(parseFloat(doseInput.value) || 0) || 1;
-                    if (doseInput.value != roundedDose) doseInput.value = roundedDose;
-                }
-                
-                if (doseUnitContainer) doseUnitContainer.classList.add('hidden');
+                const del = composer.querySelector('input[name$="-DELETE"]');
+                if (del) del.checked = true;
             }
         }
-    }
 
-    // Attach listeners to all inputs and selects
-    document.addEventListener('change', (e) => {
-        if (e.target.matches('select[name$="-medication"]')) {
-            updateMedDetails(e.target);
+        if (submitting) {
+            e.preventDefault();
+            return;
         }
-    });
+        submitting = true;
 
-    document.addEventListener('input', (e) => {
-        if (e.target.matches('input[name$="-quantity"], input[name$="-dose_count"], input[name$="-number_of_days"]')) {
-            const entry = e.target.closest('.medication-entry');
-            if (entry) {
-                updatePricePreview(entry);
-                
-                // Show/hide dose_unit based on decimal
-                if (e.target.name.endsWith('-dose_count')) {
-                    const val = e.target.value;
-                    const unitContainer = entry.querySelector('.dose-unit-container');
-                    if (val.includes('.') && parseFloat(val) % 1 !== 0) {
-                        unitContainer.classList.remove('hidden');
-                    } else {
-                        unitContainer.classList.add('hidden');
-                    }
-                }
-            }
-        }
-    });
-
-    document.addEventListener('change', (e) => {
-        if (e.target.matches('select[name$="-frequency"]')) {
-            const entry = e.target.closest('.medication-entry');
-            if (entry) updatePricePreview(entry);
-        }
-    });
-
-    // Prevent decimal input on the UI by making input to accept whole numbers only where required
-    document.addEventListener('keypress', (e) => {
-        if (e.target.matches('input[name$="-dose_count"], input[name$="-quantity"], input[name$="-number_of_days"]')) {
-            if (e.target.step === "1" && (e.key === "." || e.key === "," || e.key === "e" || e.key === "E")) {
-                e.preventDefault();
-            }
-        }
-    });
-
-
-    // Initial load
-    document.querySelectorAll('.medication-entry').forEach(entry => {
-        initializeSearchWidget(entry);
-    });
-
-    function confirmPrescribeClose() {
-        // Since modal is moved to body, we must find inputs carefully.
-        // The action input is inside the form, which is NOT in the modal.
-        const actionInput = document.getElementById('form-action');
-        const form = document.getElementById('prescription-form');
-
-        if (actionInput && form) {
-            actionInput.value = 'prescribe_close';
-            form.submit();
-        } else {
-            console.error('Form or action input not found');
-            alert('Error: Could not submit form. Please try again.');
-        }
-    }
-    function addMedication() {
-        const container = document.getElementById('medication-formset');
-        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
-        const currentCount = parseInt(totalForms.value);
-
-        const firstEntry = container.querySelector('.medication-entry');
-        const newEntry = firstEntry.cloneNode(true);
-
-        // Update index
-        const newIndex = currentCount;
-        newEntry.innerHTML = newEntry.innerHTML.replace(/items-0-/g, `items-${newIndex}-`);
-        newEntry.querySelector('.med-badge').textContent = `Drug #${newIndex + 1}`;
-        newEntry.querySelector('.med-details-hint').innerHTML = ''; // Clear hint
-
-        // Remove initialized search widget artifacts to re-initialize cleanly
-        const existingSearch = newEntry.querySelector('.med-search-input');
-        if (existingSearch) existingSearch.remove();
-        const existingResults = newEntry.querySelector('.med-search-results');
-        if (existingResults) existingResults.remove();
-        const select = newEntry.querySelector('select');
-        select.classList.remove('hidden'); // Show temporarily for value reset via default logic logic below (or just keep logic clean)
-
-        // Clear value and state of new inputs
-        newEntry.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
-            el.value = '';
-            el.readOnly = false;
-            // Reset type if it was changed to text for "Full Dosage"
-            if (el.name.endsWith('-quantity')) {
-                el.type = 'number';
-                el.classList.remove('border-rose-500', 'focus:border-rose-500');
-                el.setCustomValidity('');
-            }
-
-            el.classList.remove('bg-slate-50', 'opacity-60', 'opacity-80', 'font-black', 'text-slate-500', 'cursor-not-allowed', 'text-center');
+        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+            btn.disabled = true;
         });
 
-        // Ensure remove button exists
-        if (!newEntry.querySelector('.remove-btn')) {
-            const header = newEntry.querySelector('.medication-header');
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'remove-btn';
-            removeBtn.onclick = function () { removeMedication(this); };
-            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            header.appendChild(removeBtn);
-        }
-
-        // Ensure notice is hidden for new row
-        const wholeNotice = newEntry.querySelector('.whole-dispense-notice');
-        if (wholeNotice) wholeNotice.classList.add('hidden');
-
-        container.appendChild(newEntry);
-        initializeSearchWidget(newEntry); // Initialize new widget
-        totalForms.value = currentCount + 1;
-    }
-
-    function removeMedication(btn) {
-        const entry = btn.closest('.medication-entry');
-        const deleteCheckbox = entry.querySelector('input[name$="-DELETE"]');
-
-        if (deleteCheckbox) {
-            deleteCheckbox.checked = true;
-            entry.style.display = 'none';
-        } else {
-            entry.remove();
-            const totalForms = document.getElementById('id_items-TOTAL_FORMS');
-            totalForms.value = parseInt(totalForms.value) - 1;
-        }
-    }
-
-    function showCloseVisitModal() {
-        const modal = document.getElementById('closeVisitModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'block'; // Force display
-            document.body.appendChild(modal); // Ensure it's on top
-        } else {
-            console.error('Modal element not found');
-        }
-    }
-
-    function hideCloseVisitModal() {
-        const modal = document.getElementById('closeVisitModal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none'; // Force hide
-        }
-    }
-
-    (function initPrescriptionSubmitGuard() {
-        const form = document.getElementById('prescription-form');
-        if (!form) return;
-
-        let submitting = false;
-
-        form.addEventListener('submit', function (e) {
-            if (submitting) {
-                e.preventDefault();
-                return;
+        form.querySelectorAll('.prescribe-submit-btn').forEach(function (btn) {
+            const icon = btn.querySelector('.prescribe-submit-icon');
+            const label = btn.querySelector('.prescribe-submit-label');
+            if (icon) {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-spinner', 'fa-spin');
             }
-            submitting = true;
-
-            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
-                btn.disabled = true;
-            });
-
-            form.querySelectorAll('.prescribe-submit-btn').forEach(function (btn) {
-                const icon = btn.querySelector('.prescribe-submit-icon');
-                const label = btn.querySelector('.prescribe-submit-label');
-                if (icon) {
-                    icon.classList.remove('fa-check');
-                    icon.classList.add('fa-spinner', 'fa-spin');
-                }
-                if (label) {
-                    label.textContent = 'Saving…';
-                }
-            });
+            if (label) {
+                label.textContent = 'Saving…';
+            }
         });
-    })();
-    </script>
+    });
+})();
+</script>
 {% endblock %}

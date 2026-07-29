@@ -48,6 +48,7 @@
                     <div class="section-header">
                         <div class="section-number">1</div>
                         <h3>Personal Information</h3>
+                        <span class="badge badge-billing" style="background:#0f766e;">KNHTS / KPS.A</span>
                     </div>
                     <div class="form-grid-premium">
                         <div class="form-group-premium">
@@ -67,19 +68,12 @@
                             {{ form.last_name.errors }}
                         </div>
                         <div class="form-group-premium">
-                            <label for="{{ form.id_number.id_for_label }}">ID Number</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-id-card input-icon"></i>
-                                {{ form.id_number }}
-                            </div>
-                            {{ form.id_number.errors }}
-                        </div>
-                        <div class="form-group-premium">
-                            <label for="{{ form.gender.id_for_label }}">Gender</label>
+                            <label for="{{ form.gender.id_for_label }}">Sex / Gender (KNHTS)</label>
                             <div class="input-wrapper">
                                 <i class="fas fa-venus-mars input-icon"></i>
                                 {{ form.gender }}
                             </div>
+                            <small class="helper-text">HL7 Administrative Gender (male / female / other / unknown)</small>
                             {{ form.gender.errors }}
                         </div>
                         <div class="form-group-premium">
@@ -90,6 +84,94 @@
                             </div>
                             {{ form.date_of_birth.errors }}
                         </div>
+                    </div>
+                </div>
+
+                <!-- Identification Section -->
+                <div class="form-section-card">
+                    <div class="section-header">
+                        <div class="section-number">2</div>
+                        <h3>Government Identifiers</h3>
+                    </div>
+                    <div class="form-grid-premium">
+                        <div class="form-group-premium">
+                            <label for="{{ form.id_type.id_for_label }}">Primary ID Type</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-passport input-icon"></i>
+                                {{ form.id_type }}
+                            </div>
+                            <small class="helper-text">{{ form.id_type.help_text }}</small>
+                            {{ form.id_type.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.id_number.id_for_label }}">Primary ID Number</label>
+                            <div class="input-wrapper sha-id-row">
+                                <i class="fas fa-id-card input-icon"></i>
+                                {{ form.id_number }}
+                                {% if not form.instance.pk %}
+                                <button type="button" id="btnShaVerify" class="btn-sha-verify" title="Check SHA registration">
+                                    <i class="fas fa-shield-alt"></i> Check SHA
+                                </button>
+                                {% endif %}
+                            </div>
+                            <small class="helper-text">Enter the number for the selected ID type, then Check SHA.</small>
+                            {{ form.id_number.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.national_id.id_for_label }}">National ID</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-id-badge input-icon"></i>
+                                {{ form.national_id }}
+                            </div>
+                            <small class="helper-text">{{ form.national_id.help_text }}</small>
+                            {{ form.national_id.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.passport_number.id_for_label }}">Passport Number</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-passport input-icon"></i>
+                                {{ form.passport_number }}
+                            </div>
+                            <small class="helper-text">{{ form.passport_number.help_text }}</small>
+                            {{ form.passport_number.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.birth_certificate_number.id_for_label }}">Birth Certificate</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-baby input-icon"></i>
+                                {{ form.birth_certificate_number }}
+                            </div>
+                            <small class="helper-text">{{ form.birth_certificate_number.help_text }}</small>
+                            {{ form.birth_certificate_number.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.cr_id.id_for_label }}">SHA Client Registry ID (CR ID)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-fingerprint input-icon"></i>
+                                {{ form.cr_id }}
+                            </div>
+                            <small class="helper-text">Unique per person — dependents have their own CR ID.</small>
+                            {{ form.cr_id.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.insurance_number.id_for_label }}">Insurance Number</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-file-medical input-icon"></i>
+                                {{ form.insurance_number }}
+                            </div>
+                            <small class="helper-text">{{ form.insurance_number.help_text }}</small>
+                            {{ form.insurance_number.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact & Residence Section -->
+                <div class="form-section-card">
+                    <div class="section-header">
+                        <div class="section-number">3</div>
+                        <h3>Contact &amp; Residence</h3>
+                    </div>
+                    <div class="form-grid-premium">
                         <div class="form-group-premium">
                             <label for="{{ form.phone.id_for_label }}">Phone Number</label>
                             <div class="input-wrapper">
@@ -98,12 +180,71 @@
                             </div>
                             {{ form.phone.errors }}
                         </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.email.id_for_label }}">Email</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-envelope input-icon"></i>
+                                {{ form.email }}
+                            </div>
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.country.id_for_label }}">Country</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-globe-africa input-icon"></i>
+                                {{ form.country }}
+                            </div>
+                            {{ form.country.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.county.id_for_label }}">County</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-map input-icon"></i>
+                                {{ form.county }}
+                            </div>
+                            <small class="helper-text">Kenya 47-county classification (KNHTS)</small>
+                            {{ form.county.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.sub_county.id_for_label }}">Sub-County</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-map-marked-alt input-icon"></i>
+                                {{ form.sub_county }}
+                            </div>
+                            {{ form.sub_county.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.ward.id_for_label }}">Ward</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-map-marker input-icon"></i>
+                                {{ form.ward }}
+                            </div>
+                            {{ form.ward.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.village.id_for_label }}">Village / Estate</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-home input-icon"></i>
+                                {{ form.village }}
+                            </div>
+                            {{ form.village.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.postal_address.id_for_label }}">Postal Address</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-mail-bulk input-icon"></i>
+                                {{ form.postal_address }}
+                            </div>
+                            <small class="helper-text">P.O. Box, street or building</small>
+                            {{ form.postal_address.errors }}
+                        </div>
                         <div class="form-group-premium full-width">
-                            <label for="{{ form.location.id_for_label }}">Residential Location</label>
+                            <label for="{{ form.location.id_for_label }}">Location (display)</label>
                             <div class="input-wrapper">
                                 <i class="fas fa-map-marker-alt input-icon"></i>
                                 {{ form.location }}
                             </div>
+                            <small class="helper-text">{{ form.location.help_text }}</small>
                             {{ form.location.errors }}
                         </div>
                     </div>
@@ -112,7 +253,7 @@
                     <!-- Billing & Consultation Section -->
                     <div class="form-section-card billing-card shadow-lg">
                         <div class="section-header">
-                            <div class="section-number">2</div>
+                            <div class="section-number">4</div>
                             <h3>Billing & Consultation</h3>
                             <span class="badge badge-billing">Required</span>
                         </div>
@@ -193,6 +334,59 @@
             </form>
         </div>
     </div>
+
+    {% if not form.instance.pk %}
+    <div id="shaVerifyModal" class="sha-modal" aria-hidden="true">
+        <div class="sha-modal-backdrop" data-sha-close></div>
+        <div class="sha-modal-card" role="dialog" aria-modal="true" aria-labelledby="shaModalTitle">
+            <div class="sha-modal-header">
+                <div>
+                    <h3 id="shaModalTitle">SHA Registration Check</h3>
+                    <p class="sha-modal-sub">Patient registration & dependents via DHA / AfyaLink</p>
+                </div>
+                <button type="button" class="sha-modal-close" data-sha-close aria-label="Close">&times;</button>
+            </div>
+            <div class="sha-modal-body">
+                <div id="shaModalStatus" class="sha-status">Ready.</div>
+                <div id="shaModalResult" class="sha-result" style="display:none;"></div>
+                <div id="shaModalApiBlock" class="sha-api-block" style="display:none;">
+                    <div class="sha-api-block-title">API response</div>
+                    <pre id="shaModalDebug" class="sha-debug"></pre>
+                </div>
+            </div>
+            <div class="sha-modal-footer">
+                <button type="button" class="btn-ghost" data-sha-close>Close</button>
+                <button type="button" id="btnShaApply" class="btn-primary-premium" style="display:none;">
+                    <i class="fas fa-check"></i> Apply to form
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shaDependentsModal" class="sha-modal" aria-hidden="true">
+        <div class="sha-modal-backdrop" data-dep-close></div>
+        <div class="sha-modal-card sha-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="shaDepTitle">
+            <div class="sha-modal-header">
+                <div>
+                    <h3 id="shaDepTitle">Who is visiting today?</h3>
+                    <p class="sha-modal-sub">Select the principal and/or one or more dependents. Accounts will be created for everyone selected (principal is always registered when dependents visit).</p>
+                </div>
+                <button type="button" class="sha-modal-close" data-dep-close aria-label="Close">&times;</button>
+            </div>
+            <div class="sha-modal-body">
+                <div id="shaDepStatus" class="sha-status">Select one or more visitors.</div>
+                <div id="shaDepList" class="sha-dep-list"></div>
+            </div>
+            <div class="sha-modal-footer">
+                <button type="button" class="btn-ghost" data-dep-close>Cancel</button>
+                <button type="button" id="btnShaCreateVisitors" class="btn-primary-premium">
+                    <i class="fas fa-user-plus"></i> Create selected accounts
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <style>
     :root {
         --primary-clinical: #2563eb;
@@ -372,6 +566,210 @@
     .input-wrapper .form-control:focus+.input-icon,
     .input-wrapper select:focus+.input-icon {
         color: var(--primary-clinical);
+    }
+
+    .sha-id-row {
+        gap: 0.5rem;
+    }
+    .sha-id-row .form-control {
+        flex: 1;
+        padding-right: 0.75rem;
+    }
+    .btn-sha-verify {
+        white-space: nowrap;
+        border: none;
+        border-radius: 8px;
+        background: #0f766e;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 0.72rem 0.9rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .btn-sha-verify:disabled {
+        opacity: 0.65;
+        cursor: wait;
+    }
+    .btn-sha-verify:hover:not(:disabled) {
+        background: #0d9488;
+    }
+    .sha-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .sha-modal.open { display: flex; }
+    .sha-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+    }
+    .sha-modal-card {
+        position: relative;
+        width: min(640px, 100%);
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+        overflow: hidden;
+        z-index: 1;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .sha-modal-card-wide { width: min(720px, 100%); }
+    .sha-modal-body { overflow-y: auto; }
+    .sha-dep-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+    }
+    .sha-dep-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .sha-dep-item:hover { border-color: #14b8a6; }
+    .sha-dep-item.selected {
+        border-color: #0f766e;
+        background: #ecfdf5;
+    }
+    .sha-dep-item input { margin-top: 0.2rem; accent-color: #0f766e; }
+    .sha-dep-meta {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.2rem;
+    }
+    .sha-dep-name { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+    .sha-dep-role {
+        display: inline-block;
+        margin-left: 0.4rem;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.1rem 0.4rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #475569;
+    }
+    .sha-dep-role.principal { background: #ccfbf1; color: #0f766e; }
+    .sha-modal-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.1rem 1.25rem;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #fff;
+    }
+    .sha-modal-header h3 { margin: 0; font-size: 1.05rem; }
+    .sha-modal-sub { margin: 0.25rem 0 0; font-size: 0.78rem; opacity: 0.9; }
+    .sha-modal-close {
+        border: none;
+        background: transparent;
+        color: #fff;
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .sha-modal-body { padding: 1.1rem 1.25rem; }
+    .sha-status {
+        font-size: 0.9rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #334155;
+        margin-bottom: 0.9rem;
+    }
+    .sha-status.loading { background: #ecfeff; color: #155e75; }
+    .sha-status.error { background: #fef2f2; color: #b91c1c; }
+    .sha-status.success { background: #ecfdf5; color: #047857; }
+    .sha-result {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem 1rem;
+        font-size: 0.86rem;
+    }
+    .sha-result .label {
+        display: block;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 0.15rem;
+    }
+    .sha-result .value {
+        font-weight: 600;
+        color: #0f172a;
+        word-break: break-word;
+    }
+    .sha-badge {
+        display: inline-block;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .sha-badge.ok { background: #d1fae5; color: #047857; }
+    .sha-badge.bad { background: #fee2e2; color: #b91c1c; }
+    .sha-badge.warn { background: #fef3c7; color: #b45309; }
+    .sha-debug {
+        margin: 0;
+        max-height: 220px;
+        overflow: auto;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-size: 0.72rem;
+        line-height: 1.4;
+    }
+    .sha-api-block {
+        margin-top: 0.9rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #f8fafc;
+    }
+    .sha-api-block-title {
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+        padding: 0.55rem 0.75rem;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .sha-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 0.9rem 1.25rem 1.15rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    @media (max-width: 640px) {
+        .sha-id-row { flex-wrap: wrap; }
+        .btn-sha-verify { width: 100%; justify-content: center; }
+        .sha-result { grid-template-columns: 1fr; }
     }
 
     .helper-text {
@@ -670,6 +1068,364 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initial check
         toggleBillingOptions();
+    }
+
+    // -------- SHA eligibility verify + dependents visitors --------
+    const btnShaVerify = document.getElementById('btnShaVerify');
+    const shaModal = document.getElementById('shaVerifyModal');
+    const depModal = document.getElementById('shaDependentsModal');
+    if (btnShaVerify && shaModal) {
+        const statusEl = document.getElementById('shaModalStatus');
+        const resultEl = document.getElementById('shaModalResult');
+        const apiBlockEl = document.getElementById('shaModalApiBlock');
+        const debugEl = document.getElementById('shaModalDebug');
+        const applyBtn = document.getElementById('btnShaApply');
+        const idInput = document.getElementById('id_id_number');
+        const depList = document.getElementById('shaDepList');
+        const depStatus = document.getElementById('shaDepStatus');
+        const btnCreateVisitors = document.getElementById('btnShaCreateVisitors');
+        let lastPatient = null;
+        let lastDependents = [];
+
+        function csrfToken() {
+            const m = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+            if (m) return decodeURIComponent(m[1]);
+            const inp = document.querySelector('[name=csrfmiddlewaretoken]');
+            return inp ? inp.value : '';
+        }
+        function logSha() {
+            const args = Array.from(arguments);
+            args.unshift('[SHA UI]');
+            console.log.apply(console, args);
+        }
+        function openModal(el) {
+            el.classList.add('open');
+            el.setAttribute('aria-hidden', 'false');
+        }
+        function closeModal(el) {
+            el.classList.remove('open');
+            el.setAttribute('aria-hidden', 'true');
+        }
+        function setStatus(text, type) {
+            statusEl.textContent = text;
+            statusEl.className = 'sha-status' + (type ? ' ' + type : '');
+        }
+        function setDepStatus(text, type) {
+            if (!depStatus) return;
+            depStatus.textContent = text;
+            depStatus.className = 'sha-status' + (type ? ' ' + type : '');
+        }
+        function showApiResponse(httpStatus, data) {
+            if (!apiBlockEl || !debugEl) return;
+            const payload = {
+                http_status: httpStatus,
+                hmis: {
+                    success: data && data.success,
+                    found: data && data.found,
+                    id_number: data && data.id_number,
+                    eligibility_error: data && data.eligibility_error,
+                    client_registry_error: data && data.client_registry_error,
+                    patient: data && data.patient,
+                    dependents: data && data.dependents,
+                },
+                afyalink_raw: (data && data.raw) || {},
+                full_response: data || {},
+            };
+            apiBlockEl.style.display = 'block';
+            debugEl.textContent = JSON.stringify(payload, null, 2);
+        }
+        function hideApiResponse() {
+            if (apiBlockEl) apiBlockEl.style.display = 'none';
+            if (debugEl) debugEl.textContent = '';
+        }
+        function field(label, value) {
+            const v = (value === null || value === undefined || value === '') ? '—' : value;
+            return `<div><span class="label">${label}</span><div class="value">${v}</div></div>`;
+        }
+        function registrationBadge(patient, found) {
+            if (!found) return '<span class="sha-badge bad">Not Registered</span>';
+            if (!patient) return '<span class="sha-badge warn">Unknown</span>';
+            return '<span class="sha-badge ok">Registered</span>';
+        }
+        function displayName(p) {
+            if (!p) return 'Unknown';
+            if (p.full_name) return p.full_name;
+            return [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown';
+        }
+        function renderPatient(patient, found) {
+            if (!found) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = '<div class="value">No SHA registration found for this ID. See API response below for details.</div>';
+                applyBtn.style.display = 'none';
+                return;
+            }
+            const depCount = lastDependents.length;
+            resultEl.style.display = 'grid';
+            resultEl.innerHTML = `
+                ${field('SHA Status', registrationBadge(patient, found))}
+                ${field('Full name', patient.full_name)}
+                ${field('CR ID', patient.cr_id)}
+                ${field('ID number', patient.id_number)}
+                ${field('Gender', patient.gender)}
+                ${field('Date of birth', patient.date_of_birth)}
+                ${field('Phone', patient.phone)}
+                ${field('County', patient.county)}
+                ${field('Dependents', depCount ? `${depCount} linked` : 'None returned')}
+            `;
+            applyBtn.style.display = 'inline-flex';
+            applyBtn.innerHTML = depCount
+                ? '<i class="fas fa-users"></i> Choose visitors'
+                : '<i class="fas fa-check"></i> Apply to form';
+        }
+        function applyPatientToForm(patient) {
+            if (!patient) return;
+            const first = document.getElementById('id_first_name');
+            const last = document.getElementById('id_last_name');
+            const phone = document.getElementById('id_phone');
+            const email = document.getElementById('id_email');
+            const dob = document.getElementById('id_date_of_birth');
+            const gender = document.getElementById('id_gender');
+            const location = document.getElementById('id_location');
+            const county = document.getElementById('id_county');
+            const subCounty = document.getElementById('id_sub_county');
+            const idType = document.getElementById('id_id_type');
+            const nationalId = document.getElementById('id_national_id');
+            const passport = document.getElementById('id_passport_number');
+            const birthCert = document.getElementById('id_birth_certificate_number');
+            const payment = document.getElementById('id_payment_method');
+            const crId = document.getElementById('id_cr_id');
+
+            let firstName = patient.first_name || '';
+            let lastName = patient.last_name || '';
+            if ((!firstName || !lastName) && patient.full_name) {
+                const parts = String(patient.full_name).trim().split(/\s+/);
+                firstName = firstName || parts[0] || '';
+                lastName = lastName || parts.slice(1).join(' ') || '';
+            }
+            if (first && firstName) first.value = firstName;
+            if (last && lastName) last.value = lastName;
+            if (crId && patient.cr_id) crId.value = patient.cr_id;
+            if (phone && patient.phone) phone.value = patient.phone;
+            if (email && patient.email) email.value = patient.email;
+            if (dob && patient.date_of_birth) {
+                const m = String(patient.date_of_birth).match(/^(\d{4}-\d{2}-\d{2})/);
+                if (m) dob.value = m[1];
+            }
+            if (gender && patient.gender) {
+                const g = String(patient.gender).toLowerCase();
+                if (g.startsWith('m')) gender.value = 'male';
+                else if (g.startsWith('f')) gender.value = 'female';
+                else if (g === 'other' || g === 'o') gender.value = 'other';
+                else gender.value = 'unknown';
+            }
+            if (county && patient.county) {
+                const opts = Array.from(county.options || []);
+                const match = opts.find(o => o.value.toLowerCase() === String(patient.county).toLowerCase());
+                if (match) county.value = match.value;
+                else county.value = patient.county;
+            }
+            if (subCounty && patient.sub_county) subCounty.value = patient.sub_county;
+            if (location && (patient.county || patient.sub_county)) {
+                location.value = [patient.sub_county, patient.county].filter(Boolean).join(', ');
+            }
+            if (idInput && patient.id_number) idInput.value = patient.id_number;
+
+            const shaType = String(patient.identification_type || 'National ID').toLowerCase();
+            let mappedType = 'NATIONAL_ID';
+            if (shaType.includes('passport')) mappedType = 'PASSPORT';
+            else if (shaType.includes('birth')) mappedType = 'BIRTH_CERTIFICATE';
+            else if (shaType.includes('alien')) mappedType = 'ALIEN_ID';
+            if (idType) idType.value = mappedType;
+            if (patient.id_number) {
+                if (mappedType === 'NATIONAL_ID' && nationalId) nationalId.value = patient.id_number;
+                if (mappedType === 'PASSPORT' && passport) passport.value = patient.id_number;
+                if (mappedType === 'BIRTH_CERTIFICATE' && birthCert) birthCert.value = patient.id_number;
+            }
+            if (payment) {
+                payment.value = 'Insurance';
+                payment.dispatchEvent(new Event('change'));
+            }
+            logSha('applied patient to form', patient);
+        }
+        function openDependentsModal() {
+            if (!depModal || !depList || !lastPatient) return;
+            depList.innerHTML = '';
+
+            const principalHtml = document.createElement('label');
+            principalHtml.className = 'sha-dep-item selected';
+            principalHtml.innerHTML = `
+                <input type="checkbox" name="shaVisitor" value="principal" checked>
+                <div>
+                    <div class="sha-dep-name">${displayName(lastPatient)} <span class="sha-dep-role principal">Principal</span></div>
+                    <div class="sha-dep-meta">CR: ${lastPatient.cr_id || '—'} · ID: ${lastPatient.id_number || '—'}</div>
+                </div>
+            `;
+            depList.appendChild(principalHtml);
+
+            lastDependents.forEach((dep, idx) => {
+                const row = document.createElement('label');
+                row.className = 'sha-dep-item';
+                row.innerHTML = `
+                    <input type="checkbox" name="shaVisitor" value="dep:${idx}">
+                    <div>
+                        <div class="sha-dep-name">${displayName(dep)} <span class="sha-dep-role">Dependent</span></div>
+                        <div class="sha-dep-meta">
+                            ${dep.relationship ? dep.relationship + ' · ' : ''}
+                            CR: ${dep.cr_id || '—'} · ID: ${dep.id_number || '—'}
+                            ${dep.date_of_birth ? ' · DOB ' + dep.date_of_birth : ''}
+                        </div>
+                    </div>
+                `;
+                depList.appendChild(row);
+            });
+
+            depList.querySelectorAll('.sha-dep-item').forEach(item => {
+                const cb = item.querySelector('input');
+                const sync = () => item.classList.toggle('selected', cb.checked);
+                cb.addEventListener('change', sync);
+            });
+
+            setDepStatus(`Select who is visiting. ${lastDependents.length} dependent(s) found.`, '');
+            closeModal(shaModal);
+            openModal(depModal);
+        }
+
+        async function createSelectedVisitors() {
+            if (!lastPatient) return;
+            const checked = Array.from(document.querySelectorAll('input[name="shaVisitor"]:checked'));
+            if (!checked.length) {
+                setDepStatus('Select at least one visitor.', 'error');
+                return;
+            }
+            const includePrincipal = checked.some(c => c.value === 'principal');
+            const selectedDeps = checked
+                .filter(c => c.value.startsWith('dep:'))
+                .map(c => lastDependents[parseInt(c.value.split(':')[1], 10)])
+                .filter(Boolean);
+
+            btnCreateVisitors.disabled = true;
+            btnCreateVisitors.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+            setDepStatus('Creating patient accounts…', 'loading');
+
+            try {
+                const res = await fetch('{% url "home:create_sha_household" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        principal: lastPatient,
+                        dependents: selectedDeps,
+                        include_principal: includePrincipal || selectedDeps.length > 0,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    setDepStatus(data.error || 'Failed to create accounts.', 'error');
+                    return;
+                }
+                setDepStatus(data.message || 'Accounts created.', 'success');
+
+                const focusProfile = selectedDeps.length ? selectedDeps[0] : lastPatient;
+                applyPatientToForm(focusProfile);
+                closeModal(depModal);
+
+                const names = (data.patients || []).map(p => p.full_name).join(', ');
+                alert((data.message || 'Done.') + '\n\nPatients: ' + names + '\n\nForm filled for: ' + displayName(focusProfile) + '. Complete registration for this visitor; others are already in Patients list.');
+            } catch (err) {
+                console.error(err);
+                setDepStatus('Request failed: ' + (err.message || err), 'error');
+            } finally {
+                btnCreateVisitors.disabled = false;
+                btnCreateVisitors.innerHTML = '<i class="fas fa-user-plus"></i> Create selected accounts';
+            }
+        }
+
+        shaModal.querySelectorAll('[data-sha-close]').forEach(el => el.addEventListener('click', () => closeModal(shaModal)));
+        if (depModal) {
+            depModal.querySelectorAll('[data-dep-close]').forEach(el => el.addEventListener('click', () => closeModal(depModal)));
+        }
+        applyBtn.addEventListener('click', () => {
+            if (lastDependents.length) openDependentsModal();
+            else { applyPatientToForm(lastPatient); closeModal(shaModal); }
+        });
+        if (btnCreateVisitors) btnCreateVisitors.addEventListener('click', createSelectedVisitors);
+
+        btnShaVerify.addEventListener('click', async function() {
+            const idNumber = (idInput?.value || '').trim();
+            const idTypeEl = document.getElementById('id_id_type');
+            const typeMap = {
+                NATIONAL_ID: 'National ID',
+                PASSPORT: 'Passport',
+                BIRTH_CERTIFICATE: 'Birth Certificate',
+                ALIEN_ID: 'Alien ID',
+            };
+            const identificationType = typeMap[idTypeEl?.value] || 'National ID';
+            logSha('verify click', { idNumber, identificationType });
+            if (!idNumber) {
+                openModal(shaModal);
+                setStatus('Enter an ID number first.', 'error');
+                resultEl.style.display = 'none';
+                applyBtn.style.display = 'none';
+                hideApiResponse();
+                return;
+            }
+
+            openModal(shaModal);
+            setStatus('Checking SHA registration…', 'loading');
+            resultEl.style.display = 'none';
+            applyBtn.style.display = 'none';
+            hideApiResponse();
+            lastPatient = null;
+            lastDependents = [];
+            btnShaVerify.disabled = true;
+
+            const url = `{% url "accounts:sha_patient_by_id" %}?id_number=${encodeURIComponent(idNumber)}&identification_type=${encodeURIComponent(identificationType)}&skip_eligibility=1`;
+            logSha('fetching', url);
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                const text = await res.text();
+                logSha('raw response', res.status, text.slice(0, 500));
+                let data = null;
+                try { data = JSON.parse(text); } catch (e) {
+                    setStatus(`Server returned non-JSON (HTTP ${res.status}).`, 'error');
+                    showApiResponse(res.status, { parse_error: true, body: text.slice(0, 4000) });
+                    return;
+                }
+                showApiResponse(res.status, data);
+                if (!res.ok || !data.success) {
+                    setStatus(data.error || `Lookup failed (HTTP ${res.status}).`, 'error');
+                    resultEl.style.display = 'block';
+                    resultEl.innerHTML = '<div class="value">Request failed — see API response below.</div>';
+                    return;
+                }
+                lastPatient = data.patient || {};
+                lastDependents = Array.isArray(data.dependents) ? data.dependents : [];
+                if (data.found) {
+                    let msg = `SHA registration found for ID ${data.id_number}.`;
+                    if (lastDependents.length) msg += ` ${lastDependents.length} dependent(s) linked.`;
+                    setStatus(msg, 'success');
+                } else {
+                    setStatus(`No SHA registration found for ID ${data.id_number}.`, 'error');
+                }
+                renderPatient(lastPatient, data.found);
+            } catch (err) {
+                console.error('[SHA UI] fetch error', err);
+                setStatus(`Network/UI error: ${err.message || err}`, 'error');
+                showApiResponse(0, { network_error: String(err) });
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = '<div class="value">Network error — see API response below.</div>';
+            } finally {
+                btnShaVerify.disabled = false;
+            }
+        });
     }
 });
 </script>

@@ -132,9 +132,9 @@
                                 <!-- Generic Name -->
                                 <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-white/90">
-                                        Generic Name <span class="text-yellow-300">*</span>
+                                        Generic Name (INN) <span class="text-yellow-300">*</span>
                                     </label>
-                                    <input type="text" name="{{ med_form.generic_name.name }}" value="{{ med_form.generic_name.value|default:'' }}" placeholder="e.g., Paracetamol, Amoxicillin" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm">
+                                    <input type="text" name="{{ med_form.generic_name.name }}" value="{{ med_form.generic_name.value|default:'' }}" placeholder="e.g., Paracetamol" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm" id="id_generic_name">
                                 </div>
                                 <!-- Drug Class -->
                                 <div class="space-y-2">
@@ -146,17 +146,65 @@
                                         {% endfor %}
                                     </select>
                                 </div>
+                                <!-- Strength -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">Strength amount</label>
+                                    <input type="text" name="{{ med_form.strength_amount.name }}" value="{{ med_form.strength_amount.value|default:'' }}" placeholder="500" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium placeholder:text-white/50 backdrop-blur-sm" id="id_strength_amount">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-white/90">Strength unit</label>
+                                    <select name="{{ med_form.strength_unit.name }}" id="id_strength_unit" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
+                                        <option value="">—</option>
+                                        {% for value, label in med_form.strength_unit.field.choices %}
+                                            {% if value %}<option value="{{ value }}" class="bg-indigo-600" {% if med_form.strength_unit.value == value %}selected{% endif %}>{{ label }}</option>{% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
                                 <!-- Formulation -->
                                 <div class="space-y-2 md:col-span-2">
                                     <label class="block text-sm font-semibold text-white/90">
                                         Formulation <span class="text-yellow-300">*</span>
                                     </label>
-                                    <select name="{{ med_form.formulation.name }}" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
+                                    <select name="{{ med_form.formulation.name }}" id="id_formulation" class="w-full px-4 py-3 rounded-xl bg-white/10 border-2 border-white/30 focus:border-white focus:bg-white/20 transition-all duration-200 text-white font-medium backdrop-blur-sm">
                                         <option value="">Select formulation...</option>
                                         {% for value, label in med_form.formulation.field.choices %}
-                                            {% if value %}<option value="{{ value }}" class="bg-indigo-600">{{ label }}</option>{% endif %}
+                                            {% if value %}<option value="{{ value }}" class="bg-indigo-600" {% if med_form.formulation.value == value %}selected{% endif %}>{{ label }}</option>{% endif %}
                                         {% endfor %}
                                     </select>
+                                </div>
+
+                                <!-- DHA HPT -->
+                                <div class="md:col-span-2 pt-4 border-t border-white/20">
+                                    <p class="text-sm font-bold text-white mb-1">DHA HPT terminology (GE* prescribe code)</p>
+                                    <p class="text-xs text-white/70 mb-3">Search and select a DHA generic product so inventory matches SHA eRx standards.</p>
+                                    <div class="relative mb-3">
+                                        <input type="text" id="dha-hpt-search" placeholder="Search DHA e.g. Paracetamol 500 mg…" class="w-full px-4 py-3 rounded-xl bg-white border-2 border-white/40 text-slate-800 font-medium placeholder:text-slate-400" autocomplete="off">
+                                        <div id="dha-hpt-results" class="hidden absolute z-30 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl bg-white shadow-xl border border-slate-200"></div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="space-y-1">
+                                            <label class="text-xs font-semibold text-white/80">GE* code</label>
+                                            <input type="text" name="{{ med_form.generic_concept_code.name }}" id="id_generic_concept_code" value="{{ med_form.generic_concept_code.value|default:'' }}" placeholder="GE10177" class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-xs font-semibold text-white/80">ATC</label>
+                                            <input type="text" name="{{ med_form.atc_code.name }}" id="id_atc_code" value="{{ med_form.atc_code.value|default:'' }}" placeholder="N02BE01" class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white">
+                                        </div>
+                                        <div class="space-y-1 md:col-span-2">
+                                            <label class="text-xs font-semibold text-white/80">DHA display name</label>
+                                            <input type="text" name="{{ med_form.generic_concept_display.name }}" id="id_generic_concept_display" value="{{ med_form.generic_concept_display.value|default:'' }}" placeholder="Paracetamol 500 mg Oral Tablet" class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-xs font-semibold text-white/80">AC* component</label>
+                                            <input type="text" name="{{ med_form.active_component_code.name }}" id="id_active_component_code" value="{{ med_form.active_component_code.value|default:'' }}" placeholder="AC11114" class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-xs font-semibold text-white/80">PH* pack (optional)</label>
+                                            <input type="text" name="{{ med_form.actual_product_code.name }}" id="id_actual_product_code" value="{{ med_form.actual_product_code.value|default:'' }}" placeholder="Optional pack code" class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white">
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="{{ med_form.dha_form_id.name }}" id="id_dha_form_id" value="{{ med_form.dha_form_id.value|default:'' }}">
+                                    <input type="hidden" name="{{ med_form.dha_route_id.name }}" id="id_dha_route_id" value="{{ med_form.dha_route_id.value|default:'' }}">
                                 </div>
                             </div>
                         </div>
@@ -266,6 +314,92 @@
 
         // Initial check
         updateSections();
+
+        // DHA HPT GE* search → fill medication fields
+        const dhaSearch = document.getElementById('dha-hpt-search');
+        const dhaResults = document.getElementById('dha-hpt-results');
+        const hptSearchUrl = "{% url 'home:hpt_search_api' %}";
+        let dhaTimer = null;
+
+        function fillFromDha(item) {
+            const code = item.code || '';
+            const title = item.title || '';
+            document.getElementById('id_generic_concept_code').value = code;
+            document.getElementById('id_generic_concept_display').value = title;
+            const nameInput = document.getElementById('id_generic_name');
+            const strengthAmt = document.getElementById('id_strength_amount');
+            const strengthUnit = document.getElementById('id_strength_unit');
+            const formulation = document.getElementById('id_formulation');
+            const itemName = document.querySelector('input[name="name"]');
+
+            const m = title.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(mg|g|ml|mcg|iu)\b/i);
+            if (m) {
+                if (nameInput) nameInput.value = m[1].trim();
+                if (strengthAmt) strengthAmt.value = m[2];
+                if (strengthUnit) {
+                    const u = m[3].toLowerCase() === 'iu' ? 'IU' : m[3].toLowerCase();
+                    strengthUnit.value = u;
+                }
+            }
+            const formMap = [
+                [/tablet/i, 'Tablet'], [/capsule/i, 'Capsule'], [/syrup/i, 'Syrup'],
+                [/injection/i, 'Injection'], [/infusion/i, 'Infusion'], [/ointment/i, 'Ointment'],
+                [/cream/i, 'Cream'], [/drops/i, 'Drops'], [/inhaler/i, 'Inhaler'],
+                [/suppository/i, 'Suppository'], [/suspension/i, 'Suspension'], [/solution/i, 'Solution'],
+            ];
+            if (formulation) {
+                for (const [re, val] of formMap) {
+                    if (re.test(title)) { formulation.value = val; break; }
+                }
+            }
+            if (itemName && title) itemName.value = title;
+            if (dhaSearch) dhaSearch.value = title;
+            if (dhaResults) dhaResults.classList.add('hidden');
+        }
+
+        if (dhaSearch && dhaResults) {
+            dhaSearch.addEventListener('input', () => {
+                clearTimeout(dhaTimer);
+                dhaTimer = setTimeout(async () => {
+                    const q = dhaSearch.value.trim();
+                    if (q.length < 2) {
+                        dhaResults.classList.add('hidden');
+                        return;
+                    }
+                    try {
+                        const resp = await fetch(`${hptSearchUrl}?q=${encodeURIComponent(q)}&prefer=ge&limit=20`, {
+                            headers: { 'Accept': 'application/json' },
+                            credentials: 'same-origin',
+                        });
+                        const payload = await resp.json();
+                        const results = payload.results || [];
+                        dhaResults.innerHTML = '';
+                        if (!results.length) {
+                            dhaResults.innerHTML = '<div class="p-3 text-xs text-slate-500">No GE* products found</div>';
+                            dhaResults.classList.remove('hidden');
+                            return;
+                        }
+                        results.forEach((item) => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100';
+                            btn.innerHTML = `<div class="text-xs font-bold text-indigo-700">${item.code || ''}</div><div class="text-sm text-slate-800">${item.title || ''}</div>`;
+                            btn.addEventListener('click', () => fillFromDha(item));
+                            dhaResults.appendChild(btn);
+                        });
+                        dhaResults.classList.remove('hidden');
+                    } catch (e) {
+                        dhaResults.innerHTML = '<div class="p-3 text-xs text-rose-500">DHA search failed</div>';
+                        dhaResults.classList.remove('hidden');
+                    }
+                }, 280);
+            });
+            document.addEventListener('click', (e) => {
+                if (!dhaSearch.contains(e.target) && !dhaResults.contains(e.target)) {
+                    dhaResults.classList.add('hidden');
+                }
+            });
+        }
     });
     </script>
     <style>

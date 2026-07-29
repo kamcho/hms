@@ -11,8 +11,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 import json
-from datetime import timedelta, datetime, time
-from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis, ProcedureCompletion
+from datetime import timedelta, datetime, time, date
+from decimal import Decimal
+from .models import Patient, Visit, TriageEntry, EmergencyContact, Consultation, PatientQue, ConsultationNotes, Departments, Prescription, PrescriptionItem, Referral, Appointments, Symptoms, Impression, Diagnosis, ProcedureCompletion, Problem, ProblemHistory
 from accounts.models import Invoice, InvoiceItem, Service, Payment
 from accounts.utils import get_or_create_invoice
 from lab.models import LabResult
@@ -22,6 +23,255 @@ from morgue.models import MorgueAdmission
 from .forms import EmergencyContactForm, PatientForm, ReferralForm, AppointmentForm
 from django.db.models import Q
 from inventory.models import DispensedItem, InventoryRequest
+
+
+def _parse_dob(value):
+    """Parse common SHA date formats into a date, or None."""
+    if not value:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    # ISO date / datetime
+    m = text[:10]
+    try:
+        return datetime.strptime(m, '%Y-%m-%d').date()
+    except ValueError:
+        pass
+    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d'):
+        try:
+            return datetime.strptime(text[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _map_gender(value):
+    from .knhts_demographics import map_gender_to_knhts
+    return map_gender_to_knhts(value)
+
+
+def _upsert_patient_from_sha_profile(profile, *, created_by, default_location=''):
+    """
+    Create or update a Patient from a normalized SHA/CR profile.
+    Match priority: cr_id → id_number → create new.
+    """
+    from .knhts_demographics import map_sha_identification_type
+
+    if not isinstance(profile, dict):
+        raise ValueError('Invalid patient profile.')
+
+    cr_id = (profile.get('cr_id') or '').strip() or None
+    id_number = (profile.get('id_number') or '').strip() or None
+    id_type = map_sha_identification_type(profile.get('identification_type'))
+
+    first_name = (profile.get('first_name') or '').strip()
+    last_name = (profile.get('last_name') or '').strip()
+    if (not first_name or not last_name) and profile.get('full_name'):
+        parts = str(profile['full_name']).strip().split()
+        first_name = first_name or (parts[0] if parts else '')
+        last_name = last_name or (' '.join(parts[1:]) if len(parts) > 1 else first_name or 'Unknown')
+    first_name = first_name or 'Unknown'
+    last_name = last_name or first_name
+
+    dob = _parse_dob(profile.get('date_of_birth'))
+    gender = _map_gender(profile.get('gender') or profile.get('sex'))
+    phone = (profile.get('phone') or '').strip() or None
+    email = (profile.get('email') or '').strip() or None
+    county = (profile.get('county') or '').strip()
+    sub_county = (profile.get('sub_county') or '').strip()
+    location = (
+        ', '.join(x for x in [sub_county, county] if x)
+        or default_location
+        or 'Not specified'
+    )
+
+    patient = None
+    created = False
+    if cr_id:
+        patient = Patient.objects.filter(cr_id=cr_id).first()
+    if patient is None and id_number:
+        patient = Patient.objects.filter(id_number=id_number).first()
+
+    def _apply_id_docs(p):
+        if not id_number:
+            return
+        if id_type == 'NATIONAL_ID' and not p.national_id:
+            p.national_id = id_number
+        elif id_type == 'PASSPORT' and not p.passport_number:
+            p.passport_number = id_number
+        elif id_type == 'BIRTH_CERTIFICATE' and not p.birth_certificate_number:
+            p.birth_certificate_number = id_number
+
+    if patient is None:
+        if not dob:
+            # Dependents sometimes omit DOB — use a safe placeholder adults reception can edit
+            dob = date(2000, 1, 1)
+        patient = Patient(
+            first_name=first_name,
+            last_name=last_name,
+            id_type=id_type,
+            id_number=id_number,
+            cr_id=cr_id,
+            date_of_birth=dob,
+            phone=phone,
+            email=email,
+            location=location,
+            county=county,
+            sub_county=sub_county,
+            country='Kenya',
+            gender=gender,
+            created_by=created_by,
+        )
+        _apply_id_docs(patient)
+        patient.save()
+        created = True
+    else:
+        changed = False
+        if cr_id and patient.cr_id != cr_id:
+            patient.cr_id = cr_id
+            changed = True
+        if id_number and not patient.id_number:
+            patient.id_number = id_number
+            patient.id_type = id_type
+            changed = True
+        if id_type and patient.id_type != id_type and id_number:
+            patient.id_type = id_type
+            changed = True
+        if first_name and patient.first_name != first_name:
+            patient.first_name = first_name
+            changed = True
+        if last_name and patient.last_name != last_name:
+            patient.last_name = last_name
+            changed = True
+        if phone and not patient.phone:
+            patient.phone = phone
+            changed = True
+        if email and not patient.email:
+            patient.email = email
+            changed = True
+        if dob and patient.date_of_birth != dob:
+            patient.date_of_birth = dob
+            changed = True
+        if county and not patient.county:
+            patient.county = county
+            changed = True
+        if sub_county and not patient.sub_county:
+            patient.sub_county = sub_county
+            changed = True
+        if location and (not patient.location or patient.location == 'Not specified'):
+            patient.location = location
+            changed = True
+        if gender and gender != 'unknown' and patient.gender in ('unknown', '', None):
+            patient.gender = gender
+            changed = True
+        before_docs = (patient.national_id, patient.passport_number, patient.birth_certificate_number)
+        _apply_id_docs(patient)
+        if (patient.national_id, patient.passport_number, patient.birth_certificate_number) != before_docs:
+            changed = True
+        if changed:
+            patient.save()
+
+    return patient, created
+
+
+@login_required
+@require_http_methods(['POST'])
+def create_sha_household_patients(request):
+    """
+    Create/update Patient records for a SHA principal + selected dependents.
+
+    POST JSON:
+      {
+        "principal": {...normalized profile...},
+        "dependents": [{...}, ...],   # only selected visitors that are dependents
+        "include_principal": true,    # whether principal is also visiting / should be created
+        "selected_keys": ["principal", "0", "1"]  # optional audit
+      }
+    Always creates/updates the principal (account holder) plus selected dependents.
+    """
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    principal = payload.get('principal') or {}
+    dependents = payload.get('dependents') or []
+    include_principal = payload.get('include_principal', True)
+    if not isinstance(dependents, list):
+        return JsonResponse({'success': False, 'error': 'dependents must be a list.'}, status=400)
+    if not isinstance(principal, dict) or not (
+        principal.get('cr_id') or principal.get('id_number') or principal.get('full_name')
+        or principal.get('first_name')
+    ):
+        return JsonResponse({'success': False, 'error': 'principal profile is required.'}, status=400)
+
+    created_patients = []
+    existing_patients = []
+
+    with transaction.atomic():
+        # Always ensure principal account exists when dependents visit under their cover.
+        principal_patient, was_created = _upsert_patient_from_sha_profile(
+            principal,
+            created_by=request.user,
+        )
+        row = {
+            'id': principal_patient.pk,
+            'full_name': principal_patient.full_name,
+            'cr_id': principal_patient.cr_id,
+            'id_number': principal_patient.id_number,
+            'role': 'principal',
+            'created': was_created,
+            'visiting': bool(include_principal),
+        }
+        (created_patients if was_created else existing_patients).append(row)
+
+        for dep in dependents:
+            if not isinstance(dep, dict):
+                continue
+            patient, was_created = _upsert_patient_from_sha_profile(
+                dep,
+                created_by=request.user,
+                default_location=principal_patient.location,
+            )
+            row = {
+                'id': patient.pk,
+                'full_name': patient.full_name,
+                'cr_id': patient.cr_id,
+                'id_number': patient.id_number,
+                'role': 'dependent',
+                'relationship': dep.get('relationship'),
+                'created': was_created,
+                'visiting': True,
+            }
+            (created_patients if was_created else existing_patients).append(row)
+
+    all_rows = created_patients + existing_patients
+    visiting = [r for r in all_rows if r.get('visiting') or r.get('role') == 'dependent']
+    # Prefer a visiting dependent as the active form patient; else principal
+    focus = next((r for r in all_rows if r.get('role') == 'dependent'), None)
+    if include_principal and not focus:
+        focus = next((r for r in all_rows if r.get('role') == 'principal'), None)
+    elif include_principal:
+        # Multiple visitors — keep principal in list; form will show first selected dependent then user can switch
+        pass
+    if focus is None and all_rows:
+        focus = all_rows[0]
+
+    return JsonResponse({
+        'success': True,
+        'created_count': len(created_patients),
+        'existing_count': len(existing_patients),
+        'patients': all_rows,
+        'focus_patient_id': focus['id'] if focus else None,
+        'message': (
+            f"Registered {len(created_patients)} new patient(s)"
+            + (f", linked {len(existing_patients)} existing" if existing_patients else "")
+            + "."
+        ),
+    })
 
 
 def _is_nurse_user(user):
@@ -194,8 +444,8 @@ class PatientListView(LoginRequiredMixin, ListView):
         context['stats'] = {
             'total': all_patients.count(),
             'new_today': all_patients.filter(created_at__range=(start_of_day, end_of_day)).count(),
-            'male': all_patients.filter(gender='M').count(),
-            'female': all_patients.filter(gender='F').count(),
+            'male': all_patients.filter(gender='male').count(),
+            'female': all_patients.filter(gender='female').count(),
         }
         
         # Add last visit information for each patient
@@ -538,6 +788,113 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['consultation_notes'] = ConsultationNotes.objects.filter(**notes_filter).order_by('-created_at')
         context['queue_entries'] = PatientQue.objects.filter(**queue_filter).order_by('-created_at')
         context['emergency_contacts'] = EmergencyContact.objects.filter(patient=patient).order_by('-is_primary', 'name')
+
+        from .knhts_conditions import ACTIVE_CLINICAL_STATUSES
+        all_problems = Problem.objects.filter(patient=patient).exclude(
+            verification_status='entered-in-error',
+        ).select_related('icd11_entry', 'recorded_by').prefetch_related('history')
+        context['active_problems'] = [
+            p for p in all_problems if p.clinical_status in ACTIVE_CLINICAL_STATUSES
+        ]
+        context['resolved_problems'] = [
+            p for p in all_problems if p.clinical_status not in ACTIVE_CLINICAL_STATUSES
+        ]
+        context['problem_history_entries'] = ProblemHistory.objects.filter(
+            problem__patient=patient,
+        ).select_related('problem', 'changed_by').order_by('-changed_at')[:40]
+        from .forms import ProblemForm, DiagnosisForm, PatientMedicationForm, PatientAllergyForm, FamilyHistoryForm
+        context['problem_form'] = ProblemForm()
+        context['diagnosis_form'] = DiagnosisForm()
+        context['medication_list_form'] = PatientMedicationForm()
+        context['allergy_form'] = PatientAllergyForm()
+        context['family_history_form'] = FamilyHistoryForm()
+
+        from .models import PatientMedication, PatientAllergy, PatientMedicationHistory, PatientAllergyHistory
+        all_meds = PatientMedication.objects.filter(patient=patient).exclude(
+            status='entered-in-error',
+        ).select_related('recorded_by')
+        context['active_patient_medications'] = [m for m in all_meds if m.status == 'active']
+        context['historical_patient_medications'] = [m for m in all_meds if m.status != 'active'][:20]
+        context['medication_history_entries'] = PatientMedicationHistory.objects.filter(
+            medication__patient=patient,
+        ).select_related('medication', 'changed_by').order_by('-changed_at')[:40]
+
+        all_allergies = PatientAllergy.objects.filter(patient=patient).exclude(
+            clinical_status='entered-in-error',
+        ).select_related('recorded_by')
+        context['active_patient_allergies'] = [a for a in all_allergies if a.clinical_status == 'active']
+        context['historical_patient_allergies'] = [a for a in all_allergies if a.clinical_status != 'active'][:20]
+        context['allergy_history_entries'] = PatientAllergyHistory.objects.filter(
+            allergy__patient=patient,
+        ).select_related('allergy', 'changed_by').order_by('-changed_at')[:40]
+
+        from .models import FamilyHistory
+        context['family_history'] = list(
+            FamilyHistory.objects.filter(patient=patient, status='active')
+        )
+
+        # BMI / growth chart series (triage + CWC)
+        from .bmi_growth import build_growth_series, calc_bmi, bmi_category
+        growth_records = []
+        try:
+            from maternity.models import CwcGrowthRecord
+            growth_records.extend(
+                CwcGrowthRecord.objects.filter(patient=patient).order_by('measured_date')[:40]
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        triage_anthro = (
+            TriageEntry.objects.filter(visit__patient=patient)
+            .exclude(weight__isnull=True)
+            .order_by('entry_date')[:40]
+        )
+        # Normalize triage rows for build_growth_series
+        class _TriagePoint:
+            def __init__(self, entry):
+                self.measured_date = entry.entry_date.date() if entry.entry_date else None
+                self.weight_kg = entry.weight
+                self.height_cm = entry.height
+
+        growth_records.extend(_TriagePoint(e) for e in triage_anthro if e.weight)
+        context['growth_chart'] = build_growth_series(patient, growth_records)
+        latest_triage = (
+            TriageEntry.objects.filter(visit__patient=patient)
+            .order_by('-entry_date')
+            .first()
+        )
+        context['latest_bmi'] = None
+        context['latest_bmi_category'] = ''
+        if latest_triage and latest_triage.bmi:
+            context['latest_bmi'] = latest_triage.bmi
+            context['latest_bmi_category'] = latest_triage.bmi_category
+        elif context['growth_chart']['points']:
+            last = context['growth_chart']['points'][-1]
+            context['latest_bmi'] = last.get('bmi')
+            context['latest_bmi_category'] = last.get('bmi_category') or ''
+
+        from .models import ClinicalSummary
+        context['clinical_summaries'] = ClinicalSummary.objects.filter(
+            patient=patient,
+        ).select_related('visit', 'generated_by').order_by('-generated_at')[:10]
+        if selected_visit:
+            context['visit_clinical_summary'] = ClinicalSummary.objects.filter(
+                visit=selected_visit,
+            ).order_by('-generated_at').first()
+        else:
+            context['visit_clinical_summary'] = context['clinical_summaries'][0] if context['clinical_summaries'] else None
+
+        # Clinical Decision Support (uses problem list, HPT, allergies, demographics, labs, vitals)
+        from .clinical_decision_support import evaluate_cds
+        visit_for_cds = selected_visit or latest_visit
+        try:
+            context['cds'] = evaluate_cds(patient, visit=visit_for_cds)
+        except Exception:  # noqa: BLE001 — never break chart on CDS failure
+            context['cds'] = {
+                'success': False,
+                'alerts': [],
+                'summary': {'total': 0, 'critical': 0, 'high': 0, 'moderate': 0, 'blocking': 0},
+                'inputs_used': {},
+            }
         
         # Get lab results and reports for this patient
         from lab.models import LabResult, LabReport
@@ -1360,19 +1717,22 @@ def update_impression(request, pk):
 
 @login_required
 def add_diagnosis(request):
-    """Add diagnosis to a visit"""
+    """Add ICD-11 coded diagnosis to a visit; optionally promote to problem list."""
     if request.method == 'POST':
         try:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            from .icd11_diagnosis import validate_and_resolve_diagnosis
+
             visit_id = request.POST.get('visit_id')
             data = request.POST.get('data')
-            
+            add_to_problem_list = request.POST.get('add_to_problem_list', '1') in ('1', 'true', 'yes', 'on')
+
             visit = get_object_or_404(Visit, pk=visit_id)
-            
-            # Block if not latest visit or if visit is not active
+
             latest_visit = Visit.objects.filter(patient=visit.patient).order_by('-visit_date').first()
             if visit != latest_visit:
                 return JsonResponse({'success': False, 'error': 'Cannot add diagnosis to a previous visit.'})
-                
+
             if not visit.is_active:
                 return JsonResponse({'success': False, 'error': 'Cannot add diagnosis to a closed visit.'})
 
@@ -1380,23 +1740,44 @@ def add_diagnosis(request):
             if doctor_requires_tb_screening(request.user, visit):
                 return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
-            from .models import Diagnosis
-            Diagnosis.objects.create(
+            try:
+                code, display, entry = validate_and_resolve_diagnosis(data, required=True)
+            except DjangoValidationError as exc:
+                msg = '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
+                return JsonResponse({'success': False, 'error': msg})
+
+            diagnosis = Diagnosis.objects.create(
                 visit=visit,
-                data=data,
-                created_by=request.user
+                data=display,
+                icd11_code=code,
+                icd11_entry=entry,
+                created_by=request.user,
             )
-            return JsonResponse({'success': True})
+
+            problem = None
+            if add_to_problem_list:
+                problem = _upsert_problem_from_diagnosis(
+                    diagnosis, recorded_by=request.user, visit=visit,
+                )
+
+            return JsonResponse({
+                'success': True,
+                'diagnosis_id': diagnosis.pk,
+                'problem_id': problem.pk if problem else None,
+            })
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
+
 @login_required
 def update_diagnosis(request, pk):
-    """Update an existing diagnosis"""
+    """Update an existing visit diagnosis (ICD-11 coded)."""
     if request.method == 'POST':
         try:
-            from .models import Diagnosis
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            from .icd11_diagnosis import validate_and_resolve_diagnosis
+
             diagnosis = get_object_or_404(Diagnosis, pk=pk)
             visit = diagnosis.visit
 
@@ -1411,13 +1792,866 @@ def update_diagnosis(request, pk):
                 return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
             data = request.POST.get('data')
-            diagnosis.data = data
+            try:
+                code, display, entry = validate_and_resolve_diagnosis(data, required=True)
+            except DjangoValidationError as exc:
+                msg = '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
+                return JsonResponse({'success': False, 'error': msg})
+
+            diagnosis.data = display
+            diagnosis.icd11_code = code
+            diagnosis.icd11_entry = entry
             diagnosis.updated_by = request.user
             diagnosis.save()
+
+            if request.POST.get('add_to_problem_list', '0') in ('1', 'true', 'yes', 'on'):
+                _upsert_problem_from_diagnosis(
+                    diagnosis, recorded_by=request.user, visit=visit,
+                )
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+def _parse_optional_date(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _upsert_problem_from_diagnosis(diagnosis, *, recorded_by, visit=None):
+    """Create or refresh a problem-list item from a coded visit diagnosis."""
+    code = (diagnosis.icd11_code or '').strip().upper()
+    if not code:
+        return None
+
+    patient = diagnosis.visit.patient
+    problem = (
+        Problem.objects.filter(patient=patient, icd11_code__iexact=code)
+        .exclude(verification_status='entered-in-error')
+        .order_by('-updated_at')
+        .first()
+    )
+    visit = visit or diagnosis.visit
+
+    if problem is None:
+        problem = Problem(
+            patient=patient,
+            visit=visit,
+            source_diagnosis=diagnosis,
+            display=diagnosis.data,
+            icd11_code=code,
+            icd11_entry=diagnosis.icd11_entry,
+            clinical_status='active',
+            verification_status='confirmed',
+            category='problem-list-item',
+            recorded_by=recorded_by,
+            updated_by=recorded_by,
+        )
+        problem.save()
+        problem.record_history(
+            action='created',
+            changed_by=recorded_by,
+            change_summary='Created from visit diagnosis',
+        )
+        return problem
+
+    changed = False
+    if diagnosis.data and problem.display != diagnosis.data:
+        problem.display = diagnosis.data
+        changed = True
+    if diagnosis.icd11_entry_id and problem.icd11_entry_id != diagnosis.icd11_entry_id:
+        problem.icd11_entry = diagnosis.icd11_entry
+        changed = True
+    if visit and problem.visit_id != visit.pk:
+        problem.visit = visit
+        changed = True
+    if not problem.source_diagnosis_id:
+        problem.source_diagnosis = diagnosis
+        changed = True
+    if problem.clinical_status in ('resolved', 'inactive', 'remission'):
+        problem.clinical_status = 'recurrence'
+        problem.abatement_date = None
+        changed = True
+        action = 'reactivated'
+        summary = 'Reactivated from visit diagnosis'
+    else:
+        action = 'updated'
+        summary = 'Updated from visit diagnosis'
+
+    if changed:
+        problem.updated_by = recorded_by
+        problem.save()
+        problem.record_history(action=action, changed_by=recorded_by, change_summary=summary)
+    return problem
+
+
+@login_required
+def add_problem(request, patient_pk):
+    """Record a new KNHTS-coded problem list item for a patient."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from .forms import ProblemForm
+    from .knhts_conditions import ACTIVE_CLINICAL_STATUSES
+
+    form = ProblemForm(request.POST)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    code = getattr(form, '_icd11_code', '') or ''
+    existing = None
+    if code:
+        existing = (
+            Problem.objects.filter(patient=patient, icd11_code__iexact=code)
+            .exclude(verification_status='entered-in-error')
+            .filter(clinical_status__in=ACTIVE_CLINICAL_STATUSES)
+            .first()
+        )
+    if existing:
+        return JsonResponse({
+            'success': False,
+            'error': f'An active problem with ICD-11 code {code} already exists. Update that problem instead.',
+            'problem_id': existing.pk,
+        })
+
+    visit_id = request.POST.get('visit_id')
+    visit = None
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=patient).first()
+
+    problem = form.save(commit=False)
+    problem.patient = patient
+    problem.visit = visit
+    problem.recorded_by = request.user
+    problem.updated_by = request.user
+    problem.save()
+    problem.record_history(
+        action='created',
+        changed_by=request.user,
+        change_summary='Problem recorded on problem list',
+    )
+    return JsonResponse({'success': True, 'problem_id': problem.pk})
+
+
+@login_required
+def update_problem(request, pk):
+    """Update an existing problem list item (status, code, notes, dates)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    problem = get_object_or_404(Problem, pk=pk)
+    from .forms import ProblemForm
+
+    previous_status = problem.clinical_status
+    form = ProblemForm(request.POST, instance=problem)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    problem = form.save(commit=False)
+    problem.updated_by = request.user
+    visit_id = request.POST.get('visit_id')
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=problem.patient).first()
+        if visit:
+            problem.visit = visit
+    problem.save()
+
+    new_status = problem.clinical_status
+    if previous_status != new_status:
+        if new_status == 'resolved':
+            action = 'resolved'
+            summary = f'Status changed {previous_status} → resolved'
+        elif previous_status in ('resolved', 'inactive', 'remission') and new_status in (
+            'active', 'recurrence', 'relapse',
+        ):
+            action = 'reactivated'
+            summary = f'Status changed {previous_status} → {new_status}'
+        elif new_status == 'entered-in-error' or problem.verification_status == 'entered-in-error':
+            action = 'entered_in_error'
+            summary = 'Marked entered in error'
+        else:
+            action = 'status_changed'
+            summary = f'Status changed {previous_status} → {new_status}'
+    else:
+        action = 'updated'
+        summary = 'Problem details updated'
+
+    problem.record_history(action=action, changed_by=request.user, change_summary=summary)
+    return JsonResponse({'success': True, 'problem_id': problem.pk})
+
+
+@login_required
+def problem_history(request, patient_pk):
+    """Return problem list + history for a patient (JSON)."""
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    status_filter = (request.GET.get('status') or '').strip()
+    problems_qs = Problem.objects.filter(patient=patient).select_related(
+        'recorded_by', 'updated_by', 'icd11_entry', 'visit',
+    )
+    if status_filter == 'active':
+        from .knhts_conditions import ACTIVE_CLINICAL_STATUSES
+        problems_qs = problems_qs.filter(clinical_status__in=ACTIVE_CLINICAL_STATUSES)
+    elif status_filter == 'resolved':
+        problems_qs = problems_qs.filter(clinical_status__in=('resolved', 'remission', 'inactive'))
+    elif status_filter:
+        problems_qs = problems_qs.filter(clinical_status=status_filter)
+
+    problems = []
+    for p in problems_qs.order_by('-updated_at')[:200]:
+        history = [
+            {
+                'id': h.pk,
+                'action': h.action,
+                'action_display': h.get_action_display(),
+                'clinical_status': h.clinical_status,
+                'verification_status': h.verification_status,
+                'display': h.display,
+                'icd11_code': h.icd11_code,
+                'change_summary': h.change_summary,
+                'changed_at': h.changed_at.isoformat() if h.changed_at else None,
+                'changed_by': h.changed_by.get_full_name() if h.changed_by else None,
+            }
+            for h in p.history.all()[:30]
+        ]
+        problems.append({
+            'id': p.pk,
+            'display': p.display,
+            'icd11_code': p.icd11_code,
+            'clinical_status': p.clinical_status,
+            'clinical_status_display': p.get_clinical_status_display(),
+            'verification_status': p.verification_status,
+            'verification_status_display': p.get_verification_status_display(),
+            'category': p.category,
+            'severity': p.severity,
+            'onset_date': p.onset_date.isoformat() if p.onset_date else None,
+            'abatement_date': p.abatement_date.isoformat() if p.abatement_date else None,
+            'notes': p.notes,
+            'is_active': p.is_active,
+            'recorded_at': p.recorded_at.isoformat() if p.recorded_at else None,
+            'updated_at': p.updated_at.isoformat() if p.updated_at else None,
+            'history': history,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'patient_id': patient.pk,
+        'count': len(problems),
+        'problems': problems,
+    })
+
+
+@login_required
+def problem_detail_history(request, pk):
+    """History entries for a single problem."""
+    problem = get_object_or_404(Problem, pk=pk)
+    entries = [
+        {
+            'id': h.pk,
+            'action': h.action,
+            'action_display': h.get_action_display(),
+            'clinical_status': h.clinical_status,
+            'verification_status': h.verification_status,
+            'display': h.display,
+            'icd11_code': h.icd11_code,
+            'severity': h.severity,
+            'onset_date': h.onset_date.isoformat() if h.onset_date else None,
+            'abatement_date': h.abatement_date.isoformat() if h.abatement_date else None,
+            'notes': h.notes,
+            'change_summary': h.change_summary,
+            'changed_at': h.changed_at.isoformat() if h.changed_at else None,
+            'changed_by': (
+                h.changed_by.get_full_name() or h.changed_by.username
+            ) if h.changed_by else None,
+        }
+        for h in problem.history.select_related('changed_by').all()[:100]
+    ]
+    return JsonResponse({
+        'success': True,
+        'problem_id': problem.pk,
+        'display': problem.display,
+        'history': entries,
+    })
+
+
+@login_required
+def add_patient_medication(request, patient_pk):
+    """Add a longitudinal medication to the patient Active Medication List."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from .forms import PatientMedicationForm
+    from .models import PatientMedication
+
+    form = PatientMedicationForm(request.POST)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    code = (form.cleaned_data.get('generic_concept_code') or '').strip()
+    if code:
+        existing = PatientMedication.objects.filter(
+            patient=patient, generic_concept_code__iexact=code, status='active',
+        ).first()
+        if existing:
+            return JsonResponse({
+                'success': False,
+                'error': f'An active medication with HPT code {code} already exists. Update or stop that entry instead.',
+                'medication_id': existing.pk,
+            })
+
+    visit_id = request.POST.get('visit_id')
+    visit = Visit.objects.filter(pk=visit_id, patient=patient).first() if visit_id else None
+
+    med = form.save(commit=False)
+    med.patient = patient
+    med.visit = visit
+    med.source = 'manual'
+    med.recorded_by = request.user
+    med.updated_by = request.user
+    if not med.start_date and med.status == 'active':
+        from django.utils import timezone
+        med.start_date = timezone.localdate()
+    med.save()
+    med.record_history(
+        action='created',
+        changed_by=request.user,
+        change_summary='Clinician added to Active Medication List',
+    )
+    return JsonResponse({'success': True, 'medication_id': med.pk})
+
+
+@login_required
+def update_patient_medication(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    from .forms import PatientMedicationForm
+    from .models import PatientMedication
+
+    med = get_object_or_404(PatientMedication, pk=pk)
+    previous = med.status
+    form = PatientMedicationForm(request.POST, instance=med)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    med = form.save(commit=False)
+    med.updated_by = request.user
+    visit_id = request.POST.get('visit_id')
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=med.patient).first()
+        if visit:
+            med.visit = visit
+    if med.status in ('stopped', 'completed') and not med.end_date:
+        from django.utils import timezone
+        med.end_date = timezone.localdate()
+    med.save()
+
+    if previous != med.status:
+        if med.status == 'stopped':
+            action, summary = 'stopped', f'Status {previous} → stopped'
+        elif med.status == 'completed':
+            action, summary = 'completed', f'Status {previous} → completed'
+        elif previous != 'active' and med.status == 'active':
+            action, summary = 'reactivated', f'Status {previous} → active'
+        elif med.status == 'entered-in-error':
+            action, summary = 'entered_in_error', 'Marked entered in error'
+        else:
+            action, summary = 'status_changed', f'Status {previous} → {med.status}'
+    else:
+        action, summary = 'updated', 'Medication details updated'
+    med.record_history(action=action, changed_by=request.user, change_summary=summary)
+    return JsonResponse({'success': True, 'medication_id': med.pk})
+
+
+@login_required
+def patient_medication_history(request, patient_pk):
+    """JSON: active + historical medications with audit trail."""
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from .models import PatientMedication
+
+    status_filter = (request.GET.get('status') or '').strip()
+    qs = PatientMedication.objects.filter(patient=patient).select_related(
+        'recorded_by', 'updated_by', 'visit',
+    ).prefetch_related('history')
+    if status_filter == 'active':
+        qs = qs.filter(status='active')
+    elif status_filter == 'history':
+        qs = qs.exclude(status='active')
+    elif status_filter:
+        qs = qs.filter(status=status_filter)
+
+    rows = []
+    for m in qs.order_by('-updated_at')[:200]:
+        rows.append({
+            'id': m.pk,
+            'display_name': m.display_name,
+            'generic_concept_code': m.generic_concept_code,
+            'generic_concept_display': m.generic_concept_display,
+            'actual_product_code': m.actual_product_code,
+            'dose_text': m.dose_text,
+            'frequency': m.frequency,
+            'route': m.route,
+            'status': m.status,
+            'status_display': m.get_status_display(),
+            'source': m.source,
+            'start_date': m.start_date.isoformat() if m.start_date else None,
+            'end_date': m.end_date.isoformat() if m.end_date else None,
+            'notes': m.notes,
+            'is_active': m.is_active,
+            'history': [
+                {
+                    'id': h.pk,
+                    'action': h.action,
+                    'action_display': h.get_action_display(),
+                    'status': h.status,
+                    'change_summary': h.change_summary,
+                    'changed_at': h.changed_at.isoformat() if h.changed_at else None,
+                    'changed_by': h.changed_by.get_full_name() if h.changed_by else None,
+                }
+                for h in m.history.all()[:30]
+            ],
+        })
+    return JsonResponse({'success': True, 'patient_id': patient.pk, 'count': len(rows), 'medications': rows})
+
+
+@login_required
+def add_patient_allergy(request, patient_pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from .forms import PatientAllergyForm
+    from .models import PatientAllergy
+
+    form = PatientAllergyForm(request.POST)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    hpt = (form.cleaned_data.get('hpt_code') or '').strip()
+    name = form.cleaned_data.get('allergen_name') or ''
+    if hpt:
+        existing = PatientAllergy.objects.filter(
+            patient=patient, hpt_code__iexact=hpt, clinical_status='active',
+        ).first()
+    else:
+        existing = PatientAllergy.objects.filter(
+            patient=patient, allergen_name__iexact=name, clinical_status='active',
+        ).first()
+    if existing:
+        return JsonResponse({
+            'success': False,
+            'error': 'An active allergy for this allergen already exists. Update that entry instead.',
+            'allergy_id': existing.pk,
+        })
+
+    visit_id = request.POST.get('visit_id')
+    visit = Visit.objects.filter(pk=visit_id, patient=patient).first() if visit_id else None
+
+    allergy = form.save(commit=False)
+    allergy.patient = patient
+    allergy.visit = visit
+    allergy.recorded_by = request.user
+    allergy.updated_by = request.user
+    allergy.save()
+    allergy.record_history(
+        action='created',
+        changed_by=request.user,
+        change_summary='Allergy recorded on Allergy List',
+    )
+    return JsonResponse({'success': True, 'allergy_id': allergy.pk})
+
+
+@login_required
+def update_patient_allergy(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    from .forms import PatientAllergyForm
+    from .models import PatientAllergy
+
+    allergy = get_object_or_404(PatientAllergy, pk=pk)
+    previous = allergy.clinical_status
+    form = PatientAllergyForm(request.POST, instance=allergy)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    allergy = form.save(commit=False)
+    allergy.updated_by = request.user
+    visit_id = request.POST.get('visit_id')
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=allergy.patient).first()
+        if visit:
+            allergy.visit = visit
+    allergy.save()
+
+    if previous != allergy.clinical_status:
+        if allergy.clinical_status == 'resolved':
+            action, summary = 'resolved', f'Status {previous} → resolved'
+        elif previous != 'active' and allergy.clinical_status == 'active':
+            action, summary = 'reactivated', f'Status {previous} → active'
+        elif allergy.clinical_status == 'entered-in-error':
+            action, summary = 'entered_in_error', 'Marked entered in error'
+        else:
+            action, summary = 'status_changed', f'Status {previous} → {allergy.clinical_status}'
+    else:
+        action, summary = 'updated', 'Allergy details updated'
+    allergy.record_history(action=action, changed_by=request.user, change_summary=summary)
+    return JsonResponse({'success': True, 'allergy_id': allergy.pk})
+
+
+@login_required
+def patient_allergy_history(request, patient_pk):
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from .models import PatientAllergy
+
+    status_filter = (request.GET.get('status') or '').strip()
+    qs = PatientAllergy.objects.filter(patient=patient).select_related(
+        'recorded_by', 'updated_by',
+    ).prefetch_related('history')
+    if status_filter == 'active':
+        qs = qs.filter(clinical_status='active')
+    elif status_filter == 'history':
+        qs = qs.exclude(clinical_status='active')
+    elif status_filter:
+        qs = qs.filter(clinical_status=status_filter)
+
+    rows = []
+    for a in qs.order_by('-updated_at')[:200]:
+        rows.append({
+            'id': a.pk,
+            'allergen_name': a.allergen_name,
+            'hpt_code': a.hpt_code,
+            'hpt_display': a.hpt_display,
+            'allergy_type': a.allergy_type,
+            'category': a.category,
+            'clinical_status': a.clinical_status,
+            'clinical_status_display': a.get_clinical_status_display(),
+            'criticality': a.criticality,
+            'severity': a.severity,
+            'reaction': a.reaction,
+            'onset_date': a.onset_date.isoformat() if a.onset_date else None,
+            'notes': a.notes,
+            'is_active': a.is_active,
+            'history': [
+                {
+                    'id': h.pk,
+                    'action': h.action,
+                    'action_display': h.get_action_display(),
+                    'clinical_status': h.clinical_status,
+                    'change_summary': h.change_summary,
+                    'changed_at': h.changed_at.isoformat() if h.changed_at else None,
+                    'changed_by': h.changed_by.get_full_name() if h.changed_by else None,
+                }
+                for h in a.history.all()[:30]
+            ],
+        })
+    return JsonResponse({'success': True, 'patient_id': patient.pk, 'count': len(rows), 'allergies': rows})
+
+
+@login_required
+def add_family_history(request, patient_pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    from .forms import FamilyHistoryForm
+    from .models import FamilyHistory
+
+    form = FamilyHistoryForm(request.POST)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    row = form.save(commit=False)
+    row.patient = patient
+    row.recorded_by = request.user
+    row.updated_by = request.user
+    # If ICD display set without condition text
+    if row.icd11_display and not row.condition:
+        row.condition = row.icd11_display
+    row.save()
+    return JsonResponse({'success': True, 'family_history_id': row.pk})
+
+
+@login_required
+def update_family_history(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
+
+    from .forms import FamilyHistoryForm
+    from .models import FamilyHistory
+
+    row = get_object_or_404(FamilyHistory, pk=pk)
+    form = FamilyHistoryForm(request.POST, instance=row)
+    if not form.is_valid():
+        errors = []
+        for field, msgs in form.errors.items():
+            errors.extend([f'{field}: {m}' for m in msgs])
+        return JsonResponse({'success': False, 'error': '; '.join(errors) or 'Invalid data.'})
+
+    row = form.save(commit=False)
+    row.updated_by = request.user
+    if row.icd11_display and (not row.condition or row.condition == form.initial.get('condition')):
+        pass
+    row.save()
+    return JsonResponse({'success': True, 'family_history_id': row.pk})
+
+
+@login_required
+def patient_growth_chart_api(request, patient_pk):
+    """JSON growth / BMI series for charting (CWC + triage)."""
+    from .bmi_growth import build_growth_series
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    records = []
+    try:
+        from maternity.models import CwcGrowthRecord
+        records.extend(list(CwcGrowthRecord.objects.filter(patient=patient).order_by('measured_date')[:60]))
+    except Exception:  # noqa: BLE001
+        pass
+
+    class _TriagePoint:
+        def __init__(self, entry):
+            self.measured_date = entry.entry_date.date() if entry.entry_date else None
+            self.weight_kg = entry.weight
+            self.height_cm = entry.height
+
+    for e in TriageEntry.objects.filter(visit__patient=patient).exclude(weight__isnull=True).order_by('entry_date')[:60]:
+        records.append(_TriagePoint(e))
+
+    payload = build_growth_series(patient, records)
+    payload['success'] = True
+    return JsonResponse(payload)
+
+
+@login_required
+def hpt_allergy_search_api(request):
+    """GET /home/api/hpt/allergy-search/?q=penicillin — prefer AC* substances."""
+    from .medication_registry import search_hpt_allergens
+
+    q = (request.GET.get('q') or request.GET.get('query') or '').strip()
+    if len(q) < 2:
+        return JsonResponse({
+            'success': False,
+            'error': 'Enter at least 2 characters.',
+            'results': [],
+        }, status=400)
+    try:
+        limit = min(int(request.GET.get('limit') or 25), 50)
+    except (TypeError, ValueError):
+        limit = 25
+    payload = search_hpt_allergens(q, limit=limit)
+    status = 200 if payload.get('success') else 502
+    return JsonResponse(payload, status=status)
+
+
+@login_required
+def generate_clinical_summary_view(request, visit_id):
+    """
+    POST: generate Clinical Summary for a visit (human-readable + FHIR).
+    Optional care_plan text; optional sync_hie=1 to push to Kenya HIE.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    visit = get_object_or_404(Visit, pk=visit_id)
+    if request.user.role not in ('Admin', 'Doctor', 'Nurse'):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    care_plan = (request.POST.get('care_plan') or '').strip()
+    sync_hie = request.POST.get('sync_hie', '') in ('1', 'true', 'yes', 'on')
+
+    from .clinical_summary import generate_clinical_summary, sync_clinical_summary_to_hie
+
+    summary = generate_clinical_summary(
+        visit, care_plan=care_plan, author=request.user, persist=True,
+    )
+    sync_result = None
+    if sync_hie:
+        sync_result = sync_clinical_summary_to_hie(summary)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.POST.get('ajax'):
+        return JsonResponse({
+            'success': True,
+            'summary_id': summary.pk,
+            'status': summary.status,
+            'hie_sync_status': summary.hie_sync_status,
+            'includes': {
+                'biodata': summary.includes_biodata,
+                'clinical': summary.includes_clinical,
+                'medications': summary.includes_medications,
+                'prescriptions': summary.includes_prescriptions,
+                'care_plan': summary.includes_care_plan,
+            },
+            'print_url': reverse('home:clinical_summary_print', kwargs={'pk': summary.pk}),
+            'view_url': reverse('home:clinical_summary_detail', kwargs={'pk': summary.pk}),
+            'sync_result': sync_result,
+            'last_error': summary.last_error,
+        })
+
+    messages.success(request, f'Clinical Summary #{summary.pk} generated.')
+    if sync_hie and summary.hie_sync_status == 'error':
+        messages.warning(request, f'HIE sync issue: {summary.last_error[:200]}')
+    elif sync_hie and summary.hie_sync_status in ('synced', 'partial'):
+        messages.info(request, f'Synced to Kenya HIE ({summary.hie_sync_status}).')
+    return redirect('home:clinical_summary_detail', pk=summary.pk)
+
+
+@login_required
+def clinical_summary_detail(request, pk):
+    from .models import ClinicalSummary
+
+    summary = get_object_or_404(
+        ClinicalSummary.objects.select_related('patient', 'visit', 'generated_by'),
+        pk=pk,
+    )
+    if request.user.role not in ('Admin', 'Doctor', 'Nurse'):
+        messages.error(request, 'Permission denied.')
+        return redirect('home:patient_detail', pk=summary.patient_id)
+
+    return render(request, 'home/clinical_summary_detail.html', {
+        'summary': summary,
+        'patient': summary.patient,
+        'visit': summary.visit,
+        'data': summary.summary_json or {},
+    })
+
+
+@login_required
+def clinical_summary_print(request, pk):
+    from django.conf import settings as django_settings
+    from .models import ClinicalSummary
+
+    summary = get_object_or_404(
+        ClinicalSummary.objects.select_related('patient', 'visit', 'generated_by'),
+        pk=pk,
+    )
+    return render(request, 'home/clinical_summary_print.html', {
+        'summary': summary,
+        'patient': summary.patient,
+        'visit': summary.visit,
+        'data': summary.summary_json or {},
+        'facility_name': (
+            (summary.summary_json or {}).get('facility', {}) or {}
+        ).get('name') or getattr(django_settings, 'SHA_HIE_FACILITY_NAME', '') or 'Health Facility',
+    })
+
+
+@login_required
+def clinical_summary_fhir_json(request, pk):
+    from .models import ClinicalSummary
+
+    summary = get_object_or_404(ClinicalSummary, pk=pk)
+    if request.user.role not in ('Admin', 'Doctor', 'Nurse'):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    return JsonResponse(summary.fhir_bundle or {}, safe=False)
+
+
+@login_required
+def sync_clinical_summary_view(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+    from .models import ClinicalSummary
+    from .clinical_summary import sync_clinical_summary_to_hie
+
+    summary = get_object_or_404(ClinicalSummary, pk=pk)
+    if request.user.role not in ('Admin', 'Doctor'):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    result = sync_clinical_summary_to_hie(summary)
+    return JsonResponse({
+        'success': summary.hie_sync_status in ('synced', 'partial'),
+        'hie_sync_status': summary.hie_sync_status,
+        'last_error': summary.last_error,
+        'result': result,
+        'document_id': summary.hie_document_id,
+    })
+
+
+@login_required
+def clinical_decision_support_api(request, patient_pk):
+    """
+    GET /home/patients/<id>/cds/?visit_id=
+    Clinical Decision Support using Problem List, HPT, allergies, demographics, labs, vitals.
+    """
+    from .clinical_decision_support import evaluate_cds
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    visit = None
+    visit_id = request.GET.get('visit_id')
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=patient).first()
+    payload = evaluate_cds(patient, visit=visit)
+    return JsonResponse(payload)
+
+
+@login_required
+@require_http_methods(['POST'])
+def cds_check_medication_api(request, patient_pk):
+    """
+    POST JSON: { name, generic_concept_code, generic_concept_display, actual_product_code, visit_id? }
+    Prescribe-time allergy / HPT / CDS check for one medication.
+    """
+    from .clinical_decision_support import evaluate_cds
+
+    patient = get_object_or_404(Patient, pk=patient_pk)
+    try:
+        body = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    visit = None
+    visit_id = body.get('visit_id') or request.GET.get('visit_id')
+    if visit_id:
+        visit = Visit.objects.filter(pk=visit_id, patient=patient).first()
+
+    proposed = [{
+        'name': body.get('name') or '',
+        'generic_concept_code': body.get('generic_concept_code') or '',
+        'generic_concept_display': body.get('generic_concept_display') or '',
+        'actual_product_code': body.get('actual_product_code') or '',
+    }]
+    payload = evaluate_cds(patient, visit=visit, proposed_medications=proposed)
+    allergy_alerts = [
+        a for a in payload.get('alerts', [])
+        if 'allergy_list' in (a.get('sources') or []) or a.get('blocking')
+    ]
+    return JsonResponse({
+        'success': True,
+        'patient_id': patient.pk,
+        'blocking': any(a.get('blocking') for a in allergy_alerts),
+        'allergy_alerts': allergy_alerts,
+        'alerts': payload.get('alerts', []),
+        'summary': payload.get('summary', {}),
+        'inputs_used': payload.get('inputs_used', {}),
+    })
 
 
 @login_required
@@ -1876,7 +3110,7 @@ def create_prescription(request, visit_id):
         Prescription,
         PrescriptionItem,
         form=PrescriptionItemForm,
-        extra=3,  # Show 3 empty forms by default
+        extra=1,  # Single add widget; more rows added via JS
         can_delete=True
     )
     
@@ -1892,81 +3126,177 @@ def create_prescription(request, visit_id):
         formset = PrescriptionItemFormSet(request.POST, prefix='items')
         
         if form.is_valid() and formset.is_valid():
-            submission_in_progress = False
-            if form_token and not try_acquire_prescription_submit_lock(visit_id, form_token):
-                cached_id = get_cached_prescription_id(visit_id, form_token)
-                if cached_id:
-                    messages.info(request, 'Prescription already saved.')
-                    return redirect('home:prescription_detail', prescription_id=cached_id)
-                submission_in_progress = True
+            from .clinical_decision_support import evaluate_cds
+
+            proposed = []
+            for item_form in formset.forms:
+                if not hasattr(item_form, 'cleaned_data') or item_form.cleaned_data.get('DELETE'):
+                    continue
+                med = item_form.cleaned_data.get('medication')
+                if not med:
+                    continue
+                proposed.append({
+                    'name': getattr(med, 'name', '') or '',
+                    'generic_concept_code': item_form.cleaned_data.get('generic_concept_code') or '',
+                    'generic_concept_display': item_form.cleaned_data.get('generic_concept_display') or '',
+                    'actual_product_code': '',
+                })
+
+            blockers = []
+            if proposed:
+                cds_check = evaluate_cds(patient, visit=visit, proposed_medications=proposed)
+                blockers = [a for a in cds_check.get('alerts', []) if a.get('blocking')]
+
+            if blockers and request.POST.get('cds_override') != '1':
+                for b in blockers[:5]:
+                    messages.error(request, f"CDS block: {b.get('title')} — {b.get('message')}")
                 messages.warning(
                     request,
-                    'This prescription is already being saved. Please wait a moment.',
+                    'Prescription blocked by Clinical Decision Support (allergy/safety). '
+                    'Resolve conflicts or obtain clinical override.',
                 )
+            else:
+                if blockers and request.POST.get('cds_override') == '1':
+                    messages.warning(request, 'CDS allergy block overridden by clinician.')
 
-            if not submission_in_progress:
-                try:
-                    with transaction.atomic():
-                        locked_visit = Visit.objects.select_for_update().get(pk=visit_id)
-                        cached_id = get_cached_prescription_id(visit_id, form_token)
-                        if cached_id:
-                            messages.info(request, 'Prescription already saved.')
-                            return redirect('home:prescription_detail', prescription_id=cached_id)
+                submission_in_progress = False
+                if form_token and not try_acquire_prescription_submit_lock(visit_id, form_token):
+                    cached_id = get_cached_prescription_id(visit_id, form_token)
+                    if cached_id:
+                        messages.info(request, 'Prescription already saved.')
+                        return redirect('home:prescription_detail', prescription_id=cached_id)
+                    submission_in_progress = True
+                    messages.warning(
+                        request,
+                        'This prescription is already being saved. Please wait a moment.',
+                    )
 
-                        prescription, _created = get_or_create_visit_prescription(
-                            locked_visit,
-                            patient,
-                            request.user,
-                            diagnosis=form.cleaned_data['diagnosis'],
-                            notes=form.cleaned_data.get('notes', ''),
-                        )
+                if not submission_in_progress:
+                    try:
+                        with transaction.atomic():
+                            locked_visit = Visit.objects.select_for_update().get(pk=visit_id)
+                            cached_id = get_cached_prescription_id(visit_id, form_token)
+                            if cached_id:
+                                messages.info(request, 'Prescription already saved.')
+                                return redirect('home:prescription_detail', prescription_id=cached_id)
 
-                        if request.POST.get('action') == 'prescribe_close':
-                            locked_visit.is_active = False
-                            locked_visit.save(update_fields=['is_active'])
-                            messages.info(request, "Visit has been closed.")
+                            prescription, _created = get_or_create_visit_prescription(
+                                locked_visit,
+                                patient,
+                                request.user,
+                                diagnosis=form.cleaned_data['diagnosis'],
+                                notes=form.cleaned_data.get('notes', ''),
+                            )
 
-                        formset = PrescriptionItemFormSet(request.POST, instance=prescription, prefix='items')
-                        formset.is_valid()
-                        prescription_items = formset.save()
+                            if request.POST.get('action') == 'prescribe_close':
+                                locked_visit.is_active = False
+                                locked_visit.save(update_fields=['is_active'])
+                                messages.info(request, "Visit has been closed.")
 
-                    if prescription_items:
-                        invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
-                        
-                        new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
-                        if invoice.notes:
-                            invoice.notes += new_notes
-                        else:
-                            invoice.notes = new_notes.strip()
-                        invoice.save()
-                        
-                        prescription.invoice = invoice
-                        prescription.save(update_fields=['invoice'])
-                        
-                        for item in prescription_items:
-                            if item.medication.selling_price > 0:
-                                InvoiceItem.objects.create(
-                                    invoice=invoice,
-                                    inventory_item=item.medication,
-                                    name=item.medication.name,
-                                    unit_price=item.medication.selling_price,
-                                    quantity=item.quantity
-                                )
-                        
-                        invoice.update_totals()
-                        if invoice.total_amount == 0 and invoice.status != 'Paid':
-                            invoice.status = 'Paid'
+                            formset = PrescriptionItemFormSet(request.POST, instance=prescription, prefix='items')
+                            formset.is_valid()
+                            prescription_items = formset.save()
+
+                        if prescription_items:
+                            invoice = get_or_create_invoice(visit=prescription.visit, user=request.user)
+
+                            new_notes = f"\nPrescription meds added: {', '.join([item.medication.name for item in prescription_items])}"
+                            if invoice.notes:
+                                invoice.notes += new_notes
+                            else:
+                                invoice.notes = new_notes.strip()
                             invoice.save()
 
-                    cache_prescription_submit(visit_id, form_token, prescription.id)
-                    if prescription_items:
-                        messages.success(request, f'Prescription processed successfully for {patient.full_name}')
-                    else:
-                        messages.success(request, f'Prescription saved successfully for {patient.full_name}')
-                    return redirect('home:prescription_detail', prescription_id=prescription.id)
-                finally:
-                    if form_token and not get_cached_prescription_id(visit_id, form_token):
-                        release_prescription_submit_lock(visit_id, form_token)
+                            prescription.invoice = invoice
+                            prescription.save(update_fields=['invoice'])
+
+                            for item in prescription_items:
+                                if item.medication.selling_price > 0:
+                                    InvoiceItem.objects.create(
+                                        invoice=invoice,
+                                        inventory_item=item.medication,
+                                        name=item.medication.name,
+                                        unit_price=item.medication.selling_price,
+                                        quantity=item.quantity
+                                    )
+
+                            invoice.update_totals()
+                            if invoice.total_amount == 0 and invoice.status != 'Paid':
+                                invoice.status = 'Paid'
+                                invoice.save()
+
+                        cache_prescription_submit(visit_id, form_token, prescription.id)
+                        try:
+                            from .medication_registry import sync_active_medications_from_prescription
+                            synced = sync_active_medications_from_prescription(
+                                prescription, user=request.user,
+                            )
+                            if synced:
+                                messages.info(
+                                    request,
+                                    f'Active Medication List updated ({synced} item(s)). '
+                                    'Review on the patient profile → Active Medications.',
+                                )
+                        except Exception:
+                            pass
+                        try:
+                            from .electronic_prescribing import (
+                                attach_clinical_context_to_prescription,
+                                parse_id_list,
+                            )
+                            problem_ids = parse_id_list(request.POST.getlist('erx_problem_ids'))
+                            test_ids = parse_id_list(request.POST.getlist('erx_diagnostic_tests'))
+                            include_meds = request.POST.get('erx_include_medication_list', '1') in (
+                                '1', 'true', 'yes', 'on',
+                            )
+                            ctx = attach_clinical_context_to_prescription(
+                                prescription,
+                                problem_ids=problem_ids or None,
+                                include_medication_list=include_meds,
+                                diagnostic_service_ids=test_ids or None,
+                                order_diagnostics=bool(test_ids),
+                                user=request.user,
+                            )
+                            bits = []
+                            if ctx.get('includes', {}).get('problem_list'):
+                                bits.append('Problem List')
+                            if ctx.get('includes', {}).get('medication_list'):
+                                bits.append('Medication List')
+                            if ctx.get('includes', {}).get('diagnostic_tests'):
+                                bits.append('Diagnostic Tests')
+                            if bits:
+                                messages.info(
+                                    request,
+                                    'eRx package includes: ' + ', '.join(bits) + '.',
+                                )
+                        except Exception:
+                            pass
+                        if request.POST.get('transmit_erx') in ('1', 'true', 'yes', 'on'):
+                            try:
+                                from accounts.sha_claims_service import (
+                                    get_or_create_claim_session,
+                                    submit_erx_for_visit,
+                                )
+                                session = get_or_create_claim_session(visit, user=request.user)
+                                if session.consent_token:
+                                    submit_erx_for_visit(session, practitioner=request.user)
+                                    messages.success(request, 'Prescription transmitted electronically to SHA eRx.')
+                                else:
+                                    messages.warning(
+                                        request,
+                                        'Saved locally. Start SHA visit (OTP/consent) on Claims Desk before electronic transmission.',
+                                    )
+                            except Exception as exc:
+                                messages.warning(request, f'Local Rx saved; eRx transmit deferred: {exc}')
+                        if prescription_items:
+                            messages.success(request, f'Prescription processed successfully for {patient.full_name}')
+                        else:
+                            messages.success(request, f'Prescription saved successfully for {patient.full_name}')
+                        return redirect('home:prescription_detail', prescription_id=prescription.id)
+                    finally:
+                        if form_token and not get_cached_prescription_id(visit_id, form_token):
+                            release_prescription_submit_lock(visit_id, form_token)
+
     else:
         from .models import Diagnosis
         visit_diagnosis = (
@@ -2024,13 +3354,64 @@ def create_prescription(request, visit_id):
             'generic_name': details.generic_name if details else '',
             'formulation': details.formulation if details else '',
             'drug_class': details.drug_class.name if details and details.drug_class else '',
+            'strength_amount': details.strength_amount if details else '',
+            'strength_unit': details.strength_unit if details else '',
+            'generic_concept_code': details.generic_concept_code if details else '',
+            'generic_concept_display': details.generic_concept_display if details else '',
+            'is_dha_mapped': bool(details and details.generic_concept_code),
             'is_dispensed_as_whole': item.is_dispensed_as_whole,
             'dispensing_unit': item.dispensing_unit,
             'selling_price': str(item.selling_price),
             'stock_quantity': total_stock,
             'visit_type': visit.visit_type
         }
-    
+
+    from django.conf import settings as django_settings
+    from .clinical_decision_support import evaluate_cds
+    from .models import PatientAllergy as _PatientAllergy
+
+    cds_payload = evaluate_cds(patient, visit=visit)
+    from .knhts_conditions import ACTIVE_CLINICAL_STATUSES
+    from .models import PatientMedication, Problem
+    from accounts.models import Service as AccService
+    from lab.models import LabResult as LabResultModel
+
+    active_problems = list(
+        Problem.objects.filter(patient=patient)
+        .exclude(verification_status='entered-in-error')
+        .filter(clinical_status__in=ACTIVE_CLINICAL_STATUSES)
+        .order_by('-updated_at')[:30]
+    )
+    active_meds = list(
+        PatientMedication.objects.filter(patient=patient, status='active').order_by('-updated_at')[:30]
+    )
+    diagnostic_catalog = list(
+        AccService.objects.filter(
+            is_active=True,
+            department__isnull=False,
+        ).filter(
+            Q(department__name__icontains='Lab')
+            | Q(department__name__icontains='Imag')
+            | Q(department__name__icontains='Radiol')
+            | Q(department__name__icontains='Proced')
+        ).select_related('department').order_by('department__name', 'name')[:120]
+    )
+    if not diagnostic_catalog:
+        diagnostic_catalog = list(
+            AccService.objects.filter(is_active=True, department__isnull=False)
+            .select_related('department').order_by('department__name', 'name')[:80]
+        )
+    visit_labs = list(
+        LabResultModel.objects.filter(invoice__visit=visit)
+        .select_related('service', 'service__department')
+        .order_by('-requested_at')[:40]
+    )
+    sha_session = None
+    try:
+        sha_session = visit.sha_claim_session
+    except Exception:
+        sha_session = None
+
     context = {
         'form': form,
         'formset': formset,
@@ -2039,7 +3420,18 @@ def create_prescription(request, visit_id):
         'form_token': form_token,
         'existing_prescription': existing_prescription,
         'med_metadata_json': json.dumps(med_metadata),
-        # Add Dispensed Items context for the widget (Normalized)
+        'hpt_suggest_enabled': getattr(django_settings, 'HPT_DHA_SUGGEST_ON_SELECT', True),
+        'hpt_require_code': getattr(django_settings, 'HPT_DHA_REQUIRE_CODE', False),
+        'cds': cds_payload,
+        'cds_check_url': reverse('home:cds_check_medication', kwargs={'patient_pk': patient.pk}),
+        'active_patient_allergies': list(
+            _PatientAllergy.objects.filter(patient=patient, clinical_status='active')[:30]
+        ),
+        'erx_active_problems': active_problems,
+        'erx_active_medications': active_meds,
+        'erx_diagnostic_catalog': diagnostic_catalog,
+        'erx_visit_labs': visit_labs,
+        'sha_claim_ready': bool(sha_session and sha_session.consent_token),
         'dispensed_items': _get_normalized_history(visit, patient),
         'dispensing_departments': Departments.objects.all().order_by('name')
     }
@@ -2171,11 +3563,12 @@ def health_records_view(request):
         has_filters = True
         visits = visits.filter(visit_type=visit_type)
         
-    # 3. Gender
+    # 3. Gender (KNHTS administrative-gender codes; accept legacy M/F)
     gender = request.GET.get('gender')
     if gender and gender != 'all':
         has_filters = True
-        visits = visits.filter(patient__gender=gender)
+        from .knhts_demographics import map_gender_to_knhts
+        visits = visits.filter(patient__gender=map_gender_to_knhts(gender))
         
     # 4. Dates
     start_date = request.GET.get('start_date')
@@ -2222,14 +3615,72 @@ def health_records_view(request):
 def prescription_detail(request, prescription_id):
     """View prescription details"""
     from .models import Prescription
-    
-    prescription = get_object_or_404(Prescription, pk=prescription_id)
-    
+
+    prescription = get_object_or_404(
+        Prescription.objects.select_related('patient', 'visit', 'prescribed_by'),
+        pk=prescription_id,
+    )
+    sha_ready = False
+    if prescription.visit_id:
+        try:
+            session = prescription.visit.sha_claim_session
+            sha_ready = bool(session and session.consent_token)
+        except Exception:
+            sha_ready = False
+
     context = {
         'prescription': prescription,
         'patient': prescription.patient,
+        'sha_claim_ready': sha_ready,
+        'erx_problems': prescription.problem_list_snapshot or [],
+        'erx_medications': prescription.medication_list_snapshot or [],
+        'erx_diagnostics': prescription.diagnostic_tests_snapshot or [],
     }
     return render(request, 'home/prescription_detail.html', context)
+
+
+@login_required
+def transmit_prescription_erx(request, prescription_id):
+    """Electronically transmit visit prescription package to SHA eRx."""
+    if request.method != 'POST':
+        return redirect('home:prescription_detail', prescription_id=prescription_id)
+
+    from .models import Prescription
+    from accounts.sha_claims_service import get_or_create_claim_session, submit_erx_for_visit
+    from .electronic_prescribing import attach_clinical_context_to_prescription
+
+    prescription = get_object_or_404(Prescription, pk=prescription_id)
+    if request.user.role not in ('Doctor', 'Admin', 'Pharmacist') and not request.user.is_superuser:
+        messages.error(request, 'Permission denied.')
+        return redirect('home:prescription_detail', prescription_id=prescription.id)
+
+    if not prescription.visit_id:
+        messages.error(request, 'Prescription has no visit — cannot transmit.')
+        return redirect('home:prescription_detail', prescription_id=prescription.id)
+
+    # Refresh clinical context if empty
+    if not prescription.erx_clinical_context:
+        attach_clinical_context_to_prescription(
+            prescription,
+            include_medication_list=True,
+            order_diagnostics=False,
+            user=request.user,
+        )
+
+    try:
+        session = get_or_create_claim_session(prescription.visit, user=request.user)
+        if not session.consent_token:
+            messages.warning(
+                request,
+                'Start the SHA visit on Claims Desk (OTP → consent) before electronic transmission.',
+            )
+            return redirect('accounts:sha_claims_desk', visit_id=prescription.visit_id)
+        submit_erx_for_visit(session, practitioner=request.user)
+        messages.success(request, 'Electronic prescription transmitted to SHA eRx.')
+    except Exception as exc:
+        messages.error(request, f'eRx transmission failed: {exc}')
+
+    return redirect('home:prescription_detail', prescription_id=prescription.id)
 
 
 @login_required
@@ -2374,6 +3825,18 @@ def edit_prescription(request, prescription_id):
                                 messages.info(request, f"Note: A credit of {overpaid} has been recorded for {patient.full_name} due to overpayment.")
 
                         cache_prescription_edit(prescription_id, form_token)
+                        try:
+                            from .medication_registry import sync_active_medications_from_prescription
+                            synced = sync_active_medications_from_prescription(
+                                prescription, user=request.user,
+                            )
+                            if synced:
+                                messages.info(
+                                    request,
+                                    f'Active Medication List updated ({synced} item(s)).',
+                                )
+                        except Exception:
+                            pass
                         messages.success(request, f"Prescription for {patient.full_name} updated successfully.")
                         return redirect('home:prescription_detail', prescription_id=prescription.id)
                     finally:
@@ -2418,6 +3881,11 @@ def edit_prescription(request, prescription_id):
             'generic_name': details.generic_name if details else '',
             'formulation': details.formulation if details else '',
             'drug_class': details.drug_class.name if details and details.drug_class else '',
+            'strength_amount': details.strength_amount if details else '',
+            'strength_unit': details.strength_unit if details else '',
+            'generic_concept_code': details.generic_concept_code if details else '',
+            'generic_concept_display': details.generic_concept_display if details else '',
+            'is_dha_mapped': bool(details and details.generic_concept_code),
             'is_dispensed_as_whole': item.is_dispensed_as_whole,
             'dispensing_unit': item.dispensing_unit,
             'selling_price': str(item.selling_price),
@@ -3127,11 +4595,9 @@ def dispense_all_visit_items(request, visit_id):
                 )
                 remaining -= take
 
-            # Mark as dispensed
-            med.dispensed = True
-            med.dispensed_at = timezone.now()
-            med.dispensed_by = request.user
-            med.save()
+            # Mark as dispensed (+ DHA pack code snapshot)
+            from accounts.sha_claims_service import mark_rx_item_dispensed
+            mark_rx_item_dispensed(med, request.user)
 
             DispensedItem.objects.create(
                 item=med.medication,
@@ -3915,11 +5381,9 @@ def dispense_night_opd_items(request, visit_id):
                 )
                 remaining -= take
 
-            # Mark as dispensed
-            med.dispensed = True
-            med.dispensed_at = timezone.now()
-            med.dispensed_by = request.user
-            med.save()
+            # Mark as dispensed (+ DHA pack code snapshot)
+            from accounts.sha_claims_service import mark_rx_item_dispensed
+            mark_rx_item_dispensed(med, request.user)
 
             DispensedItem.objects.create(
                 item=med.medication,
@@ -4005,55 +5469,37 @@ def appointments_dashboard(request):
     Shows analytics and a schedule of appointments
     """
     today = timezone.localdate()
+    now = timezone.now()
     start_of_day = timezone.make_aware(datetime.combine(today, time.min))
     end_of_day = timezone.make_aware(datetime.combine(today, time.max))
-    
-    # Base query for all active appointments
-    appointments = Appointments.objects.all().select_related('patient').order_by('appointment_date')
-    
-    # 1. Analytics
-    # Today's Appointments
+
+    appointments = Appointments.objects.select_related(
+        'patient', 'created_by'
+    ).order_by('appointment_date')
+
     today_appointments = appointments.filter(
         appointment_date__range=(start_of_day, end_of_day)
     )
     todays_count = today_appointments.count()
-    
-    # Upcoming Appointments (Future dates)
+
     upcoming_appointments = appointments.filter(
-        appointment_date__date__gt=today,
-        is_completed=False
+        appointment_date__gt=now,
+        is_completed=False,
     )
     upcoming_count = upcoming_appointments.count()
-    
-    # Missed Appointments (Past dates, not completed)
+
     missed_appointments = appointments.filter(
-        appointment_date__lt=timezone.now(),
-        is_completed=False
+        appointment_date__lt=now,
+        is_completed=False,
     )
     missed_count = missed_appointments.count()
-    
-    # Completed Appointments (Any date)
-    completed_appointments = appointments.filter(
-        is_completed=True
-    )
+
+    completed_appointments = appointments.filter(is_completed=True)
     completed_count = completed_appointments.count()
-    
-    # Search functionality
-    search_query = request.GET.get('search', '')
-    if search_query:
-        appointments = appointments.filter(
-            Q(patient__first_name__icontains=search_query) |
-            Q(patient__last_name__icontains=search_query) |
-            Q(patient__id_number__icontains=search_query) |
-            Q(appointment_type__icontains=search_query)
-        )
-        
-    # Time-based exact filtering (24h/48h)
-    now = timezone.now()
+
     next_24h = now + timedelta(hours=24)
     next_48h = now + timedelta(hours=48)
-        
-    # Default to showing today's appointments if no filter is specified
+
     filter_type = request.GET.get('filter', 'today')
     if filter_type == 'upcoming':
         display_appointments = upcoming_appointments
@@ -4067,28 +5513,51 @@ def appointments_dashboard(request):
         display_appointments = completed_appointments
     elif filter_type == 'all':
         display_appointments = appointments
-    else:  # 'today'
+    else:
+        filter_type = 'today'
         display_appointments = today_appointments
-        
+
+    search_query = (request.GET.get('search') or '').strip()
     if search_query:
-        display_appointments = appointments  # Override filter if searching
-    
-    # Pagination
+        display_appointments = display_appointments.filter(
+            Q(patient__first_name__icontains=search_query)
+            | Q(patient__last_name__icontains=search_query)
+            | Q(patient__id_number__icontains=search_query)
+            | Q(patient__phone__icontains=search_query)
+            | Q(appointment_type__icontains=search_query)
+        )
+
+    if filter_type in ('missed', 'completed', 'all'):
+        display_appointments = display_appointments.order_by('-appointment_date')
+    else:
+        display_appointments = display_appointments.order_by('appointment_date')
+
     paginator = Paginator(display_appointments, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    filter_labels = {
+        'today': "Today's appointments",
+        'upcoming': 'Upcoming appointments',
+        '24h': 'Next 24 hours',
+        '48h': 'Next 48 hours',
+        'missed': 'Missed appointments',
+        'completed': 'Completed appointments',
+        'all': 'All appointments',
+    }
+
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
         'filter_type': filter_type,
+        'filter_label': filter_labels.get(filter_type, 'Appointments'),
         'todays_count': todays_count,
         'upcoming_count': upcoming_count,
         'missed_count': missed_count,
         'completed_count': completed_count,
         'today': today,
+        'now': now,
     }
-    
+
     return render(request, 'home/appointments_dashboard.html', context)
 
 @login_required
@@ -4451,10 +5920,33 @@ def ambulance_dashboard(request):
     total_trips = AmbulanceActivity.objects.count()
     total_revenue = AmbulanceActivity.objects.aggregate(total=Sum('amount'))['total'] or 0
     trips_today = AmbulanceActivity.objects.filter(date__range=(start_of_day, end_of_day)).count()
+    revenue_today = AmbulanceActivity.objects.filter(
+        date__range=(start_of_day, end_of_day)
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    trips_30d = AmbulanceActivity.objects.filter(date__date__gte=start_date).count()
+    revenue_30d = AmbulanceActivity.objects.filter(
+        date__date__gte=start_date
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    pending_trips = AmbulanceActivity.objects.exclude(invoice__status='Paid').count()
+    paid_trips = AmbulanceActivity.objects.filter(invoice__status='Paid').count()
+    avg_trip = (total_revenue / total_trips) if total_trips else 0
+    route_count = AmbulanceCharge.objects.count()
+
+    hour = timezone.localtime().hour
+    if hour < 12:
+        greeting = 'Good morning'
+    elif hour < 17:
+        greeting = 'Good afternoon'
+    else:
+        greeting = 'Good evening'
     
-    # Recent Activities
-    activities = AmbulanceActivity.objects.all().select_related('patient', 'route', 'invoice').order_by('-date')[:20]
-    
+    # Recent trip activity for the table
+    activities = (
+        AmbulanceActivity.objects.all()
+        .select_related('patient', 'route', 'invoice')
+        .order_by('-date')[:20]
+    )
+
     # Routes for Dropdown
     routes = AmbulanceCharge.objects.all()
     
@@ -4500,9 +5992,19 @@ def ambulance_dashboard(request):
         revenues.append(float(item['revenue'] or 0))
 
     context = {
+        'greeting': greeting,
+        'range_start': start_date,
+        'range_end': today,
         'total_trips': total_trips,
         'total_revenue': total_revenue,
         'trips_today': trips_today,
+        'revenue_today': revenue_today,
+        'trips_30d': trips_30d,
+        'revenue_30d': revenue_30d,
+        'pending_trips': pending_trips,
+        'paid_trips': paid_trips,
+        'avg_trip': avg_trip,
+        'route_count': route_count,
         'activities': activities,
         'routes': routes,
         'patients': patients,
@@ -4619,3 +6121,215 @@ def patient_search_api(request):
     } for p in patients]
     return JsonResponse({'results': results})
 
+
+def can_use_icd11(user):
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.role in ['Doctor', 'Nurse', 'Admin', 'SHA Manager']
+    )
+
+
+@login_required
+@user_passes_test(can_use_icd11)
+def icd11_search_page(request):
+    """Simple UI for WHO ICD-11 code search."""
+    from django.conf import settings as django_settings
+    from .icd11_local import local_icd11_count
+
+    local_count = local_icd11_count()
+    return render(request, 'home/icd11_search.html', {
+        'release': django_settings.ICD11_RELEASE,
+        'linearization': django_settings.ICD11_LINEARIZATION,
+        'language': django_settings.ICD11_LANGUAGE,
+        'has_credentials': bool(
+            django_settings.ICD11_CLIENT_ID and django_settings.ICD11_CLIENT_SECRET
+        ),
+        'uses_local_db': django_settings.ICD11_USE_LOCAL_DB,
+        'local_count': local_count,
+        'has_local_data': local_count > 0,
+    })
+
+
+@login_required
+@user_passes_test(can_use_icd11)
+def icd11_search_api(request):
+    """GET /home/api/icd11/search/?q=diabetes — local DB only."""
+    from django.conf import settings as django_settings
+    from .icd11_local import local_icd11_count, search_icd11_local
+
+    query = (request.GET.get('q') or request.GET.get('query') or '').strip()
+    if not query:
+        return JsonResponse({'success': False, 'error': 'q is required.'}, status=400)
+
+    if local_icd11_count() == 0:
+        return JsonResponse({
+            'success': False,
+            'error': 'ICD-11 database is empty. Run `python manage.py sync_icd11` on the server.',
+        }, status=503)
+
+    try:
+        payload = search_icd11_local(query, limit=25)
+        results = payload.get('results') or []
+        return JsonResponse({
+            'success': True,
+            'query': payload.get('query'),
+            'release': payload.get('release') or django_settings.ICD11_RELEASE,
+            'linearization': payload.get('linearization') or django_settings.ICD11_LINEARIZATION,
+            'source': 'local',
+            'count': len(results),
+            'results': results,
+        })
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(can_use_icd11)
+def icd11_validate_api(request):
+    """
+    GET /home/api/icd11/validate/?code=BA00&title=Essential%20hypertension
+
+    Cross-checks a locally selected ICD-11 code against DHA terminology:
+    still supported, and title unchanged.
+    """
+    from .icd11_diagnosis import cross_check_icd11_with_dha
+
+    code = (request.GET.get('code') or '').strip()
+    title = (request.GET.get('title') or '').strip()
+    if not code:
+        return JsonResponse({'success': False, 'error': 'code is required.'}, status=400)
+
+    try:
+        payload = cross_check_icd11_with_dha(code, local_title=title or None)
+        http_status = 200
+        if not payload.get('success'):
+            status = payload.get('status')
+            if status in ('not_in_local_db', 'not_supported_by_dha', 'title_changed'):
+                http_status = 409
+            elif status == 'dha_unavailable':
+                http_status = 502
+        return JsonResponse(payload, status=http_status)
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(can_use_icd11)
+def icd11_entity_api(request):
+    """GET /home/api/icd11/entity/?id=257068234"""
+    from .icd11_service import (
+        Icd11ConfigError,
+        Icd11RequestError,
+        get_icd11_entity,
+    )
+
+    entity_ref = (request.GET.get('id') or request.GET.get('uri') or '').strip()
+    if not entity_ref:
+        return JsonResponse({'success': False, 'error': 'id or uri is required.'}, status=400)
+
+    try:
+        payload = get_icd11_entity(entity_ref)
+        return JsonResponse({'success': True, **payload})
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Icd11ConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except Icd11RequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(can_use_icd11)
+def icd11_code_api(request):
+    """GET /home/api/icd11/code/?code=1A00"""
+    from .icd11_service import (
+        Icd11ConfigError,
+        Icd11RequestError,
+        get_icd11_code_info,
+    )
+
+    code = (request.GET.get('code') or '').strip()
+    if not code:
+        return JsonResponse({'success': False, 'error': 'code is required.'}, status=400)
+
+    try:
+        payload = get_icd11_code_info(code)
+        return JsonResponse({'success': True, **payload})
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Icd11ConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except Icd11RequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+def hpt_search_api(request):
+    """
+    GET /home/api/hpt/search/?q=metformin+500&prefer=ge
+
+    Search DHA MOH-PPB HPT terminology for medication concepts.
+    """
+    from .dha_medication import search_dha_medications
+
+    query = (request.GET.get('q') or request.GET.get('search') or '').strip()
+    if not query:
+        return JsonResponse({'success': False, 'error': 'q is required.'}, status=400)
+
+    prefer = (request.GET.get('prefer') or 'ge').strip().lower()
+    prefer_generic = prefer in ('ge', 'generic', '1', 'true', 'yes')
+    try:
+        limit = int(request.GET.get('limit') or 25)
+    except ValueError:
+        limit = 25
+
+    try:
+        payload = search_dha_medications(
+            query,
+            limit=max(1, min(limit, 50)),
+            prefer_generic=prefer_generic,
+        )
+        status = 200 if payload.get('success') else 502
+        return JsonResponse(payload, status=status)
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+def hpt_suggest_api(request):
+    """
+    GET /home/api/hpt/suggest/?name=...&generic_name=...&formulation=...
+
+    Suggest DHA generic product codes after selecting a local inventory drug.
+    """
+    from .dha_medication import suggest_dha_for_local_drug
+
+    name = (request.GET.get('name') or '').strip()
+    generic_name = (request.GET.get('generic_name') or '').strip()
+    formulation = (request.GET.get('formulation') or '').strip()
+    if not (name or generic_name):
+        return JsonResponse(
+            {'success': False, 'error': 'name or generic_name is required.'},
+            status=400,
+        )
+
+    try:
+        payload = suggest_dha_for_local_drug(
+            name=name,
+            generic_name=generic_name,
+            formulation=formulation,
+        )
+        status = 200 if payload.get('success') else 502
+        return JsonResponse(payload, status=status)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)

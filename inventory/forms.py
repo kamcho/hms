@@ -30,10 +30,40 @@ class InventoryItemForm(forms.ModelForm):
 class MedicationForm(forms.ModelForm):
     class Meta:
         model = Medication
-        fields = ['generic_name', 'drug_class', 'formulation']
+        fields = [
+            'generic_name',
+            'drug_class',
+            'formulation',
+            'strength_amount',
+            'strength_unit',
+            'generic_concept_code',
+            'generic_concept_display',
+            'active_component_code',
+            'atc_code',
+            'actual_product_code',
+            'dha_form_id',
+            'dha_route_id',
+        ]
         widgets = {
-            'generic_name': forms.TextInput(attrs={'placeholder': 'e.g. Paracetamol'}),
+            'generic_name': forms.TextInput(attrs={'placeholder': 'e.g. Paracetamol (INN)'}),
+            'strength_amount': forms.TextInput(attrs={'placeholder': 'e.g. 500'}),
+            'generic_concept_code': forms.TextInput(attrs={
+                'placeholder': 'GE10177',
+                'class': 'dha-generic-concept-code',
+            }),
+            'generic_concept_display': forms.TextInput(attrs={
+                'placeholder': 'Paracetamol 500 mg Oral Tablet',
+                'class': 'dha-generic-concept-display',
+            }),
+            'active_component_code': forms.TextInput(attrs={'placeholder': 'AC11114'}),
+            'atc_code': forms.TextInput(attrs={'placeholder': 'N02BE01'}),
+            'actual_product_code': forms.TextInput(attrs={
+                'placeholder': 'Optional PH* pack code',
+            }),
+            'dha_form_id': forms.HiddenInput(),
+            'dha_route_id': forms.HiddenInput(),
         }
+
 
 class ConsumableDetailForm(forms.ModelForm):
     class Meta:

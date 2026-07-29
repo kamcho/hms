@@ -8,18 +8,24 @@
     --sidebar-width: 250px;
     --sidebar-collapsed-width: 70px;
     --transition: all 0.3s ease;
+    /* HMS typeface — Josefin Sans */
+    --font-sans: 'Josefin Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-sans);
 }
 
 body {
     background-color: #f0f2f5;
     color: #333;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .dashboard-container {

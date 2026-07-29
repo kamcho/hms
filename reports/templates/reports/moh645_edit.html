@@ -1,0 +1,174 @@
+{% extends 'users/dashboard_base.html' %}
+{% block title %}{{ title }} - HMS{% endblock %}
+{% block extra_css %}
+<style>
+.m645-page { padding: 1rem 1.25rem 2rem; }
+.m645-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.m645-toolbar h1 { margin: 0.35rem 0 0; font-size: 1.25rem; font-weight: 800; }
+.m645-back { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #059669; text-decoration: none; }
+.m645-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.9rem; border: none; border-radius: 8px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; cursor: pointer; text-decoration: none; color: #fff; }
+.m645-btn-green { background: #059669; } .m645-btn-blue { background: #2563eb; } .m645-btn-dark { background: #1e293b; }
+.m645-btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+.m645-sheet { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; }
+.m645-header { background: linear-gradient(135deg, #065f46, #059669); color: #fff; padding: 1rem; text-align: center; }
+.m645-header .title { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; }
+.m645-stock { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; padding: 1rem; background: #ecfdf5; border-bottom: 1px solid #a7f3d0; }
+.m645-stock label { display: block; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: #047857; }
+.m645-stock input, .m645-stock textarea { width: 100%; padding: 0.4rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; }
+.m645-note { padding: 0.6rem 1rem; background: #fffbeb; border-bottom: 1px solid #fde68a; font-size: 0.72rem; color: #92400e; }
+.m645-wrap { overflow: auto; }
+.m645-table { border-collapse: collapse; width: 100%; font-size: 10px; min-width: 960px; }
+.m645-table th, .m645-table td { border: 1px solid #cbd5e1; padding: 5px; text-align: center; }
+.m645-table thead th { background: #ecfdf5; font-weight: 800; text-transform: uppercase; font-size: 9px; }
+.m645-table input, .m645-table select { width: 100%; padding: 4px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 10px; }
+.m645-summary { padding: 0.75rem 1rem; background: #f8fafc; font-size: 0.75rem; display: flex; flex-wrap: wrap; gap: 1.5rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="m645-page">
+    <div class="m645-toolbar">
+        <div>
+            <a href="{% url 'reports:moh645_list' %}?year={{ report.report_date.year }}&month={{ report.report_date.month }}" class="m645-back"><i class="fas fa-arrow-left"></i> Daily list</a>
+            <h1>{{ title }}</h1>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+            {% if report.status != 'submitted' %}
+            <form method="post" action="{% url 'reports:moh645_sync' report.pk %}" style="display:inline;">{% csrf_token %}
+                <button type="submit" class="m645-btn m645-btn-green"><i class="fas fa-sync"></i> Sync from HMS</button>
+            </form>
+            <button type="button" id="btnAddRow" class="m645-btn m645-btn-outline"><i class="fas fa-plus"></i> Add row</button>
+            <button type="button" id="btnSave" class="m645-btn m645-btn-blue"><i class="fas fa-save"></i> Save</button>
+            <button type="button" id="btnSubmit" class="m645-btn m645-btn-dark"><i class="fas fa-check"></i> Submit</button>
+            {% endif %}
+            <a href="{% url 'reports:moh645_print' report.pk %}" target="_blank" class="m645-btn m645-btn-outline"><i class="fas fa-print"></i> Print</a>
+        </div>
+    </div>
+    <div class="m645-sheet">
+        <div class="m645-header">
+            <div style="font-size:0.65rem;">Republic of Kenya — Ministry of Health</div>
+            <div class="title">MOH 645 — Daily Activity Register for Malaria Commodities</div>
+            <div style="margin-top:0.5rem;font-size:0.75rem;">{{ report.facility_name }} · {{ report.report_date }} · Page {{ report.page_number }}</div>
+        </div>
+        <div class="m645-note"><i class="fas fa-info-circle"></i> Malaria is tested via <strong>Microscopy</strong> or <strong>mRDT</strong>. Sync pulls completed lab results and dispensing for this date; review daily before submit.</div>
+        <div class="m645-stock">
+            <div><label>Balance prev. (A)</label><input type="number" step="0.01" id="balancePrevious" value="{{ report.balance_previous }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div><label>Received (B)</label><input type="number" step="0.01" id="qtyReceived" value="{{ report.qty_received }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div><label>Stock (C)</label><input type="text" id="totalStock" value="{{ report.total_stock_available }}" readonly></div>
+            <div><label>Losses (D)</label><input type="number" step="0.01" id="losses" value="{{ report.losses }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div><label>Receipt date</label><input type="date" id="receiptDate" value="{{ report.receipt_date|date:'Y-m-d' }}" {% if report.status == 'submitted' %}disabled{% endif %}></div>
+            <div style="grid-column:1/-1;"><label>Remarks</label><textarea id="remarks" rows="2" {% if report.status == 'submitted' %}disabled{% endif %}>{{ report.remarks }}</textarea></div>
+        </div>
+        <div class="m645-wrap">
+            <table class="m645-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th><th>IP/OP</th><th>Test method</th><th>Result</th><th>AL weight band</th>
+                        <th>RDTs</th><th>AL 6</th><th>AL 12</th><th>AL 18</th><th>AL 24</th><th>Artesunate</th><th></th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody">
+                    {% for e in entries %}
+                    <tr data-entry-id="{{ e.pk }}">
+                        <td><input type="text" class="inp-name" value="{{ e.patient_name }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><select class="inp-visit" {% if report.status == 'submitted' %}disabled{% endif %}>{% for val, label in visit_type_choices %}<option value="{{ val }}" {% if e.visit_type == val %}selected{% endif %}>{{ val }}</option>{% endfor %}</select></td>
+                        <td><select class="inp-method" {% if report.status == 'submitted' %}disabled{% endif %}>{% for val, label in test_method_choices %}<option value="{{ val }}" {% if e.test_method == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+                        <td><select class="inp-result" {% if report.status == 'submitted' %}disabled{% endif %}>{% for val, label in test_result_choices %}<option value="{{ val }}" {% if e.test_result == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+                        <td><select class="inp-al-band" {% if report.status == 'submitted' %}disabled{% endif %}>{% for val, label in al_band_choices %}<option value="{{ val }}" {% if e.al_weight_band == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+                        <td><input type="number" step="0.01" class="inp-rdts" value="{{ e.qty_rdts }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" step="0.01" class="inp-al6" value="{{ e.qty_al_6 }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" step="0.01" class="inp-al12" value="{{ e.qty_al_12 }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" step="0.01" class="inp-al18" value="{{ e.qty_al_18 }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" step="0.01" class="inp-al24" value="{{ e.qty_al_24 }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td><input type="number" step="0.01" class="inp-art" value="{{ e.qty_artesunate }}" {% if report.status == 'submitted' %}disabled{% endif %}></td>
+                        <td>{% if report.status != 'submitted' %}<button type="button" class="btn-del-row" style="border:none;background:none;color:#dc2626;cursor:pointer;">×</button>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="m645-summary">
+            <div>Total dispensed (E): <strong id="totalDispensed">{{ report.total_dispensed }}</strong></div>
+            <div>Balance end: <strong id="balanceEnd">{{ report.balance_end }}</strong></div>
+            <div>Status: <strong>{{ report.get_status_display }}</strong></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if report.status != 'submitted' %}
+<script>
+(function() {
+    const saveUrl = "{% url 'reports:moh645_save' report.pk %}";
+    const csrf = '{{ csrf_token }}';
+    function updateStockSummary() {
+        const a = parseFloat(document.getElementById('balancePrevious').value) || 0;
+        const b = parseFloat(document.getElementById('qtyReceived').value) || 0;
+        const d = parseFloat(document.getElementById('losses').value) || 0;
+        document.getElementById('totalStock').value = (a + b).toFixed(2);
+        let e = 0;
+        document.querySelectorAll('#entriesBody tr').forEach(tr => {
+            ['inp-rdts','inp-al6','inp-al12','inp-al18','inp-al24','inp-art'].forEach(cls => {
+                e += parseFloat(tr.querySelector('.' + cls)?.value) || 0;
+            });
+        });
+        document.getElementById('totalDispensed').textContent = e.toFixed(2);
+        document.getElementById('balanceEnd').textContent = (a + b - e - d).toFixed(2);
+    }
+    ['balancePrevious','qtyReceived','losses'].forEach(id => document.getElementById(id).addEventListener('input', updateStockSummary));
+    document.getElementById('entriesBody').addEventListener('input', updateStockSummary);
+    function collectEntries() {
+        return Array.from(document.querySelectorAll('#entriesBody tr')).map(tr => ({
+            id: tr.dataset.entryId || null,
+            patient_name: tr.querySelector('.inp-name').value,
+            visit_type: tr.querySelector('.inp-visit').value,
+            test_method: tr.querySelector('.inp-method').value,
+            test_result: tr.querySelector('.inp-result').value,
+            al_weight_band: tr.querySelector('.inp-al-band').value,
+            qty_rdts: tr.querySelector('.inp-rdts').value || 0,
+            qty_al_6: tr.querySelector('.inp-al6').value || 0,
+            qty_al_12: tr.querySelector('.inp-al12').value || 0,
+            qty_al_18: tr.querySelector('.inp-al18').value || 0,
+            qty_al_24: tr.querySelector('.inp-al24').value || 0,
+            qty_artesunate: tr.querySelector('.inp-art').value || 0,
+        }));
+    }
+    function postData(submit) {
+        return fetch(saveUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({
+                header: {
+                    balance_previous: document.getElementById('balancePrevious').value,
+                    qty_received: document.getElementById('qtyReceived').value,
+                    losses: document.getElementById('losses').value,
+                    remarks: document.getElementById('remarks').value,
+                    receipt_date: document.getElementById('receiptDate').value,
+                },
+                entries: collectEntries(),
+                replace_entries: true,
+                submit: submit,
+            }),
+        }).then(r => r.json());
+    }
+    document.getElementById('btnSave').addEventListener('click', () => postData(false).then(d => { if (d.success) location.reload(); else alert(d.error || 'Failed'); }));
+    document.getElementById('btnSubmit').addEventListener('click', () => {
+        if (!confirm('Submit and lock this daily register?')) return;
+        postData(true).then(d => { if (d.success) location.reload(); else alert(d.error || 'Failed'); });
+    });
+    document.getElementById('btnAddRow').addEventListener('click', () => {
+        const tbody = document.getElementById('entriesBody');
+        const tr = tbody.querySelector('tr')?.cloneNode(true);
+        if (tr) {
+            tr.dataset.entryId = '';
+            tr.querySelectorAll('input').forEach(i => { if (!i.readOnly) i.value = i.type === 'number' ? '0' : ''; });
+            tr.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            tbody.appendChild(tr);
+        }
+    });
+    document.getElementById('entriesBody').addEventListener('click', e => {
+        if (e.target.classList.contains('btn-del-row')) e.target.closest('tr').remove();
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

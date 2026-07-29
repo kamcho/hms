@@ -1,478 +1,1068 @@
 {% extends 'users/dashboard_base.html' %}
 {% load static %}
 {% block title %}Ambulance Dashboard - HMS{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 {% block content %}
-    <style>
-    :root {
-        --amb-red: #ef4444;
-        --amb-header: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        --amb-card: #ffffff;
-        --amb-border: #e2e8f0;
-    }
-
-    .amb-header {
-        background: var(--amb-header);
-        color: white;
-        padding: 2.5rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .amb-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 300px;
-        height: 100%;
-        background: radial-gradient(circle at top right, rgba(239, 68, 68, 0.2), transparent 70%);
-    }
-
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2.5rem;
-    }
-
-    .stat-card {
-        background: white;
-        border: 1px solid var(--amb-border);
-        border-radius: 20px;
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        transition: transform 0.2s;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.75rem;
-    }
-
-    .trip-card {
-        background: #eff6ff;
-        color: #3b82f6;
-    }
-
-    .revenue-card {
-        background: #ecfdf5;
-        color: #10b981;
-    }
-
-    .today-card {
-        background: #fff1f2;
-        color: #f43f5e;
-    }
-
-    .main-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-    }
-
-    .section-card {
-        background: white;
-        border: 1px solid var(--amb-border);
-        border-radius: 24px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .section-header h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .table-container {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th {
-        text-align: left;
-        padding: 1rem;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        background: #f8fafc;
-        border-bottom: 1px solid var(--amb-border);
-    }
-
-    td {
-        padding: 1rem;
-        border-bottom: 1px solid var(--amb-border);
-        color: #334155;
-        font-size: 0.9rem;
-    }
-
-    .btn-action {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.2s;
-    }
-
-    .btn-action:hover {
-        background: #2563eb;
-    }
-
-    .form-group {
-        margin-bottom: 1.25rem;
-    }
-
-    .form-label {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #475569;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        transition: border-color 0.2s;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-    @media (max-width: 1024px) {
-        .main-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    </style>
-    <div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-        <!-- Header -->
-        <div class="amb-header">
-            <h1 style="font-weight: 800; font-size: 2rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
-                <i class="fas fa-ambulance"></i> Ambulance Operations Center
-            </h1>
-            <p style="margin: 0.5rem 0 0 3.5rem; opacity: 0.8;">Monitor trips, manage billing, and dispatch services.</p>
+<div class="admin-dash amb-dash">
+    <!-- Header -->
+    <div class="ad-header">
+        <div class="ad-header-left">
+            <div class="ad-title-icon ad-title-icon-amb">
+                <i class="fas fa-ambulance"></i>
+            </div>
+            <div>
+                <h1 class="ad-title">Ambulance</h1>
+                <p class="ad-subtitle">
+                    {{ greeting }}{% if user.first_name %}, {{ user.first_name }}{% endif %}
+                    · Dispatch, billing & route analytics
+                </p>
+            </div>
         </div>
-        <!-- Stats -->
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-icon trip-card">
+        <div class="ad-header-actions">
+            <div class="ad-date-chip">
+                <i class="fas fa-calendar-alt"></i>
+                <span>{{ range_start|date:"d M Y" }} — {{ range_end|date:"d M Y" }}</span>
+            </div>
+            <button type="button" class="ad-btn ad-btn-ghost" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+            <button type="button" class="ad-btn ad-btn-primary" onclick="openRouteModal()">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Add Route</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Top grid -->
+    <div class="ad-top-grid amb-top-grid">
+        <div class="ad-kpi-stack">
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-blue">
                     <i class="fas fa-route"></i>
                 </div>
-                <div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ total_trips }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Trips</div>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Total Trips</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value">{{ total_trips }}</span>
+                        <span class="ad-trend neutral">{{ trips_30d }} / 30d</span>
+                    </div>
+                    <span class="ad-kpi-hint">{{ trips_today }} dispatched today</span>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon revenue-card">
+
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-teal">
                     <i class="fas fa-coins"></i>
                 </div>
-                <div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">Let {{ total_revenue }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Total Revenue</div>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Total Revenue</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value ad-kpi-value-sm">KES {{ total_revenue|floatformat:0 }}</span>
+                    </div>
+                    <span class="ad-kpi-hint">30d: KES {{ revenue_30d|floatformat:0 }}</span>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon today-card">
+
+            <div class="ad-kpi-card">
+                <div class="ad-kpi-icon ad-kpi-icon-rose">
                     <i class="fas fa-clock"></i>
                 </div>
-                <div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">{{ trips_today }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Trips Today</div>
+                <div class="ad-kpi-body">
+                    <span class="ad-kpi-label">Trips Today</span>
+                    <div class="ad-kpi-row">
+                        <span class="ad-kpi-value">{{ trips_today }}</span>
+                        <span class="ad-trend up">KES {{ revenue_today|floatformat:0 }}</span>
+                    </div>
+                    <span class="ad-kpi-hint">Avg trip KES {{ avg_trip|floatformat:0 }}</span>
                 </div>
             </div>
         </div>
-        <div class="main-grid">
-            <!-- Left Column: Activity Log & Chart -->
-            <div>
-                <!-- Usage Chart -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-chart-line" style="color: #3b82f6;"></i> Usage & Revenue Analytics (30 Days)
-                        </h2>
-                    </div>
-                    <div style="height: 300px;">
-                        <canvas id="ambulanceChart"></canvas>
-                    </div>
+
+        <div class="ad-card ad-overview-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-chart-column"></i>
+                    <span>Usage & Revenue</span>
                 </div>
-                <!-- Recent Activity List -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-list-alt" style="color: #64748b;"></i> Recent Trips
-                        </h2>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Patient</th>
-                                    <th>Route</th>
-                                    <th>Driver</th>
-                                    <th>Billing</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for trip in activities %}
-                                    <tr>
-                                        <td>{{ trip.date|date:"M d, H:i" }}</td>
-                                        <td style="font-weight: 600;">{{ trip.patient.full_name }}</td>
-                                        <td>{{ trip.route.from_location }} &rarr; {{ trip.route.to_location }}</td>
-                                        <td>{{ trip.driver }}</td>
-                                        <td>Let {{ trip.amount }}</td>
-                                        <td>
-                                            {% if trip.invoice.status == 'Paid' %}
-                                                <span style="color: #10b981; font-weight: 700; font-size: 0.75rem; background: #ecfdf5; padding: 0.25rem 0.75rem; border-radius: 99px;">PAID</span>
-                                            {% else %}
-                                                <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem; background: #fffbeb; padding: 0.25rem 0.75rem; border-radius: 99px;">PENDING</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">
-                                            No activity
-                                            recorded yet
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="ad-legend compact">
+                    <span><i class="dot" style="background:#2563eb"></i> Trips</span>
+                    <span><i class="dot" style="background:#059669"></i> Revenue</span>
                 </div>
             </div>
-            <!-- Right Column: Dispatch Form -->
-            <div>
-                <div class="section-card" style="position: sticky; top: 2rem;">
-                    <div class="section-header">
-                        <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <span><i class="fas fa-plus-circle" style="color: #ef4444;"></i> New Dispatch</span>
-                            <button type="button" onclick="openRouteModal()" class="btn-action" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #64748b;">
-                                <i class="fas fa-map-marked-alt"></i> Add Route
-                            </button>
-                        </h2>
-                    </div>
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <label class="form-label">Patient</label>
-                            <select name="patient" class="form-control" required>
-                                <option value="">Select Patient...</option>
-                                {% for p in patients %}<option value="{{ p.id }}">{{ p.full_name }} ({{ p.id_number }})</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Route</label>
-                            <select name="route" class="form-control" required>
-                                <option value="">Select Route...</option>
-                                {% for r in routes %}<option value="{{ r.id }}">{{ r.from_location }} to {{ r.to_location }} - Let {{ r.price }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Driver</label>
-                            <input type="text" name="driver" class="form-control" placeholder="Driver Name">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Additional Notes</label>
-                            <textarea name="notes" class="form-control" rows="3" placeholder="Condition, pickup details..."></textarea>
-                        </div>
-                        <button type="submit" class="btn-action" style="width: 100%; justify-content: center;">
-                            <i class="fas fa-paper-plane"></i> Record Trip & Bill
-                        </button>
-                        <div style="margin-top: 1rem; font-size: 0.8rem; color: #64748b; text-align: center;">
-                            <i class="fas fa-info-circle"></i> This will automatically generate an invoice for the patient.
-                        </div>
-                    </form>
-                </div>
+            <div class="ad-chart-wrap">
+                <canvas id="ambulanceChart"></canvas>
+            </div>
+        </div>
 
-                <!-- Routes Management -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-map-signs" style="color: #3b82f6;"></i> Available Routes
-                        </h2>
-                    </div>
-                    <div class="table-container" style="max-height: 300px; overflow-y: auto;">
-                        <table style="font-size: 0.8rem;">
-                            <thead>
-                                <tr>
-                                    <th>Route</th>
-                                    <th>Price</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in routes %}
-                                    <tr>
-                                        <td>{{ r.from_location }} &rarr; {{ r.to_location }}</td>
-                                        <td style="font-weight: 700;">Let {{ r.price }}</td>
-                                    </tr>
-                                {% empty %}
-                                    <tr><td colspan="2" style="text-align: center; color: #94a3b8;">No routes defined</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+        <div class="ad-side-col">
+            <div class="ad-card ad-dispatch-card">
+                <div class="ad-card-head">
+                    <div class="ad-card-title">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>New Dispatch</span>
                     </div>
                 </div>
+                <form method="POST" class="amb-form">
+                    {% csrf_token %}
+                    <div class="ad-field">
+                        <label>Patient</label>
+                        <select name="patient" required>
+                            <option value="">Select patient…</option>
+                            {% for p in patients %}
+                            <option value="{{ p.id }}">{{ p.full_name }} ({{ p.id_number }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="ad-field">
+                        <label>Route</label>
+                        <select name="route" required>
+                            <option value="">Select route…</option>
+                            {% for r in routes %}
+                            <option value="{{ r.id }}">{{ r.from_location }} → {{ r.to_location }} — KES {{ r.price }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="ad-field">
+                        <label>Driver</label>
+                        <input type="text" name="driver" placeholder="Driver name">
+                    </div>
+                    <div class="ad-field">
+                        <label>Notes</label>
+                        <textarea name="notes" rows="2" placeholder="Condition, pickup details…"></textarea>
+                    </div>
+                    <button type="submit" class="ad-btn ad-btn-primary ad-btn-block">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Record Trip & Bill</span>
+                    </button>
+                    <p class="ad-form-hint"><i class="fas fa-info-circle"></i> Creates an invoice automatically.</p>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Add Route Modal -->
-    <div id="routeModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 50; align-items: center; justify-content: center; padding: 1rem;">
-        <div style="background: white; border-radius: 24px; width: 100%; max-width: 500px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-            <div style="background: var(--amb-header); color: white; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-weight: 800; display: flex; align-items: center; gap: 0.75rem;">
-                    <i class="fas fa-map-marked-alt"></i> Define New Route
-                </h3>
-                <button onclick="closeRouteModal()" style="background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-times"></i>
+    <!-- Metric strip -->
+    <div class="ad-metric-row amb-metric-row">
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Paid trips</span>
+                <i class="fas fa-info-circle" title="Trips with paid invoices"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num">{{ paid_trips }}</span>
+                <span class="ad-trend up">settled</span>
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>Pending</span><strong>{{ pending_trips }}</strong></div>
+                <div><span>Routes</span><strong>{{ route_count }}</strong></div>
+            </div>
+        </div>
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>30-day trips</span>
+                <i class="fas fa-info-circle" title="Dispatches in the last 30 days"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num">{{ trips_30d }}</span>
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>Revenue 30d</span><strong>KES {{ revenue_30d|floatformat:0 }}</strong></div>
+                <div><span>Today</span><strong>{{ trips_today }}</strong></div>
+            </div>
+        </div>
+        <div class="ad-metric-card">
+            <div class="ad-metric-top">
+                <span>Average fare</span>
+                <i class="fas fa-info-circle" title="Average billed amount per trip"></i>
+            </div>
+            <div class="ad-metric-main">
+                <span class="ad-metric-num ad-metric-num-sm">KES {{ avg_trip|floatformat:0 }}</span>
+            </div>
+            <div class="ad-metric-subs">
+                <div><span>All-time</span><strong>KES {{ total_revenue|floatformat:0 }}</strong></div>
+                <div><span>Today</span><strong>KES {{ revenue_today|floatformat:0 }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom: trips table + routes -->
+    <div class="amb-bottom-grid">
+        <div class="ad-card ad-table-card">
+            <div class="ad-table-toolbar">
+                <div class="ad-table-title">
+                    <i class="fas fa-list"></i>
+                    <span>Recent Trips</span>
+                </div>
+                <div class="ad-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="tripSearch" placeholder="Search trips…" autocomplete="off">
+                </div>
+            </div>
+            <div class="ad-table-scroll">
+                <table class="ad-table" id="tripsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Patient</th>
+                            <th>Route</th>
+                            <th>Driver</th>
+                            <th>Billing</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trip in activities %}
+                        <tr>
+                            <td class="muted">{{ trip.date|date:"d M, H:i" }}</td>
+                            <td>
+                                <div class="ad-person">
+                                    <div class="ad-avatar indigo">{{ trip.patient.first_name|first }}{{ trip.patient.last_name|first }}</div>
+                                    <div>
+                                        <div class="name">{{ trip.patient.full_name }}</div>
+                                        <div class="meta">{{ trip.patient.id_number|default:"—" }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="name">{{ trip.route.from_location }}</div>
+                                <div class="meta">→ {{ trip.route.to_location }}</div>
+                            </td>
+                            <td>{{ trip.driver|default:"—" }}</td>
+                            <td class="name">KES {{ trip.amount|floatformat:0 }}</td>
+                            <td>
+                                {% if trip.invoice.status == 'Paid' %}
+                                <span class="ad-badge green">Paid</span>
+                                {% else %}
+                                <span class="ad-badge amber">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="ad-empty">No trips recorded yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div class="ad-card-title">
+                    <i class="fas fa-map-signs"></i>
+                    <span>Available Routes</span>
+                </div>
+                <button type="button" class="ad-btn ad-btn-ghost ad-btn-sm" onclick="openRouteModal()">
+                    <i class="fas fa-plus"></i>
+                    <span>Add</span>
                 </button>
             </div>
-            <form method="POST" style="padding: 2rem;">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add_route">
-                
-                <div class="form-group">
-                    <label class="form-label">From Location</label>
-                    {{ route_form.from_location }}
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">To Location</label>
-                    {{ route_form.to_location }}
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Price (Let)</label>
-                    {{ route_form.price }}
-                </div>
-
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button type="button" onclick="closeRouteModal()" class="btn-action" style="background: #f1f5f9; color: #64748b; flex: 1; justify-content: center;">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-action" style="flex: 2; justify-content: center;">
-                        <i class="fas fa-check-circle"></i> Save Route
-                    </button>
-                </div>
-            </form>
+            <div class="ad-table-scroll amb-routes-scroll">
+                <table class="ad-table">
+                    <thead>
+                        <tr>
+                            <th>Route</th>
+                            <th class="right">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in routes %}
+                        <tr>
+                            <td>
+                                <div class="name">{{ r.from_location }}</div>
+                                <div class="meta">→ {{ r.to_location }}</div>
+                            </td>
+                            <td class="right name">KES {{ r.price|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="ad-empty">No routes defined</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <script src="{% static 'users/vendor/chart.js/chart.min.js' %}"></script>
-    <script>
+</div>
+
+<!-- Add Route Modal -->
+<div id="routeModal" class="ad-modal" hidden>
+    <div class="ad-modal-backdrop" onclick="closeRouteModal()"></div>
+    <div class="ad-modal-panel">
+        <div class="ad-modal-head">
+            <h3><i class="fas fa-map-marked-alt"></i> Define New Route</h3>
+            <button type="button" class="ad-icon-btn" onclick="closeRouteModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form method="POST" class="ad-modal-body amb-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_route">
+            <div class="ad-field">
+                <label>From Location</label>
+                {{ route_form.from_location }}
+            </div>
+            <div class="ad-field">
+                <label>To Location</label>
+                {{ route_form.to_location }}
+            </div>
+            <div class="ad-field">
+                <label>Price (KES)</label>
+                {{ route_form.price }}
+            </div>
+            <div class="ad-modal-actions">
+                <button type="button" class="ad-btn ad-btn-ghost" onclick="closeRouteModal()">Cancel</button>
+                <button type="submit" class="ad-btn ad-btn-primary">
+                    <i class="fas fa-check"></i>
+                    <span>Save Route</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.admin-dash {
+    --ad-bg: #f4f6f9;
+    --ad-card: #ffffff;
+    --ad-border: #e5eaf0;
+    --ad-text: #111827;
+    --ad-muted: #6b7280;
+    --ad-blue: #1e3a8a;
+    --ad-blue-dark: #172554;
+    --ad-teal: #0d9488;
+    --ad-amber: #d97706;
+    --ad-rose: #e11d48;
+    --ad-radius: 16px;
+    --ad-radius-sm: 8px;
+    --ad-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+    padding: 1.5rem 1.75rem 2.5rem;
+    background: var(--ad-bg);
+    min-height: calc(100vh - 70px);
+    font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    color: var(--ad-text);
+}
+
+.ad-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ad-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.ad-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--ad-radius-sm);
+    background: var(--ad-blue);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+}
+
+.ad-title-icon-amb { background: #b91c1c; }
+
+.ad-title {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+}
+
+.ad-subtitle {
+    margin: 0.15rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--ad-muted);
+    font-weight: 400;
+}
+
+.ad-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.ad-date-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    box-shadow: var(--ad-shadow);
+}
+
+.ad-date-chip i { color: var(--ad-blue); }
+
+.ad-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--ad-radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.15s ease;
+    font-family: inherit;
+    background: none;
+}
+
+.ad-btn-sm { padding: 0.35rem 0.7rem; font-size: 0.75rem; }
+
+.ad-btn-ghost {
+    background: var(--ad-card);
+    border-color: var(--ad-border);
+    color: #374151;
+    box-shadow: var(--ad-shadow);
+}
+
+.ad-btn-ghost:hover { border-color: #cbd5e1; color: var(--ad-blue); }
+
+.ad-btn-primary {
+    background: var(--ad-blue);
+    color: #fff !important;
+}
+
+.ad-btn-primary:hover { background: var(--ad-blue-dark); }
+
+.ad-btn-block {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+
+.ad-top-grid {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) 300px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ad-kpi-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ad-kpi-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1rem 1.1rem;
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+
+.ad-kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--ad-radius-sm);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.ad-kpi-icon-blue { background: #eff6ff; color: #2563eb; }
+.ad-kpi-icon-teal { background: #f0fdfa; color: #0d9488; }
+.ad-kpi-icon-rose { background: #fff1f2; color: #e11d48; }
+
+.ad-kpi-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+    margin-bottom: 0.2rem;
+}
+
+.ad-kpi-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ad-kpi-value {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.ad-kpi-value-sm { font-size: 1.1rem; }
+
+.ad-kpi-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.ad-trend {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ad-trend.up { background: #ecfdf5; color: #059669; }
+.ad-trend.down { background: #fff1f2; color: #e11d48; }
+.ad-trend.neutral { background: #f3f4f6; color: #4b5563; }
+
+.ad-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1.15rem 1.25rem;
+}
+
+.ad-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.ad-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-card-title i { color: var(--ad-blue); font-size: 0.85rem; }
+
+.ad-chart-wrap {
+    position: relative;
+    height: 280px;
+    width: 100%;
+}
+
+.ad-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+}
+
+.ad-legend.compact { margin: 0; justify-content: flex-end; }
+
+.ad-legend .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.ad-side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ad-dispatch-card { position: sticky; top: 1rem; }
+
+.amb-form .ad-field {
+    margin-bottom: 0.85rem;
+}
+
+.amb-form label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+    margin-bottom: 0.35rem;
+}
+
+.amb-form select,
+.amb-form input,
+.amb-form textarea,
+.amb-form .form-control {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius-sm);
+    background: #f9fafb;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ad-text);
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.amb-form select:focus,
+.amb-form input:focus,
+.amb-form textarea:focus,
+.amb-form .form-control:focus {
+    border-color: #93c5fd;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ad-form-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-align: center;
+    font-weight: 400;
+}
+
+.ad-metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ad-metric-card {
+    background: var(--ad-card);
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: var(--ad-shadow);
+    padding: 1.1rem 1.2rem;
+}
+
+.ad-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.55rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ad-muted);
+}
+
+.ad-metric-top i { color: #d1d5db; font-size: 0.8rem; }
+
+.ad-metric-main {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.85rem;
+}
+
+.ad-metric-num {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: var(--ad-text);
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.ad-metric-num-sm { font-size: 1.2rem; }
+
+.ad-metric-subs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.ad-metric-subs span {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #9ca3af;
+    margin-bottom: 0.15rem;
+}
+
+.ad-metric-subs strong {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.amb-bottom-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.8fr);
+    gap: 1rem;
+}
+
+.ad-table-card { padding: 0; overflow: hidden; }
+
+.ad-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid var(--ad-border);
+}
+
+.ad-table-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-table-title i { color: var(--ad-blue); }
+
+.ad-search { position: relative; }
+
+.ad-search i {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.ad-search input {
+    width: min(240px, 70vw);
+    padding: 0.5rem 0.85rem 0.5rem 2.2rem;
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius-sm);
+    background: #f9fafb;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ad-text);
+    outline: none;
+    font-family: inherit;
+}
+
+.ad-search input:focus {
+    border-color: #93c5fd;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ad-table-scroll { overflow-x: auto; }
+.amb-routes-scroll { max-height: 420px; overflow-y: auto; }
+
+.ad-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.ad-table th {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--ad-border);
+    white-space: nowrap;
+}
+
+.ad-table td {
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.ad-table tr:hover td { background: #f9fafb; }
+.ad-table th.right,
+.ad-table td.right { text-align: right; }
+
+.ad-person {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ad-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.ad-avatar.indigo { background: #eff6ff; color: #2563eb; }
+
+.ad-table .name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ad-text);
+}
+
+.ad-table .meta {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #9ca3af;
+    margin-top: 0.1rem;
+}
+
+.ad-table .muted {
+    color: #9ca3af;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.ad-badge {
+    display: inline-block;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.ad-badge.green { background: #ecfdf5; color: #059669; }
+.ad-badge.amber { background: #fffbeb; color: #d97706; }
+
+.ad-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--ad-radius-sm);
+    border: 1px solid var(--ad-border);
+    color: #9ca3af;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.ad-icon-btn:hover {
+    border-color: #93c5fd;
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.ad-empty {
+    text-align: center;
+    padding: 2.5rem !important;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.ad-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.ad-modal[hidden] { display: none !important; }
+
+.ad-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+}
+
+.ad-modal-panel {
+    position: relative;
+    background: #fff;
+    border-radius: var(--ad-radius);
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.ad-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--ad-border);
+}
+
+.ad-modal-head h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ad-text);
+}
+
+.ad-modal-head h3 i { color: var(--ad-blue); }
+
+.ad-modal-body { padding: 1.25rem; }
+
+.ad-modal-actions {
+    display: flex;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+.ad-modal-actions .ad-btn { flex: 1; justify-content: center; }
+
+@media (max-width: 1200px) {
+    .ad-top-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .ad-kpi-stack {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .ad-side-col { grid-column: 2; }
+    .ad-overview-card { grid-column: 1; }
+    .amb-bottom-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .admin-dash { padding: 1rem; }
+    .ad-top-grid,
+    .ad-kpi-stack,
+    .ad-metric-row {
+        grid-template-columns: 1fr;
+    }
+    .ad-side-col,
+    .ad-overview-card { grid-column: auto; }
+    .ad-dispatch-card { position: static; }
+}
+</style>
+
+<script>
+(function () {
     function openRouteModal() {
-        document.getElementById('routeModal').style.display = 'flex';
+        const el = document.getElementById('routeModal');
+        el.hidden = false;
     }
     function closeRouteModal() {
-        document.getElementById('routeModal').style.display = 'none';
+        document.getElementById('routeModal').hidden = true;
     }
+    window.openRouteModal = openRouteModal;
+    window.closeRouteModal = closeRouteModal;
+
+    document.getElementById('tripSearch')?.addEventListener('keyup', function () {
+        const filter = this.value.toLowerCase();
+        document.querySelectorAll('#tripsTable tbody tr').forEach(tr => {
+            if (tr.querySelector('.ad-empty')) return;
+            tr.style.display = tr.textContent.toLowerCase().includes(filter) ? '' : 'none';
+        });
+    });
 
     document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('ambulanceChart').getContext('2d');
-        const labels = {{ chart_labels|safe }};
-        const counts = {{ chart_counts|safe }};
-        const revenues = {{ chart_revenues|safe }};
+        const ctx = document.getElementById('ambulanceChart');
+        if (!ctx || typeof Chart === 'undefined') return;
 
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Trips',
-                    data: counts,
-                    backgroundColor: '#3b82f6',
-                    borderRadius: 4,
-                    order: 2,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Revenue',
-                    data: revenues,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    type: 'line',
-                    tension: 0.4,
-                    order: 1,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+        new Chart(ctx.getContext('2d'), {
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Trips',
+                        data: {{ chart_counts|safe }},
+                        backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                        borderRadius: 4,
+                        barThickness: 10,
+                        yAxisID: 'y',
+                        order: 2,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Revenue',
+                        data: {{ chart_revenues|safe }},
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        yAxisID: 'y1',
+                        order: 1,
+                    }
+                ]
             },
-            plugins: {
-                legend: {
-                    position: 'top',
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    position: 'left',
-                    grid: { display: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { weight: '600', size: 12 },
+                        bodyFont: { weight: '500', size: 11 },
+                        padding: 10,
+                        cornerRadius: 8,
+                    }
                 },
-                y1: {
-                    beginAtZero: true,
-                    position: 'right',
-                    grid: { display: true }
-                },
-                x: {
-                    grid: { display: false }
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: { weight: '500', size: 10 },
+                            maxTicksLimit: 10,
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        grid: { color: '#f3f4f6' },
+                        ticks: { color: '#9ca3af', font: { weight: '500', size: 10 }, precision: 0 }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af', font: { weight: '500', size: 10 } }
+                    }
                 }
             }
-        }
+        });
     });
-    });
-    </script>
+})();
+</script>
 {% endblock %}

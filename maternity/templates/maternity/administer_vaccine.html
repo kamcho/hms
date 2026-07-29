@@ -196,7 +196,11 @@
                                     {{ g.weight_kg }} kg
                                     {% if g.height_cm %} · {{ g.height_cm }} cm{% endif %}
                                     {% if g.head_circumference_cm %} · HC {{ g.head_circumference_cm }} cm{% endif %}
+                                    {% if g.bmi %} · BMI {{ g.bmi }}{% endif %}
                                 </div>
+                                {% if g.weight_for_age_status %}
+                                <div class="text-[10px] font-semibold text-slate-500 mt-0.5">WFA: {{ g.weight_for_age_status }}</div>
+                                {% endif %}
                             </div>
                         {% empty %}
                             <div class="p-6 text-center text-slate-400 text-xs font-bold">No growth records yet</div>
