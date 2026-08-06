@@ -205,11 +205,23 @@
                         <strong>Patient:</strong> {{ invoice.patient.full_name }}
                         <br>
                         <strong>ID:</strong> {{ invoice.patient.id }}
+                        {% if is_delivery %}
+                            <br><span style="display:inline-block;margin-top:0.35rem;font-size:0.75rem;font-weight:700;color:#9d174d;background:#fce7f3;padding:0.15rem 0.45rem;border-radius:4px;">Maternity</span>
+                        {% endif %}
+                        {% if is_sha_visit %}
+                            <span style="display:inline-block;margin-top:0.35rem;font-size:0.75rem;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:0.15rem 0.45rem;border-radius:4px;">SHA</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="text-end" style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
                     <span class="badge badge-{{ invoice.status|lower }}">{{ invoice.get_status_display }}</span>
-                    {% if user.role == 'Receptionist' %}
+                    {% if is_sha_visit and invoice.visit_id %}
+                        <a href="{% url 'accounts:sha_claims_desk' invoice.visit_id %}" class="custom-btn btn-primary" style="background: #1d4ed8;">
+                            <i class="fas fa-shield-alt" style="margin-right: 0.5rem;"></i>
+                            Submit SHA claim
+                        </a>
+                        <span style="font-size:0.75rem;color:#64748b;font-weight:600;max-width:14rem;text-align:right;">Cash payment is not recorded for SHA — use claims desk</span>
+                    {% elif user.role == 'Receptionist' %}
                         {% if invoice.status == 'Paid' and invoice.visit.admissions.exists %}
                             {% with admission=invoice.visit.admissions.first %}
                                 {% if admission.gate_pass %}
@@ -289,12 +301,56 @@
                                 {% endif %}
                             </td>
                             <td>{{ item.quantity }}</td>
-                            <td>Ksh {{ item.unit_price|format_number:2 }}</td>
+                            <td>
+                                {% if can_edit_maternity_sha and item.paid_amount == 0 %}
+                                    <div style="display:flex;align-items:center;gap:0.35rem;">
+                                        <span>Ksh</span>
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0"
+                                               class="mat-price-input"
+                                               data-item-id="{{ item.id }}"
+                                               value="{{ item.unit_price }}"
+                                               style="width:7rem;padding:0.3rem 0.45rem;border:1px solid #e2e8f0;border-radius:6px;font-weight:700;font-size:0.85rem;">
+                                        <button type="button"
+                                                class="mat-save-price"
+                                                data-item-id="{{ item.id }}"
+                                                title="Save price"
+                                                style="border:none;background:#2563eb;color:#fff;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;font-size:0.75rem;">
+                                            Save
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    Ksh {{ item.unit_price|format_number:2 }}
+                                {% endif %}
+                            </td>
                             <td class="text-end">Ksh {{ item.amount|format_number:2 }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
+
+            {% if can_edit_maternity_sha %}
+            <div style="margin: 1.25rem 0; padding: 1rem 1.15rem; border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 10px;">
+                <div style="font-weight: 800; color: #166534; margin-bottom: 0.35rem;">SHA maternity package</div>
+                <p style="font-size: 0.85rem; color: #4b5563; margin: 0 0 0.75rem;">
+                    Sets the <strong>Normal Delivery</strong> (or delivery) line to the SHA package amount
+                    (default <strong>Ksh {{ maternity_sha_rebate|format_number:0 }}</strong>).
+                    This updates the billed amount — it is not capped to the old total.
+                </p>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <label style="font-size:0.8rem;font-weight:700;color:#334155;">Package amount</label>
+                    <input type="number" id="maternityRebateInput" step="0.01" min="0"
+                           value="{{ maternity_sha_rebate }}"
+                           style="width:9rem;padding:0.4rem 0.55rem;border:1px solid #86efac;border-radius:6px;font-weight:700;">
+                    <button type="button" id="btnApplyMaternityRebate" class="custom-btn btn-primary" style="background:#15803d;">
+                        Apply package amount
+                    </button>
+                    <span id="maternityRebateFeedback" style="font-size:0.85rem;font-weight:600;"></span>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="total-section">
                 <div class="total-row">
                     <span>Subtotal (Total Billed)</span>
@@ -582,5 +638,74 @@
             })
             .catch(err => showMessageModal('Error', 'Connection error: ' + err));
     }
-    </script>
+
+    {% if can_edit_maternity_sha %}
+    document.querySelectorAll('.mat-save-price').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector(`.mat-price-input[data-item-id="${itemId}"]`);
+            if (!input) return;
+            const priceUrl = `{% url 'accounts:update_invoice_item_price' 0 %}`.replace('/0/', `/${itemId}/`);
+            this.disabled = true;
+            fetch(priceUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ unit_price: input.value }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        showMessageModal('Error', data.error || 'Failed to update price');
+                        this.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    showMessageModal('Error', 'Connection error: ' + err);
+                    this.disabled = false;
+                });
+        });
+    });
+
+    const rebateBtn = document.getElementById('btnApplyMaternityRebate');
+    if (rebateBtn) {
+        rebateBtn.addEventListener('click', function () {
+            const amount = document.getElementById('maternityRebateInput').value;
+            const feedback = document.getElementById('maternityRebateFeedback');
+            rebateBtn.disabled = true;
+            feedback.textContent = 'Applying…';
+            feedback.style.color = '#64748b';
+            fetch(`{% url 'accounts:apply_maternity_sha_rebate' invoice.id %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ amount: amount }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        feedback.style.color = '#166534';
+                        feedback.textContent = data.message || 'Rebate applied.';
+                        setTimeout(() => window.location.reload(), 600);
+                    } else {
+                        feedback.style.color = '#dc2626';
+                        feedback.textContent = data.error || 'Failed.';
+                        rebateBtn.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    feedback.style.color = '#dc2626';
+                    feedback.textContent = 'Error: ' + err;
+                    rebateBtn.disabled = false;
+                });
+        });
+    }
+    {% endif %}
+</script>
 {% endblock %}

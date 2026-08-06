@@ -13,6 +13,8 @@ urlpatterns = [
     path('invoice/<int:pk>/delete/', views.delete_invoice, name='delete_invoice'),
     path('invoice/item/<int:item_id>/delete/', views.delete_invoice_item, name='delete_invoice_item'),
     path('invoice/item/<int:item_id>/zero/', views.zero_invoice_item, name='zero_invoice_item'),
+    path('invoice/item/<int:item_id>/price/', views.update_invoice_item_price, name='update_invoice_item_price'),
+    path('invoice/<int:pk>/maternity-sha-rebate/', views.apply_maternity_sha_rebate, name='apply_maternity_sha_rebate'),
     
     # Expense Module
     path('expenses/', views.expense_dashboard, name='expense_dashboard'),
@@ -50,6 +52,7 @@ urlpatterns = [
     path('api/sha/eligibility/', views.sha_patient_by_id_number, name='sha_eligibility_api'),
     path('api/sha/diagnostics/', views.sha_diagnostics_api, name='sha_diagnostics_api'),
     path('api/sha/facility-by-code/', views.sha_facility_by_code, name='sha_facility_by_code'),
+    path('api/sha/create-visit/', views.sha_create_visit_from_eligibility, name='sha_create_visit'),
     path('sha/eligibility/', views.sha_eligibility_page, name='sha_eligibility'),
     path('sha/facility-search/', views.sha_facility_search_page, name='sha_facility_search'),
     path('sha/claims/<int:visit_id>/', views.sha_claims_desk, name='sha_claims_desk'),

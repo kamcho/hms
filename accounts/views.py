@@ -39,6 +39,22 @@ def is_receptionist(user):
     return user.is_authenticated and (user.role == 'Receptionist' or user.is_superuser)
 
 IPD_SHA_PER_DIEM_RATE = Decimal('2240')
+MATERNITY_SHA_REBATE = Decimal('10000')
+
+
+def _is_maternity_invoice(invoice):
+    """True when invoice visit is linked to a labor & delivery record."""
+    if not invoice.visit_id:
+        return False
+    from maternity.models import LaborDelivery
+    return LaborDelivery.objects.filter(visit_id=invoice.visit_id).exists()
+
+
+def _is_sha_visit(invoice):
+    visit = getattr(invoice, 'visit', None)
+    if not visit:
+        return False
+    return (visit.payment_method or '').upper() == 'SHA'
 
 
 def _get_ipd_per_diem_info(invoice):
@@ -46,8 +62,11 @@ def _get_ipd_per_diem_info(invoice):
     SHA inpatient per-diem: insurance pays days × rate; adjustment records loss/gain.
     Positive adjustment = billed > per-diem (facility loss).
     Negative adjustment = billed < per-diem (facility gain).
+    Maternity (L&D) invoices use a fixed SHA rebate instead — not per-diem.
     """
     if not invoice.visit or invoice.visit.visit_type != 'IN-PATIENT':
+        return None
+    if _is_maternity_invoice(invoice):
         return None
     admission = Admission.objects.filter(visit=invoice.visit).order_by('-admitted_at').first()
     if not admission:
@@ -75,6 +94,49 @@ def _get_ipd_per_diem_info(invoice):
         'total_billed_for_per_diem': total_billed_for_per_diem,
         'adjustment': adjustment,
     }
+
+
+def _get_maternity_sha_rebate_info(invoice):
+    """Fixed SHA maternity package amount (default Ksh 10,000) when visit is SHA."""
+    if not _is_maternity_invoice(invoice) or not _is_sha_visit(invoice):
+        return None
+    package_item = _maternity_package_item(invoice)
+    return {
+        'default_rebate': float(MATERNITY_SHA_REBATE),
+        'current_rebate': float(invoice.insurance_adjustment or 0),
+        'suggested_rebate': float(MATERNITY_SHA_REBATE),
+        'package_item_id': package_item.id if package_item else None,
+        'package_item_name': package_item.name if package_item else None,
+        'package_unit_price': float(package_item.unit_price) if package_item else None,
+        'total_billed': float(invoice.total_amount),
+        'effective_after_rebate': float(invoice.total_amount),
+    }
+
+
+def _maternity_package_item(invoice):
+    """Prefer Normal Delivery / C-section line for SHA package amount edit."""
+    keywords = (
+        'normal delivery',
+        'caesarean',
+        'cesarean',
+        'c-section',
+        'c section',
+        'delivery',
+    )
+    items = list(invoice.items.all().order_by('created_at'))
+    for item in items:
+        name = (item.name or '').lower()
+        if any(k in name for k in keywords[:5]):  # exact-ish delivery packages first
+            return item
+    for item in items:
+        name = (item.name or '').lower()
+        if 'delivery' in name:
+            return item
+    # Fallback: highest-priced unpaid non-drug line, else first item
+    non_meds = [i for i in items if not (i.name or '').lower().startswith('medication') and 'paracetamol' not in (i.name or '').lower() and 'test drug' not in (i.name or '').lower()]
+    if non_meds:
+        return max(non_meds, key=lambda i: i.unit_price * i.quantity)
+    return items[0] if items else None
 
 
 def is_billing_staff(user):
@@ -500,6 +562,15 @@ def sha_patient_by_id_number(request):
 def sha_eligibility_page(request):
     """UI to check SHA patient eligibility by national ID."""
     from .sha_diagnostics import DHA_SUPPORT_EMAIL
+    from .models import Service
+
+    services = Service.objects.filter(
+        is_active=True,
+        name__in=['OPD Consultation', 'MCH'],
+    ).order_by('name')
+    # Fallback: any active OPD-ish services if named ones missing
+    if not services.exists():
+        services = Service.objects.filter(is_active=True).order_by('name')[:20]
 
     return render(request, 'accounts/sha_eligibility_check.html', {
         'title': 'SHA Eligibility Check',
@@ -510,6 +581,170 @@ def sha_eligibility_page(request):
             '/v2/eligibility',
         ),
         'dha_support_email': DHA_SUPPORT_EMAIL,
+        'services': services,
+        'facility_code': getattr(settings, 'SHA_HIE_FACILITY_FR_CODE', '') or '15627',
+    })
+
+
+@login_required
+@require_POST
+def sha_create_visit_from_eligibility(request):
+    """
+    POST /accounts/api/sha/create-visit/
+    Create a SHA visit from the eligibility page after a successful check.
+    Expects JSON: {patient_id, cr_id, id_number, consultation_id, ...}
+    If patient_id is empty, attempts to find/create patient by id_number.
+    """
+    from home.models import PatientQue, Departments
+    from .models import Service, Invoice, InvoiceItem
+    from .utils import get_or_create_invoice
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    cr_id = (data.get('cr_id') or '').strip()
+    id_number = (data.get('id_number') or '').strip()
+    patient_id = data.get('patient_id')
+    consultation_id = data.get('consultation_id')
+    first_name = (data.get('first_name') or '').strip()
+    last_name = (data.get('last_name') or '').strip()
+    gender = (data.get('gender') or '').strip().lower() or 'unknown'
+    dob = (data.get('date_of_birth') or '').strip()
+    phone = (data.get('phone') or '').strip()
+
+    if not consultation_id:
+        return JsonResponse({'success': False, 'error': 'Select a consultation type.'}, status=400)
+
+    service = Service.objects.filter(pk=consultation_id, is_active=True).first()
+    if not service:
+        return JsonResponse({'success': False, 'error': 'Service not found.'}, status=400)
+
+    # Resolve patient
+    patient = None
+    if patient_id:
+        patient = Patient.objects.filter(pk=patient_id).first()
+
+    if not patient and id_number:
+        patient = Patient.objects.filter(
+            Q(national_id=id_number) | Q(id_number=id_number)
+        ).first()
+
+    if not patient:
+        if not first_name or not last_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Patient not found locally. Register them on Add patient first, then retry.',
+                'needs_registration': True,
+            }, status=400)
+        from datetime import date as _date
+        parsed_dob = None
+        if dob:
+            try:
+                parsed_dob = _date.fromisoformat(str(dob)[:10])
+            except (ValueError, TypeError):
+                parsed_dob = None
+        if not parsed_dob:
+            parsed_dob = _date(2000, 1, 1)
+        gender_mapped = gender
+        if gender_mapped.startswith('m'):
+            gender_mapped = 'male'
+        elif gender_mapped.startswith('f'):
+            gender_mapped = 'female'
+        elif gender_mapped not in ('male', 'female', 'other', 'unknown'):
+            gender_mapped = 'unknown'
+        patient = Patient.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            date_of_birth=parsed_dob,
+            gender=gender_mapped,
+            phone=phone or None,
+            id_type='NATIONAL_ID',
+            id_number=id_number or None,
+            national_id=id_number or None,
+            cr_id=cr_id or None,
+            location=data.get('county') or 'Unknown',
+            created_by=request.user,
+        )
+
+    # Update CR ID on patient if missing
+    if cr_id and not patient.cr_id:
+        patient.cr_id = cr_id
+        patient.save(update_fields=['cr_id'])
+    if id_number and not patient.national_id:
+        patient.national_id = id_number
+        patient.id_number = id_number
+        patient.save(update_fields=['national_id', 'id_number'])
+
+    # Close active visits
+    Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
+
+    # Create SHA visit
+    visit = Visit.objects.create(
+        patient=patient,
+        visit_type='OUT-PATIENT',
+        visit_mode='Walk In',
+        payment_method='SHA',
+        by_nurse=False,
+    )
+
+    # Billing
+    service_upper = service.name.upper()
+    is_mch = 'MCH' in service_upper
+
+    if not is_mch:
+        invoice = get_or_create_invoice(visit=visit, user=request.user)
+        opd_book = Service.objects.filter(name__icontains='OPD Book', is_active=True).first()
+        if opd_book:
+            InvoiceItem.objects.create(
+                invoice=invoice, service=opd_book,
+                name=opd_book.name, unit_price=opd_book.price, quantity=1,
+            )
+        InvoiceItem.objects.create(
+            invoice=invoice, service=service,
+            name=service.name, unit_price=300, quantity=1,
+        )
+        invoice.refresh_from_db()
+        from .models import Payment
+        if invoice.total_amount > 0:
+            insurance_amount = min(invoice.total_amount, 300)
+            Payment.objects.create(
+                invoice=invoice, amount=insurance_amount,
+                payment_method='Insurance',
+                notes='SHA insurance portion (auto)',
+                created_by=request.user,
+            )
+
+    # Queue to Triage (or MCH)
+    reception_dept, _ = Departments.objects.get_or_create(name='Reception', defaults={'abbreviation': 'REC'})
+    if is_mch:
+        dest_dept, _ = Departments.objects.get_or_create(name='MCH', defaults={'abbreviation': 'MCH'})
+    else:
+        dest_dept, _ = Departments.objects.get_or_create(name='Triage', defaults={'abbreviation': 'TRI'})
+
+    PatientQue.objects.create(
+        visit=visit, qued_from=reception_dept,
+        sent_to=dest_dept, created_by=request.user,
+    )
+
+    # Create SHA claim session
+    from .sha_claims_service import get_or_create_claim_session
+    try:
+        session = get_or_create_claim_session(visit, user=request.user)
+        if cr_id:
+            session.patient_cr_id = cr_id
+            session.patient_id_number = id_number
+            session.save(update_fields=['patient_cr_id', 'patient_id_number', 'updated_at'])
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': True,
+        'message': f'{patient.full_name} admitted (SHA) for {service.name}. Queued to {dest_dept.name}.',
+        'visit_id': visit.pk,
+        'patient_id': patient.pk,
+        'claims_desk_url': f'/accounts/sha/claims/{visit.pk}/',
     })
 
 
@@ -689,7 +924,15 @@ def get_invoice_items(request, invoice_id):
             'current_adjustment': float(invoice.insurance_adjustment),
         }
 
-    return JsonResponse({'items': items_data, 'admission_info': admission_info})
+    maternity_rebate = _get_maternity_sha_rebate_info(invoice)
+
+    return JsonResponse({
+        'items': items_data,
+        'admission_info': admission_info,
+        'maternity_rebate': maternity_rebate,
+        'is_maternity': _is_maternity_invoice(invoice),
+        'is_sha': _is_sha_visit(invoice),
+    })
 
 @login_required
 @user_passes_test(is_billing_staff)
@@ -709,6 +952,7 @@ def process_insurance_claim(request):
             return JsonResponse({'success': False, 'error': 'Select at least one invoice item.'})
 
         per_diem = _get_ipd_per_diem_info(invoice)
+        maternity_rebate = _get_maternity_sha_rebate_info(invoice)
         tol = Decimal('0.01')
 
         if per_diem:
@@ -718,6 +962,24 @@ def process_insurance_claim(request):
             invoice.distribute_payments()
             invoice.refresh_from_db()
             claim_amount = per_diem['per_diem_total']
+        elif maternity_rebate:
+            # SHA maternity: package amount is edited on the delivery line separately.
+            # Optional adjustment from claim UI still allowed, but default is 0 (not a write-off of 10k).
+            rebate_amt = Decimal(str(adjustment)) if adjustment not in (None, '') else Decimal('0')
+            if rebate_amt < 0:
+                return JsonResponse({'success': False, 'error': 'Adjustment cannot be negative.'}, status=400)
+            if rebate_amt > invoice.total_amount:
+                rebate_amt = invoice.total_amount
+            invoice.insurance_adjustment = rebate_amt
+            invoice.save()
+            invoice.distribute_payments()
+            invoice.refresh_from_db()
+            selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            claim_amount = (
+                Decimal(str(custom_amount)) if custom_amount is not None else selected_total
+            )
+            if claim_amount > invoice.balance + tol:
+                claim_amount = max(invoice.balance, Decimal('0'))
         else:
             if adjustment is not None:
                 invoice.insurance_adjustment = Decimal(str(adjustment))
@@ -869,20 +1131,22 @@ def invoice_detail(request, pk):
                 can_authorize = True
                 admission_type = 'Morgue'
                 
-    is_delivery = False
-    if invoice.visit and hasattr(invoice.visit, 'labor_delivery'):
-        is_delivery = True
-    elif admission_type == 'IPD':
-        # Alternatively check admission
-        if Admission.objects.filter(visit=invoice.visit, status='Admitted', delivery__isnull=False).exists():
-            is_delivery = True
-            
+    is_delivery = _is_maternity_invoice(invoice)
+    is_sha = _is_sha_visit(invoice)
+    can_edit_maternity_sha = is_delivery and is_sha and (
+        request.user.is_superuser
+        or request.user.role in ['SHA Manager', 'Accountant', 'Admin', 'Receptionist']
+    )
+
     context = {
         'invoice': invoice,
         'can_authorize': can_authorize,
         'admission_type': admission_type,
-        'can_record_payment': is_receptionist(request.user),
+        'can_record_payment': is_receptionist(request.user) and not is_sha,
         'is_delivery': is_delivery,
+        'is_sha_visit': is_sha,
+        'can_edit_maternity_sha': can_edit_maternity_sha,
+        'maternity_sha_rebate': MATERNITY_SHA_REBATE,
     }
     return render(request, 'accounts/invoice_detail.html', context)
 
@@ -891,6 +1155,12 @@ def invoice_detail(request, pk):
 @require_POST
 def record_payment(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk)
+    if _is_sha_visit(invoice):
+        return JsonResponse({
+            'success': False,
+            'error': 'SHA visits are settled via the SHA claims desk, not cash Record Payment.',
+            'claims_desk_url': f'/accounts/sha/claims/{invoice.visit_id}/' if invoice.visit_id else None,
+        }, status=400)
     payments_to_create = []
     
     try:
@@ -1108,11 +1378,7 @@ def zero_invoice_item(request, item_id):
     if request.user.role not in ['SHA Manager', 'Accountant', 'Admin'] and not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Only SHA Manager or Accountant can zero invoice items.'})
         
-    is_delivery = False
-    if invoice.visit and hasattr(invoice.visit, 'labor_delivery'):
-        is_delivery = True
-    elif invoice.visit and Admission.objects.filter(visit=invoice.visit, delivery__isnull=False).exists():
-        is_delivery = True
+    is_delivery = _is_maternity_invoice(invoice)
         
     if not is_delivery:
         return JsonResponse({'success': False, 'error': 'Zeroing items is strictly for Delivery/Maternity visits.'})
@@ -1127,6 +1393,134 @@ def zero_invoice_item(request, item_id):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+def update_invoice_item_price(request, item_id):
+    """
+    Edit unit price on a maternity SHA invoice line (unpaid items only).
+    POST: unit_price
+    """
+    item = get_object_or_404(InvoiceItem, pk=item_id)
+    invoice = item.invoice
+
+    if request.user.role not in ['SHA Manager', 'Accountant', 'Admin', 'Receptionist'] and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Not allowed to edit invoice amounts.'}, status=403)
+
+    if not _is_maternity_invoice(invoice) or not _is_sha_visit(invoice):
+        return JsonResponse({
+            'success': False,
+            'error': 'Amount edit is only allowed on maternity invoices for SHA visits.',
+        }, status=400)
+
+    if item.paid_amount > 0:
+        return JsonResponse({'success': False, 'error': 'Cannot edit a partially or fully paid item.'}, status=400)
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        data = request.POST
+
+    try:
+        new_price = Decimal(str(data.get('unit_price', '')).replace(',', '').strip())
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid unit price.'}, status=400)
+
+    if new_price < 0:
+        return JsonResponse({'success': False, 'error': 'Unit price cannot be negative.'}, status=400)
+
+    item.unit_price = new_price
+    item.save()
+    invoice.update_totals()
+    invoice.refresh_from_db()
+
+    return JsonResponse({
+        'success': True,
+        'item_id': item.id,
+        'unit_price': float(item.unit_price),
+        'amount': float(item.amount),
+        'total_amount': float(invoice.total_amount),
+        'balance': float(invoice.balance),
+        'insurance_adjustment': float(invoice.insurance_adjustment),
+    })
+
+
+@login_required
+@require_POST
+def apply_maternity_sha_rebate(request, pk):
+    """
+    Set SHA maternity package amount on the delivery line (default Ksh 10,000).
+    This edits the Normal Delivery / delivery unit price — it does NOT clamp to
+    the previous total (that was causing 10000 → 4000).
+    """
+    invoice = get_object_or_404(Invoice, pk=pk)
+
+    if request.user.role not in ['SHA Manager', 'Accountant', 'Admin', 'Receptionist'] and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Not allowed to apply maternity SHA rebate.'}, status=403)
+
+    if not _is_maternity_invoice(invoice):
+        return JsonResponse({'success': False, 'error': 'Invoice is not linked to maternity.'}, status=400)
+    if not _is_sha_visit(invoice):
+        return JsonResponse({'success': False, 'error': 'Visit is not SHA. Rebate applies to SHA maternity only.'}, status=400)
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        data = request.POST
+
+    raw = data.get('amount', None)
+    if raw is None or raw == '':
+        package_amount = MATERNITY_SHA_REBATE
+    else:
+        try:
+            package_amount = Decimal(str(raw).replace(',', '').strip())
+        except Exception:
+            return JsonResponse({'success': False, 'error': 'Invalid package amount.'}, status=400)
+
+    if package_amount < 0:
+        return JsonResponse({'success': False, 'error': 'Package amount cannot be negative.'}, status=400)
+
+    item = _maternity_package_item(invoice)
+    if not item:
+        return JsonResponse({
+            'success': False,
+            'error': 'No delivery / maternity package line found to update. Add Normal Delivery first.',
+        }, status=400)
+
+    if item.paid_amount > 0 and item.paid_amount >= item.amount and package_amount < item.unit_price:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot reduce a fully paid delivery line. Reverse payments first.',
+        }, status=400)
+
+    item.unit_price = package_amount
+    item.save()
+
+    # Clear prior facility write-off that was incorrectly used as "rebate"
+    if invoice.insurance_adjustment:
+        invoice.insurance_adjustment = Decimal('0')
+        invoice.save(update_fields=['insurance_adjustment'])
+
+    invoice.update_totals()
+    invoice.distribute_payments()
+    invoice.refresh_from_db()
+
+    return JsonResponse({
+        'success': True,
+        'message': (
+            f'SHA maternity package set to Ksh {package_amount:,.2f} '
+            f'on “{item.name}”.'
+        ),
+        'item_id': item.id,
+        'item_name': item.name,
+        'unit_price': float(item.unit_price),
+        'insurance_adjustment': float(invoice.insurance_adjustment),
+        'effective_amount': float(invoice.effective_amount),
+        'total_amount': float(invoice.total_amount),
+        'balance': float(invoice.balance),
+        'default_rebate': float(MATERNITY_SHA_REBATE),
+    })
 @login_required
 @user_passes_test(is_billing_staff)
 def invoice_list(request):

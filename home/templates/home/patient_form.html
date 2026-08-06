@@ -356,6 +356,9 @@
             </div>
             <div class="sha-modal-footer">
                 <button type="button" class="btn-ghost" data-sha-close>Close</button>
+                <button type="button" id="btnShaContinueManual" class="btn-primary-premium" style="display:none;">
+                    <i class="fas fa-keyboard"></i> Continue manually
+                </button>
                 <button type="button" id="btnShaApply" class="btn-primary-premium" style="display:none;">
                     <i class="fas fa-check"></i> Apply to form
                 </button>
@@ -1080,12 +1083,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const apiBlockEl = document.getElementById('shaModalApiBlock');
         const debugEl = document.getElementById('shaModalDebug');
         const applyBtn = document.getElementById('btnShaApply');
+        const manualBtn = document.getElementById('btnShaContinueManual');
         const idInput = document.getElementById('id_id_number');
         const depList = document.getElementById('shaDepList');
         const depStatus = document.getElementById('shaDepStatus');
         const btnCreateVisitors = document.getElementById('btnShaCreateVisitors');
         let lastPatient = null;
         let lastDependents = [];
+
+        function showManualContinue(show) {
+            if (!manualBtn) return;
+            manualBtn.style.display = show ? 'inline-flex' : 'none';
+        }
+        function continueManually() {
+            closeModal(shaModal);
+            showManualContinue(false);
+            const first = document.getElementById('id_first_name');
+            if (first) {
+                first.focus();
+                first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
 
         function csrfToken() {
             const m = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
@@ -1155,10 +1173,12 @@ document.addEventListener('DOMContentLoaded', function() {
         function renderPatient(patient, found) {
             if (!found) {
                 resultEl.style.display = 'block';
-                resultEl.innerHTML = '<div class="value">No SHA registration found for this ID. See API response below for details.</div>';
+                resultEl.innerHTML = '<div class="value">No SHA registration found for this ID. Use <strong>Continue manually</strong> to type the patient details on the form.</div>';
                 applyBtn.style.display = 'none';
+                showManualContinue(true);
                 return;
             }
+            showManualContinue(false);
             const depCount = lastDependents.length;
             resultEl.style.display = 'grid';
             resultEl.innerHTML = `
@@ -1353,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (lastDependents.length) openDependentsModal();
             else { applyPatientToForm(lastPatient); closeModal(shaModal); }
         });
+        if (manualBtn) manualBtn.addEventListener('click', continueManually);
         if (btnCreateVisitors) btnCreateVisitors.addEventListener('click', createSelectedVisitors);
 
         btnShaVerify.addEventListener('click', async function() {
@@ -1371,6 +1392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setStatus('Enter an ID number first.', 'error');
                 resultEl.style.display = 'none';
                 applyBtn.style.display = 'none';
+                showManualContinue(false);
                 hideApiResponse();
                 return;
             }
@@ -1379,6 +1401,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setStatus('Checking SHA registration…', 'loading');
             resultEl.style.display = 'none';
             applyBtn.style.display = 'none';
+            showManualContinue(false);
             hideApiResponse();
             lastPatient = null;
             lastDependents = [];
@@ -1395,15 +1418,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 logSha('raw response', res.status, text.slice(0, 500));
                 let data = null;
                 try { data = JSON.parse(text); } catch (e) {
-                    setStatus(`Server returned non-JSON (HTTP ${res.status}).`, 'error');
+                    setStatus(`Server returned non-JSON (HTTP ${res.status}). DHA may be unreachable — continue manually.`, 'error');
                     showApiResponse(res.status, { parse_error: true, body: text.slice(0, 4000) });
+                    resultEl.style.display = 'block';
+                    resultEl.innerHTML = '<div class="value">Could not read SHA response. Use <strong>Continue manually</strong> to register the patient on the form.</div>';
+                    showManualContinue(true);
                     return;
                 }
                 showApiResponse(res.status, data);
                 if (!res.ok || !data.success) {
-                    setStatus(data.error || `Lookup failed (HTTP ${res.status}).`, 'error');
+                    setStatus((data.error || `Lookup failed (HTTP ${res.status}).`) + ' You can continue manually.', 'error');
                     resultEl.style.display = 'block';
-                    resultEl.innerHTML = '<div class="value">Request failed — see API response below.</div>';
+                    resultEl.innerHTML = '<div class="value">SHA / DHA unreachable or returned an error. Use <strong>Continue manually</strong> to type patient details.</div>';
+                    showManualContinue(true);
                     return;
                 }
                 lastPatient = data.patient || {};
@@ -1413,15 +1440,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (lastDependents.length) msg += ` ${lastDependents.length} dependent(s) linked.`;
                     setStatus(msg, 'success');
                 } else {
-                    setStatus(`No SHA registration found for ID ${data.id_number}.`, 'error');
+                    setStatus(`No SHA registration found for ID ${data.id_number}. Continue manually.`, 'error');
                 }
                 renderPatient(lastPatient, data.found);
             } catch (err) {
                 console.error('[SHA UI] fetch error', err);
-                setStatus(`Network/UI error: ${err.message || err}`, 'error');
+                setStatus(`Network error: ${err.message || err}. Continue manually.`, 'error');
                 showApiResponse(0, { network_error: String(err) });
                 resultEl.style.display = 'block';
-                resultEl.innerHTML = '<div class="value">Network error — see API response below.</div>';
+                resultEl.innerHTML = '<div class="value">DHA API unreachable. Use <strong>Continue manually</strong> to register the patient on the form.</div>';
+                showManualContinue(true);
             } finally {
                 btnShaVerify.disabled = false;
             }

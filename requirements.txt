@@ -1,46 +1,48 @@
-annotated-types==0.7.0
-anyio==4.12.1
-asgiref==3.11.0
-certifi==2026.1.4
+# HMS runtime dependencies
+# Install: pip install -r requirements.txt
+
+# --- Core ---
+Django==6.0.4
+asgiref==3.11.1
+sqlparse==0.5.5
+python-dotenv==1.2.2
+Pillow==12.2.0
+
+# --- SHA / DHA HIE (eligibility, claims, client registry decrypt) ---
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+anyio==4.13.0
+sniffio==1.3.1
+idna==3.11
+certifi==2026.2.25
+cryptography==46.0.7
+cffi==2.0.0
+
+# --- Realtime (comms / channels) ---
 channels==4.3.2
 channels_redis==4.3.0
-click==8.3.1
-colorama==0.4.6
-cssbeautifier==1.15.4
-distro==1.9.0
-Django==6.0.1
-djangorestframework==3.16.1
-djlint==1.36.4
-EditorConfig==0.17.1
-gunicorn==25.1.0
-h11==0.16.0
-httpcore==1.0.9
-httptools==0.7.1
-httpx==0.28.1
-idna==3.11
-jiter==0.13.0
-jsbeautifier==1.15.4
-json5==0.13.0
+redis==6.4.0
 msgpack==1.1.2
-openai==2.18.0
-packaging==26.0
-pathspec==1.0.4
-pillow==12.1.0
-pydantic==2.12.5
-pydantic_core==2.41.5
-python-dotenv==1.2.1
-PyYAML==6.0.3
-redis==7.2.0
-regex==2026.1.15
-six==1.17.0
-sniffio==1.3.1
-sqlparse==0.5.5
-tqdm==4.67.3
-typing-inspection==0.4.2
-typing_extensions==4.15.0
-uvicorn==0.41.0
-# uvloop==0.22.1
-watchfiles==1.1.1
-websockets==16.0
-# mysqlclient==2.2.4
 
+# --- Production server / DB ---
+gunicorn==26.0.0
+uvicorn==0.34.3
+httptools==0.8.0
+watchfiles==1.2.0
+websockets==16.0
+daphne==4.2.1
+mysqlclient==2.2.8
+
+# --- HR biometric attendance (ZKTeco) ---
+# Import name is `zk`; install if you use ZK sync
+pyzk==0.9
+
+# --- Typing helpers ---
+typing_extensions==4.15.0
+typing-inspection==0.4.2
+
+# --- Optional / currently unused in app code (kept commented) ---
+# djangorestframework==3.17.1
+# openai==2.18.0
+# djlint==1.36.4

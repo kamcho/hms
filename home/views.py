@@ -470,6 +470,14 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
     form_class = PatientForm
     template_name = 'home/patient_form.html'
     success_url = reverse_lazy('home:patient_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        id_number = (self.request.GET.get('id_number') or '').strip()
+        if id_number:
+            initial['id_number'] = id_number
+            initial['national_id'] = id_number
+        return initial
     
     def form_valid(self, form):
         form.instance.created_by = self.request.user
