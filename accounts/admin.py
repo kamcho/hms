@@ -27,9 +27,12 @@ class InventoryPurchaseAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'department', 'price', 'is_active')
+    list_display = ('name', 'department', 'price', 'loinc_code', 'ichi_code', 'sha_intervention_code', 'is_active')
     list_filter = ('department', 'is_active')
-    search_fields = ('name', 'description')
+    search_fields = (
+        'name', 'description', 'loinc_code', 'ichi_code',
+        'loinc_display', 'ichi_display', 'sha_intervention_code', 'sha_intervention_name',
+    )
 
 class InvoiceItemInline(admin.TabularInline):
     model = InvoiceItem
@@ -62,8 +65,13 @@ admin.site.register(InvoiceItem)
 @admin.register(ShaClaimSession)
 class ShaClaimSessionAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'visit', 'status', 'service_type', 'consent_token', 'claim_id', 'eligible', 'updated_at',
+        'id', 'visit', 'status', 'service_type', 'consent_token', 'claim_id',
+        'eligible', 'consent_method', 'updated_at',
     )
-    list_filter = ('status', 'service_type', 'eligible')
+    list_filter = ('status', 'service_type', 'eligible', 'consent_method')
     search_fields = ('consent_token', 'claim_id', 'patient_cr_id', 'patient_id_number')
-    readonly_fields = ('created_at', 'updated_at', 'eligibility_raw', 'erx_raw', 'preauth_raw', 'submit_raw')
+    readonly_fields = (
+        'created_at', 'updated_at', 'eligibility_raw', 'erx_raw',
+        'preauth_raw', 'submit_raw', 'coverage_snapshot', 'schemes',
+        'intervention_meta',
+    )

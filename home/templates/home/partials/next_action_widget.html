@@ -64,6 +64,17 @@
                 <div id="dynamic-test-categories" class="w-full hidden space-y-4"></div>
             </div>
         </div>
+        <div id="sha-preauth-advisory" class="hidden mb-6 p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5"></i>
+                <div class="flex-1">
+                    <h4 class="text-xs font-black text-amber-900 uppercase tracking-widest mb-1">SHA pre-authorization needed</h4>
+                    <p class="text-[11px] font-semibold text-amber-800 mb-2">Inform the patient before proceeding. SHA may not pay until preauth is approved.</p>
+                    <ul id="sha-preauth-advisory-list" class="text-[11px] font-medium text-amber-900 space-y-1 list-disc pl-4"></ul>
+                    <a id="sha-preauth-claims-link" href="#" class="hidden inline-block mt-3 text-[10px] font-black uppercase tracking-widest text-indigo-700 hover:underline">Open SHA claims desk →</a>
+                </div>
+            </div>
+        </div>
         <!-- Action Buttons -->
         <div class="flex gap-3 pt-4 border-t border-slate-100">
             <button type="button" onclick="clearNextActionForm()" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex-1">Reset</button>
@@ -87,11 +98,77 @@
     /**
      * Shared Clinical Next Action Logic
      */
+    const SHA_PREAUTH_CHECK_URL = "{{ sha_preauth_check_url|default:'' }}";
+    const SHA_VISIT_BILLED = {{ sha_visit_billed|yesno:"true,false" }};
+    const SHA_VISIT_ID = "{{ visit.pk|default:selected_visit.pk|default:'' }}";
+    let shaPreauthTimer = null;
 
-    // Initialize on load if needed
     document.addEventListener('DOMContentLoaded', function () {
         // Any init logic
     });
+
+    function updateShaPreauthAdvisory() {
+        const box = document.getElementById('sha-preauth-advisory');
+        const list = document.getElementById('sha-preauth-advisory-list');
+        const link = document.getElementById('sha-preauth-claims-link');
+        if (!box || !list) return;
+
+        if (!SHA_VISIT_BILLED || !SHA_PREAUTH_CHECK_URL || !SHA_VISIT_ID) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        const ids = Array.from(document.querySelectorAll('input[name="tests"]:checked')).map(cb => cb.value);
+        if (!ids.length) {
+            box.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        clearTimeout(shaPreauthTimer);
+        shaPreauthTimer = setTimeout(async function () {
+            try {
+                const params = new URLSearchParams();
+                params.set('visit_id', SHA_VISIT_ID);
+                ids.forEach(id => params.append('service_ids', id));
+                const res = await fetch(SHA_PREAUTH_CHECK_URL + '?' + params.toString(), {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await res.json();
+                const needing = (data.inform_patient || (data.labs && data.labs.inform_patient) || []);
+                if (!data.success || !needing.length) {
+                    box.classList.add('hidden');
+                    list.innerHTML = '';
+                    return;
+                }
+                list.innerHTML = needing.map(function (row) {
+                    const elective = row.needs_manual_preauth_approval ? ' · elective' : '';
+                    const code = row.intervention_code ? ` [${row.intervention_code}]` : '';
+                    return '<li><strong>' + escapeHtml(row.label || '') + '</strong>'
+                        + escapeHtml(code) + escapeHtml(elective)
+                        + ' — ' + escapeHtml(row.message || 'Requires SHA preauth') + '</li>';
+                }).join('');
+                const desk = (data.labs && data.labs.claims_desk_url) || null;
+                if (link && desk) {
+                    link.href = desk;
+                    link.classList.remove('hidden');
+                } else if (link) {
+                    link.classList.add('hidden');
+                }
+                box.classList.remove('hidden');
+            } catch (err) {
+                console.warn('SHA preauth check failed', err);
+            }
+        }, 250);
+    }
+
+    function escapeHtml(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 
     function updateServicesFilter() {
         const selectedDepts = Array.from(document.querySelectorAll('input[name="send_to"]:checked'))
@@ -170,10 +247,11 @@
                     <div class="p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-100 transition-colors">
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input type="checkbox" name="tests" value="${test.id}" ${isChecked}
-                                onchange="toggleTestNotes(${test.id}); toggleExecuteButton()"
+                                onchange="toggleTestNotes(${test.id}); toggleExecuteButton(); updateShaPreauthAdvisory()"
                                 class="w-4 h-4 mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                             <div class="flex-1">
                                 <span class="text-xs font-bold text-slate-700 block">${test.name}</span>
+                                ${test.sha_intervention_code ? `<span class="text-[9px] font-bold text-teal-700 uppercase tracking-wide">SHA ${test.sha_intervention_code}</span>` : ''}
                                 <div id="test-notes-container-${test.id}" class="${displayStyle} mt-4 space-y-4 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 shadow-inner">
                                     ${showSpecimen ? `
                                     <div class="relative">
@@ -272,7 +350,12 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message || 'Action executed successfully');
+                    let msg = data.message || 'Action executed successfully';
+                    if (data.preauth && data.preauth.inform_patient && data.preauth.inform_patient.length) {
+                        msg += '\n\nInform patient — SHA preauth required:\n'
+                            + data.preauth.inform_patient.map(r => '• ' + (r.label || '') + (r.intervention_code ? ' [' + r.intervention_code + ']' : '')).join('\n');
+                    }
+                    alert(msg);
                     if (data.invoice_id) {
                         window.location.href = `/accounts/invoice/${data.invoice_id}/`;
                     } else {

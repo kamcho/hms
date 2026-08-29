@@ -57,37 +57,107 @@ def get_or_create_claim_session(visit: Visit, user=None) -> ShaClaimSession:
 
 
 def refresh_eligibility(session: ShaClaimSession) -> ShaClaimSession:
-    client = ShaHieClient()
+    from accounts.sha_hie_service import get_patient_info_by_id_number
+
     id_number = session.patient_id_number or (session.visit.patient.id_number or '')
-    if not id_number:
-        raise ValueError('Patient national ID is required for eligibility.')
-    result = client.get_patient_by_id_number(id_number)
-    session.eligibility_raw = result.raw if isinstance(result.raw, dict) else {'value': result.raw}
-    session.eligible = bool(result.found)
-    # Prefer CR id from eligibility / patient
-    cr = session.visit.patient.cr_id or ''
-    raw = session.eligibility_raw
-    for key in ('cr_id', 'patient_id', 'clientRegistryId', 'beneficiary_id'):
-        if isinstance(raw, dict) and raw.get(key):
-            cr = str(raw.get(key))
-            break
-    # Nested common shapes
-    if isinstance(raw, dict):
-        for nest in ('patient', 'data', 'beneficiary', 'result'):
-            node = raw.get(nest)
-            if isinstance(node, dict):
-                for key in ('cr_id', 'id', 'patient_id', 'clientRegistryId'):
-                    if node.get(key):
-                        cr = str(node.get(key))
-                        break
-    session.patient_cr_id = (cr or session.patient_cr_id or '').strip()
-    session.status = 'eligible' if session.eligible else 'error'
-    if not session.eligible:
-        session.last_error = 'Patient not found / not eligible on SHA eligibility API.'
+    cr_id = (session.patient_cr_id or session.visit.patient.cr_id or '').strip()
+    if not id_number and not cr_id:
+        raise ValueError('Patient national ID or CR ID is required for eligibility.')
+
+    access_point = 'IP' if session.service_type == 'INPATIENT' else 'OP'
+    if cr_id:
+        lookup_id, lookup_type = cr_id, 'ClientRegistry ID'
     else:
+        lookup_id, lookup_type = id_number, 'National ID'
+
+    payload = get_patient_info_by_id_number(
+        lookup_id,
+        identification_type=lookup_type,
+        include_coverage=True,
+        access_point=access_point,
+    )
+    patient = payload.get('patient') or {}
+    session.eligibility_raw = {
+        'eligibility': (payload.get('raw') or {}).get('eligibility') or {},
+        'patient_search': (payload.get('raw') or {}).get('patient_search') or {},
+        'outcome': payload.get('outcome'),
+        'schemes': payload.get('schemes') or [],
+        'interventions': payload.get('interventions') or [],
+        'sub_benefits': payload.get('sub_benefits') or [],
+    }
+    session.eligible = bool(payload.get('eligible'))
+    session.schemes = payload.get('schemes') or patient.get('schemes') or []
+    session.is_alive = patient.get('is_alive') is not False
+    session.whitelisted_for_otp = bool(patient.get('whitelisted_for_otp'))
+    session.facility_biometrics_enforced = bool(
+        patient.get('facility_biometrics_enforced')
+    )
+    session.consent_method = patient.get('consent_method') or payload.get(
+        'consent_method'
+    ) or 'otp'
+    session.coverage_snapshot = {
+        'sub_benefits': payload.get('sub_benefits') or [],
+        'interventions': payload.get('interventions') or [],
+        'pomsf_balances': payload.get('pomsf_balances'),
+        'utilization': payload.get('utilization'),
+        'coverage_error': payload.get('coverage_error'),
+    }
+    if patient.get('cr_id'):
+        session.patient_cr_id = str(patient.get('cr_id')).strip()
+    elif cr_id:
+        session.patient_cr_id = cr_id
+    if patient.get('id_number'):
+        session.patient_id_number = str(patient.get('id_number')).strip()
+    elif id_number:
+        session.patient_id_number = id_number
+
+    # Prefer covered intervention over hardcoded default when empty / default-only
+    interventions = payload.get('interventions') or []
+    if interventions:
+        top = interventions[0]
+        if not session.intervention_codes or session.intervention_codes == [
+            _default_intervention(session.visit)
+        ]:
+            session.intervention_codes = [top['code']]
+        session.sub_benefit_code = (
+            top.get('sub_benefit_code') or session.sub_benefit_code or ''
+        )
+        session.intervention_meta = {
+            'payment_mechanism': top.get('payment_mechanism'),
+            'needs_preauth': top.get('needs_preauth'),
+            'needs_manual_preauth_approval': top.get('needs_manual_preauth_approval'),
+            'access_point': top.get('access_point'),
+            'fund': top.get('fund'),
+            'name': top.get('name'),
+        }
+
+    if not session.is_alive:
+        session.status = 'error'
+        session.last_error = 'Patient is deceased — SHA transactions blocked.'
+        session.eligible = False
+    elif session.eligible:
+        session.status = 'eligible'
         session.last_error = ''
+    else:
+        session.status = 'error'
+        session.last_error = (
+            patient.get('eligibility_message')
+            or f"Eligibility outcome: {payload.get('outcome') or 'not_eligible'}"
+        )
     session.save()
     return session
+
+
+def recommend_consent_action(session: ShaClaimSession) -> str:
+    """Return 'otp', 'biometrics', or 'blocked' for claims desk UI."""
+    if not session.is_alive:
+        return 'blocked'
+    method = (session.consent_method or '').strip().lower()
+    if method == 'biometrics':
+        return 'biometrics'
+    if session.facility_biometrics_enforced and not session.whitelisted_for_otp:
+        return 'biometrics'
+    return 'otp'
 
 
 def start_visit_with_otp(
@@ -118,7 +188,8 @@ def start_visit_with_otp(
             patient_id=patient_id,
             service_type=session.service_type or _service_type(session.visit),
             intervention_codes=codes,
-            otp=otp,
+            otp=otp if not session.authorization_guid else None,
+            auth_guid=session.authorization_guid or None,
             practitioner_identification_type=id_type or None,
             practitioner_identification_number=id_number or None,
             practitioner_regulation_body=reg_body or None,

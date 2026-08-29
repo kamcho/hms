@@ -216,7 +216,28 @@
                 <i class="fas fa-hospital-user"></i> Ward & Bed Management
             </h1>
             <p style="margin: 0.5rem 0 0 3.5rem; opacity: 0.8;">Manage hospital wards, capacity, and bed infrastructure.</p>
+            {% if sha_bed_occupancy.sha_synced %}
+            <div style="margin-top: 1.25rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.1); border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">DHA HIE SYNCED</span>
+                        <strong style="margin-left: 0.5rem; font-size: 1rem;">{{ sha_bed_occupancy.facility_name }} ({% if sha_bed_occupancy.bp_level %}{{ sha_bed_occupancy.bp_level }}{% else %}Facility{% endif %})</strong>
+                    </div>
+                    <div style="font-weight: 800; font-size: 1.1rem; color: #34d399;">
+                        Occupancy: {{ sha_bed_occupancy.occupancy_rate }}% ({{ sha_bed_occupancy.total_ip_visits }}/{{ sha_bed_occupancy.total_number_of_bed }} beds)
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem; font-size: 0.85rem; flex-wrap: wrap; opacity: 0.95;">
+                    <span><i class="fas fa-bed"></i> Normal: <strong>{{ sha_bed_occupancy.normal_ip_visits }}/{{ sha_bed_occupancy.number_of_normal_bed }}</strong></span>
+                    <span><i class="fas fa-heartbeat"></i> ICU: <strong>{{ sha_bed_occupancy.icu_visits }}/{{ sha_bed_occupancy.number_of_icu_bed }}</strong></span>
+                    <span><i class="fas fa-procedures"></i> HDU: <strong>{{ sha_bed_occupancy.hdu_visits }}/{{ sha_bed_occupancy.number_of_hdu_bed }}</strong></span>
+                    <span><i class="fas fa-notes-medical"></i> Dialysis: <strong>{{ sha_bed_occupancy.dialysis_visits }}/{{ sha_bed_occupancy.number_of_dialysis_bed }}</strong></span>
+                    <span><i class="fas fa-baby"></i> Baby Cots: <strong>{{ sha_bed_occupancy.newborn_visits }}/{{ sha_bed_occupancy.number_of_baby_cot }}</strong></span>
+                </div>
+            </div>
+            {% endif %}
         </div>
+
 
         <div class="main-grid">
             <!-- Left Column: Wards List -->

@@ -181,6 +181,9 @@ def dashboard_view(request):
     else:
         greeting = 'Good evening'
 
+    from accounts.sha_hie_service import get_sha_bed_occupancy
+    sha_bed_occupancy = get_sha_bed_occupancy()
+
     context = {
         'greeting': greeting,
         'total_patients': total_patients,
@@ -202,6 +205,7 @@ def dashboard_view(request):
         'occupied_beds': occupied_beds,
         'available_beds': max(total_beds - occupied_beds, 0),
         'bed_occupancy_pct': bed_occupancy_pct,
+        'sha_bed_occupancy': sha_bed_occupancy,
         'ward_labels_json': json.dumps(ward_labels),
         'ward_data_json': json.dumps(ward_data),
         'ward_capacity_json': json.dumps(ward_capacity),
@@ -232,6 +236,7 @@ def dashboard_view(request):
     }
 
     return render(request, 'users/dashboard.html', context)
+
 
 @login_required
 def profile_view(request):

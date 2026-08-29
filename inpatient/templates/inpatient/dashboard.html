@@ -168,15 +168,16 @@
             <div class="metric-icon green"><i class="fas fa-bed"></i></div>
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%;">
                 <div>
-                    <div class="metric-label">Bed occupancy</div>
-                    <div class="metric-value" style="color: var(--success);">{{ occupancy_rate }}%</div>
-                    <div class="metric-meta">{{ occupied_beds }} of {{ total_beds }} beds filled</div>
+                    <div class="metric-label">Bed occupancy {% if sha_bed_occupancy.sha_synced %}<span class="badge badge-success" style="font-size:0.65rem; padding: 2px 6px;">DHA HIE</span>{% endif %}</div>
+                    <div class="metric-value" style="color: var(--success);">{% if sha_bed_occupancy.sha_synced %}{{ sha_bed_occupancy.occupancy_rate }}%{% else %}{{ occupancy_rate }}%{% endif %}</div>
+                    <div class="metric-meta">{% if sha_bed_occupancy.sha_synced %}{{ sha_bed_occupancy.total_ip_visits }} of {{ sha_bed_occupancy.total_number_of_bed }} DHA beds (Normal: {{ sha_bed_occupancy.number_of_normal_bed }}, ICU: {{ sha_bed_occupancy.number_of_icu_bed }}, HDU: {{ sha_bed_occupancy.number_of_hdu_bed }}){% else %}{{ occupied_beds }} of {{ total_beds }} beds filled{% endif %}</div>
                 </div>
                 <div class="occupancy-ring">
                     <canvas id="occupancyChart" width="44" height="44"></canvas>
                 </div>
             </div>
         </div>
+
         <div class="card metric-card">
             <div class="metric-icon amber"><i class="fas fa-hospital-alt"></i></div>
             <div>

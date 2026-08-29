@@ -78,7 +78,7 @@
     <div class="page-header">
         <div>
             <h1>SHA facility search</h1>
-            <p>Look up a facility on AfyaLink by registration / facility code.</p>
+            <p>Look up a facility on AfyaConnect Facility Registry by identifier.</p>
         </div>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <span class="badge badge-role">{{ base_url }}{{ facility_search_path }}</span>
@@ -87,9 +87,19 @@
 
     <div class="card" style="padding: 1.5rem; margin-bottom: 1.25rem;">
         <form id="facilitySearchForm" class="filter-row" autocomplete="off">
+            <div class="form-group" style="flex: 0 0 180px; min-width: 160px; margin-bottom: 0;">
+                <label class="form-label" for="identifierType">Identifier type</label>
+                <select id="identifierType" class="form-input">
+                    <option value="fr-code" {% if default_id_type == 'fr-code' %}selected{% endif %}>FR code</option>
+                    <option value="mfl" {% if default_id_type == 'mfl' %}selected{% endif %}>MFL</option>
+                    <option value="registration-number" {% if default_id_type == 'registration-number' %}selected{% endif %}>Registration number</option>
+                    <option value="license-number" {% if default_id_type == 'license-number' %}selected{% endif %}>License number</option>
+                    <option value="fid" {% if default_id_type == 'fid' %}selected{% endif %}>FID</option>
+                </select>
+            </div>
             <div class="form-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
-                <label class="form-label" for="facilityCode">Facility / registration code</label>
-                <input type="text" id="facilityCode" class="form-input" placeholder="e.g. facility registry code" required>
+                <label class="form-label" for="facilityCode">Identifier</label>
+                <input type="text" id="facilityCode" class="form-input" placeholder="e.g. 15627" required>
             </div>
             <div style="display: flex; gap: 0.5rem;">
                 <button type="submit" id="searchBtn" class="btn btn-primary">
@@ -112,7 +122,7 @@
         </div>
         <div id="facilityFields" class="result-grid"></div>
         <details open style="margin-top: 1.15rem;">
-            <summary style="cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">API response (AfyaLink / HMIS)</summary>
+            <summary style="cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">API response (AfyaConnect / HMIS)</summary>
             <pre id="rawJson" class="raw-box"></pre>
         </details>
     </div>
@@ -124,6 +134,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('facilitySearchForm');
     const codeInput = document.getElementById('facilityCode');
+    const typeSelect = document.getElementById('identifierType');
     const searchBtn = document.getElementById('searchBtn');
     const clearBtn = document.getElementById('clearBtn');
     const statusBanner = document.getElementById('statusBanner');
@@ -135,15 +146,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const FIELD_LABELS = [
         ['name', 'Facility name'],
-        ['facility_code', 'Facility code'],
+        ['facility_code', 'FR code'],
         ['registration_number', 'Registration number'],
-        ['id', 'Registry ID'],
-        ['level', 'Level'],
+        ['license_number', 'License number'],
+        ['fid_code', 'FID code'],
+        ['id', 'Registry UUID'],
+        ['level', 'KEPH level'],
         ['facility_type', 'Type'],
         ['facility_category', 'Category'],
         ['ownership', 'Owner'],
         ['regulator', 'Regulator'],
         ['status', 'Operational status'],
+        ['sha_contract_status', 'SHA contract status'],
         ['approved', 'Approved'],
         ['license_expiry', 'License expiry'],
         ['county', 'County'],
@@ -153,6 +167,9 @@ document.addEventListener('DOMContentLoaded', function () {
         ['address', 'Address'],
         ['phone', 'Phone'],
         ['email', 'Email'],
+        ['administrator_name', 'Administrator'],
+        ['pcn_code', 'PCN code'],
+        ['is_hub', 'Is hub'],
     ];
 
     function formatApiPayload(httpStatus, data) {
@@ -162,10 +179,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 success: data && data.success,
                 found: data && data.found,
                 facility_code: data && data.facility_code,
+                identifier_type: data && data.identifier_type,
                 facility: data && data.facility,
                 debug: data && data.debug,
             },
-            afyalink_raw: (data && data.raw) || {},
+            afyaconnect_raw: (data && data.raw) || {},
             full_response: data || {},
         }, null, 2);
     }
@@ -212,14 +230,15 @@ document.addEventListener('DOMContentLoaded', function () {
         searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching…';
 
         try {
-            const url = `{% url "accounts:sha_facility_by_code" %}?facility_code=${encodeURIComponent(code)}`;
+            const idType = (typeSelect && typeSelect.value) || 'fr-code';
+            const url = `{% url "accounts:sha_facility_by_code" %}?facility_code=${encodeURIComponent(code)}&identifier_type=${encodeURIComponent(idType)}`;
             const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const data = await res.json();
 
             if (!res.ok || !data.success) {
                 showStatus('error', data.error || 'Facility search failed.');
                 resultCard.style.display = 'block';
-                resultSub.textContent = `Query: ${code}`;
+                resultSub.textContent = `Query: ${code} (${idType})`;
                 foundBadge.className = 'badge badge-danger';
                 foundBadge.textContent = 'Error';
                 facilityFields.innerHTML = '<div class="result-field"><label>Details</label><div>See API response below.</div></div>';
@@ -228,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             resultCard.style.display = 'block';
-            resultSub.textContent = `Query: ${data.facility_code}`;
+            resultSub.textContent = `Query: ${data.facility_code} (${data.identifier_type || idType})`;
             rawJson.textContent = formatApiPayload(res.status, data);
 
             if (data.found) {

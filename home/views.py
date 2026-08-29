@@ -25,6 +25,15 @@ from django.db.models import Q
 from inventory.models import DispensedItem, InventoryRequest
 
 
+def can_use_sha_coverage_check(user):
+    """SHA Coverage Check on patient add — superuser or Insurance Manager (SHA Manager)."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return getattr(user, 'role', None) == 'SHA Manager'
+
+
 def _parse_dob(value):
     """Parse common SHA date formats into a date, or None."""
     if not value:
@@ -192,6 +201,12 @@ def create_sha_household_patients(request):
       }
     Always creates/updates the principal (account holder) plus selected dependents.
     """
+    if not can_use_sha_coverage_check(request.user):
+        return JsonResponse({
+            'success': False,
+            'error': 'Only Insurance Manager or superuser can create patients from SHA check.',
+        }, status=403)
+
     try:
         payload = json.loads(request.body.decode('utf-8') or '{}')
     except json.JSONDecodeError:
@@ -478,7 +493,12 @@ class PatientCreateView(LoginRequiredMixin, CreateView):
             initial['id_number'] = id_number
             initial['national_id'] = id_number
         return initial
-    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_sha_coverage_check'] = can_use_sha_coverage_check(self.request.user)
+        return context
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         
@@ -668,6 +688,11 @@ class PatientUpdateView(LoginRequiredMixin, UpdateView):
     form_class = PatientForm
     template_name = 'home/patient_form.html'
     success_url = reverse_lazy('home:patient_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_sha_coverage_check'] = False
+        return context
 
 class PatientDeleteView(LoginRequiredMixin, DeleteView):
     model = Patient
@@ -933,10 +958,24 @@ class PatientDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 'name': test.name,
                 'department_id': test.department.id,
                 'department_name': test.department.name.lower(),
-                'price': str(test.price) if test.price else None
+                'price': str(test.price) if test.price else None,
+                'sha_intervention_code': test.sha_intervention_code or '',
+                'sha_intervention_name': test.sha_intervention_name or '',
             })
         context['medical_tests_data'] = medical_tests_data
         context['medical_tests_json'] = json.dumps(medical_tests_data)
+        try:
+            context['sha_visit_billed'] = bool(
+                selected_visit
+                and (
+                    (selected_visit.payment_method or '').upper() in ('SHA', 'INSURANCE', 'SHIF', 'UHC')
+                    or getattr(selected_visit, 'sha_claim_session', None)
+                )
+            )
+            context['sha_preauth_check_url'] = reverse('home:sha_preauth_check_api')
+        except Exception:
+            context['sha_visit_billed'] = False
+            context['sha_preauth_check_url'] = ''
         
         # Get departments for the "Send To" options (only Lab, Imaging, Procedure Room)
         context['available_departments'] = Departments.objects.filter(
@@ -1223,9 +1262,11 @@ def submit_next_action(request):
                             selected_tests.append(str(b_id))
                 
                 items_created = 0
+                ordered_services = []
                 for test_id in selected_tests:
                     try:
                         service = Service.objects.get(pk=test_id)
+                        ordered_services.append(service)
                         
                         # Determine Price (Free if part of ANC Profile bundle)
                         unit_price = service.price
@@ -1261,13 +1302,32 @@ def submit_next_action(request):
                 
                 if items_created == 0:
                     invoice.delete() # Don't keep empty invoices
-            
+                    invoice_id = None
+
+                try:
+                    from accounts.sha_preauth_check import check_services_preauth
+                    preauth_advisory = check_services_preauth(visit, ordered_services)
+                except Exception:
+                    preauth_advisory = None
+            else:
+                preauth_advisory = None
+
+            msg = (
+                f'Next action processed for {patient.first_name} {patient.last_name}. '
+                f'Patient routed to {len(send_to_departments)} department(s) and '
+                f'{len(selected_tests)} test(s) ordered.'
+            )
+            if preauth_advisory and preauth_advisory.get('inform_patient'):
+                msg += (
+                    f" SHA preauth: {len(preauth_advisory['inform_patient'])} item(s) "
+                    "require pre-authorization — inform the patient."
+                )
+
             return JsonResponse({
                 'success': True,
-                'invoice_id': invoice_id,
-                'message': f'Next action processed for {patient.first_name} {patient.last_name}. ' +
-                          f'Patient routed to {len(send_to_departments)} department(s) and ' +
-                          f'{len(selected_tests)} test(s) ordered.'
+                'invoice_id': invoice_id if selected_tests else None,
+                'message': msg,
+                'preauth': preauth_advisory,
             })
             
         except Exception as e:
@@ -3136,38 +3196,63 @@ def create_prescription(request, visit_id):
         if form.is_valid() and formset.is_valid():
             from .clinical_decision_support import evaluate_cds
 
-            proposed = []
-            for item_form in formset.forms:
-                if not hasattr(item_form, 'cleaned_data') or item_form.cleaned_data.get('DELETE'):
-                    continue
-                med = item_form.cleaned_data.get('medication')
-                if not med:
-                    continue
-                proposed.append({
-                    'name': getattr(med, 'name', '') or '',
-                    'generic_concept_code': item_form.cleaned_data.get('generic_concept_code') or '',
-                    'generic_concept_display': item_form.cleaned_data.get('generic_concept_display') or '',
-                    'actual_product_code': '',
-                })
+            # SHA visit terminology guard: all prescribed medications must exist in DHA Terminology
+            is_sha_visit = (visit.payment_method or '').upper() in ('SHA', 'SHIF', 'INSURANCE') or bool(getattr(visit, 'sha_claim_session', None))
+            sha_unmapped_items = []
+            if is_sha_visit:
+                for item_form in formset.forms:
+                    if not hasattr(item_form, 'cleaned_data') or item_form.cleaned_data.get('DELETE'):
+                        continue
+                    med = item_form.cleaned_data.get('medication')
+                    if not med:
+                        continue
+                    dha_code = (
+                        item_form.cleaned_data.get('generic_concept_code')
+                        or getattr(getattr(med, 'medication', None), 'generic_concept_code', '')
+                        or ''
+                    ).strip()
+                    if not dha_code:
+                        sha_unmapped_items.append(getattr(med, 'name', 'Medication'))
 
-            blockers = []
-            if proposed:
-                cds_check = evaluate_cds(patient, visit=visit, proposed_medications=proposed)
-                blockers = [a for a in cds_check.get('alerts', []) if a.get('blocking')]
-
-            if blockers and request.POST.get('cds_override') != '1':
-                for b in blockers[:5]:
-                    messages.error(request, f"CDS block: {b.get('title')} — {b.get('message')}")
-                messages.warning(
-                    request,
-                    'Prescription blocked by Clinical Decision Support (allergy/safety). '
-                    'Resolve conflicts or obtain clinical override.',
-                )
+            if sha_unmapped_items:
+                for unmapped_name in sha_unmapped_items:
+                    messages.error(
+                        request,
+                        f'SHA Prescribing Error: "{unmapped_name}" does not exist in DHA Terminology (missing GE* code). Under SHA rules, this drug cannot be prescribed for SHA visits.',
+                    )
             else:
-                if blockers and request.POST.get('cds_override') == '1':
-                    messages.warning(request, 'CDS allergy block overridden by clinician.')
+                proposed = []
+                for item_form in formset.forms:
+                    if not hasattr(item_form, 'cleaned_data') or item_form.cleaned_data.get('DELETE'):
+                        continue
+                    med = item_form.cleaned_data.get('medication')
+                    if not med:
+                        continue
+                    proposed.append({
+                        'name': getattr(med, 'name', '') or '',
+                        'generic_concept_code': item_form.cleaned_data.get('generic_concept_code') or '',
+                        'generic_concept_display': item_form.cleaned_data.get('generic_concept_display') or '',
+                        'actual_product_code': '',
+                    })
 
-                submission_in_progress = False
+                blockers = []
+                if proposed:
+                    cds_check = evaluate_cds(patient, visit=visit, proposed_medications=proposed)
+                    blockers = [a for a in cds_check.get('alerts', []) if a.get('blocking')]
+
+                if blockers and request.POST.get('cds_override') != '1':
+                    for b in blockers[:5]:
+                        messages.error(request, f"CDS block: {b.get('title')} — {b.get('message')}")
+                    messages.warning(
+                        request,
+                        'Prescription blocked by Clinical Decision Support (allergy/safety). '
+                        'Resolve conflicts or obtain clinical override.',
+                    )
+                else:
+                    if blockers and request.POST.get('cds_override') == '1':
+                        messages.warning(request, 'CDS allergy block overridden by clinician.')
+
+                    submission_in_progress = False
                 if form_token and not try_acquire_prescription_submit_lock(visit_id, form_token):
                     cached_id = get_cached_prescription_id(visit_id, form_token)
                     if cached_id:
@@ -3233,6 +3318,24 @@ def create_prescription(request, visit_id):
                                 invoice.status = 'Paid'
                                 invoice.save()
 
+                            try:
+                                from accounts.sha_preauth_check import check_inventory_preauth
+
+                                meds = [item.medication for item in prescription_items]
+                                preauth_meds = check_inventory_preauth(prescription.visit, meds)
+                                needing = list(preauth_meds.get('inform_patient') or [])
+
+                                for row in needing:
+                                    messages.warning(request, row.get('message') or 'SHA preauth required.')
+                                if needing:
+                                    messages.info(
+                                        request,
+                                        'Inform the patient: some prescribed items require SHA pre-authorization '
+                                        'before SHA payment is guaranteed. Use the SHA claims desk to raise preauth.',
+                                    )
+                            except Exception:
+                                pass
+
                         cache_prescription_submit(visit_id, form_token, prescription.id)
                         try:
                             from .medication_registry import sync_active_medications_from_prescription
@@ -3253,7 +3356,6 @@ def create_prescription(request, visit_id):
                                 parse_id_list,
                             )
                             problem_ids = parse_id_list(request.POST.getlist('erx_problem_ids'))
-                            test_ids = parse_id_list(request.POST.getlist('erx_diagnostic_tests'))
                             include_meds = request.POST.get('erx_include_medication_list', '1') in (
                                 '1', 'true', 'yes', 'on',
                             )
@@ -3261,8 +3363,8 @@ def create_prescription(request, visit_id):
                                 prescription,
                                 problem_ids=problem_ids or None,
                                 include_medication_list=include_meds,
-                                diagnostic_service_ids=test_ids or None,
-                                order_diagnostics=bool(test_ids),
+                                diagnostic_service_ids=None,
+                                order_diagnostics=False,
                                 user=request.user,
                             )
                             bits = []
@@ -3270,8 +3372,6 @@ def create_prescription(request, visit_id):
                                 bits.append('Problem List')
                             if ctx.get('includes', {}).get('medication_list'):
                                 bits.append('Medication List')
-                            if ctx.get('includes', {}).get('diagnostic_tests'):
-                                bits.append('Diagnostic Tests')
                             if bits:
                                 messages.info(
                                     request,
@@ -3371,7 +3471,8 @@ def create_prescription(request, visit_id):
             'dispensing_unit': item.dispensing_unit,
             'selling_price': str(item.selling_price),
             'stock_quantity': total_stock,
-            'visit_type': visit.visit_type
+            'visit_type': visit.visit_type,
+            'sha_intervention_code': getattr(item, 'sha_intervention_code', None) or '',
         }
 
     from django.conf import settings as django_settings
@@ -3440,6 +3541,11 @@ def create_prescription(request, visit_id):
         'erx_diagnostic_catalog': diagnostic_catalog,
         'erx_visit_labs': visit_labs,
         'sha_claim_ready': bool(sha_session and sha_session.consent_token),
+        'sha_preauth_check_url': reverse('home:sha_preauth_check_api'),
+        'sha_visit_billed': bool(
+            (visit.payment_method or '').upper() in ('SHA', 'INSURANCE', 'SHIF', 'UHC')
+            or sha_session
+        ),
         'dispensed_items': _get_normalized_history(visit, patient),
         'dispensing_departments': Departments.objects.all().order_by('name')
     }
@@ -6033,12 +6139,17 @@ def ward_management(request):
     ward_form = WardForm()
     bed_form = BedForm()
     
+    from accounts.sha_hie_service import get_sha_bed_occupancy
+    sha_bed_occupancy = get_sha_bed_occupancy()
+
     context = {
         'wards': wards,
         'ward_form': ward_form,
         'bed_form': bed_form,
+        'sha_bed_occupancy': sha_bed_occupancy,
     }
     return render(request, 'home/ward_management.html', context)
+
 
 @login_required
 @require_http_methods(['POST'])
@@ -6134,6 +6245,16 @@ def can_use_icd11(user):
     return user.is_authenticated and (
         user.is_superuser
         or user.role in ['Doctor', 'Nurse', 'Admin', 'SHA Manager']
+    )
+
+
+def can_use_terminology(user):
+    """AfyaConnect LOINC / ICHI / concepts search (clinical coding + service catalog)."""
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.role in [
+            'Doctor', 'Nurse', 'Admin', 'SHA Manager', 'Accountant', 'Lab Technician',
+        ]
     )
 
 
@@ -6316,18 +6437,20 @@ def hpt_search_api(request):
 @login_required
 def hpt_suggest_api(request):
     """
-    GET /home/api/hpt/suggest/?name=...&generic_name=...&formulation=...
+    GET /home/api/hpt/suggest/?name=...&generic_name=...&formulation=...&code=...
 
-    Suggest DHA generic product codes after selecting a local inventory drug.
+    Suggest or verify DHA generic product codes after selecting a local inventory drug.
     """
     from .dha_medication import suggest_dha_for_local_drug
 
     name = (request.GET.get('name') or '').strip()
     generic_name = (request.GET.get('generic_name') or '').strip()
     formulation = (request.GET.get('formulation') or '').strip()
-    if not (name or generic_name):
+    code = (request.GET.get('code') or request.GET.get('generic_concept_code') or '').strip()
+
+    if not (name or generic_name or code):
         return JsonResponse(
-            {'success': False, 'error': 'name or generic_name is required.'},
+            {'success': False, 'error': 'name, generic_name, or code is required.'},
             status=400,
         )
 
@@ -6336,8 +6459,303 @@ def hpt_suggest_api(request):
             name=name,
             generic_name=generic_name,
             formulation=formulation,
+            concept_code=code,
         )
         status = 200 if payload.get('success') else 502
         return JsonResponse(payload, status=status)
     except Exception as exc:  # noqa: BLE001
         return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+def sha_preauth_check_api(request):
+    """
+    GET/POST /home/api/sha/preauth-check/
+
+    Advisory check: do selected labs / meds need SHA preauth?
+    Query/body: visit_id, service_ids[] / services, inventory_ids[] / medications
+    """
+    from accounts.models import Service
+    from accounts.sha_preauth_check import (
+        check_inventory_preauth,
+        check_services_preauth,
+    )
+    from inventory.models import InventoryItem
+
+    if request.method == 'POST':
+        visit_id = request.POST.get('visit_id') or request.GET.get('visit_id')
+        service_ids = request.POST.getlist('service_ids') or request.POST.getlist('services')
+        inventory_ids = (
+            request.POST.getlist('inventory_ids')
+            or request.POST.getlist('medications')
+            or request.POST.getlist('medication_ids')
+        )
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                body = json.loads(request.body.decode('utf-8') or '{}')
+            except ValueError:
+                body = {}
+            visit_id = body.get('visit_id') or visit_id
+            service_ids = body.get('service_ids') or body.get('services') or service_ids
+            inventory_ids = (
+                body.get('inventory_ids')
+                or body.get('medications')
+                or body.get('medication_ids')
+                or inventory_ids
+            )
+    else:
+        visit_id = request.GET.get('visit_id')
+        service_ids = request.GET.getlist('service_ids') or request.GET.getlist('services')
+        inventory_ids = (
+            request.GET.getlist('inventory_ids')
+            or request.GET.getlist('medications')
+            or request.GET.getlist('medication_ids')
+        )
+        # Allow comma-separated
+        if len(service_ids) == 1 and ',' in service_ids[0]:
+            service_ids = [x.strip() for x in service_ids[0].split(',') if x.strip()]
+        if len(inventory_ids) == 1 and ',' in inventory_ids[0]:
+            inventory_ids = [x.strip() for x in inventory_ids[0].split(',') if x.strip()]
+
+    if not visit_id:
+        return JsonResponse({'success': False, 'error': 'visit_id is required.'}, status=400)
+
+    visit = get_object_or_404(Visit, pk=visit_id)
+    payload: dict = {
+        'success': True,
+        'visit_id': visit.pk,
+        'labs': None,
+        'medications': None,
+    }
+
+    try:
+        if service_ids:
+            services = list(Service.objects.filter(pk__in=service_ids))
+            payload['labs'] = check_services_preauth(visit, services)
+        if inventory_ids:
+            invs = list(
+                InventoryItem.objects.filter(pk__in=inventory_ids).select_related('medication')
+            )
+            payload['medications'] = check_inventory_preauth(visit, invs)
+
+        # If neither provided, still return visit-level / empty check
+        if not service_ids and not inventory_ids:
+            payload['labs'] = check_services_preauth(visit, [])
+
+        attention = False
+        inform = []
+        for key in ('labs', 'medications'):
+            block = payload.get(key) or {}
+            if block.get('requires_attention'):
+                attention = True
+            inform.extend(block.get('inform_patient') or [])
+
+        payload['requires_attention'] = attention
+        payload['inform_patient'] = inform
+        payload['message'] = (
+            f"{len(inform)} item(s) require SHA pre-authorization — inform the patient."
+            if inform
+            else 'No SHA pre-authorization required for the selection.'
+        )
+        return JsonResponse(payload)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+def _terminology_search_response(request, system: str):
+    """
+    LOINC / ICHI search: local TerminologyConcept DB first.
+    If no local hits, seed from DHA Terminology Service into DB, then return.
+    Selection confirmation is a separate validate endpoint.
+    """
+    from accounts.sha_hie_service import ShaHieConfigError, ShaHieRequestError
+    from .terminology_local import (
+        local_terminology_count,
+        search_terminology_local,
+        seed_from_dha,
+    )
+
+    query = (request.GET.get('q') or request.GET.get('search') or '').strip()
+    if not query:
+        return JsonResponse({'success': False, 'error': 'q is required.'}, status=400)
+    try:
+        limit = int(request.GET.get('limit') or 25)
+    except ValueError:
+        limit = 25
+    limit = max(1, min(limit, 50))
+
+    force_live = (request.GET.get('live') or '').strip().lower() in (
+        '1', 'true', 'yes', 'force',
+    )
+
+    try:
+        if system in ('loinc', 'ichi'):
+            local = search_terminology_local(system, query, limit=limit)
+            results = local.get('results') or []
+            if results and not force_live:
+                return JsonResponse({
+                    'success': True,
+                    'query': query,
+                    'system': system,
+                    'source': 'local',
+                    'count': len(results),
+                    'local_total': local_terminology_count(system),
+                    'results': results,
+                })
+
+            # Empty local (or ?live=1): fetch DHA, cache, return local-shaped rows
+            seeded = seed_from_dha(system, query, limit=limit)
+            results = seeded.get('results') or []
+            return JsonResponse({
+                'success': True,
+                'query': query,
+                'system': system,
+                'source': seeded.get('source') or 'local_after_dha_seed',
+                'path': seeded.get('dha_path'),
+                'seeded': seeded.get('seeded') or 0,
+                'count': len(results),
+                'local_total': local_terminology_count(system),
+                'results': results,
+            })
+
+        # Generic concepts: ICD-11 prefers local Icd11Code DB
+        owner = (request.GET.get('owner') or '').strip()
+        source = (request.GET.get('source') or '').strip()
+        if not owner or not source:
+            return JsonResponse(
+                {'success': False, 'error': 'owner and source are required.'},
+                status=400,
+            )
+        if source.upper() in ('ICD-11', 'ICD11') or 'ICD-11' in source.upper():
+            from .icd11_local import local_icd11_count, search_icd11_local
+
+            if local_icd11_count() == 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'ICD-11 database is empty. Run `python manage.py sync_icd11`.',
+                }, status=503)
+            payload = search_icd11_local(query, limit=limit)
+            results = payload.get('results') or []
+            return JsonResponse({
+                'success': True,
+                'query': query,
+                'system': 'icd11',
+                'owner': owner,
+                'source': 'local',
+                'count': len(results),
+                'results': results,
+            })
+
+        from accounts.sha_hie_service import ShaHieClient
+
+        payload = ShaHieClient().search_concepts(
+            query, owner=owner, source=source, limit=limit
+        )
+        results = payload.get('results') or []
+        return JsonResponse({
+            'success': True,
+            'query': payload.get('query') or query,
+            'system': system,
+            'owner': payload.get('owner'),
+            'source': payload.get('source') or 'dha',
+            'path': payload.get('path'),
+            'count': len(results),
+            'results': results,
+        })
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except ShaHieConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except ShaHieRequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+def _terminology_validate_response(request, system: str):
+    """Confirm a locally selected LOINC/ICHI code is unchanged on DHA."""
+    from .terminology_validate import cross_check_terminology_with_dha
+
+    code = (request.GET.get('code') or '').strip()
+    title = (request.GET.get('title') or '').strip()
+    if not code:
+        return JsonResponse({'success': False, 'error': 'code is required.'}, status=400)
+
+    try:
+        payload = cross_check_terminology_with_dha(
+            system, code, local_title=title or None
+        )
+        http_status = 200
+        if not payload.get('success'):
+            status = payload.get('status')
+            if status in ('not_in_local_db', 'not_supported_by_dha', 'title_changed'):
+                http_status = 409
+            elif status == 'dha_unavailable':
+                http_status = 502
+        return JsonResponse(payload, status=http_status)
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def loinc_search_api(request):
+    """GET /home/api/loinc/search/?q=glucose — local DB first, seed from DHA if miss."""
+    return _terminology_search_response(request, 'loinc')
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def ichi_search_api(request):
+    """GET /home/api/ichi/search/?q=appendectomy — local DB first, seed from DHA if miss."""
+    return _terminology_search_response(request, 'ichi')
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def loinc_validate_api(request):
+    """GET /home/api/loinc/validate/?code=2345-7&title=... — confirm unchanged via DHA."""
+    return _terminology_validate_response(request, 'loinc')
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def ichi_validate_api(request):
+    """GET /home/api/ichi/validate/?code=ATD.AC.ZZ&title=... — confirm unchanged via DHA."""
+    return _terminology_validate_response(request, 'ichi')
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def terminology_concepts_api(request):
+    """
+    GET /home/api/terminology/concepts/?owner=WHO&source=ICD-11&q=...
+
+    ICD-11 uses local Icd11Code DB. Other sources query DHA (no local table yet).
+    """
+    return _terminology_search_response(request, 'concepts')
+
+
+@login_required
+@user_passes_test(can_use_terminology)
+def terminology_browser_page(request):
+    """UI to search ICD-11 / LOINC / ICHI (local first, DHA confirm on select)."""
+    from django.conf import settings as django_settings
+    from .icd11_local import local_icd11_count
+    from .terminology_local import local_terminology_count
+
+    return render(request, 'home/terminology_browser.html', {
+        'loinc_owner': django_settings.SHA_HIE_LOINC_OWNER,
+        'loinc_source': django_settings.SHA_HIE_LOINC_SOURCE,
+        'ichi_owner': django_settings.SHA_HIE_ICHI_OWNER,
+        'ichi_source': django_settings.SHA_HIE_ICHI_SOURCE,
+        'icd11_owner': django_settings.SHA_HIE_ICD11_OWNER,
+        'icd11_source': django_settings.SHA_HIE_ICD11_SOURCE,
+        'terminology_base': django_settings.SHA_HIE_TERMINOLOGY_BASE_URL,
+        'local_icd11_count': local_icd11_count(),
+        'local_loinc_count': local_terminology_count('loinc'),
+        'local_ichi_count': local_terminology_count('ichi'),
+        'validate_on_select': django_settings.TERMINOLOGY_DHA_VALIDATE_ON_SELECT,
+    })

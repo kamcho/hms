@@ -19,6 +19,7 @@ from .models import (
     PatientAllergyHistory,
     ClinicalSummary,
     FamilyHistory,
+    TerminologyConcept,
 )
 
 
@@ -198,6 +199,17 @@ class Icd11CodeAdmin(admin.ModelAdmin):
     list_filter = ('release', 'linearization', 'class_kind', 'is_leaf', 'chapter_no')
     search_fields = ('code', 'title', 'title_plain', 'entity_id')
     readonly_fields = ('linearization_uri', 'foundation_uri')
+
+
+@admin.register(TerminologyConcept)
+class TerminologyConceptAdmin(admin.ModelAdmin):
+    list_display = (
+        'system', 'code', 'title', 'owner', 'source',
+        'is_active', 'last_verified_at',
+    )
+    list_filter = ('system', 'is_active', 'owner', 'source')
+    search_fields = ('code', 'title', 'title_normalized', 'concept_id')
+    readonly_fields = ('created_at', 'updated_at', 'last_verified_at', 'last_dha_title')
 
 
 class ProblemHistoryInline(admin.TabularInline):

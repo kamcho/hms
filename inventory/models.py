@@ -50,6 +50,14 @@ class InventoryItem(models.Model):
     buying_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Cost price per dispensing unit")
     reorder_level = models.IntegerField(default=10, help_text="Minimum stock level before reordering")
     is_updated = models.BooleanField(default=False, help_text="Set to True once the item has been reviewed/updated")
+    # SHA benefit intervention for pharmacy billing / preauth advisories
+    sha_intervention_code = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="SHA intervention code for preauth / claims (optional)",
+    )
 
     class Meta:
         ordering = ['name']

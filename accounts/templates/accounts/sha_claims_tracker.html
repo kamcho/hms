@@ -1,0 +1,814 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static custom_filters %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    :root {
+        --sha-primary: #1e3a8a;
+        --sha-primary-light: #3b82f6;
+        --sha-accent: #6366f1;
+        --sha-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+    }
+
+    .tracker-container {
+        background: var(--sha-bg);
+        min-height: 100vh;
+        padding: 1.75rem 1.5rem 3.5rem;
+        max-width: 1680px;
+        margin: 0 auto;
+    }
+
+    /* Hero Banner */
+    .tracker-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+        border-radius: 20px;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.75rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 16px 36px -10px rgba(30, 58, 138, 0.35);
+    }
+
+    .tracker-hero::after {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -5%;
+        width: 340px;
+        height: 340px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .hero-flex {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: rgba(255,255,255,0.95);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        margin-bottom: 0.65rem;
+    }
+
+    .hero-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin: 0 0 0.4rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.92rem;
+        color: rgba(255,255,255,0.8);
+        max-width: 620px;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-btn {
+        background: white;
+        color: var(--sha-primary);
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .hero-btn:hover {
+        background: #f1f5f9;
+        transform: translateY(-2px);
+    }
+
+    .hero-btn-ghost {
+        background: rgba(255,255,255,0.12);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.25);
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .hero-btn-ghost:hover {
+        background: rgba(255,255,255,0.22);
+        color: white;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .kpi-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.25rem 1.35rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: all 0.2s ease;
+    }
+
+    .kpi-card:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        transform: translateY(-2px);
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-icon.blue { background: #eff6ff; color: #2563eb; }
+    .kpi-icon.green { background: #ecfdf5; color: #059669; }
+    .kpi-icon.amber { background: #fffbeb; color: #d97706; }
+    .kpi-icon.purple { background: #f5f3ff; color: #7c3aed; }
+    .kpi-icon.rose { background: #fff1f2; color: #e11d48; }
+    .kpi-icon.slate { background: #f1f5f9; color: #475569; }
+
+    .kpi-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.2rem;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        line-height: 1;
+    }
+
+    /* Filter & Search Bar */
+    .filter-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .search-input-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 280px;
+    }
+
+    .search-input-wrap i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.7rem 1rem 0.7rem 2.6rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .filter-chips {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .filter-chip {
+        padding: 0.45rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-decoration: none;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .filter-chip:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .filter-chip.active {
+        background: #1e3a8a;
+        color: white;
+        border-color: #1e3a8a;
+    }
+
+    .filter-chip .chip-count {
+        background: rgba(0,0,0,0.08);
+        padding: 0.1rem 0.4rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+    }
+
+    .filter-chip.active .chip-count {
+        background: rgba(255,255,255,0.25);
+        color: white;
+    }
+
+    /* Main Encounters Table Card */
+    .table-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    }
+
+    .table-header-bar {
+        padding: 1.15rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .table-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .records-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.86rem;
+    }
+
+    .records-table th {
+        text-align: left;
+        padding: 0.85rem 1.15rem;
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .records-table td {
+        padding: 1rem 1.15rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .records-table tbody tr {
+        transition: background 0.15s ease;
+    }
+
+    .records-table tbody tr:hover {
+        background: #f8faff;
+    }
+
+    /* Patient Cell */
+    .patient-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .patient-name {
+        font-weight: 800;
+        color: #0f172a;
+        font-size: 0.92rem;
+        text-decoration: none;
+    }
+
+    .patient-name:hover {
+        color: #2563eb;
+    }
+
+    .patient-meta {
+        font-size: 0.76rem;
+        color: #64748b;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .cr-badge {
+        background: #e0e7ff;
+        color: #3730a3;
+        padding: 0.1rem 0.45rem;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.7rem;
+    }
+
+    .scheme-badge {
+        background: #f1f5f9;
+        color: #334155;
+        padding: 0.1rem 0.45rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.7rem;
+    }
+
+    /* Visit Badge */
+    .type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .type-badge.opd { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .type-badge.ipd { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .type-badge.maternity { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
+
+    /* SHA Status Pill */
+    .sha-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .sha-pill.draft { background: #f1f5f9; color: #475569; }
+    .sha-pill.started { background: #dbeafe; color: #1d4ed8; }
+    .sha-pill.preauth { background: #fef3c7; color: #b45309; }
+    .sha-pill.submitted { background: #dcfce7; color: #15803d; }
+    .sha-pill.error { background: #fee2e2; color: #b91c1c; }
+
+    /* Action Buttons */
+    .table-actions {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+    }
+
+    .btn-action {
+        padding: 0.45rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: 1px solid transparent;
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+
+    .btn-action-primary {
+        background: #1e3a8a;
+        color: white;
+    }
+
+    .btn-action-primary:hover {
+        background: #172554;
+        color: white;
+    }
+
+    .btn-action-secondary {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #334155;
+    }
+
+    .btn-action-secondary:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .btn-status-check {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .btn-status-check:hover {
+        background: #dbeafe;
+    }
+
+    .btn-status-check.loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #64748b;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: #cbd5e1;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tracker-container">
+    <!-- Hero Banner -->
+    <div class="tracker-hero">
+        <div class="hero-flex">
+            <div>
+                <div class="hero-badge">
+                    <i class="fas fa-shield-alt"></i> DHA / SHA eClaims Hub
+                </div>
+                <h1 class="hero-title">{{ title }}</h1>
+                <p class="hero-subtitle">
+                    Central hospital workspace to monitor SHA patient visits, verify virtual claim tokens, track preauthorizations, and review adjudication statuses.
+                </p>
+            </div>
+            <div class="hero-actions">
+                <a href="{% url 'accounts:sha_eligibility' %}" class="hero-btn">
+                    <i class="fas fa-id-card"></i> Check Eligibility
+                </a>
+                <a href="{% url 'accounts:insurance_manager' %}" class="hero-btn-ghost">
+                    <i class="fas fa-file-invoice-dollar"></i> Insurance Manager
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fas fa-hospital-user"></i></div>
+            <div>
+                <div class="kpi-label">Total SHA Visits</div>
+                <div class="kpi-value">{{ stats.total_visits }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="fas fa-spinner"></i></div>
+            <div>
+                <div class="kpi-label">Active / Started</div>
+                <div class="kpi-value">{{ stats.active_started }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon amber"><i class="fas fa-hourglass-half"></i></div>
+            <div>
+                <div class="kpi-label">Preauth Pending</div>
+                <div class="kpi-value">{{ stats.preauth_pending }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="kpi-label">Claims Submitted</div>
+                <div class="kpi-value">{{ stats.submitted_claims }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon slate"><i class="fas fa-file-alt"></i></div>
+            <div>
+                <div class="kpi-label">Draft / New</div>
+                <div class="kpi-value">{{ stats.draft_sessions }}</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon rose"><i class="fas fa-exclamation-triangle"></i></div>
+            <div>
+                <div class="kpi-label">Attention / Error</div>
+                <div class="kpi-value">{{ stats.error_sessions }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Card -->
+    <div class="filter-card">
+        <form method="GET" class="filter-row">
+            <div class="search-input-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search by patient name, ID #, CR ID, phone, or Claim ID..." class="search-input">
+            </div>
+
+            <div class="filter-chips">
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=all" class="filter-chip {% if status_filter == 'all' %}active{% endif %}">
+                    All <span class="chip-count">{{ stats.total_visits }}</span>
+                </a>
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=started" class="filter-chip {% if status_filter == 'started' %}active{% endif %}">
+                    Active <span class="chip-count">{{ stats.active_started }}</span>
+                </a>
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=preauth" class="filter-chip {% if status_filter == 'preauth' %}active{% endif %}">
+                    Preauth <span class="chip-count">{{ stats.preauth_pending }}</span>
+                </a>
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=submitted" class="filter-chip {% if status_filter == 'submitted' %}active{% endif %}">
+                    Submitted <span class="chip-count">{{ stats.submitted_claims }}</span>
+                </a>
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=draft" class="filter-chip {% if status_filter == 'draft' %}active{% endif %}">
+                    Draft <span class="chip-count">{{ stats.draft_sessions }}</span>
+                </a>
+                <a href="?search={{ search_query }}&type={{ type_filter }}&status=error" class="filter-chip {% if status_filter == 'error' %}active{% endif %}">
+                    Attention <span class="chip-count">{{ stats.error_sessions }}</span>
+                </a>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <select name="type" onchange="this.form.submit()" style="padding:0.6rem 0.85rem; border:1px solid #cbd5e1; border-radius:10px; font-size:0.82rem; font-weight:700; background:white; color:#334155;">
+                    <option value="ALL" {% if type_filter == 'ALL' %}selected{% endif %}>All Types</option>
+                    <option value="OUT-PATIENT" {% if type_filter == 'OUT-PATIENT' %}selected{% endif %}>Out-Patient (OPD)</option>
+                    <option value="IN-PATIENT" {% if type_filter == 'IN-PATIENT' %}selected{% endif %}>In-Patient (IPD)</option>
+                    <option value="MATERNITY" {% if type_filter == 'MATERNITY' %}selected{% endif %}>Maternity</option>
+                </select>
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                {% if search_query or type_filter != 'ALL' or status_filter != 'all' %}
+                    <a href="{% url 'accounts:sha_claims_tracker' %}" style="font-size:0.8rem; font-weight:700; color:#ef4444; text-decoration:none; padding:0.4rem 0.6rem;">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Encounters Table -->
+    <div class="table-card">
+        <div class="table-header-bar">
+            <h3 class="table-title">
+                <i class="fas fa-list-ul" style="color: #2563eb;"></i>
+                SHA Encounters ({{ stats.displayed_count }} records)
+            </h3>
+            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Showing most recent SHA visits</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Patient Details</th>
+                        <th>Visit Info</th>
+                        <th>Claim Status</th>
+                        <th>Diagnostics & Codes</th>
+                        <th>Billed / Balance</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr id="session-row-{{ rec.session.id|default:rec.visit.id }}">
+                        <!-- Patient Details -->
+                        <td>
+                            <div class="patient-cell">
+                                <a href="{% url 'home:patient_detail' rec.patient.id %}" class="patient-name">
+                                    {{ rec.patient.full_name }}
+                                </a>
+                                <div class="patient-meta">
+                                    <span>ID: <strong>{{ rec.patient.id_number|default:"N/A" }}</strong></span>
+                                    {% if rec.patient.cr_id %}
+                                        <span class="cr-badge" title="SHA Client Registry ID">CR: {{ rec.patient.cr_id }}</span>
+                                    {% endif %}
+                                    {% if rec.patient.phone %}
+                                        <span><i class="fas fa-phone-alt" style="font-size:0.65rem;"></i> {{ rec.patient.phone }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if rec.schemes %}
+                                <div style="display:flex; gap:0.25rem; flex-wrap:wrap; margin-top:0.2rem;">
+                                    {% for s in rec.schemes %}
+                                        <span class="scheme-badge">{% if s.schemeName %}{{ s.schemeName }}{% elif s.name %}{{ s.name }}{% else %}{{ s }}{% endif %}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Visit Info -->
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <div>
+                                    {% if rec.visit.labor_delivery %}
+                                        <span class="type-badge maternity"><i class="fas fa-baby"></i> Maternity</span>
+                                    {% elif rec.visit.visit_type == 'IN-PATIENT' %}
+                                        <span class="type-badge ipd"><i class="fas fa-bed"></i> IPD</span>
+                                    {% else %}
+                                        <span class="type-badge opd"><i class="fas fa-user-clock"></i> OPD</span>
+                                    {% endif %}
+                                </div>
+                                <span style="font-size:0.75rem; color:#64748b;">
+                                    Visit #{{ rec.visit.id }} · {{ rec.visit.visit_date|date:"M d, Y H:i" }}
+                                </span>
+                                <span style="font-size:0.72rem; color:#475569;">Mode: {{ rec.visit.visit_mode|default:"Walk In" }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Claim Status -->
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <div>
+                                    <span class="sha-pill {% if rec.status == 'submitted' %}submitted{% elif rec.status == 'started' or rec.status == 'erx_submitted' or rec.status == 'dispensed' %}started{% elif rec.status == 'preauth_pending' or rec.status == 'preauth_approved' %}preauth{% elif rec.status == 'error' or rec.last_error %}error{% else %}draft{% endif %}" id="status-badge-{{ rec.session.id|default:rec.visit.id }}">
+                                        <i class="fas fa-circle" style="font-size:0.45rem;"></i>
+                                        {{ rec.status_display }}
+                                    </span>
+                                </div>
+                                {% if rec.claim_id %}
+                                    <div style="font-size:0.72rem; color:#1e3a8a; font-weight:700;">
+                                        Claim ID: <code>{{ rec.claim_id }}</code>
+                                    </div>
+                                {% elif rec.consent_token %}
+                                    <div style="font-size:0.72rem; color:#64748b;">
+                                        Token: <code>{{ rec.consent_token|truncatechars:14 }}</code>
+                                    </div>
+                                {% endif %}
+                                {% if rec.last_error %}
+                                    <div style="font-size:0.7rem; color:#dc2626; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ rec.last_error }}">
+                                        <i class="fas fa-exclamation-circle"></i> {{ rec.last_error }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Diagnostics & Codes -->
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:0.2rem; font-size:0.78rem;">
+                                <div>
+                                    <i class="fas fa-stethoscope" style="color:#6366f1; margin-right:0.2rem;"></i>
+                                    <strong>{{ rec.diagnoses_count }}</strong> diagnosis ({{ rec.icd_count }} with ICD-11)
+                                </div>
+                                <div style="color:#64748b; font-size:0.72rem;">
+                                    <i class="fas fa-box-open" style="margin-right:0.2rem;"></i>
+                                    {{ rec.item_count }} billable item{{ rec.item_count|pluralize }}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Billed / Balance -->
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:0.15rem;">
+                                <span style="font-weight:800; color:#0f172a;">Ksh {{ rec.billed_total|format_number:2 }}</span>
+                                {% if rec.adjustment > 0 %}
+                                    <span style="font-size:0.7rem; color:#dc2626;">- Ksh {{ rec.adjustment|format_number:2 }} (Adj)</span>
+                                {% endif %}
+                                <span style="font-size:0.72rem; color:{% if rec.balance > 0 %}#d97706{% else %}#059669{% endif %}; font-weight:700;">
+                                    Bal: Ksh {{ rec.balance|format_number:2 }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Actions -->
+                        <td style="text-align: right;">
+                            <div class="table-actions" style="justify-content: flex-end;">
+                                <a href="{% url 'accounts:sha_claims_desk' rec.visit.id %}" class="btn-action btn-action-primary" title="Open Claims Desk">
+                                    <i class="fas fa-shield-alt"></i> Claims Desk
+                                </a>
+                                {% if rec.invoice %}
+                                    <a href="{% url 'accounts:invoice_detail' rec.invoice.id %}" class="btn-action btn-action-secondary" title="View Invoice">
+                                        <i class="fas fa-file-invoice"></i> Invoice
+                                    </a>
+                                {% endif %}
+                                {% if rec.claim_id and rec.session %}
+                                    <button type="button" onclick="checkLiveStatus({{ rec.session.id }})" id="btn-live-{{ rec.session.id }}" class="btn-action btn-status-check" title="Poll DHA Switch for live adjudication status">
+                                        <i class="fas fa-sync-alt"></i> Status
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fas fa-shield-alt"></i>
+                                <h3>No SHA Encounters Found</h3>
+                                <p>No visits matched your search or filter criteria.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+async function checkLiveStatus(sessionId) {
+    const btn = document.getElementById(`btn-live-${sessionId}`);
+    const badge = document.getElementById(`status-badge-${sessionId}`);
+    if (btn) {
+        btn.classList.add('loading');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+    }
+
+    try {
+        const resp = await fetch(`/accounts/api/sha/session/${sessionId}/live-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (badge) {
+                badge.className = 'sha-pill submitted';
+                badge.innerHTML = `<i class="fas fa-check-circle"></i> ${data.workflow_state || data.status}`;
+            }
+            alert(`Claim ${data.claim_id} Status:\nWorkflow: ${data.workflow_state || 'N/A'}\nSession: ${data.status}`);
+        } else {
+            alert(`Status Check Failed:\n${data.error || 'Unknown error'}`);
+        }
+    } catch (e) {
+        alert(`Network Error: ${e.message}`);
+    } finally {
+        if (btn) {
+            btn.classList.remove('loading');
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Status';
+        }
+    }
+}
+</script>
+{% endblock %}

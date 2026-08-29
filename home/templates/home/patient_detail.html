@@ -375,6 +375,23 @@
         overflow-y: auto;
     }
 
+    /* Modals with ICD-11 picker need overflow visible so the
+       absolutely-positioned search dropdown is not clipped. */
+    #diagnosisModal .modal-content,
+    #problemModal .modal-content {
+        max-height: none;
+        overflow: visible;
+    }
+    #diagnosisModal .modal-body,
+    #problemModal .modal-body {
+        overflow: visible;
+    }
+    #diagnosisModal .icd-diagnosis-results,
+    #problemModal .icd-diagnosis-results {
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
     /* Filter Bar */
     .filter-bar {
         display: flex;

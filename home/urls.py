@@ -93,10 +93,19 @@ urlpatterns = [
     path('api/icd11/validate/', views.icd11_validate_api, name='icd11_validate_api'),
     path('api/icd11/entity/', views.icd11_entity_api, name='icd11_entity_api'),
     path('api/icd11/code/', views.icd11_code_api, name='icd11_code_api'),
+    # AfyaConnect Terminology Service (LOINC / ICHI / OCL concepts)
+    path('terminology/', views.terminology_browser_page, name='terminology_browser'),
+    path('api/loinc/search/', views.loinc_search_api, name='loinc_search_api'),
+    path('api/loinc/validate/', views.loinc_validate_api, name='loinc_validate_api'),
+    path('api/ichi/search/', views.ichi_search_api, name='ichi_search_api'),
+    path('api/ichi/validate/', views.ichi_validate_api, name='ichi_validate_api'),
+    path('api/terminology/concepts/', views.terminology_concepts_api, name='terminology_concepts_api'),
     # DHA HPT medication terminology (MOH-PPB)
     path('api/hpt/search/', views.hpt_search_api, name='hpt_search_api'),
     path('api/hpt/suggest/', views.hpt_suggest_api, name='hpt_suggest_api'),
     path('api/hpt/allergy-search/', views.hpt_allergy_search_api, name='hpt_allergy_search_api'),
+    # SHA preauth advisory (labs / prescriptions)
+    path('api/sha/preauth-check/', views.sha_preauth_check_api, name='sha_preauth_check_api'),
     # Clinical Decision Support
     path('patients/<int:patient_pk>/cds/', views.clinical_decision_support_api, name='clinical_decision_support'),
     path('patients/<int:patient_pk>/cds/check-medication/', views.cds_check_medication_api, name='cds_check_medication'),

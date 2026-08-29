@@ -173,6 +173,61 @@
     color: var(--accent-primary);
 }
 
+.badge-term {
+    background: rgba(15, 118, 110, 0.1);
+    color: #0f766e;
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem;
+}
+
+.term-picker {
+    position: relative;
+    margin-bottom: 0.75rem;
+}
+
+.term-picker-results {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.term-picker-results.open { display: block; }
+
+.term-picker-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: #fff;
+    padding: 0.55rem 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.term-picker-item:hover { background: #f8fafc; }
+
+.term-picker-item .code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: #0f766e;
+    font-weight: 700;
+}
+
+.term-bound {
+    font-size: 0.78rem;
+    color: #047857;
+    margin-top: 0.35rem;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -248,7 +303,7 @@
     background: #fff;
     border-radius: 16px;
     width: 100%;
-    max-width: 540px;
+    max-width: 640px;
     padding: 2rem;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
     animation: slideUp 0.25s ease-out;
@@ -432,6 +487,7 @@
                     <tr>
                         <th>Service Name</th>
                         <th>Department</th>
+                        <th>Terminology</th>
                         <th>Price (Ksh)</th>
                         <th>Status</th>
                         <th style="text-align: right;">Actions</th>
@@ -445,6 +501,17 @@
                             {% if service.description %}<small style="color: var(--text-secondary);">{{ service.description|truncatewords:10 }}</small>{% endif %}
                         </td>
                         <td><span class="badge badge-dept">{{ service.department.name|default:"—" }}</span></td>
+                        <td>
+                            {% if service.loinc_code %}
+                            <span class="badge badge-term" title="{{ service.loinc_display|default:'' }}">LOINC {{ service.loinc_code }}</span>
+                            {% endif %}
+                            {% if service.ichi_code %}
+                            <span class="badge badge-term" title="{{ service.ichi_display|default:'' }}">ICHI {{ service.ichi_code }}</span>
+                            {% endif %}
+                            {% if not service.loinc_code and not service.ichi_code %}
+                            <span style="color: var(--text-secondary); font-size: 0.8rem;">—</span>
+                            {% endif %}
+                        </td>
                         <td class="price-cell">{{ service.price|floatformat:2 }}</td>
                         <td>
                             {% if service.is_active %}
@@ -469,7 +536,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="empty-state">
                                 <i class="fas fa-concierge-bell"></i>
                                 <p style="font-weight: 600; margin-bottom: 0.25rem;">No services found</p>
@@ -510,6 +577,36 @@
             <div class="form-group">
                 <label>Description</label>
                 {{ form.description }}
+            </div>
+            <div class="form-group">
+                <label>LOINC code <small style="font-weight:400;color:var(--text-secondary);">(lab / observation)</small></label>
+                <div class="term-picker" data-system="loinc" data-prefix="id">
+                    <input type="search" class="form-control term-search" placeholder="Search LOINC e.g. glucose, CBC" autocomplete="off">
+                    <div class="term-picker-results"></div>
+                </div>
+                {{ form.loinc_code }}
+                {{ form.loinc_display }}
+                <div class="term-bound" id="id_loinc_bound">{% if form.loinc_code.value %}LOINC {{ form.loinc_code.value }} — {{ form.loinc_display.value }}{% endif %}</div>
+            </div>
+            <div class="form-group">
+                <label>ICHI code <small style="font-weight:400;color:var(--text-secondary);">(procedure)</small></label>
+                <div class="term-picker" data-system="ichi" data-prefix="id">
+                    <input type="search" class="form-control term-search" placeholder="Search ICHI e.g. appendectomy" autocomplete="off">
+                    <div class="term-picker-results"></div>
+                </div>
+                {{ form.ichi_code }}
+                {{ form.ichi_display }}
+                <div class="term-bound" id="id_ichi_bound">{% if form.ichi_code.value %}ICHI {{ form.ichi_code.value }} — {{ form.ichi_display.value }}{% endif %}</div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SHA intervention code</label>
+                    {{ form.sha_intervention_code }}
+                </div>
+                <div class="form-group">
+                    <label>SHA intervention name</label>
+                    {{ form.sha_intervention_name }}
+                </div>
             </div>
             <div class="form-group">
                 <div class="form-check">
@@ -558,6 +655,36 @@
                 <textarea name="description" id="edit-description" class="form-control" rows="2"></textarea>
             </div>
             <div class="form-group">
+                <label>LOINC code <small style="font-weight:400;color:var(--text-secondary);">(lab / observation)</small></label>
+                <div class="term-picker" data-system="loinc" data-prefix="edit">
+                    <input type="search" class="form-control term-search" id="edit-loinc-search" placeholder="Search LOINC e.g. glucose, CBC" autocomplete="off">
+                    <div class="term-picker-results"></div>
+                </div>
+                <input type="hidden" name="loinc_code" id="edit-loinc_code">
+                <input type="hidden" name="loinc_display" id="edit-loinc_display">
+                <div class="term-bound" id="edit_loinc_bound"></div>
+            </div>
+            <div class="form-group">
+                <label>ICHI code <small style="font-weight:400;color:var(--text-secondary);">(procedure)</small></label>
+                <div class="term-picker" data-system="ichi" data-prefix="edit">
+                    <input type="search" class="form-control term-search" id="edit-ichi-search" placeholder="Search ICHI e.g. appendectomy" autocomplete="off">
+                    <div class="term-picker-results"></div>
+                </div>
+                <input type="hidden" name="ichi_code" id="edit-ichi_code">
+                <input type="hidden" name="ichi_display" id="edit-ichi_display">
+                <div class="term-bound" id="edit_ichi_bound"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SHA intervention code</label>
+                    <input type="text" name="sha_intervention_code" id="edit-sha_intervention_code" class="form-control" placeholder="e.g. SHA-18-005">
+                </div>
+                <div class="form-group">
+                    <label>SHA intervention name</label>
+                    <input type="text" name="sha_intervention_name" id="edit-sha_intervention_name" class="form-control" placeholder="Optional name">
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="form-check">
                     <input type="checkbox" name="is_active" id="edit-is_active" class="form-check-input">
                     <label>Active</label>
@@ -574,6 +701,11 @@
 
 {% block extra_js %}
 <script>
+const LOINC_SEARCH_URL = "{% url 'home:loinc_search_api' %}";
+const ICHI_SEARCH_URL = "{% url 'home:ichi_search_api' %}";
+const LOINC_VALIDATE_URL = "{% url 'home:loinc_validate_api' %}";
+const ICHI_VALIDATE_URL = "{% url 'home:ichi_validate_api' %}";
+
 function openModal(id) {
     document.getElementById(id).classList.add('open');
 }
@@ -581,12 +713,129 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('open');
 }
 
-// Close modal on backdrop click
 document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
     backdrop.addEventListener('click', function(e) {
         if (e.target === backdrop) backdrop.classList.remove('open');
     });
 });
+
+function setTermBound(prefix, system, code, display, meta) {
+    const codeEl = document.getElementById(prefix === 'edit' ? 'edit-' + system + '_code' : 'id_' + system + '_code');
+    const displayEl = document.getElementById(prefix === 'edit' ? 'edit-' + system + '_display' : 'id_' + system + '_display');
+    const boundEl = document.getElementById(prefix === 'edit' ? 'edit_' + system + '_bound' : 'id_' + system + '_bound');
+    if (codeEl) codeEl.value = code || '';
+    if (displayEl) displayEl.value = display || '';
+    if (boundEl) {
+        const base = code
+            ? (system.toUpperCase() + ' ' + code + (display ? ' — ' + display : ''))
+            : '';
+        boundEl.textContent = base + (meta ? ' · ' + meta : '');
+        boundEl.style.color = meta && meta.indexOf('failed') >= 0 ? '#b91c1c'
+            : meta && meta.indexOf('warn') >= 0 ? '#b45309'
+            : '#047857';
+    }
+}
+
+function bindTermPickers(root) {
+    (root || document).querySelectorAll('.term-picker').forEach(function (picker) {
+        if (picker.dataset.bound === '1') return;
+        picker.dataset.bound = '1';
+        const system = picker.dataset.system;
+        const prefix = picker.dataset.prefix || 'id';
+        const input = picker.querySelector('.term-search');
+        const results = picker.querySelector('.term-picker-results');
+        let timer = null;
+
+        function hide() { results.classList.remove('open'); results.innerHTML = ''; }
+
+        async function confirmWithDha(code, title) {
+            const validateUrl = (system === 'loinc' ? LOINC_VALIDATE_URL : ICHI_VALIDATE_URL)
+                + '?code=' + encodeURIComponent(code)
+                + '&title=' + encodeURIComponent(title || '');
+            setTermBound(prefix, system, code, title, 'confirming with DHA…');
+            try {
+                const res = await fetch(validateUrl, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (data.success) {
+                    const finalTitle = data.title || title;
+                    const finalCode = (data.dha && data.dha.code) || code;
+                    setTermBound(prefix, system, finalCode, finalTitle, 'DHA confirmed');
+                    input.value = finalTitle || finalCode;
+                    return;
+                }
+                // Not confirmed — do not bind (same as ICD-11 picker)
+                setTermBound(prefix, system, '', '', '');
+                input.value = '';
+                const boundEl = document.getElementById(
+                    prefix === 'edit' ? 'edit_' + system + '_bound' : 'id_' + system + '_bound'
+                );
+                if (boundEl) {
+                    boundEl.textContent = data.message || 'Not confirmed by DHA';
+                    boundEl.style.color = '#b91c1c';
+                }
+            } catch (err) {
+                // Non-strict: allow local with warning
+                setTermBound(prefix, system, code, title, 'warn: DHA unreachable — local only');
+                input.value = title || code;
+            }
+        }
+
+        input.addEventListener('input', function () {
+            clearTimeout(timer);
+            const q = (input.value || '').trim();
+            if (q.length < 2) { hide(); return; }
+            timer = setTimeout(async function () {
+                const url = (system === 'loinc' ? LOINC_SEARCH_URL : ICHI_SEARCH_URL)
+                    + '?q=' + encodeURIComponent(q);
+                try {
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    const items = (data.results || []).slice(0, 12);
+                    if (!items.length) {
+                        results.innerHTML = '<div class="term-picker-item">No local matches</div>';
+                        results.classList.add('open');
+                        return;
+                    }
+                    results.innerHTML = items.map(function (r) {
+                        const code = r.code || '';
+                        const title = r.title || '';
+                        return '<button type="button" class="term-picker-item" data-code="'
+                            + encodeURIComponent(code) + '" data-title="'
+                            + encodeURIComponent(title) + '">'
+                            + '<div class="code">' + escapeHtml(code) + '</div>'
+                            + '<div>' + escapeHtml(title) + '</div></button>';
+                    }).join('');
+                    results.classList.add('open');
+                    results.querySelectorAll('.term-picker-item[data-code]').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            const code = decodeURIComponent(btn.dataset.code || '');
+                            const title = decodeURIComponent(btn.dataset.title || '');
+                            hide();
+                            confirmWithDha(code, title);
+                        });
+                    });
+                } catch (err) {
+                    results.innerHTML = '<div class="term-picker-item">Search failed</div>';
+                    results.classList.add('open');
+                }
+            }, 280);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!picker.contains(e.target)) hide();
+        });
+    });
+}
+
+function escapeHtml(s) {
+    return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+bindTermPickers(document);
 
 function loadEditService(serviceId) {
     fetch('/accounts/services/' + serviceId + '/edit/')
@@ -595,9 +844,14 @@ function loadEditService(serviceId) {
             document.getElementById('edit-name').value = data.name;
             document.getElementById('edit-department').value = data.department || '';
             document.getElementById('edit-price').value = data.price;
-
             document.getElementById('edit-description').value = data.description;
             document.getElementById('edit-is_active').checked = data.is_active;
+            setTermBound('edit', 'loinc', data.loinc_code, data.loinc_display, data.loinc_code ? 'saved' : '');
+            setTermBound('edit', 'ichi', data.ichi_code, data.ichi_display, data.ichi_code ? 'saved' : '');
+            document.getElementById('edit-loinc-search').value = data.loinc_display || data.loinc_code || '';
+            document.getElementById('edit-ichi-search').value = data.ichi_display || data.ichi_code || '';
+            document.getElementById('edit-sha_intervention_code').value = data.sha_intervention_code || '';
+            document.getElementById('edit-sha_intervention_name').value = data.sha_intervention_name || '';
             document.getElementById('editForm').action = '/accounts/services/' + serviceId + '/edit/';
             openModal('editModal');
         });

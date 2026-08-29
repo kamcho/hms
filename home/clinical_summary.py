@@ -17,6 +17,7 @@ from django.utils import timezone
 
 ICD11_SYSTEM = "http://id.who.int/icd/release/11/mms"
 HPT_SYSTEM = "https://ocl.kenya-hie.health/orgs/MOH-PPB/sources/HPT"
+ICHI_SYSTEM = "http://id.who.int/icd/release/11/ichi"
 CR_PATIENT_SYSTEM = "https://cr.kenya-hie.health/api/v4/Patient"
 FR_ORG_SYSTEM = "https://fr.kenya-hie.health/api/v4/Organization"
 HWR_SYSTEM = "https://hwr.kenya-hie.health/api/v4/Practitioner"
@@ -223,6 +224,64 @@ def collect_summary_data(visit, *, care_plan: str = "", author=None) -> dict[str
             "items": items,
         })
 
+    # Labs / procedures from visit invoice — bind LOINC / ICHI when catalogued
+    labs: list[dict[str, Any]] = []
+    procedures: list[dict[str, Any]] = []
+    try:
+        from accounts.models import InvoiceItem
+        from lab.models import LabResult
+
+        lab_filter = {"patient": patient}
+        invoice = getattr(visit, "invoice", None)
+        if invoice is not None:
+            lab_filter["invoice"] = invoice
+        lab_qs = (
+            LabResult.objects.filter(**lab_filter)
+            .select_related("service")
+            .order_by("-requested_at")[:40]
+        )
+        for lab in lab_qs:
+            svc = lab.service
+            labs.append({
+                "name": svc.name if svc else "",
+                "status": lab.status,
+                "loinc_code": (getattr(svc, "loinc_code", None) or "") if svc else "",
+                "loinc_display": (getattr(svc, "loinc_display", None) or "") if svc else "",
+                "results": lab.results or "",
+                "requested_at": _iso(lab.requested_at),
+            })
+
+        if invoice is not None:
+            items = (
+                InvoiceItem.objects.filter(invoice=invoice)
+                .select_related("service")
+                .order_by("created_at")
+            )
+            for item in items:
+                svc = item.service
+                if not svc:
+                    continue
+                if getattr(svc, "ichi_code", None):
+                    procedures.append({
+                        "name": svc.name,
+                        "ichi_code": svc.ichi_code or "",
+                        "ichi_display": svc.ichi_display or "",
+                        "amount": str(item.amount),
+                    })
+                elif getattr(svc, "loinc_code", None) and not any(
+                    L.get("loinc_code") == svc.loinc_code for L in labs
+                ):
+                    labs.append({
+                        "name": svc.name,
+                        "status": "Ordered",
+                        "loinc_code": svc.loinc_code or "",
+                        "loinc_display": svc.loinc_display or "",
+                        "results": "",
+                        "requested_at": _iso(item.created_at),
+                    })
+    except Exception:
+        pass
+
     # Care plan: explicit override → IPD discharge → blank
     care_plan_text = (care_plan or "").strip()
     if not care_plan_text:
@@ -267,6 +326,8 @@ def collect_summary_data(visit, *, care_plan: str = "", author=None) -> dict[str
         "clinical": clinical,
         "medications": medications,
         "prescriptions": prescriptions,
+        "labs": labs,
+        "procedures": procedures,
         "care_plan": care_plan_text,
         "author": {
             "name": author_name,
@@ -385,7 +446,29 @@ def build_human_readable_text(data: dict[str, Any]) -> str:
         lines.append("  No prescriptions for this visit")
 
     lines.append("")
-    lines.append("6. CARE PLAN")
+    lines.append("6. LABORATORY (LOINC)")
+    labs = data.get("labs") or []
+    if labs:
+        for lab in labs:
+            code = f" [LOINC {lab['loinc_code']}]" if lab.get("loinc_code") else ""
+            lines.append(f"  - {lab.get('name')}{code} ({lab.get('status')})")
+            if lab.get("results"):
+                lines.append(f"    Result: {lab.get('results')}")
+    else:
+        lines.append("  None recorded")
+
+    lines.append("")
+    lines.append("7. PROCEDURES (ICHI)")
+    procs = data.get("procedures") or []
+    if procs:
+        for proc in procs:
+            code = f" [ICHI {proc['ichi_code']}]" if proc.get("ichi_code") else ""
+            lines.append(f"  - {proc.get('name')}{code}")
+    else:
+        lines.append("  None recorded")
+
+    lines.append("")
+    lines.append("8. CARE PLAN")
     plan = (data.get("care_plan") or "").strip()
     lines.append(f"  {plan if plan else 'Not documented'}")
     lines.append("")
@@ -636,6 +719,64 @@ def build_fhir_document_bundle(data: dict[str, Any], *, summary_id: str | None =
             ref = add_resource(req)
             rx_refs.append({"reference": ref, "display": it.get("name") or ""})
 
+    lab_refs = []
+    for idx, lab in enumerate(data.get("labs") or []):
+        oid = f"Obs-lab-{visit.get('id')}-{idx}"
+        coding = []
+        if lab.get("loinc_code"):
+            coding.append({
+                "system": LOINC,
+                "code": lab["loinc_code"],
+                "display": lab.get("loinc_display") or lab.get("name") or "",
+            })
+        obs = {
+            "resourceType": "Observation",
+            "id": oid,
+            "status": "final" if (lab.get("status") or "").lower() == "completed" else "registered",
+            "category": [{
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                    "code": "laboratory",
+                }]
+            }],
+            "code": {
+                "coding": coding,
+                "text": lab.get("loinc_display") or lab.get("name") or "",
+            },
+            "subject": patient_subject,
+            "encounter": {"reference": f"Encounter/{encounter_id}"},
+        }
+        if lab.get("results"):
+            obs["valueString"] = lab["results"]
+        if lab.get("requested_at"):
+            obs["effectiveDateTime"] = lab["requested_at"]
+        ref = add_resource(obs)
+        lab_refs.append({"reference": ref, "display": lab.get("name") or ""})
+
+    proc_refs = []
+    for idx, proc in enumerate(data.get("procedures") or []):
+        pid = f"Procedure-{visit.get('id')}-{idx}"
+        coding = []
+        if proc.get("ichi_code"):
+            coding.append({
+                "system": ICHI_SYSTEM,
+                "code": proc["ichi_code"],
+                "display": proc.get("ichi_display") or proc.get("name") or "",
+            })
+        procedure = {
+            "resourceType": "Procedure",
+            "id": pid,
+            "status": "completed",
+            "code": {
+                "coding": coding,
+                "text": proc.get("ichi_display") or proc.get("name") or "",
+            },
+            "subject": patient_subject,
+            "encounter": {"reference": f"Encounter/{encounter_id}"},
+        }
+        ref = add_resource(procedure)
+        proc_refs.append({"reference": ref, "display": proc.get("name") or ""})
+
     care_text = (data.get("care_plan") or "").strip() or "Care plan not documented."
     careplan = {
         "resourceType": "CarePlan",
@@ -723,6 +864,28 @@ def build_fhir_document_bundle(data: dict[str, Any], *, summary_id: str | None =
                 "entry": rx_refs,
             },
             {
+                "title": "Laboratory",
+                "code": {"coding": [{"system": LOINC, "code": "26436-6", "display": "Laboratory studies"}]},
+                "text": _narrative_div(
+                    "\n".join(
+                        f"- {L.get('name')} [LOINC {L.get('loinc_code') or '—'}] ({L.get('status')})"
+                        for L in (data.get("labs") or [])
+                    ) or "None"
+                ),
+                "entry": lab_refs,
+            },
+            {
+                "title": "Procedures",
+                "code": {"coding": [{"system": LOINC, "code": "47519-4", "display": "History of Procedures Document"}]},
+                "text": _narrative_div(
+                    "\n".join(
+                        f"- {P.get('name')} [ICHI {P.get('ichi_code') or '—'}]"
+                        for P in (data.get("procedures") or [])
+                    ) or "None"
+                ),
+                "entry": proc_refs,
+            },
+            {
                 "title": "Care Plan",
                 "code": {"coding": [{"system": LOINC, "code": "18776-5", "display": "Plan of care note"}]},
                 "text": _narrative_div(care_text),
@@ -774,6 +937,8 @@ def build_encounter_sync_payload(data: dict[str, Any], fhir_bundle: dict[str, An
         "allergies": clinical.get("allergies") or [],
         "medications": data.get("medications") or [],
         "prescriptions": data.get("prescriptions") or [],
+        "labs": data.get("labs") or [],
+        "procedures": data.get("procedures") or [],
         "care_plan": data.get("care_plan") or "",
         "treatment_notes": [
             n.get("text") for n in (clinical.get("notes") or []) if n.get("text")

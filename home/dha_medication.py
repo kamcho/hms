@@ -285,25 +285,60 @@ def suggest_dha_for_local_drug(
     name: str = "",
     generic_name: str = "",
     formulation: str = "",
+    concept_code: str = "",
     limit: int = 15,
 ) -> dict[str, Any]:
-    """Suggest a DHA generic product after a local inventory drug is selected."""
+    """Suggest or verify a DHA generic product after a local inventory drug is selected."""
+    from accounts.sha_hie_service import ShaHieClient, ShaHieError
+
+    concept_code = (concept_code or "").strip().upper()
+
+    # If an existing concept_code is provided (e.g. from inventory master), verify directly with DHA
+    if concept_code:
+        try:
+            client = ShaHieClient()
+            direct_search = client.search_hpt(concept_code, limit=10)
+            raw_results = direct_search.get("results") or []
+            exact_match = next(
+                (r for r in raw_results if str(r.get("code") or "").upper() == concept_code),
+                None,
+            )
+            if exact_match:
+                return {
+                    "success": True,
+                    "query": concept_code,
+                    "results": [exact_match],
+                    "suggested": exact_match,
+                    "auto_selected": True,
+                    "code_verified": True,
+                    "local": {
+                        "name": name or None,
+                        "generic_name": generic_name or None,
+                        "formulation": formulation or None,
+                        "concept_code": concept_code,
+                    },
+                    "message": f"Verified in DHA Terminology: {exact_match.get('code')} — {exact_match.get('title')}",
+                }
+        except Exception:
+            pass
+
     query = build_local_search_query(
         name=name,
         generic_name=generic_name,
         formulation=formulation,
     )
-    if not query:
+    if not query and not concept_code:
         return {
             "success": False,
             "query": "",
             "results": [],
             "suggested": None,
+            "code_verified": False,
             "message": "No drug name available for DHA lookup.",
         }
 
     payload = search_dha_medications(
-        query,
+        query or concept_code,
         limit=limit,
         prefer_generic=True,
         name=name,
@@ -327,10 +362,12 @@ def suggest_dha_for_local_drug(
 
     payload["suggested"] = suggested
     payload["auto_selected"] = bool(auto and suggested)
+    payload["code_verified"] = bool(auto and suggested)
     payload["local"] = {
         "name": name or None,
         "generic_name": generic_name or None,
         "formulation": formulation or None,
+        "concept_code": concept_code or None,
     }
     if not payload.get("success"):
         return payload
@@ -351,3 +388,4 @@ def suggest_dha_for_local_drug(
             "Pick strength + form (GE*), not brand packs (PH*)."
         )
     return payload
+

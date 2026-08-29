@@ -1,172 +1,692 @@
 {% extends 'users/dashboard_base.html' %}
-{% block title %}SHA Claims — {{ patient.full_name }}{% endblock %}
-{% block content %}
+{% load static custom_filters %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
 <style>
-.sha-claims { max-width: 960px; margin: 0 auto; font-family: var(--font-sans, 'Quicksand', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif); }
-.sha-claims h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 .35rem; }
-.sha-claims .meta { color: #64748b; font-size: .875rem; margin-bottom: 1.25rem; }
-.sha-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1rem; }
-.sha-card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin: 0 0 .75rem; }
-.sha-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-.sha-row label { display: block; font-size: .7rem; font-weight: 600; color: #64748b; margin-bottom: .25rem; }
-.sha-row input, .sha-row select, .sha-row textarea {
-  width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: .5rem .65rem; font-size: .875rem;
-}
-.sha-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .85rem; }
-.sha-actions button {
-  border: 0; border-radius: 8px; padding: .55rem .9rem; font-size: .8rem; font-weight: 600; cursor: pointer;
-  background: #1e3a8a; color: #fff;
-}
-.sha-actions button.secondary { background: #fff; color: #1e3a8a; border: 1px solid #cbd5e1; }
-.sha-actions button:disabled { opacity: .55; cursor: not-allowed; }
-.sha-status { display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .55rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .75rem; font-weight: 700; }
-.sha-log { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: .75rem; font-size: .75rem; max-height: 220px; overflow: auto; white-space: pre-wrap; }
-.sha-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-.sha-table th, .sha-table td { text-align: left; padding: .4rem .35rem; border-bottom: 1px solid #f1f5f9; }
-.ok { color: #059669; } .bad { color: #dc2626; }
-@media (max-width: 700px) { .sha-row { grid-template-columns: 1fr; } }
+    :root {
+        --sha-navy: #0f172a;
+        --sha-blue: #1e3a8a;
+        --sha-accent: #2563eb;
+        --sha-indigo: #4f46e5;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-dark: #1e293b;
+        --text-muted: #64748b;
+    }
+
+    .desk-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1.25rem 3rem;
+        font-family: var(--font-sans, 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    }
+
+    /* Hero Banner */
+    .desk-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%);
+        border-radius: 20px;
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.5rem;
+        color: white;
+        box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .desk-hero::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .hero-top-row {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+    }
+
+    .patient-header-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .hero-badge-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .badge-claim-status {
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .badge-claim-status.submitted { background: #dcfce7; color: #166534; }
+    .badge-claim-status.started { background: #dbeafe; color: #1e40af; }
+    .badge-claim-status.preauth_pending { background: #fef3c7; color: #92400e; }
+    .badge-claim-status.error { background: #fee2e2; color: #991b1b; }
+
+    .patient-title {
+        font-size: 1.65rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0;
+    }
+
+    .patient-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.85);
+    }
+
+    .patient-meta-pill {
+        background: rgba(255,255,255,0.12);
+        padding: 0.2rem 0.55rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    /* Stepper Workflow Header */
+    .stepper-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .stepper-track {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .step-node {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .step-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 800;
+        background: #f1f5f9;
+        color: #64748b;
+        border: 2px solid #cbd5e1;
+        transition: all 0.2s ease;
+    }
+
+    .step-node.completed .step-circle {
+        background: #dcfce7;
+        color: #166534;
+        border-color: #86efac;
+    }
+
+    .step-node.active .step-circle {
+        background: #1e3a8a;
+        color: white;
+        border-color: #1e3a8a;
+        box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.15);
+    }
+
+    .step-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .step-title {
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: #1e293b;
+    }
+
+    .step-subtitle {
+        font-size: 0.7rem;
+        color: #64748b;
+    }
+
+    /* Main Workbench Grid */
+    .workbench-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 992px) {
+        .workbench-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .bench-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.35rem 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .bench-card-title {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin: 0 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+    }
+
+    .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+    .bench-label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 0.3rem;
+    }
+
+    .bench-input, .bench-select, .bench-textarea {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.86rem;
+        color: var(--text-dark);
+        font-weight: 600;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .bench-input:focus, .bench-select:focus, .bench-textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .bench-input[readonly] {
+        background: #f8fafc;
+        color: #475569;
+    }
+
+    .action-button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 1.15rem;
+    }
+
+    .btn-bench {
+        padding: 0.6rem 1.15rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.15s ease;
+    }
+
+    .btn-bench-primary {
+        background: #1e3a8a;
+        color: white;
+    }
+
+    .btn-bench-primary:hover {
+        background: #172554;
+    }
+
+    .btn-bench-secondary {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #334155;
+    }
+
+    .btn-bench-secondary:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .btn-bench-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-bench-success:hover {
+        background: #047857;
+    }
+
+    .btn-bench:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Billables Table */
+    .bill-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+        margin-top: 0.5rem;
+    }
+
+    .bill-table th {
+        text-align: left;
+        padding: 0.65rem 0.85rem;
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .bill-table td {
+        padding: 0.75rem 0.85rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .bill-tag {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+    .bill-tag.ok { background: #dcfce7; color: #166534; }
+    .bill-tag.missing { background: #fee2e2; color: #991b1b; }
+
+    /* Activity Log Box */
+    .log-box {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.75rem;
+        max-height: 240px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.5;
+    }
 </style>
+{% endblock %}
 
-<div class="sha-claims">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
-    <div>
-      <h1>SHA / DHA claims desk</h1>
-      <p class="meta">
-        {{ patient.full_name }} · Visit #{{ visit.id }} · {{ visit.visit_type }} ·
-        Payment: {{ visit.payment_method }}
-      </p>
+{% block content %}
+<div class="desk-container">
+    <!-- Hero Banner -->
+    <div class="desk-hero">
+        <div class="hero-top-row">
+            <div class="patient-header-info">
+                <div class="hero-badge-row">
+                    <span class="badge-claim-status {{ session.status }}" id="statusBadge">{{ session.get_status_display|default:session.status }}</span>
+                    <span class="patient-meta-pill">{{ visit.visit_type }} · Visit #{{ visit.id }}</span>
+                    {% if facility_fr %}
+                        <span class="patient-meta-pill"><i class="fas fa-hospital"></i> FR: {{ facility_fr }}</span>
+                    {% endif %}
+                </div>
+                <h1 class="patient-title">{{ patient.full_name }}</h1>
+                <div class="patient-meta-row">
+                    <span>ID: <strong>{{ patient.id_number|default:"N/A" }}</strong></span>
+                    <span>CR ID: <strong>{{ session.patient_cr_id|default:patient.cr_id|default:"Unregistered" }}</strong></span>
+                    <span>Phone: <strong>{{ patient.phone|default:"N/A" }}</strong></span>
+                    {% if session.schemes %}
+                        <span>Coverage: 
+                            {% for s in session.schemes %}
+                                <strong>{% if s.schemeName %}{{ s.schemeName }}{% elif s.name %}{{ s.name }}{% else %}{{ s }}{% endif %}</strong>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+                <a href="{% url 'accounts:sha_claims_tracker' %}" class="btn-bench btn-bench-secondary" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.25);">
+                    <i class="fas fa-arrow-left"></i> Claims Tracker
+                </a>
+                {% if invoice %}
+                    <a href="{% url 'accounts:invoice_detail' invoice.id %}" class="btn-bench btn-bench-secondary" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.25);">
+                        <i class="fas fa-file-invoice"></i> Invoice #{{ invoice.id }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <span class="sha-status" id="statusBadge">{{ session.status }}</span>
-  </div>
 
-  {% if not facility_fr %}
-  <div class="sha-card" style="border-color:#fde68a;background:#fffbeb;">
-    <strong>Configure facility.</strong> Set <code>SHA_HIE_FACILITY_FR_CODE</code> in <code>.env</code> (Facility Registry / FR code) for eClaims headers.
-  </div>
-  {% endif %}
+    <!-- Stepper Lifecycle Progress -->
+    <div class="stepper-card">
+        <div class="stepper-track">
+            <!-- Step 1: Eligibility -->
+            <div class="step-node {% if session.eligible %}completed{% else %}active{% endif %}">
+                <div class="step-circle">{% if session.eligible %}<i class="fas fa-check"></i>{% else %}1{% endif %}</div>
+                <div class="step-text">
+                    <span class="step-title">Eligibility</span>
+                    <span class="step-subtitle">{% if session.eligible %}Verified OK{% else %}Pending check{% endif %}</span>
+                </div>
+            </div>
 
-  <div class="sha-card">
-    <h2>1. Session & practitioner</h2>
-    <div class="sha-row">
-      <div>
-        <label>Patient CR ID</label>
-        <input id="patientCrId" value="{{ session.patient_cr_id|default:patient.cr_id }}" readonly>
-      </div>
-      <div>
-        <label>Service type</label>
-        <select id="serviceType">
-          {% for val, label in session.SERVICE_TYPE_CHOICES %}
-          <option value="{{ val }}" {% if session.service_type == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label>Intervention code(s)</label>
-        <input id="interventionCodes" value="{{ session.intervention_codes|join:', ' }}">
-      </div>
-      <div>
-        <label>Practitioner licence #</label>
-        <input id="pracLicence" value="{{ session.practitioner_identification_number|default:request.user.practitioner_licence_number }}">
-      </div>
-      <div>
-        <label>ID type</label>
-        <select id="pracIdType">
-          <option value="registration_number">registration_number</option>
-          <option value="National ID">National ID</option>
-        </select>
-      </div>
-      <div>
-        <label>Regulation body</label>
-        <select id="pracBody">
-          <option value="KMPDC">KMPDC</option>
-          <option value="NCK">NCK</option>
-          <option value="COC">COC</option>
-          <option value="PPB">PPB</option>
-        </select>
-      </div>
-    </div>
-    <div class="sha-actions">
-      <button type="button" data-action="eligibility">Check eligibility</button>
-      <button type="button" class="secondary" data-action="send_otp">Send OTP</button>
-    </div>
-  </div>
+            <!-- Step 2: Consent & Start -->
+            <div class="step-node {% if session.consent_token %}completed{% elif session.eligible %}active{% endif %}">
+                <div class="step-circle">{% if session.consent_token %}<i class="fas fa-check"></i>{% else %}2{% endif %}</div>
+                <div class="step-text">
+                    <span class="step-title">Consent & Start</span>
+                    <span class="step-subtitle">{% if session.consent_token %}Token Active{% else %}OTP / Biometrics{% endif %}</span>
+                </div>
+            </div>
 
-  <div class="sha-card">
-    <h2>2. Start virtual claim (consent)</h2>
-    <div class="sha-row">
-      <div>
-        <label>OTP from patient phone</label>
-        <input id="otpInput" placeholder="6-digit OTP" autocomplete="one-time-code">
-      </div>
-      <div>
-        <label>Consent token</label>
-        <input id="consentToken" value="{{ session.consent_token }}" readonly>
-      </div>
-    </div>
-    <div class="sha-actions">
-      <button type="button" data-action="start_visit">Start visit / create claim</button>
-    </div>
-  </div>
+            <!-- Step 3: Clinical Coding -->
+            <div class="step-node {% if diagnoses.exists %}completed{% elif session.consent_token %}active{% endif %}">
+                <div class="step-circle">{% if diagnoses.exists %}<i class="fas fa-check"></i>{% else %}3{% endif %}</div>
+                <div class="step-text">
+                    <span class="step-title">ICD-11 & Interventions</span>
+                    <span class="step-subtitle">{{ diagnoses.count }} diagnosis recorded</span>
+                </div>
+            </div>
 
-  <div class="sha-card">
-    <h2>3. Clinical coding on this visit</h2>
-    <table class="sha-table">
-      <thead><tr><th>ICD-11</th><th>Diagnosis</th></tr></thead>
-      <tbody>
-        {% for d in diagnoses %}
-        <tr><td>{{ d.icd11_code|default:"—" }}</td><td>{{ d.data|truncatechars:80 }}</td></tr>
-        {% empty %}
-        <tr><td colspan="2">No diagnoses yet</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <table class="sha-table" style="margin-top:.75rem;">
-      <thead><tr><th>Drug</th><th>GE*</th><th>PH*</th><th>Dispensed</th></tr></thead>
-      <tbody>
-        {% for r in rx_items %}
-        <tr>
-          <td>{{ r.medication.name }}</td>
-          <td class="{% if r.generic_concept_code %}ok{% else %}bad{% endif %}">{{ r.generic_concept_code|default:"missing" }}</td>
-          <td class="{% if r.actual_product_code %}ok{% elif r.medication.medication.actual_product_code %}ok{% else %}bad{% endif %}">
-            {% if r.actual_product_code %}{{ r.actual_product_code }}{% elif r.medication.medication %}{{ r.medication.medication.actual_product_code|default:"missing" }}{% else %}missing{% endif %}
-          </td>
-          <td>{% if r.dispensed %}yes{% else %}no{% endif %}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4">No prescription items</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <div class="sha-actions">
-      <button type="button" data-action="preauth">Submit preauth</button>
-      <button type="button" data-action="erx">Submit eRx (GE* + clinical package)</button>
-      <button type="button" data-action="dispense">Submit eRx dispense (PH*)</button>
-    </div>
-  </div>
+            <!-- Step 4: Preauth / eRx -->
+            <div class="step-node {% if session.status == 'preauth_approved' or session.status == 'dispensed' or session.status == 'submitted' %}completed{% elif session.consent_token %}active{% endif %}">
+                <div class="step-circle">{% if session.status == 'submitted' or session.status == 'dispensed' %}<i class="fas fa-check"></i>{% else %}4{% endif %}</div>
+                <div class="step-text">
+                    <span class="step-title">Preauth & eRx</span>
+                    <span class="step-subtitle">{% if session.status == 'preauth_pending' %}Preauth in review{% else %}Rx & procedures{% endif %}</span>
+                </div>
+            </div>
 
-  <div class="sha-card">
-    <h2>4. Dispatch claim</h2>
-    <div class="sha-row">
-      <div>
-        <label>Invoice</label>
-        <input value="{% if invoice %}#{{ invoice.id }} — {{ invoice.status }}{% else %}No invoice{% endif %}" readonly>
-      </div>
-      <div>
-        <label>Submit OTP (if required)</label>
-        <input id="submitOtp" placeholder="Optional OTP for submit">
-      </div>
+            <!-- Step 5: Claim Submit -->
+            <div class="step-node {% if session.status == 'submitted' %}completed{% elif session.consent_token %}active{% endif %}">
+                <div class="step-circle">{% if session.status == 'submitted' %}<i class="fas fa-check"></i>{% else %}5{% endif %}</div>
+                <div class="step-text">
+                    <span class="step-title">Claim Dispatch</span>
+                    <span class="step-subtitle">{% if session.claim_id %}Claim ID: {{ session.claim_id }}{% else %}Ready to submit{% endif %}</span>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="sha-actions">
-      <button type="button" data-action="submit">Submit claim to SHA</button>
-      <button type="button" class="secondary" data-action="status">Refresh claim status</button>
-      <button type="button" class="secondary" data-action="close">Close claim</button>
-    </div>
-  </div>
 
-  <div class="sha-card">
-    <h2>Activity log</h2>
-    <div class="sha-log" id="claimsLog">Ready.</div>
-  </div>
+    <!-- Workbench Grid -->
+    <div class="workbench-grid">
+        <!-- 1. Session & Consent Control Card -->
+        <div class="bench-card">
+            <h3 class="bench-card-title">
+                <i class="fas fa-user-shield" style="color: #2563eb;"></i>
+                1. Practitioner & Patient Consent
+            </h3>
+            <div class="form-grid">
+                <div>
+                    <label class="bench-label">Patient CR ID</label>
+                    <input id="patientCrId" class="bench-input" value="{{ session.patient_cr_id|default:patient.cr_id }}" readonly>
+                </div>
+                <div>
+                    <label class="bench-label">Service Type</label>
+                    <select id="serviceType" class="bench-select">
+                        {% for val, label in session.SERVICE_TYPE_CHOICES %}
+                            <option value="{{ val }}" {% if session.service_type == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="bench-label">Intervention Code(s)</label>
+                    <input id="interventionCodes" class="bench-input" value="{{ session.intervention_codes|join:', ' }}" placeholder="e.g. SHA-18-005">
+                </div>
+                <div>
+                    <label class="bench-label">Practitioner Licence #</label>
+                    <input id="pracLicence" class="bench-input" value="{{ session.practitioner_identification_number|default:request.user.practitioner_licence_number }}">
+                </div>
+                <div>
+                    <label class="bench-label">ID Type</label>
+                    <select id="pracIdType" class="bench-select">
+                        <option value="registration_number">registration_number</option>
+                        <option value="National ID">National ID</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="bench-label">Regulation Body</label>
+                    <select id="pracBody" class="bench-select">
+                        <option value="KMPDC">KMPDC</option>
+                        <option value="NCK">NCK</option>
+                        <option value="COC">COC</option>
+                        <option value="PPB">PPB</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="action-button-row">
+                <button type="button" data-action="eligibility" class="btn-bench btn-bench-primary">
+                    <i class="fas fa-id-card"></i> Verify Eligibility
+                </button>
+                <button type="button" data-action="send_otp" id="btnSendOtp" class="btn-bench btn-bench-secondary">
+                    <i class="fas fa-sms"></i> Send OTP
+                </button>
+                <button type="button" data-action="authorize_biometrics" id="btnBiometrics" class="btn-bench btn-bench-secondary">
+                    <i class="fas fa-fingerprint"></i> Biometrics Auth
+                </button>
+            </div>
+
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed #e2e8f0;">
+                <div class="form-grid">
+                    <div>
+                        <label class="bench-label">OTP from Patient Phone</label>
+                        <input id="otpInput" class="bench-input" placeholder="Enter 6-digit OTP" autocomplete="one-time-code">
+                    </div>
+                    <div>
+                        <label class="bench-label">Active Consent Token</label>
+                        <input id="consentToken" class="bench-input" value="{{ session.consent_token }}" readonly placeholder="Consent token pending">
+                    </div>
+                </div>
+                <div class="action-button-row" style="margin-top: 0.75rem;">
+                    <button type="button" data-action="start_visit" class="btn-bench btn-bench-success">
+                        <i class="fas fa-play"></i> Start Visit & Create Claim
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Preauth, eRx & Claim Dispatch Card -->
+        <div class="bench-card">
+            <h3 class="bench-card-title">
+                <i class="fas fa-paper-plane" style="color: #4f46e5;"></i>
+                2. Preauthorization & Dispatch
+            </h3>
+
+            <div class="form-grid">
+                <div>
+                    <label class="bench-label">Invoice Summary</label>
+                    <input class="bench-input" value="{% if invoice %}#{{ invoice.id }} (Ksh {{ invoice.total_amount|format_number:2 }}){% else %}No invoice attached{% endif %}" readonly>
+                </div>
+                <div>
+                    <label class="bench-label">Submit OTP (if requested)</label>
+                    <input id="submitOtp" class="bench-input" placeholder="Optional submit OTP">
+                </div>
+                <div class="form-group-full">
+                    <label class="bench-label">Submission Notes</label>
+                    <input id="claimNotes" class="bench-input" placeholder="Optional notes for claim adjudicator">
+                </div>
+            </div>
+
+            <div class="action-button-row" style="margin-top: 1rem;">
+                <button type="button" data-action="preauth" class="btn-bench btn-bench-secondary">
+                    <i class="fas fa-file-signature"></i> Submit Preauth
+                </button>
+                <button type="button" data-action="erx" class="btn-bench btn-bench-secondary">
+                    <i class="fas fa-prescription"></i> Push eRx
+                </button>
+                <button type="button" data-action="dispense" class="btn-bench btn-bench-secondary">
+                    <i class="fas fa-pills"></i> Push Dispense
+                </button>
+            </div>
+
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed #e2e8f0;">
+                <div class="action-button-row">
+                    <button type="button" data-action="submit" class="btn-bench btn-bench-primary" style="background:#15803d;">
+                        <i class="fas fa-shield-alt"></i> Submit Final Claim to SHA
+                    </button>
+                    <button type="button" data-action="status" class="btn-bench btn-bench-secondary">
+                        <i class="fas fa-sync-alt"></i> Refresh Claim Status
+                    </button>
+                    <button type="button" data-action="close" class="btn-bench btn-bench-secondary" style="color:#b91c1c;">
+                        <i class="fas fa-times-circle"></i> Close Claim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Formatted Billables & Interventions Table Card -->
+    <div class="bench-card" style="margin-bottom: 1.5rem;">
+        <h3 class="bench-card-title">
+            <i class="fas fa-receipt" style="color: #059669;"></i>
+            3. Billables, Medications & Interventions
+        </h3>
+
+        <!-- Diagnostic ICD-11 List -->
+        <div style="margin-bottom: 1.25rem;">
+            <div class="bench-label" style="margin-bottom:0.4rem;">Clinical Diagnoses & ICD-11 Codes</div>
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">ICD-11 Code</th>
+                        <th>Diagnosis Description</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in diagnoses %}
+                    <tr>
+                        <td>
+                            {% if d.icd11_code %}
+                                <span class="bill-tag ok">{{ d.icd11_code }}</span>
+                            {% else %}
+                                <span class="bill-tag missing">Missing ICD</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ d.data }}</td>
+                        <td style="color:#64748b;">{{ d.created_by.get_full_name|default:d.created_by.username|default:"System" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align:center; color:#64748b; padding:1rem;">No diagnoses recorded for this visit yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Itemized Bill Breakdown -->
+        <div>
+            <div class="bench-label" style="margin-bottom:0.4rem;">Invoice Items & Terminology Coding</div>
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th>Item / Service</th>
+                        <th>Terminology / Code</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in invoice_items %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.name }}</strong>
+                            {% if item.service %}
+                                <span style="font-size:0.7rem; color:#64748b; display:block;">{{ item.service.get_category_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.service.loinc_code %}
+                                <span class="bill-tag ok">LOINC {{ item.service.loinc_code }}</span>
+                            {% elif item.service.ichi_code %}
+                                <span class="bill-tag ok">ICHI {{ item.service.ichi_code }}</span>
+                            {% elif item.service.sha_intervention_code %}
+                                <span class="bill-tag ok">{{ item.service.sha_intervention_code }}</span>
+                            {% else %}
+                                <span style="color:#94a3b8; font-size:0.75rem;">Standard</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td>Ksh {{ item.unit_price|format_number:2 }}</td>
+                        <td><strong>Ksh {{ item.amount|format_number:2 }}</strong></td>
+                        <td>
+                            {% if item.is_dispensed %}
+                                <span class="bill-tag ok"><i class="fas fa-check"></i> Dispensed</span>
+                            {% elif item.is_completed_service %}
+                                <span class="bill-tag ok"><i class="fas fa-check"></i> Completed</span>
+                            {% else %}
+                                <span style="color:#64748b; font-size:0.75rem;">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align:center; color:#64748b; padding:1.25rem;">No billable items linked to this visit invoice.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. Real-Time Activity & API Event Log -->
+    <div class="bench-card">
+        <h3 class="bench-card-title">
+            <i class="fas fa-terminal" style="color: #64748b;"></i>
+            Real-Time Activity & DHA Response Log
+        </h3>
+        <div class="log-box" id="claimsLog">Workbench initialized. Ready for actions.</div>
+    </div>
 </div>
 
 <script>
@@ -176,64 +696,67 @@ const logEl = document.getElementById('claimsLog');
 const badge = document.getElementById('statusBadge');
 
 function log(msg, obj) {
-  const line = typeof obj === 'undefined' ? msg : msg + '\n' + JSON.stringify(obj, null, 2);
-  logEl.textContent = line + '\n\n' + logEl.textContent;
+    const timestamp = new Date().toLocaleTimeString();
+    const line = typeof obj === 'undefined' ? `[${timestamp}] ${msg}` : `[${timestamp}] ${msg}\n` + JSON.stringify(obj, null, 2);
+    logEl.textContent = line + '\n\n' + logEl.textContent;
 }
 
 function basePayload() {
-  return {
-    service_type: document.getElementById('serviceType').value,
-    intervention_codes: document.getElementById('interventionCodes').value,
-    practitioner_identification_number: document.getElementById('pracLicence').value,
-    practitioner_identification_type: document.getElementById('pracIdType').value,
-    practitioner_regulation_body: document.getElementById('pracBody').value,
-  };
+    return {
+        service_type: document.getElementById('serviceType').value,
+        intervention_codes: document.getElementById('interventionCodes').value,
+        practitioner_identification_number: document.getElementById('pracLicence').value,
+        practitioner_identification_type: document.getElementById('pracIdType').value,
+        practitioner_regulation_body: document.getElementById('pracBody').value,
+    };
 }
 
 async function runAction(action) {
-  const body = { ...basePayload(), action };
-  if (action === 'start_visit') body.otp = document.getElementById('otpInput').value.trim();
-  if (action === 'submit') {
-    body.otp = document.getElementById('submitOtp').value.trim() || null;
-    body.invoice_id = {% if invoice %}{{ invoice.id }}{% else %}null{% endif %};
-  }
-  if (action === 'close') {
-    body.cancel_reason_type = 'OTHER_REASONS';
-    body.cancel_reason_text = 'Closed from HMS claims desk';
-  }
-  log('→ ' + action + '…');
-  try {
-    const resp = await fetch(ACTION_URL, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF,
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await resp.json();
-    if (data.session) {
-      badge.textContent = data.session.status;
-      if (data.session.consent_token) {
-        document.getElementById('consentToken').value = data.session.consent_token;
-      }
-      if (data.session.patient_cr_id) {
-        document.getElementById('patientCrId').value = data.session.patient_cr_id;
-      }
+    const body = { ...basePayload(), action };
+    if (action === 'start_visit') body.otp = document.getElementById('otpInput').value.trim();
+    if (action === 'submit') {
+        body.otp = document.getElementById('submitOtp').value.trim() || null;
+        body.notes = (document.getElementById('claimNotes') ? document.getElementById('claimNotes').value.trim() : '');
+        body.invoice_id = {% if invoice %}{{ invoice.id }}{% else %}null{% endif %};
     }
-    if (!data.success) {
-      log('✗ ' + action, data);
-      return;
+    if (action === 'close') {
+        body.cancel_reason_type = 'OTHER_REASONS';
+        body.cancel_reason_text = 'Closed from HMS claims desk';
     }
-    log('✓ ' + action, data);
-  } catch (e) {
-    log('✗ network', { error: String(e) });
-  }
+    log(`→ Initiating ${action} action...`);
+    
+    try {
+        const resp = await fetch(ACTION_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.session) {
+            badge.textContent = data.session.status;
+            if (data.session.consent_token) {
+                document.getElementById('consentToken').value = data.session.consent_token;
+            }
+            if (data.session.patient_cr_id) {
+                document.getElementById('patientCrId').value = data.session.patient_cr_id;
+            }
+        }
+        if (!data.success) {
+            log(`✗ Action '${action}' returned an error:`, data);
+            return;
+        }
+        log(`✓ Action '${action}' completed successfully:`, data);
+    } catch (e) {
+        log(`✗ Network error on '${action}':`, { error: String(e) });
+    }
 }
 
 document.querySelectorAll('[data-action]').forEach((btn) => {
-  btn.addEventListener('click', () => runAction(btn.dataset.action));
+    btn.addEventListener('click', () => runAction(btn.dataset.action));
 });
 </script>
 {% endblock %}

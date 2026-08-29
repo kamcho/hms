@@ -120,30 +120,39 @@
                     <div class="ad-card-title">
                         <i class="fas fa-hospital"></i>
                         <span>Bed Occupancy</span>
+                        {% if sha_bed_occupancy.sha_synced %}<span class="badge badge-success" style="font-size:0.65rem; padding: 2px 6px; margin-left: 0.5rem; background: #10b981; color: white; border-radius: 999px;">DHA HIE</span>{% endif %}
                     </div>
                 </div>
                 <div class="ad-gauge-wrap">
                     <canvas id="occupancyGauge"></canvas>
                     <div class="ad-gauge-center">
-                        <strong>{{ bed_occupancy_pct }}%</strong>
+                        <strong>{% if sha_bed_occupancy.sha_synced %}{{ sha_bed_occupancy.occupancy_rate }}%{% else %}{{ bed_occupancy_pct }}%{% endif %}</strong>
                         <span>Occupied</span>
                     </div>
                 </div>
                 <div class="ad-occupancy-stats">
                     <div>
-                        <strong>{{ occupied_beds }}</strong>
-                        <span>In use</span>
+                        <strong>{% if sha_bed_occupancy.sha_synced %}{{ sha_bed_occupancy.total_ip_visits }}{% else %}{{ occupied_beds }}{% endif %}</strong>
+                        <span>{% if sha_bed_occupancy.sha_synced %}DHA In Use{% else %}In use{% endif %}</span>
                     </div>
                     <div>
-                        <strong>{{ available_beds }}</strong>
-                        <span>Available</span>
+                        <strong>{% if sha_bed_occupancy.sha_synced %}{{ sha_bed_occupancy.total_number_of_bed }}{% else %}{{ available_beds }}{% endif %}</strong>
+                        <span>{% if sha_bed_occupancy.sha_synced %}DHA Total{% else %}Available{% endif %}</span>
                     </div>
                     <div>
                         <strong>{{ currently_admitted_deceased }}</strong>
                         <span>Morgue</span>
                     </div>
                 </div>
+                {% if sha_bed_occupancy.sha_synced %}
+                <div style="font-size: 0.75rem; color: var(--text-muted, #64748b); padding: 0.5rem 0.75rem 0.25rem; border-top: 1px solid #f1f5f9; margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: space-between;">
+                    <span>Normal: <strong>{{ sha_bed_occupancy.normal_ip_visits }}/{{ sha_bed_occupancy.number_of_normal_bed }}</strong></span>
+                    <span>ICU: <strong>{{ sha_bed_occupancy.icu_visits }}/{{ sha_bed_occupancy.number_of_icu_bed }}</strong></span>
+                    <span>HDU: <strong>{{ sha_bed_occupancy.hdu_visits }}/{{ sha_bed_occupancy.number_of_hdu_bed }}</strong></span>
+                </div>
+                {% endif %}
             </div>
+
 
             <div class="ad-card ad-quick-card">
                 <p class="ad-quick-title">Quick actions</p>

@@ -522,12 +522,21 @@ def sha_patient_by_id_number(request):
         return JsonResponse({
             'success': True,
             'found': payload['found'],
+            'outcome': payload.get('outcome'),
+            'eligible': payload.get('eligible'),
             'id_number': payload['id_number'],
             'patient': payload['patient'],
             'dependents': payload.get('dependents') or [],
+            'schemes': payload.get('schemes') or [],
+            'sub_benefits': payload.get('sub_benefits') or [],
+            'interventions': payload.get('interventions') or [],
+            'pomsf_balances': payload.get('pomsf_balances'),
+            'utilization': payload.get('utilization'),
+            'consent_method': payload.get('consent_method') or 'otp',
             'raw': payload['raw'],
             'eligibility_error': payload.get('eligibility_error'),
             'client_registry_error': payload.get('client_registry_error'),
+            'coverage_error': payload.get('coverage_error'),
             'debug': debug,
         })
     except ValueError as exc:
@@ -574,16 +583,163 @@ def sha_eligibility_page(request):
 
     return render(request, 'accounts/sha_eligibility_check.html', {
         'title': 'SHA Eligibility Check',
-        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', ''),
+        'base_url': (
+            getattr(settings, 'SHA_HIE_ECLAIMS_BASE_URL', '')
+            or getattr(settings, 'SHA_HIE_AUTH_BASE_URL', '')
+            or getattr(settings, 'SHA_HIE_BASE_URL', '')
+        ),
         'eligibility_path': getattr(
             settings,
             'SHA_HIE_ELIGIBILITY_PATH',
-            '/v2/eligibility',
+            '/patients/eligibility',
         ),
         'dha_support_email': DHA_SUPPORT_EMAIL,
         'services': services,
         'facility_code': getattr(settings, 'SHA_HIE_FACILITY_FR_CODE', '') or '15627',
+        'default_intervention_opd': getattr(
+            settings, 'SHA_HIE_DEFAULT_INTERVENTION_OPD', 'SHA-18-005'
+        ),
     })
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+def sha_consent_contacts(request):
+    """GET /accounts/api/sha/consent/contacts/?patient_id=CR… — list OTP contacts."""
+    from accounts.sha_hie_service import ShaHieClient, ShaHieConfigError, ShaHieRequestError
+
+    patient_id = (
+        request.GET.get('patient_id')
+        or request.GET.get('cr_id')
+        or ''
+    ).strip()
+    if not patient_id:
+        return JsonResponse({'success': False, 'error': 'patient_id (CR ID) is required.'}, status=400)
+    try:
+        raw = ShaHieClient().get_patient_contacts(patient_id)
+        results = []
+        if isinstance(raw, dict):
+            results = raw.get('results') or raw.get('contacts') or raw.get('data') or []
+            if isinstance(results, dict):
+                results = [results]
+        elif isinstance(raw, list):
+            results = raw
+        contacts = []
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            contacts.append({
+                'id': item.get('id') or item.get('contact_id') or item.get('contactId'),
+                'contact_value': item.get('contactValue') or item.get('contact_value') or item.get('phone') or '',
+                'contact_type': item.get('contactType') or item.get('contact_type') or '',
+                'is_confirmed': item.get('isConfirmed', item.get('is_confirmed', True)),
+                'active': item.get('active', True),
+            })
+        return JsonResponse({'success': True, 'contacts': contacts, 'raw': raw})
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except ShaHieConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except ShaHieRequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+@require_POST
+def sha_consent_send_otp(request):
+    """POST JSON: patient_id, contact_id?, intervention_codes? — send visit OTP before admit."""
+    from accounts.sha_hie_service import ShaHieClient, ShaHieConfigError, ShaHieRequestError
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    patient_id = (data.get('patient_id') or data.get('cr_id') or '').strip()
+    if not patient_id:
+        return JsonResponse({'success': False, 'error': 'patient_id (CR ID) is required.'}, status=400)
+    codes = data.get('intervention_codes') or []
+    if isinstance(codes, str):
+        codes = [c.strip() for c in codes.split(',') if c.strip()]
+    contact_id = data.get('contact_id') or data.get('beneficiary_contact_id')
+    try:
+        raw = ShaHieClient().send_claim_otp(
+            patient_id=patient_id,
+            phone=(data.get('phone') or None),
+            contact_id=contact_id,
+            intervention_codes=codes or None,
+        )
+        return JsonResponse({'success': True, 'otp_response': raw})
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except ShaHieConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except ShaHieRequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+@login_required
+@user_passes_test(can_query_sha_client_registry)
+@require_POST
+def sha_consent_authorize(request):
+    """POST JSON: patient_id (+ optional biometrics fields) — start biometrics consent."""
+    from accounts.sha_hie_service import ShaHieClient, ShaHieConfigError, ShaHieRequestError
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    patient_id = (data.get('patient_id') or data.get('cr_id') or '').strip()
+    if not patient_id:
+        return JsonResponse({'success': False, 'error': 'patient_id (CR ID) is required.'}, status=400)
+
+    agent_national_id = (
+        getattr(request.user, 'id_number', None) or ''
+    ).strip()
+    if not agent_national_id:
+        return JsonResponse({
+            'success': False,
+            'error': (
+                'Logged-in user has no National ID (id_number). '
+                'Set it on the user account — it is used as the biometrics agent ID.'
+            ),
+        }, status=400)
+
+    # Client may still pass workstation / device fields; agent always from session user
+    extra = {
+        k: v for k, v in data.items()
+        if k not in (
+            'patient_id', 'cr_id', 'agent_id', 'agent_national_id', 'national_id',
+        )
+        and v not in (None, '')
+    }
+    try:
+        raw = ShaHieClient().create_biometric_authorization(
+            patient_id=patient_id,
+            agent_national_id=agent_national_id,
+            work_station_id=(
+                data.get('work_station_id')
+                or data.get('workStationId')
+                or data.get('workstationID')
+            ),
+            extra=extra or None,
+        )
+        return JsonResponse({
+            'success': True,
+            'authorize_response': raw,
+            'consent_token': raw.get('token') or raw.get('consent_token') or '',
+            'authorization_guid': raw.get('guid') or raw.get('authorization_guid') or '',
+            'iframe_url': raw.get('iframe') or raw.get('iframe_url') or raw.get('url') or '',
+            'agent_national_id': agent_national_id,
+        })
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except ShaHieConfigError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=503)
+    except ShaHieRequestError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
 @login_required
@@ -591,13 +747,16 @@ def sha_eligibility_page(request):
 def sha_create_visit_from_eligibility(request):
     """
     POST /accounts/api/sha/create-visit/
-    Create a SHA visit from the eligibility page after a successful check.
-    Expects JSON: {patient_id, cr_id, id_number, consultation_id, ...}
-    If patient_id is empty, attempts to find/create patient by id_number.
+
+    Consent-first: requires otp or auth_guid. Calls DHA POST /claims/visit first;
+    only then creates the local Visit / queue. If DHA consent/start fails, no
+    local visit is created so the patient does not enter service without consent.
     """
     from home.models import PatientQue, Departments
     from .models import Service, Invoice, InvoiceItem
     from .utils import get_or_create_invoice
+    from accounts.sha_hie_service import ShaHieClient, ShaHieError
+    from django.conf import settings as django_settings
 
     try:
         data = json.loads(request.body)
@@ -608,18 +767,121 @@ def sha_create_visit_from_eligibility(request):
     id_number = (data.get('id_number') or '').strip()
     patient_id = data.get('patient_id')
     consultation_id = data.get('consultation_id')
+    intervention_code = (data.get('intervention_code') or '').strip()
+    sub_benefit_code = (data.get('sub_benefit_code') or '').strip()
+    intervention_meta = data.get('intervention_meta') or {}
+    schemes = data.get('schemes') or []
+    consent_method = (data.get('consent_method') or 'otp').strip() or 'otp'
+    otp = (data.get('otp') or '').strip()
+    auth_guid = (data.get('auth_guid') or data.get('authorization_guid') or '').strip()
     first_name = (data.get('first_name') or '').strip()
     last_name = (data.get('last_name') or '').strip()
     gender = (data.get('gender') or '').strip().lower() or 'unknown'
     dob = (data.get('date_of_birth') or '').strip()
     phone = (data.get('phone') or '').strip()
 
-    if not consultation_id:
-        return JsonResponse({'success': False, 'error': 'Select a consultation type.'}, status=400)
+    if not cr_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Client Registry ID is required for SHA consent / visit start.',
+        }, status=400)
 
-    service = Service.objects.filter(pk=consultation_id, is_active=True).first()
-    if not service:
-        return JsonResponse({'success': False, 'error': 'Service not found.'}, status=400)
+    if not otp and not auth_guid:
+        return JsonResponse({
+            'success': False,
+            'error': 'Patient consent required before creating a visit. Send OTP (or complete biometrics) first, then enter the OTP.',
+            'needs_consent': True,
+        }, status=400)
+
+    if not consultation_id and not intervention_code:
+        return JsonResponse({
+            'success': False,
+            'error': 'Select a consultation / covered intervention.',
+        }, status=400)
+
+    codes = [intervention_code] if intervention_code else [
+        getattr(django_settings, 'SHA_HIE_DEFAULT_INTERVENTION_OPD', 'SHA-18-005')
+    ]
+
+    # --- Consent gate: start DHA virtual claim BEFORE local admit ---
+    prac_type = (
+        data.get('practitioner_identification_type')
+        or getattr(request.user, 'practitioner_identification_type', None)
+        or 'registration_number'
+    )
+    prac_number = (
+        data.get('practitioner_identification_number')
+        or getattr(request.user, 'practitioner_licence_number', None)
+        or getattr(request.user, 'id_number', None)
+        or ''
+    )
+    prac_body = (
+        data.get('practitioner_regulation_body')
+        or getattr(request.user, 'practitioner_regulation_body', None)
+        or 'KMPDC'
+    )
+    try:
+        dha_raw = ShaHieClient().create_virtual_claim(
+            patient_id=cr_id,
+            service_type=(data.get('service_type') or 'OUTPATIENT'),
+            intervention_codes=codes,
+            otp=otp or None,
+            auth_guid=auth_guid or None,
+            practitioner_identification_type=prac_type if prac_number else None,
+            practitioner_identification_number=prac_number or None,
+            practitioner_regulation_body=prac_body if prac_number else None,
+        )
+    except ShaHieError as exc:
+        return JsonResponse({
+            'success': False,
+            'error': f'Consent / DHA visit start failed — patient was not admitted: {exc}',
+            'needs_consent': True,
+        }, status=502)
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({
+            'success': False,
+            'error': f'Consent / DHA visit start failed — patient was not admitted: {exc}',
+            'needs_consent': True,
+        }, status=502)
+
+    consent_token = str(
+        dha_raw.get('authorization_code')
+        or dha_raw.get('consent_token')
+        or dha_raw.get('token')
+        or ''
+    )
+    authorization_guid = str(
+        dha_raw.get('authorization_guid') or auth_guid or ''
+    )
+    claim_id = str(dha_raw.get('claim_id') or dha_raw.get('id') or '')
+
+    service = None
+    if consultation_id:
+        service = Service.objects.filter(pk=consultation_id, is_active=True).first()
+        if not service:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    'DHA visit started but local service not found. '
+                    f'Claim/consent token: {consent_token or claim_id or "see debug"}. '
+                    'Open claims desk after fixing service config.'
+                ),
+                'dha_started': True,
+                'consent_token': consent_token,
+                'claim_id': claim_id,
+            }, status=400)
+    else:
+        service = Service.objects.filter(
+            is_active=True, name__icontains='OPD Consultation'
+        ).first() or Service.objects.filter(is_active=True).order_by('name').first()
+        if not service:
+            return JsonResponse({
+                'success': False,
+                'error': 'DHA visit started but no local consultation service is configured.',
+                'dha_started': True,
+                'consent_token': consent_token,
+                'claim_id': claim_id,
+            }, status=400)
 
     # Resolve patient
     patient = None
@@ -635,8 +897,14 @@ def sha_create_visit_from_eligibility(request):
         if not first_name or not last_name:
             return JsonResponse({
                 'success': False,
-                'error': 'Patient not found locally. Register them on Add patient first, then retry.',
+                'error': (
+                    'DHA consent succeeded but patient is not in HMS. '
+                    'Register them on Add patient, then open claims desk with this consent token.'
+                ),
                 'needs_registration': True,
+                'dha_started': True,
+                'consent_token': consent_token,
+                'claim_id': claim_id,
             }, status=400)
         from datetime import date as _date
         parsed_dob = None
@@ -680,7 +948,7 @@ def sha_create_visit_from_eligibility(request):
     # Close active visits
     Visit.objects.filter(patient=patient, is_active=True).update(is_active=False)
 
-    # Create SHA visit
+    # Create SHA visit (local) only after DHA consent/start succeeded
     visit = Visit.objects.create(
         patient=patient,
         visit_type='OUT-PATIENT',
@@ -728,22 +996,59 @@ def sha_create_visit_from_eligibility(request):
         sent_to=dest_dept, created_by=request.user,
     )
 
-    # Create SHA claim session
+    # Create SHA claim session already started
     from .sha_claims_service import get_or_create_claim_session
     try:
         session = get_or_create_claim_session(visit, user=request.user)
-        if cr_id:
-            session.patient_cr_id = cr_id
+        session.patient_cr_id = cr_id
+        if id_number:
             session.patient_id_number = id_number
-            session.save(update_fields=['patient_cr_id', 'patient_id_number', 'updated_at'])
+        session.intervention_codes = codes
+        if sub_benefit_code:
+            session.sub_benefit_code = sub_benefit_code
+        if isinstance(intervention_meta, dict) and intervention_meta:
+            session.intervention_meta = intervention_meta
+        if schemes:
+            session.schemes = schemes
+        session.consent_method = 'biometrics' if auth_guid else consent_method
+        session.eligible = True
+        session.is_alive = data.get('is_alive', True) is not False
+        session.whitelisted_for_otp = bool(data.get('whitelisted_for_otp'))
+        session.facility_biometrics_enforced = bool(
+            data.get('facility_biometrics_enforced')
+        )
+        session.consent_token = consent_token
+        session.authorization_guid = authorization_guid
+        session.claim_id = claim_id
+        session.edi_claim_guid = str(dha_raw.get('edi_claim_guid') or '')
+        session.workflow_state = str(dha_raw.get('workflow_state') or '')
+        session.status = 'started'
+        session.last_error = ''
+        session.submit_raw = {'start_visit': dha_raw}
+        if prac_number:
+            session.practitioner_identification_type = prac_type or ''
+            session.practitioner_identification_number = prac_number or ''
+            session.practitioner_regulation_body = prac_body or ''
+        session.coverage_snapshot = {
+            'interventions': data.get('interventions') or [],
+            'sub_benefits': data.get('sub_benefits') or [],
+            'from_eligibility_page': True,
+            'consent_before_admit': True,
+        }
+        session.save()
     except Exception:
         pass
 
     return JsonResponse({
         'success': True,
-        'message': f'{patient.full_name} admitted (SHA) for {service.name}. Queued to {dest_dept.name}.',
+        'message': (
+            f'{patient.full_name} consented and admitted (SHA) for {service.name}. '
+            f'Queued to {dest_dept.name}.'
+        ),
         'visit_id': visit.pk,
         'patient_id': patient.pk,
+        'consent_token': consent_token,
+        'claim_id': claim_id,
         'claims_desk_url': f'/accounts/sha/claims/{visit.pk}/',
     })
 
@@ -776,15 +1081,23 @@ def sha_diagnostics_api(request):
 @login_required
 @user_passes_test(can_query_sha_client_registry)
 def sha_facility_search_page(request):
-    """Small UI to look up a facility by registry / registration code."""
+    """Small UI to look up a facility via AfyaConnect Facility Registry."""
+    registry_base = (
+        getattr(settings, 'SHA_HIE_FACILITY_REGISTRY_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_AUTH_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_TERMINOLOGY_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_BASE_URL', '')
+    )
     return render(request, 'accounts/sha_facility_search.html', {
         'title': 'SHA Facility Search',
-        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', ''),
+        'base_url': registry_base,
         'facility_search_path': getattr(
             settings,
             'SHA_HIE_FACILITY_SEARCH_PATH',
-            '/v2/facility-search',
+            '/facilities/search',
         ),
+        'default_id_type': getattr(settings, 'SHA_HIE_FACILITY_ID_TYPE', 'fr-code')
+        or 'fr-code',
     })
 
 
@@ -792,10 +1105,11 @@ def sha_facility_search_page(request):
 @user_passes_test(can_query_sha_client_registry)
 def sha_facility_by_code(request):
     """
-    GET /accounts/api/sha/facility-by-code/?facility_code=XXXX
+    GET /accounts/api/sha/facility-by-code/?facility_code=XXXX&identifier_type=fr-code
 
-    Proxies AfyaLink:
-        GET {{base_url}}/v2/facility-search?facility_code={{facility_code}}
+    Proxies AfyaConnect Facility Registry:
+        GET {middleware}/facilities/search?identifier=...&identifier-type=...
+    Docs: https://afyaconnect.dha.go.ke/hie-api/hieRegistry/facility-registry
     """
     import logging
     import traceback
@@ -803,26 +1117,46 @@ def sha_facility_by_code(request):
     logger = logging.getLogger(__name__)
     facility_code = (
         request.GET.get('facility_code')
+        or request.GET.get('identifier')
         or request.GET.get('registration_number')
         or request.GET.get('code')
         or ''
     ).strip()
+    identifier_type = (
+        request.GET.get('identifier_type')
+        or request.GET.get('identifier-type')
+        or getattr(settings, 'SHA_HIE_FACILITY_ID_TYPE', 'fr-code')
+        or 'fr-code'
+    ).strip()
+    registry_base = (
+        getattr(settings, 'SHA_HIE_FACILITY_REGISTRY_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_AUTH_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_TERMINOLOGY_BASE_URL', '')
+        or getattr(settings, 'SHA_HIE_BASE_URL', '')
+    )
     debug = {
         'step': 'start',
         'facility_code': facility_code,
+        'identifier_type': identifier_type,
         'user': getattr(request.user, 'username', None),
-        'base_url': getattr(settings, 'SHA_HIE_BASE_URL', None),
+        'registry_base_url': registry_base,
         'facility_search_path': getattr(
             settings,
             'SHA_HIE_FACILITY_SEARCH_PATH',
-            '/v2/facility-search',
+            '/facilities/search',
         ),
         'has_username': bool(getattr(settings, 'SHA_HIE_USERNAME', '')),
         'has_password': bool(getattr(settings, 'SHA_HIE_PASSWORD', '')),
-        'has_consumer_key': bool(getattr(settings, 'SHA_HIE_CONSUMER_KEY', '')),
+        'has_client_id': bool(
+            getattr(settings, 'SHA_HIE_CLIENT_ID', '')
+            or getattr(settings, 'SHA_HIE_CONSUMER_KEY', '')
+        ),
         'agent_id': getattr(settings, 'SHA_HIE_AGENT_ID', '') or None,
     }
-    print(f"[SHA DEBUG] facility search requested by={debug['user']} code={facility_code}")
+    print(
+        f"[SHA DEBUG] facility search requested by={debug['user']} "
+        f"code={facility_code} type={identifier_type}"
+    )
     logger.info("SHA facility search start: %s", debug)
 
     if not facility_code:
@@ -834,13 +1168,17 @@ def sha_facility_by_code(request):
 
     try:
         debug['step'] = 'calling_hie'
-        payload = get_facility_by_code(facility_code)
+        payload = get_facility_by_code(
+            facility_code,
+            identifier_type=identifier_type,
+        )
         debug['step'] = 'success'
         debug['found'] = payload.get('found')
         return JsonResponse({
             'success': True,
             'found': payload['found'],
             'facility_code': payload['facility_code'],
+            'identifier_type': identifier_type,
             'facility': payload['facility'],
             'raw': payload['raw'],
             'debug': debug,
@@ -1138,6 +1476,66 @@ def invoice_detail(request, pk):
         or request.user.role in ['SHA Manager', 'Accountant', 'Admin', 'Receptionist']
     )
 
+    # ── SHA Claims Readiness Checklist ──
+    claim_readiness = None
+    if is_sha and invoice.visit:
+        from home.models import Diagnosis, PrescriptionItem
+        from accounts.models import ShaClaimSession
+
+        visit = invoice.visit
+        patient = invoice.patient
+
+        # 1. Patient CR ID
+        has_cr_id = bool(getattr(patient, 'cr_id', None))
+
+        # 2. Diagnoses with ICD-11 codes
+        all_diagnoses = Diagnosis.objects.filter(visit=visit)
+        diagnoses_with_icd = all_diagnoses.filter(icd11_code__gt='').count()
+        has_diagnosis = all_diagnoses.exists()
+        has_icd_codes = diagnoses_with_icd > 0
+
+        # 3. Invoice items
+        items = list(invoice.items.all())
+        has_items = len(items) > 0
+        total_amount = sum(i.amount for i in items)
+
+        # 4. Claim session status
+        session = ShaClaimSession.objects.filter(visit=visit).first()
+        has_session = session is not None
+        session_status = session.status if session else 'none'
+        is_eligible = session.eligible if session else False
+        has_consent = bool(session.consent_token) if session else False
+        visit_started = session_status in ('started', 'preauth_pending', 'preauth_approved', 'erx_submitted', 'dispensed', 'submitted') if session else False
+        claim_submitted = session_status == 'submitted' if session else False
+
+        # 5. Practitioner info
+        has_practitioner = bool(session.practitioner_identification_number) if session else False
+
+        # 6. Intervention codes
+        has_intervention = bool(session.intervention_codes) if session else False
+
+        claim_readiness = {
+            'has_cr_id': has_cr_id,
+            'cr_id': getattr(patient, 'cr_id', ''),
+            'has_diagnosis': has_diagnosis,
+            'has_icd_codes': has_icd_codes,
+            'diagnosis_count': all_diagnoses.count(),
+            'icd_count': diagnoses_with_icd,
+            'has_items': has_items,
+            'item_count': len(items),
+            'total_amount': total_amount,
+            'has_session': has_session,
+            'session_status': session_status,
+            'session_status_display': dict(ShaClaimSession.STATUS_CHOICES).get(session_status, session_status) if session else 'Not Started',
+            'is_eligible': is_eligible,
+            'has_consent': has_consent,
+            'visit_started': visit_started,
+            'claim_submitted': claim_submitted,
+            'has_practitioner': has_practitioner,
+            'has_intervention': has_intervention,
+            'last_error': (session.last_error if session else ''),
+        }
+
     context = {
         'invoice': invoice,
         'can_authorize': can_authorize,
@@ -1147,6 +1545,7 @@ def invoice_detail(request, pk):
         'is_sha_visit': is_sha,
         'can_edit_maternity_sha': can_edit_maternity_sha,
         'maternity_sha_rebate': MATERNITY_SHA_REBATE,
+        'claim_readiness': claim_readiness,
     }
     return render(request, 'accounts/invoice_detail.html', context)
 
@@ -1297,17 +1696,16 @@ def delete_invoice(request, pk):
     return HttpResponse(status=405)
 
 @login_required
-@user_passes_test(is_billing_staff)
 def delete_invoice_item(request, item_id):
     if request.method == 'POST':
         item = get_object_or_404(InvoiceItem, pk=item_id)
         invoice = item.invoice
         
         # Permission Check: Admin or Invoice Creator or Item Creator
-        if request.user.is_superuser or invoice.created_by == request.user or item.created_by == request.user:
-             pass
-        else:
-            return JsonResponse({'success': False, 'error': 'Only the item creator or invoice creator can delete items.'})
+        is_admin = request.user.is_superuser or request.user.role == 'Admin'
+        is_creator = (invoice.created_by == request.user) or (item.created_by == request.user)
+        if not (is_admin or is_creator):
+            return JsonResponse({'success': False, 'error': 'Only the item creator, invoice creator, or an administrator can delete items.'})
         
         # Dispense Check: Nobody can delete dispensed items
         if item.is_dispensed:
@@ -1323,6 +1721,10 @@ def delete_invoice_item(request, item_id):
             
         try:
             with transaction.atomic():
+                # Cleanup associated pending/uncompleted lab results
+                if hasattr(item, 'labresult_set'):
+                    item.labresult_set.filter(status__in=['Pending', 'In Progress', 'Cancelled']).delete()
+
                 # Handle Inventory Reversal if this is an inventory item
                 if item.inventory_item and invoice.visit:
                     from inventory.models import DispensedItem, StockRecord
@@ -1366,33 +1768,6 @@ def delete_invoice_item(request, item_id):
             return JsonResponse({'success': False, 'error': str(e)})
             
     return HttpResponse(status=405)
-
-@login_required
-@require_POST
-def zero_invoice_item(request, item_id):
-    """Sets the unit price to 0 for an invoice item if allowed by SHA or Accountant on a delivery visit."""
-    item = get_object_or_404(InvoiceItem, pk=item_id)
-    invoice = item.invoice
-    
-    # Permission condition
-    if request.user.role not in ['SHA Manager', 'Accountant', 'Admin'] and not request.user.is_superuser:
-        return JsonResponse({'success': False, 'error': 'Only SHA Manager or Accountant can zero invoice items.'})
-        
-    is_delivery = _is_maternity_invoice(invoice)
-        
-    if not is_delivery:
-        return JsonResponse({'success': False, 'error': 'Zeroing items is strictly for Delivery/Maternity visits.'})
-        
-    if item.paid_amount > 0:
-        return JsonResponse({'success': False, 'error': 'Cannot zero a partially or fully paid item.'})
-        
-    try:
-        item.unit_price = 0
-        item.save()
-        invoice.update_totals()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -2195,6 +2570,12 @@ def edit_service(request, pk):
             'department': service.department_id,
             'price': float(service.price),
             'description': service.description or '',
+            'loinc_code': service.loinc_code or '',
+            'loinc_display': service.loinc_display or '',
+            'ichi_code': service.ichi_code or '',
+            'ichi_display': service.ichi_display or '',
+            'sha_intervention_code': service.sha_intervention_code or '',
+            'sha_intervention_name': service.sha_intervention_name or '',
             'is_active': service.is_active,
         })
 
@@ -2311,11 +2692,21 @@ def sha_claims_desk(request, visit_id):
         prescription__visit=visit
     ).select_related('medication', 'medication__medication')
 
+    invoice_items = []
+    if invoice:
+        invoice_items = list(invoice.items.select_related('service', 'inventory_item').all().order_by('created_at'))
+
+    selected_items_raw = request.GET.get('items', '').strip()
+    selected_item_ids = [int(x) for x in selected_items_raw.split(',') if x.isdigit()]
+
     return render(request, 'accounts/sha_claims_desk.html', {
+        'title': f'SHA Claims Workbench — {visit.patient.full_name}',
         'visit': visit,
         'patient': visit.patient,
         'session': session,
         'invoice': invoice,
+        'invoice_items': invoice_items,
+        'selected_item_ids': selected_item_ids,
         'diagnoses': diagnoses,
         'rx_items': rx_items,
         'facility_fr': getattr(django_settings, 'SHA_HIE_FACILITY_FR_CODE', ''),
@@ -2375,6 +2766,18 @@ def sha_claims_action(request, visit_id):
         if action == 'eligibility':
             session = refresh_eligibility(session)
         elif action == 'send_otp':
+            if not session.is_alive:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Patient is deceased — consent blocked.',
+                    'session': _session_payload(session),
+                }, status=400)
+            if session.facility_biometrics_enforced and not session.whitelisted_for_otp:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Facility requires biometrics. Use Biometrics authorize instead.',
+                    'session': _session_payload(session),
+                }, status=400)
             client = ShaHieClient()
             raw = client.send_claim_otp(
                 patient_id=session.patient_cr_id or visit.patient.cr_id or '',
@@ -2384,11 +2787,76 @@ def sha_claims_action(request, visit_id):
             session.last_error = ''
             session.save(update_fields=['status', 'last_error', 'updated_at'])
             return JsonResponse({'success': True, 'action': action, 'otp_response': raw, 'session': _session_payload(session)})
+        elif action == 'authorize_biometrics':
+            if not session.is_alive:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Patient is deceased — consent blocked.',
+                    'session': _session_payload(session),
+                }, status=400)
+            agent_national_id = (getattr(request.user, 'id_number', None) or '').strip()
+            if not agent_national_id:
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        'Logged-in user has no National ID (id_number). '
+                        'Set it on the user account — it is used as the biometrics agent ID.'
+                    ),
+                    'session': _session_payload(session),
+                }, status=400)
+            client = ShaHieClient()
+            raw = client.create_biometric_authorization(
+                patient_id=session.patient_cr_id or visit.patient.cr_id or '',
+                agent_national_id=agent_national_id,
+                work_station_id=(
+                    data.get('work_station_id')
+                    or data.get('workStationId')
+                    or data.get('workstationID')
+                ),
+                extra={
+                    k: v for k, v in data.items()
+                    if k not in (
+                        'action', 'patient_id', 'cr_id',
+                        'agent_id', 'agent_national_id', 'national_id',
+                        'work_station_id', 'workStationId', 'workstationID',
+                    )
+                    and v not in (None, '')
+                } or None,
+            )
+            session.consent_token = str(
+                raw.get('token') or raw.get('consent_token') or session.consent_token or ''
+            )
+            session.authorization_guid = str(
+                raw.get('guid') or raw.get('authorization_guid') or ''
+            )
+            session.consent_method = 'biometrics'
+            session.status = 'otp_sent'
+            session.submit_raw = {**(session.submit_raw or {}), 'authorize': raw}
+            session.last_error = ''
+            session.save()
+            return JsonResponse({
+                'success': True,
+                'action': action,
+                'authorize_response': raw,
+                'iframe_url': raw.get('iframe') or raw.get('iframe_url') or raw.get('url'),
+                'agent_national_id': agent_national_id,
+                'session': _session_payload(session),
+            })
         elif action == 'start_visit':
+            if not session.is_alive:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Patient is deceased — visit blocked.',
+                    'session': _session_payload(session),
+                }, status=400)
             otp = (data.get('otp') or '').strip()
-            if not otp:
-                return JsonResponse({'success': False, 'error': 'OTP is required.'}, status=400)
-            session = start_visit_with_otp(session, otp=otp, practitioner=request.user)
+            if not otp and not session.authorization_guid:
+                return JsonResponse({'success': False, 'error': 'OTP is required (or complete biometrics first).'}, status=400)
+            session = start_visit_with_otp(
+                session,
+                otp=otp or '',
+                practitioner=request.user,
+            )
         elif action == 'erx':
             session = submit_erx_for_visit(session, practitioner=request.user)
         elif action == 'dispense':
@@ -2442,12 +2910,216 @@ def _session_payload(session):
         'status': session.status,
         'service_type': session.service_type,
         'intervention_codes': session.intervention_codes,
+        'sub_benefit_code': getattr(session, 'sub_benefit_code', '') or '',
+        'intervention_meta': getattr(session, 'intervention_meta', None) or {},
         'patient_cr_id': session.patient_cr_id,
         'eligible': session.eligible,
+        'schemes': getattr(session, 'schemes', None) or [],
+        'is_alive': getattr(session, 'is_alive', True),
+        'whitelisted_for_otp': getattr(session, 'whitelisted_for_otp', False),
+        'facility_biometrics_enforced': getattr(
+            session, 'facility_biometrics_enforced', False
+        ),
+        'consent_method': getattr(session, 'consent_method', None) or 'otp',
         'consent_token': session.consent_token,
+        'authorization_guid': session.authorization_guid,
         'claim_id': session.claim_id,
         'edi_claim_guid': session.edi_claim_guid,
         'workflow_state': session.workflow_state,
         'last_error': session.last_error,
         'practitioner_identification_number': session.practitioner_identification_number,
     }
+
+
+@login_required
+@user_passes_test(lambda u: u.is_authenticated and (u.role in ['Admin', 'SHA Manager', 'Accountant', 'Doctor', 'Receptionist', 'Nurse', 'SHA'] or u.is_superuser))
+def sha_claims_tracker(request):
+    """
+    Consolidated enterprise dashboard to monitor and manage all SHA visits,
+    claim sessions, billables, preauthorizations, and submission statuses.
+    """
+    from home.models import Visit, Diagnosis
+    from accounts.models import ShaClaimSession, Invoice
+    from django.db.models import Prefetch
+
+    search_query = (request.GET.get('search') or '').strip()
+    status_filter = (request.GET.get('status') or 'all').strip().lower()
+    type_filter = (request.GET.get('type') or 'all').strip().upper()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+
+    # Query all visits that are SHA or have a ShaClaimSession
+    visits_qs = Visit.objects.filter(
+        Q(payment_method='SHA') | Q(sha_claim_session__isnull=False)
+    ).select_related(
+        'patient',
+        'sha_claim_session',
+        'invoice',
+        'labor_delivery',
+    ).prefetch_related(
+        'invoice__items',
+        'diagnoses',
+    ).order_by('-visit_date')
+
+    # Date range filters
+    if date_from:
+        visits_qs = visits_qs.filter(visit_date__date__gte=date_from)
+    if date_to:
+        visits_qs = visits_qs.filter(visit_date__date__lte=date_to)
+
+    # Search filter
+    if search_query:
+        terms = search_query.split()
+        q_obj = Q()
+        for term in terms:
+            q_obj &= (
+                Q(patient__first_name__icontains=term) |
+                Q(patient__last_name__icontains=term) |
+                Q(patient__id_number__icontains=term) |
+                Q(patient__phone__icontains=term) |
+                Q(patient__cr_id__icontains=term) |
+                Q(sha_claim_session__claim_id__icontains=term) |
+                Q(sha_claim_session__consent_token__icontains=term) |
+                Q(id__icontains=term)
+            )
+        visits_qs = visits_qs.filter(q_obj)
+
+    # Filter by visit type
+    if type_filter and type_filter != 'ALL':
+        if type_filter == 'MATERNITY':
+            visits_qs = visits_qs.filter(labor_delivery__isnull=False)
+        elif type_filter == 'IN-PATIENT':
+            visits_qs = visits_qs.filter(visit_type='IN-PATIENT', labor_delivery__isnull=True)
+        elif type_filter == 'OUT-PATIENT':
+            visits_qs = visits_qs.filter(visit_type='OUT-PATIENT')
+
+    # Compute aggregate KPI metrics across all unpaginated visits
+    all_sha_visits = Visit.objects.filter(
+        Q(payment_method='SHA') | Q(sha_claim_session__isnull=False)
+    ).select_related('sha_claim_session')
+
+    total_visits = all_sha_visits.count()
+    active_started = all_sha_visits.filter(
+        sha_claim_session__status__in=['started', 'erx_submitted', 'dispensed']
+    ).count()
+    preauth_pending = all_sha_visits.filter(
+        sha_claim_session__status='preauth_pending'
+    ).count()
+    submitted_claims = all_sha_visits.filter(
+        sha_claim_session__status='submitted'
+    ).count()
+    error_sessions = all_sha_visits.filter(
+        Q(sha_claim_session__status='error') | Q(sha_claim_session__last_error__gt='')
+    ).count()
+    draft_sessions = all_sha_visits.filter(
+        Q(sha_claim_session__isnull=True) | Q(sha_claim_session__status__in=['draft', 'eligible', 'otp_sent'])
+    ).count()
+
+    # Apply status filter to list
+    if status_filter == 'submitted':
+        visits_qs = visits_qs.filter(sha_claim_session__status='submitted')
+    elif status_filter == 'started':
+        visits_qs = visits_qs.filter(sha_claim_session__status__in=['started', 'erx_submitted', 'dispensed'])
+    elif status_filter == 'preauth':
+        visits_qs = visits_qs.filter(sha_claim_session__status__in=['preauth_pending', 'preauth_approved'])
+    elif status_filter == 'draft':
+        visits_qs = visits_qs.filter(
+            Q(sha_claim_session__isnull=True) | Q(sha_claim_session__status__in=['draft', 'eligible', 'otp_sent'])
+        )
+    elif status_filter == 'error':
+        visits_qs = visits_qs.filter(
+            Q(sha_claim_session__status='error') | Q(sha_claim_session__last_error__gt='')
+        )
+
+    # Format records for UI
+    records = []
+    for visit in visits_qs[:100]:
+        session = getattr(visit, 'sha_claim_session', None)
+        invoice = getattr(visit, 'invoice', None)
+        items = list(invoice.items.all()) if invoice else []
+        billed_total = invoice.total_amount if invoice else Decimal('0')
+        paid_amount = invoice.paid_amount if invoice else Decimal('0')
+        adjustment = invoice.insurance_adjustment if invoice else Decimal('0')
+        balance = (billed_total - adjustment - paid_amount) if invoice else Decimal('0')
+        
+        diagnoses = list(visit.diagnoses.all())
+        icd_count = sum(1 for d in diagnoses if d.icd11_code)
+
+        records.append({
+            'visit': visit,
+            'patient': visit.patient,
+            'session': session,
+            'invoice': invoice,
+            'item_count': len(items),
+            'billed_total': billed_total,
+            'paid_amount': paid_amount,
+            'adjustment': adjustment,
+            'balance': balance,
+            'diagnoses_count': len(diagnoses),
+            'icd_count': icd_count,
+            'status': session.status if session else 'draft',
+            'status_display': (
+                dict(ShaClaimSession.STATUS_CHOICES).get(session.status, session.status)
+                if session else 'Not Started'
+            ),
+            'claim_id': session.claim_id if session else '',
+            'consent_token': session.consent_token if session else '',
+            'last_error': session.last_error if session else '',
+            'service_type': session.service_type if session else visit.visit_type,
+            'schemes': (session.schemes if session and session.schemes else []),
+        })
+
+    context = {
+        'title': 'SHA Claims & Visits Tracker',
+        'records': records,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'type_filter': type_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'stats': {
+            'total_visits': total_visits,
+            'active_started': active_started,
+            'preauth_pending': preauth_pending,
+            'submitted_claims': submitted_claims,
+            'error_sessions': error_sessions,
+            'draft_sessions': draft_sessions,
+            'displayed_count': len(records),
+        },
+    }
+    return render(request, 'accounts/sha_claims_tracker.html', context)
+
+
+@login_required
+@require_POST
+def sha_claim_live_status(request, session_id):
+    """AJAX endpoint to query live DHA status for a given claim session."""
+    from accounts.models import ShaClaimSession
+    from accounts.sha_hie_service import ShaHieClient, ShaHieError
+
+    session = get_object_or_404(ShaClaimSession, pk=session_id)
+    if not session.claim_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Claim ID has not been issued yet. Start visit and submit claim first.',
+        }, status=400)
+
+    try:
+        raw = ShaHieClient().get_claim_status(session.claim_id)
+        # Update workflow_state if provided
+        if isinstance(raw, dict) and raw.get('workflow_state'):
+            session.workflow_state = str(raw['workflow_state'])
+            session.save(update_fields=['workflow_state', 'updated_at'])
+        return JsonResponse({
+            'success': True,
+            'claim_id': session.claim_id,
+            'workflow_state': session.workflow_state,
+            'status': session.status,
+            'raw': raw,
+        })
+    except (ShaHieError, Exception) as exc:
+        return JsonResponse({
+            'success': False,
+            'error': str(exc),
+        }, status=400)
+

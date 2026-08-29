@@ -209,31 +209,80 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# SHA / DHA HIE integration settings (AfyaLink)
+# SHA / DHA HIE integration settings (AfyaConnect / ILM middleware)
 SHA_HIE_BASE_URL = os.getenv('SHA_HIE_BASE_URL', 'https://uat.dha.go.ke')
 SHA_HIE_USERNAME = os.getenv('SHA_HIE_USERNAME', '')
 SHA_HIE_PASSWORD = os.getenv('SHA_HIE_PASSWORD', '')
-# Agent ID (Basic Auth section) + Token Auth Key/Secret from DHA portal.
+# Agent ID (still used for Client Registry / some legacy routes)
 SHA_HIE_AGENT_ID = os.getenv('SHA_HIE_AGENT_ID', '')
-SHA_HIE_CONSUMER_KEY = os.getenv('SHA_HIE_CONSUMER_KEY', '')
-SHA_HIE_CONSUMER_SECRET = os.getenv('SHA_HIE_CONSUMER_SECRET', '')
+# AfyaConnect OAuth client credentials (preferred names)
+SHA_HIE_CLIENT_ID = os.getenv('SHA_HIE_CLIENT_ID', '') or os.getenv('SHA_HIE_CONSUMER_KEY', '')
+SHA_HIE_CLIENT_SECRET = os.getenv('SHA_HIE_CLIENT_SECRET', '') or os.getenv('SHA_HIE_CONSUMER_SECRET', '')
+# Legacy aliases still accepted
+SHA_HIE_CONSUMER_KEY = os.getenv('SHA_HIE_CONSUMER_KEY', '') or SHA_HIE_CLIENT_ID
+SHA_HIE_CONSUMER_SECRET = os.getenv('SHA_HIE_CONSUMER_SECRET', '') or SHA_HIE_CLIENT_SECRET
 SHA_HIE_TIMEOUT_SECONDS = int(os.getenv('SHA_HIE_TIMEOUT_SECONDS', '45'))
 SHA_HIE_VERIFY_SSL = os.getenv('SHA_HIE_VERIFY_SSL', 'true').lower() == 'true'
-SHA_HIE_TOKEN_PATH = os.getenv('SHA_HIE_TOKEN_PATH', '/v1/hie-auth')
+# Auth: oauth (AfyaConnect POST /tenants/token) or basic (legacy GET /v1/hie-auth)
+SHA_HIE_AUTH_MODE = os.getenv('SHA_HIE_AUTH_MODE', 'oauth')
+SHA_HIE_AUTH_BASE_URL = os.getenv(
+    'SHA_HIE_AUTH_BASE_URL',
+    os.getenv(
+        'SHA_HIE_TERMINOLOGY_BASE_URL',
+        'https://ilm-dev.dha.go.ke/uat-middleware/api/v1',
+    ),
+)
+SHA_HIE_TOKEN_PATH = os.getenv('SHA_HIE_TOKEN_PATH', '/tenants/token')
 SHA_HIE_CLIENT_VERIFY_PATH = os.getenv(
     'SHA_HIE_CLIENT_VERIFY_PATH',
     '/v3/client-registry/fetch-client',
 )
+# AfyaConnect Patient Search + Eligibility (ILM middleware)
+SHA_HIE_PATIENT_SEARCH_PATH = os.getenv('SHA_HIE_PATIENT_SEARCH_PATH', '/patients')
 SHA_HIE_ELIGIBILITY_PATH = os.getenv(
     'SHA_HIE_ELIGIBILITY_PATH',
-    '/v2/eligibility',
+    '/patients/eligibility',
 )
+SHA_HIE_SUB_BENEFITS_PATH = os.getenv(
+    'SHA_HIE_SUB_BENEFITS_PATH',
+    '/patients/sub-benefits',
+)
+SHA_HIE_INTERVENTIONS_PATH = os.getenv(
+    'SHA_HIE_INTERVENTIONS_PATH',
+    '/patients/benefits/interventions',
+)
+SHA_HIE_UTILIZATION_PATH = os.getenv(
+    'SHA_HIE_UTILIZATION_PATH',
+    '/patients/benefits/utilization',
+)
+SHA_HIE_POMSF_BALANCES_PATH = os.getenv(
+    'SHA_HIE_POMSF_BALANCES_PATH',
+    '/patients/pomsf-balances',
+)
+SHA_HIE_ECLAIMS_BASE_URL = os.getenv('SHA_HIE_ECLAIMS_BASE_URL', '')
+# AfyaConnect Facility Registry: GET /facilities/search?identifier=&identifier-type=
+# Docs: https://afyaconnect.dha.go.ke/hie-api/hieRegistry/facility-registry
+SHA_HIE_FACILITY_REGISTRY_BASE_URL = os.getenv(
+    'SHA_HIE_FACILITY_REGISTRY_BASE_URL',
+    '',  # falls back to SHA_HIE_AUTH_BASE_URL / terminology base
+)
+SHA_HIE_FACILITY_FR_CODE = os.getenv('SHA_HIE_FACILITY_FR_CODE', '15627')
+SHA_HIE_FACILITY_CODE = os.getenv('SHA_HIE_FACILITY_CODE', SHA_HIE_FACILITY_FR_CODE)
+SHA_HIE_FACILITY_ID_TYPE = os.getenv('SHA_HIE_FACILITY_ID_TYPE', 'fr-code')
+
 SHA_HIE_FACILITY_SEARCH_PATH = os.getenv(
     'SHA_HIE_FACILITY_SEARCH_PATH',
-    '/v2/facility-search',
+    '/facilities/search',
 )
-# DHA Terminology Service — ICD-11 validate/search (AfyaLink / ILM middleware)
-# Auth still uses SHA_HIE_BASE_URL (/v1/hie-auth); terminology routes live on the middleware host.
+
+# AfyaConnect Health Worker Registry: GET /professionals?identification_number=&identification_type=&regulator=
+SHA_HIE_PRACTITIONER_SEARCH_PATH = os.getenv(
+    'SHA_HIE_PRACTITIONER_SEARCH_PATH',
+    '/professionals',
+)
+
+# DHA Terminology Service — ICD-11 validate/search (ILM middleware)
+# Auth uses SHA_HIE_AUTH_BASE_URL POST /tenants/token
 SHA_HIE_TERMINOLOGY_BASE_URL = os.getenv(
     'SHA_HIE_TERMINOLOGY_BASE_URL',
     'https://ilm-dev.dha.go.ke/uat-middleware/api/v1',
@@ -247,6 +296,20 @@ SHA_HIE_ICD11_SOURCE = os.getenv('SHA_HIE_ICD11_SOURCE', 'ICD-11')
 # DHA HPT (Health Products & Technologies) — PPB generic/product concepts for eRx
 SHA_HIE_HPT_OWNER = os.getenv('SHA_HIE_HPT_OWNER', 'MOH-PPB')
 SHA_HIE_HPT_SOURCE = os.getenv('SHA_HIE_HPT_SOURCE', 'HPT')
+# LOINC — laboratory / observation codes (AfyaConnect Terminology Service)
+SHA_HIE_LOINC_OWNER = os.getenv('SHA_HIE_LOINC_OWNER', 'Regenstrief')
+SHA_HIE_LOINC_SOURCE = os.getenv('SHA_HIE_LOINC_SOURCE', 'LOINC')
+SHA_HIE_LOINC_SEARCH_PATH = os.getenv(
+    'SHA_HIE_LOINC_SEARCH_PATH',
+    '/clinical/loinc/search',
+)
+# ICHI — procedure / intervention codes
+SHA_HIE_ICHI_OWNER = os.getenv('SHA_HIE_ICHI_OWNER', 'WHO')
+SHA_HIE_ICHI_SOURCE = os.getenv('SHA_HIE_ICHI_SOURCE', 'ICHI')
+SHA_HIE_ICHI_SEARCH_PATH = os.getenv(
+    'SHA_HIE_ICHI_SEARCH_PATH',
+    '/clinical/concepts',
+)
 # On prescribe: suggest/require DHA generic_concept_code (GE*) after local drug select
 HPT_DHA_SUGGEST_ON_SELECT = os.getenv('HPT_DHA_SUGGEST_ON_SELECT', 'true').lower() == 'true'
 HPT_DHA_REQUIRE_CODE = os.getenv('HPT_DHA_REQUIRE_CODE', 'false').lower() == 'true'
@@ -255,6 +318,8 @@ HPT_DHA_REQUIRE_CODE = os.getenv('HPT_DHA_REQUIRE_CODE', 'false').lower() == 'tr
 SHA_HIE_FACILITY_FR_CODE = os.getenv('SHA_HIE_FACILITY_FR_CODE', '')
 SHA_HIE_FACILITY_ID_TYPE = os.getenv('SHA_HIE_FACILITY_ID_TYPE', 'fr-code')
 SHA_HIE_FACILITY_NAME = os.getenv('SHA_HIE_FACILITY_NAME', '')
+# Optional Hardware Server workstation id for biometrics authorize
+SHA_HIE_BIOMETRICS_WORKSTATION_ID = os.getenv('SHA_HIE_BIOMETRICS_WORKSTATION_ID', '')
 SHA_HIE_DEFAULT_INTERVENTION_OPD = os.getenv('SHA_HIE_DEFAULT_INTERVENTION_OPD', 'SHA-18-005')
 SHA_HIE_DEFAULT_INTERVENTION_IPD = os.getenv('SHA_HIE_DEFAULT_INTERVENTION_IPD', 'SHA-11-001')
 # When true, insurance desk also pushes claim submit to DHA after local payment
@@ -288,6 +353,13 @@ ICD11_USE_LOCAL_DB = os.getenv('ICD11_USE_LOCAL_DB', 'true').lower() == 'true'
 ICD11_DHA_VALIDATE_ON_SELECT = os.getenv('ICD11_DHA_VALIDATE_ON_SELECT', 'true').lower() == 'true'
 # If true, reject selection when DHA is unreachable; if false, allow with warning
 ICD11_DHA_VALIDATE_STRICT = os.getenv('ICD11_DHA_VALIDATE_STRICT', 'false').lower() == 'true'
+# LOINC / ICHI: search local TerminologyConcept first; confirm unchanged via DHA on select
+TERMINOLOGY_DHA_VALIDATE_ON_SELECT = os.getenv(
+    'TERMINOLOGY_DHA_VALIDATE_ON_SELECT', 'true'
+).lower() == 'true'
+TERMINOLOGY_DHA_VALIDATE_STRICT = os.getenv(
+    'TERMINOLOGY_DHA_VALIDATE_STRICT', 'false'
+).lower() == 'true'
 ICD11_TABULATION_URL = os.getenv(
     'ICD11_TABULATION_URL',
     'https://icdcdn.who.int/static/releasefiles/{release}/SimpleTabulation-ICD-11-MMS-{language}.zip',

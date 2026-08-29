@@ -35,6 +35,115 @@
     margin: 0 auto;
 }
 
+.sha-preauth-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.sha-preauth-modal[hidden] { display: none !important; }
+.sha-preauth-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+}
+.sha-preauth-modal__panel {
+    position: relative;
+    width: min(440px, 100%);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+}
+.sha-preauth-modal__spinner {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    border: 3px solid #e2e8f0;
+    border-top-color: #0f766e;
+    animation: shaPreauthSpin 0.75s linear infinite;
+}
+@keyframes shaPreauthSpin { to { transform: rotate(360deg); } }
+.sha-preauth-modal__loading h3,
+.sha-preauth-modal__result h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.sha-preauth-modal__loading p,
+.sha-preauth-modal__result p {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+.sha-preauth-modal__bar {
+    height: 4px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.sha-preauth-modal__bar span {
+    display: block;
+    height: 100%;
+    width: 40%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #0f766e, #14b8a6);
+    animation: shaPreauthBar 1.2s ease-in-out infinite;
+}
+@keyframes shaPreauthBar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+.sha-preauth-modal__result-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 0.85rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+.sha-preauth-modal__result-icon.is-warn {
+    background: #fffbeb;
+    color: #d97706;
+    border: 2px solid #fcd34d;
+}
+.sha-preauth-modal__result-icon.is-ok {
+    background: #ecfdf5;
+    color: #059669;
+    border: 2px solid #6ee7b7;
+}
+.sha-preauth-modal__result-icon.is-err {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 2px solid #fecaca;
+}
+.sha-preauth-modal__result ul {
+    text-align: left;
+    margin: 0 0 1rem;
+    padding-left: 1.15rem;
+    font-size: 0.8rem;
+    color: #78350f;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.sha-preauth-modal__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
 .rx-split {
     display: grid;
     grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.55fr);
@@ -622,6 +731,41 @@
             </a>
         </div>
 
+        <div id="sha-preauth-rx-banner" class="hidden" style="margin:0 0 1rem; padding:0.9rem 1rem; border-radius:12px; border:2px solid #f59e0b; background:#fffbeb;">
+            <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+                <i class="fas fa-exclamation-triangle" style="color:#d97706; margin-top:0.15rem;"></i>
+                <div style="flex:1;">
+                    <div style="font-size:0.75rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#92400e; margin-bottom:0.25rem;">SHA pre-authorization — inform the patient</div>
+                    <ul id="sha-preauth-rx-list" style="margin:0; padding-left:1.1rem; font-size:0.8rem; color:#78350f;"></ul>
+                    <a id="sha-preauth-rx-desk" href="{% url 'accounts:sha_claims_desk' visit.pk %}" class="hidden" style="margin-top:0.5rem; font-size:0.7rem; font-weight:800; text-transform:uppercase; color:#1d4ed8;">Open SHA claims desk →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHA preauth progress / result modal -->
+        <div id="sha-preauth-modal" class="sha-preauth-modal" hidden aria-hidden="true">
+            <div class="sha-preauth-modal__backdrop"></div>
+            <div class="sha-preauth-modal__panel" role="dialog" aria-modal="true" aria-labelledby="sha-preauth-modal-title">
+                <div id="sha-preauth-modal-loading" class="sha-preauth-modal__loading">
+                    <div class="sha-preauth-modal__spinner" aria-hidden="true"></div>
+                    <h3 id="sha-preauth-modal-title">Checking SHA pre-authorization…</h3>
+                    <p id="sha-preauth-modal-subtitle">Looking up intervention coverage for selected medicines. Please wait.</p>
+                    <div class="sha-preauth-modal__bar"><span></span></div>
+                </div>
+                <div id="sha-preauth-modal-result" class="sha-preauth-modal__result" hidden>
+                    <div id="sha-preauth-modal-result-icon" class="sha-preauth-modal__result-icon">!</div>
+                    <h3 id="sha-preauth-modal-result-title">Preauth check complete</h3>
+                    <p id="sha-preauth-modal-result-msg"></p>
+                    <ul id="sha-preauth-modal-result-list"></ul>
+                    <div class="sha-preauth-modal__actions">
+                        <a id="sha-preauth-modal-desk" href="{% url 'accounts:sha_claims_desk' visit.pk %}" class="rx-btn rx-btn-ghost" hidden>SHA claims desk</a>
+                        <button type="button" id="sha-preauth-modal-close" class="rx-btn rx-btn-primary">Got it — inform patient</button>
+                        <button type="button" id="sha-preauth-modal-continue" class="rx-btn rx-btn-primary" hidden>Continue prescribe</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {% if existing_prescription %}
         <div class="rx-notice">
             <i class="fas fa-info-circle"></i>
@@ -713,237 +857,225 @@
                 </div>
             </div>
 
-            <!-- Electronic prescribing clinical context -->
-            <div class="rx-card">
-                <div class="rx-card-head">
-                    <h2 class="rx-card-title">
-                        <span class="rx-icon" style="background:#ecfdf5;color:#065f46;"><i class="fas fa-file-medical"></i></span>
-                        eRx clinical package
-                    </h2>
-                    <span style="font-size:0.7rem;color:#64748b;">Problem List · Medication List · Diagnostic Tests</span>
+            <div id="rx-diagnosis-prompt" class="rx-card" style="border: 2px dashed #cbd5e1; background: #f8fafc; text-align: center; padding: 2.25rem 1.5rem; margin-top: 1.25rem; border-radius: 12px;">
+                <div style="width: 48px; height: 48px; background: #e0f2fe; color: #0284c7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-bottom: 0.85rem;">
+                    <i class="fas fa-stethoscope"></i>
                 </div>
-                <div style="padding:0 1.25rem 1.25rem; display:grid; gap:1rem;">
-                    <p style="font-size:0.75rem; color:#64748b; margin:0; line-height:1.45;">
-                        Electronic prescribing packages these with your drug orders. DHA <code>/prescriptions</code> transmits HPT medication items;
-                        problem list, active meds, and diagnostics are snapshotted into the eRx package for continuity and claims desk transmission.
-                    </p>
-
-                    <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
-                            <i class="fas fa-notes-medical"></i> Problem List
-                            <a href="{% url 'home:patient_detail' patient.pk %}" style="font-weight:500; margin-left:0.35rem;">Manage on profile</a>
-                        </div>
-                        {% if erx_active_problems %}
-                        <div style="display:flex; flex-direction:column; gap:0.35rem; max-height:140px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:0.5rem;">
-                            {% for p in erx_active_problems %}
-                            <label style="display:flex; gap:0.5rem; align-items:flex-start; font-size:0.8rem; cursor:pointer;">
-                                <input type="checkbox" name="erx_problem_ids" value="{{ p.pk }}" checked style="margin-top:0.2rem;">
-                                <span>{{ p.display }}{% if p.icd11_code %} <strong style="color:#3730a3;">[{{ p.icd11_code }}]</strong>{% endif %}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active problems — add on patient profile before prescribing when possible.</p>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
-                            <i class="fas fa-pills"></i> Medication Lists (active)
-                        </div>
-                        <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; margin-bottom:0.45rem;">
-                            <input type="checkbox" name="erx_include_medication_list" value="1" checked>
-                            Include Active Medication List in eRx package
-                        </label>
-                        {% if erx_active_medications %}
-                        <ul style="margin:0; padding-left:1.1rem; font-size:0.8rem; color:#475569; max-height:120px; overflow-y:auto;">
-                            {% for m in erx_active_medications %}
-                            <li>{{ m.display_name }}{% if m.generic_concept_code %} [{{ m.generic_concept_code }}]{% endif %}{% if m.dose_text or m.frequency %} — {{ m.dose_text }} {{ m.frequency }}{% endif %}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active meds yet — this Rx will sync into the list on save.</p>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
-                            <i class="fas fa-vial"></i> Diagnostic Tests
-                        </div>
-                        {% if erx_visit_labs %}
-                        <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.35rem;">Already ordered this visit:</p>
-                        <ul style="margin:0 0 0.65rem; padding-left:1.1rem; font-size:0.78rem; color:#475569;">
-                            {% for lab in erx_visit_labs %}
-                            <li>{{ lab.service.name }}{% if lab.service.department %} ({{ lab.service.department.name }}){% endif %} — {{ lab.status }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                        <p style="font-size:0.75rem; color:#64748b; margin:0 0 0.35rem;">Order / include with this prescription:</p>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.35rem; max-height:160px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:0.5rem;">
-                            {% for svc in erx_diagnostic_catalog %}
-                            <label style="display:flex; gap:0.4rem; align-items:flex-start; font-size:0.75rem; cursor:pointer;">
-                                <input type="checkbox" name="erx_diagnostic_tests" value="{{ svc.pk }}" style="margin-top:0.15rem;">
-                                <span>{{ svc.name }}{% if svc.department %} <span style="color:#94a3b8;">· {{ svc.department.name }}</span>{% endif %}</span>
-                            </label>
-                            {% empty %}
-                            <span style="font-size:0.8rem; color:#94a3b8;">No lab/imaging services configured.</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div style="border-top:1px solid #e5eaf0; padding-top:0.85rem;">
-                        <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; font-weight:600;">
-                            <input type="checkbox" name="transmit_erx" value="1" {% if sha_claim_ready %}checked{% endif %}>
-                            Electronically transmit to SHA eRx after save
-                            {% if sha_claim_ready %}
-                            <span style="font-weight:500; color:#065f46;">(consent ready)</span>
-                            {% else %}
-                            <span style="font-weight:500; color:#9a3412;">(needs Claims Desk OTP / start visit)</span>
-                            {% endif %}
-                        </label>
-                    </div>
-                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">Select Diagnosis to Proceed</h3>
+                <p style="font-size: 0.82rem; color: #64748b; margin: 0 auto; max-width: 460px; line-height: 1.5;">
+                    Please search and select a clinical diagnosis (ICD-11) above. Once a diagnosis is selected, the medication composer and prescribing forms will appear.
+                </p>
             </div>
 
-            <div class="rx-split">
-                <div class="rx-card rx-consumables-sticky">
-                    <div class="rx-card-head">
-                        <h2 class="rx-card-title">
-                            <span class="rx-icon rx-icon-amber"><i class="fas fa-box-open"></i></span>
-                            Dispense consumables
-                        </h2>
-                    </div>
-                    <div class="rx-panel">
-                        <p class="rx-panel-hint">
-                            <i class="fas fa-info-circle"></i>
-                            Optional items (e.g. syringes, cannulas).
-                        </p>
-                        {% if user.role == 'Nurse' %}
-                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Mini Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
-                        {% else %}
-                        {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
-                        {% endif %}
-                    </div>
-                </div>
-
+            <div id="rx-dependent-sections" class="space-y-6" style="margin-top: 1.5rem;">
+                <!-- Electronic prescribing clinical context -->
                 <div class="rx-card">
                     <div class="rx-card-head">
                         <h2 class="rx-card-title">
-                            <span class="rx-icon rx-icon-teal"><i class="fas fa-pills"></i></span>
-                            Medications
+                            <span class="rx-icon" style="background:#ecfdf5;color:#065f46;"><i class="fas fa-file-medical"></i></span>
+                            eRx clinical package
                         </h2>
+                        <span style="font-size:0.7rem;color:#64748b;">Problem List · Medication List</span>
                     </div>
+                    <div style="padding:0 1.25rem 1.25rem; display:grid; gap:1rem;">
+                        <p style="font-size:0.75rem; color:#64748b; margin:0; line-height:1.45;">
+                            Electronic prescribing packages these with your drug orders. DHA <code>/prescriptions</code> transmits HPT medication items;
+                            problem list and active meds are snapshotted into the eRx package for continuity.
+                            Order lab / imaging from the patient visit <strong>Clinical Next Action</strong> or Diagnostics tab — not here.
+                        </p>
 
-                    <div class="rx-med-table-wrap">
-                        <table class="rx-med-table" id="meds-table">
-                            <thead>
-                                <tr>
-                                    <th>Drug</th>
-                                    <th>Dose</th>
-                                    <th>Frequency</th>
-                                    <th>Days</th>
-                                    <th>Qty</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="meds-table-body"></tbody>
-                        </table>
-                        <p class="rx-meds-empty" id="meds-empty">No medicines added yet</p>
-                    </div>
-
-                    {{ formset.management_form }}
-                    <div id="medication-formset-store"></div>
-                    <div id="medication-formset" class="rx-composer">
-                        <div class="rx-card-head" style="margin-bottom: 0.85rem;">
-                            <h3 class="rx-card-title" style="font-size: 0.875rem;">
-                                <span class="rx-icon rx-icon-teal" style="width:28px;height:28px;font-size:0.75rem;"><i class="fas fa-plus"></i></span>
-                                Add medicine
-                            </h3>
-                        </div>
-                        {% for form in formset %}
-                        <div class="medication-entry rx-med" data-form-index="{{ forloop.counter0 }}" style="background:transparent;border:none;padding:0;margin:0;">
-                            <div class="medication-header rx-med-header" style="display:none;">
-                                <div class="flex items-center">
-                                    <span class="med-badge rx-med-badge">Drug #{{ forloop.counter }}</span>
-                                </div>
-                                <button type="button" class="remove-btn rx-remove" onclick="removeMedication(this)" title="Remove drug" style="display:none;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
+                                <i class="fas fa-notes-medical"></i> Problem List
+                                <a href="{% url 'home:patient_detail' patient.pk %}" style="font-weight:500; margin-left:0.35rem;">Manage on profile</a>
                             </div>
-
-                            <div class="rx-grid">
-                                <div class="rx-span-4 search-container relative">
-                                    <label class="rx-label">Drug name *</label>
-                                    {{ form.medication }}
-                                    {{ form.generic_concept_code }}
-                                    {{ form.generic_concept_display }}
-                                    <div class="med-details-hint"></div>
-                                    <div class="whole-dispense-notice">
-                                        <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
-                                        <p class="text-[11px] font-semibold text-amber-900 leading-snug">Note: This item is usually prescribed as a whole package.</p>
-                                    </div>
-                                    <div class="rx-dha-panel" hidden>
-                                        <div class="rx-dha-head">
-                                            <span class="rx-dha-title">DHA terminology</span>
-                                            <span class="rx-dha-status"></span>
-                                        </div>
-                                        <div class="rx-dha-selected"></div>
-                                        <div class="rx-dha-results"></div>
-                                        <div class="rx-dha-manual">
-                                            <input type="text" class="dha-manual-search" placeholder="Search DHA generic product…" autocomplete="off">
-                                        </div>
-                                        <div class="rx-dha-actions">
-                                            <button type="button" class="dha-change-btn" hidden>Change</button>
-                                            <button type="button" class="dha-manual-btn" hidden>Search DHA</button>
-                                            <button type="button" class="dha-clear-btn" hidden>Clear</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="rx-label">Units / dose *</label>
-                                    <div class="flex gap-2">
-                                        {{ form.dose_count }}
-                                        <div class="dose-unit-container hidden w-1/2">
-                                            {{ form.dose_unit }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="rx-label">Frequency *</label>
-                                    {{ form.frequency }}
-                                </div>
-                                <div>
-                                    <label class="rx-label">Days *</label>
-                                    {{ form.number_of_days }}
-                                </div>
-                                <div>
-                                    <label class="rx-label">Total quantity *</label>
-                                    {{ form.quantity }}
-                                </div>
-                                <div class="rx-span-4">
-                                    <label class="rx-label">Specific instructions</label>
-                                    {{ form.instructions }}
-                                </div>
+                            {% if erx_active_problems %}
+                            <div style="display:flex; flex-direction:column; gap:0.35rem; max-height:140px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:0.5rem;">
+                                {% for p in erx_active_problems %}
+                                <label style="display:flex; gap:0.5rem; align-items:flex-start; font-size:0.8rem; cursor:pointer;">
+                                    <input type="checkbox" name="erx_problem_ids" value="{{ p.pk }}" checked style="margin-top:0.2rem;">
+                                    <span>{{ p.display }}{% if p.icd11_code %} <strong style="color:#3730a3;">[{{ p.icd11_code }}]</strong>{% endif %}</span>
+                                </label>
+                                {% endfor %}
                             </div>
-                            <div class="hidden">{{ form.DELETE }}</div>
+                            {% else %}
+                            <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active problems — add on patient profile before prescribing when possible.</p>
+                            {% endif %}
                         </div>
-                        {% endfor %}
-                        <div class="rx-composer-actions">
-                            <button type="button" class="rx-btn rx-btn-primary" onclick="commitMedication()">
-                                <i class="fas fa-plus"></i>
-                                Add to list
-                            </button>
+
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:700; color:#334155; margin-bottom:0.45rem;">
+                                <i class="fas fa-pills"></i> Medication Lists (active)
+                            </div>
+                            <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; margin-bottom:0.45rem;">
+                                <input type="checkbox" name="erx_include_medication_list" value="1" checked>
+                                Include Active Medication List in eRx package
+                            </label>
+                            {% if erx_active_medications %}
+                            <ul style="margin:0; padding-left:1.1rem; font-size:0.8rem; color:#475569; max-height:120px; overflow-y:auto;">
+                                {% for m in erx_active_medications %}
+                                <li>{{ m.display_name }}{% if m.generic_concept_code %} [{{ m.generic_concept_code }}]{% endif %}{% if m.dose_text or m.frequency %} — {{ m.dose_text }} {{ m.frequency }}{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p style="font-size:0.8rem; color:#94a3b8; margin:0;">No active meds yet — this Rx will sync into the list on save.</p>
+                            {% endif %}
+                        </div>
+
+                        <div style="border-top:1px solid #e5eaf0; padding-top:0.85rem;">
+                            <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem; font-weight:600;">
+                                <input type="checkbox" name="transmit_erx" value="1" {% if sha_claim_ready %}checked{% endif %}>
+                                Electronically transmit to SHA eRx after save
+                                {% if sha_claim_ready %}
+                                <span style="font-weight:500; color:#065f46;">(consent ready)</span>
+                                {% else %}
+                                <span style="font-weight:500; color:#9a3412;">(needs Claims Desk OTP / start visit)</span>
+                                {% endif %}
+                            </label>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="rx-actions">
-                <button type="submit" name="action" value="prescribe" class="rx-btn rx-btn-primary prescribe-submit-btn">
-                    <i class="fas fa-check prescribe-submit-icon"></i>
-                    <span class="prescribe-submit-label">Prescribe</span>
-                </button>
+                <div class="rx-split">
+                    <div class="rx-card rx-consumables-sticky">
+                        <div class="rx-card-head">
+                            <h2 class="rx-card-title">
+                                <span class="rx-icon rx-icon-amber"><i class="fas fa-box-open"></i></span>
+                                Dispense consumables
+                            </h2>
+                        </div>
+                        <div class="rx-panel">
+                            <p class="rx-panel-hint">
+                                <i class="fas fa-info-circle"></i>
+                                Optional items (e.g. syringes, cannulas).
+                            </p>
+                            {% if user.role == 'Nurse' %}
+                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Mini Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
+                            {% else %}
+                            {% include 'inventory/partials/dispense_widget.html' with patient=patient visit=visit allowed_departments="Pharmacy" exclude_pharmaceuticals="true" free_dispense="true" %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="rx-card">
+                        <div class="rx-card-head">
+                            <h2 class="rx-card-title">
+                                <span class="rx-icon rx-icon-teal"><i class="fas fa-pills"></i></span>
+                                Medications
+                            </h2>
+                        </div>
+
+                        <div class="rx-med-table-wrap">
+                            <table class="rx-med-table" id="meds-table">
+                                <thead>
+                                    <tr>
+                                        <th>Drug</th>
+                                        <th>Dose</th>
+                                        <th>Frequency</th>
+                                        <th>Days</th>
+                                        <th>Qty</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="meds-table-body"></tbody>
+                            </table>
+                            <p class="rx-meds-empty" id="meds-empty">No medicines added yet</p>
+                        </div>
+
+                        {{ formset.management_form }}
+                        <div id="medication-formset-store"></div>
+                        <div id="medication-formset" class="rx-composer">
+                            <div class="rx-card-head" style="margin-bottom: 0.85rem;">
+                                <h3 class="rx-card-title" style="font-size: 0.875rem;">
+                                    <span class="rx-icon rx-icon-teal" style="width:28px;height:28px;font-size:0.75rem;"><i class="fas fa-plus"></i></span>
+                                    Add medicine
+                                </h3>
+                            </div>
+                            {% for form in formset %}
+                            <div class="medication-entry rx-med" data-form-index="{{ forloop.counter0 }}" style="background:transparent;border:none;padding:0;margin:0;">
+                                <div class="medication-header rx-med-header" style="display:none;">
+                                    <div class="flex items-center">
+                                        <span class="med-badge rx-med-badge">Drug #{{ forloop.counter }}</span>
+                                    </div>
+                                    <button type="button" class="remove-btn rx-remove" onclick="removeMedication(this)" title="Remove drug" style="display:none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+
+                                <div class="rx-grid">
+                                    <div class="rx-span-4 search-container relative">
+                                        <label class="rx-label">Drug name *</label>
+                                        {{ form.medication }}
+                                        {{ form.generic_concept_code }}
+                                        {{ form.generic_concept_display }}
+                                        <div class="med-details-hint"></div>
+                                        <div class="whole-dispense-notice">
+                                            <i class="fas fa-info-circle text-amber-500 text-xs mt-0.5"></i>
+                                            <p class="text-[11px] font-semibold text-amber-900 leading-snug">Note: This item is usually prescribed as a whole package.</p>
+                                        </div>
+                                        <div class="rx-dha-panel" hidden>
+                                            <div class="rx-dha-head">
+                                                <span class="rx-dha-title">DHA terminology</span>
+                                                <span class="rx-dha-status"></span>
+                                            </div>
+                                            <div class="rx-dha-selected"></div>
+                                            <div class="rx-dha-results"></div>
+                                            <div class="rx-dha-manual">
+                                                <input type="text" class="dha-manual-search" placeholder="Search DHA generic product…" autocomplete="off">
+                                            </div>
+                                            <div class="rx-dha-actions">
+                                                <button type="button" class="dha-change-btn" hidden>Change</button>
+                                                <button type="button" class="dha-manual-btn" hidden>Search DHA</button>
+                                                <button type="button" class="dha-clear-btn" hidden>Clear</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="rx-label">Units / dose *</label>
+                                        <div class="flex gap-2">
+                                            {{ form.dose_count }}
+                                            <div class="dose-unit-container hidden w-1/2">
+                                                {{ form.dose_unit }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="rx-label">Frequency *</label>
+                                        {{ form.frequency }}
+                                    </div>
+                                    <div>
+                                        <label class="rx-label">Days *</label>
+                                        {{ form.number_of_days }}
+                                    </div>
+                                    <div>
+                                        <label class="rx-label">Total quantity *</label>
+                                        {{ form.quantity }}
+                                    </div>
+                                    <div class="rx-span-4">
+                                        <label class="rx-label">Specific instructions</label>
+                                        {{ form.instructions }}
+                                    </div>
+                                </div>
+                                <div class="hidden">{{ form.DELETE }}</div>
+                            </div>
+                            {% endfor %}
+                            <div class="rx-composer-actions">
+                                <button type="button" class="rx-btn rx-btn-primary" onclick="commitMedication()">
+                                    <i class="fas fa-plus"></i>
+                                    Add to list
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rx-actions">
+                    <button type="submit" name="action" value="prescribe" class="rx-btn rx-btn-primary prescribe-submit-btn">
+                        <i class="fas fa-check prescribe-submit-icon"></i>
+                        <span class="prescribe-submit-label">Prescribe</span>
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -959,6 +1091,220 @@ const HPT_SEARCH_URL = "{% url 'home:hpt_search_api' %}";
 const HPT_SUGGEST_ENABLED = {{ hpt_suggest_enabled|yesno:"true,false" }};
 const HPT_REQUIRE_CODE = {{ hpt_require_code|yesno:"true,false" }};
 const CDS_CHECK_URL = "{{ cds_check_url|default:'' }}?visit_id={{ visit.pk }}";
+const SHA_PREAUTH_CHECK_URL = "{{ sha_preauth_check_url|default:'' }}";
+const SHA_VISIT_BILLED = {{ sha_visit_billed|yesno:"true,false" }};
+const SHA_VISIT_ID = "{{ visit.pk }}";
+let shaRxPreauthTimer = null;
+let shaPreauthInFlight = null;
+let shaPreauthPendingSubmit = false;
+
+function collectRxMedicationIds() {
+    const ids = [];
+    document.querySelectorAll('input[name$="-medication"], select[name$="-medication"]').forEach(function (el) {
+        const entry = el.closest('.medication-entry');
+        if (entry) {
+            const del = entry.querySelector('input[name$="-DELETE"]');
+            if (del && del.checked) return;
+            if (!entry.classList.contains('is-committed') && entry.parentElement && entry.parentElement.id === 'medication-formset') {
+                // composer not yet committed — still include if value set
+            }
+        }
+        if (el.value && ids.indexOf(el.value) === -1) ids.push(el.value);
+    });
+    return ids;
+}
+
+function showShaPreauthModalLoading(title, subtitle) {
+    const modal = document.getElementById('sha-preauth-modal');
+    const loading = document.getElementById('sha-preauth-modal-loading');
+    const result = document.getElementById('sha-preauth-modal-result');
+    if (!modal || !loading || !result) return;
+    document.getElementById('sha-preauth-modal-title').textContent = title || 'Checking SHA pre-authorization…';
+    document.getElementById('sha-preauth-modal-subtitle').textContent = subtitle || 'Looking up intervention coverage. Please wait.';
+    loading.hidden = false;
+    result.hidden = true;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function hideShaPreauthModal() {
+    const modal = document.getElementById('sha-preauth-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    shaPreauthPendingSubmit = false;
+}
+
+function showShaPreauthModalResult(payload) {
+    const modal = document.getElementById('sha-preauth-modal');
+    const loading = document.getElementById('sha-preauth-modal-loading');
+    const result = document.getElementById('sha-preauth-modal-result');
+    const icon = document.getElementById('sha-preauth-modal-result-icon');
+    const title = document.getElementById('sha-preauth-modal-result-title');
+    const msg = document.getElementById('sha-preauth-modal-result-msg');
+    const list = document.getElementById('sha-preauth-modal-result-list');
+    const desk = document.getElementById('sha-preauth-modal-desk');
+    const closeBtn = document.getElementById('sha-preauth-modal-close');
+    const continueBtn = document.getElementById('sha-preauth-modal-continue');
+    if (!modal || !result) return;
+
+    const needing = payload.needing || [];
+    const ok = payload.ok;
+    const error = payload.error;
+
+    loading.hidden = true;
+    result.hidden = false;
+    icon.className = 'sha-preauth-modal__result-icon ' + (error ? 'is-err' : (needing.length ? 'is-warn' : 'is-ok'));
+    icon.textContent = error ? '!' : (needing.length ? '!' : '✓');
+    title.textContent = error
+        ? 'Could not verify preauth'
+        : (needing.length ? 'SHA pre-authorization required' : 'No preauth required');
+    msg.textContent = error
+        ? error
+        : (needing.length
+            ? 'Inform the patient before prescribing. SHA may not pay until preauth is approved.'
+            : 'Selected medicines do not require SHA pre-authorization for this visit.');
+    list.innerHTML = needing.map(function (row) {
+        const code = row.intervention_code ? ' [' + row.intervention_code + ']' : '';
+        const elective = row.needs_manual_preauth_approval ? ' (elective)' : '';
+        return '<li><strong>' + (row.label || '') + '</strong>' + code + elective + '</li>';
+    }).join('');
+    list.style.display = needing.length ? '' : 'none';
+
+    if (desk) {
+        if (needing.length) {
+            desk.hidden = false;
+        } else {
+            desk.hidden = true;
+        }
+    }
+    if (closeBtn) {
+        closeBtn.hidden = !!shaPreauthPendingSubmit && needing.length === 0;
+        closeBtn.textContent = needing.length ? 'Got it — inform patient' : 'Close';
+    }
+    if (continueBtn) {
+        continueBtn.hidden = !shaPreauthPendingSubmit;
+        continueBtn.textContent = needing.length ? 'Inform patient & prescribe anyway' : 'Continue prescribe';
+    }
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function applyShaPreauthBanner(needing) {
+    const box = document.getElementById('sha-preauth-rx-banner');
+    const list = document.getElementById('sha-preauth-rx-list');
+    const desk = document.getElementById('sha-preauth-rx-desk');
+    if (!box || !list) return;
+    if (!needing.length) {
+        box.classList.add('hidden');
+        list.innerHTML = '';
+        if (desk) desk.classList.add('hidden');
+        return;
+    }
+    list.innerHTML = needing.map(function (row) {
+        const code = row.intervention_code ? ' [' + row.intervention_code + ']' : '';
+        const elective = row.needs_manual_preauth_approval ? ' (elective)' : '';
+        return '<li><strong>' + (row.label || '') + '</strong>' + code + elective
+            + ' — inform patient: SHA preauth required.</li>';
+    }).join('');
+    box.classList.remove('hidden');
+    if (desk) {
+        desk.classList.remove('hidden');
+        desk.style.display = 'inline-block';
+    }
+}
+
+async function runShaPreauthCheck(options) {
+    const opts = options || {};
+    const showModal = opts.showModal !== false;
+    const medIds = collectRxMedicationIds();
+
+    if (!SHA_VISIT_BILLED || !SHA_PREAUTH_CHECK_URL) {
+        return { ok: true, needing: [], skipped: true };
+    }
+    if (!medIds.length) {
+        applyShaPreauthBanner([]);
+        return { ok: true, needing: [], empty: true };
+    }
+
+    if (shaPreauthInFlight) {
+        try { await shaPreauthInFlight; } catch (e) { /* ignore */ }
+    }
+
+    if (showModal) {
+        showShaPreauthModalLoading(
+            'Checking SHA pre-authorization…',
+            'Verifying ' + medIds.length + ' medicine(s) against SHA intervention coverage.'
+        );
+    }
+
+    const run = (async function () {
+        const params = new URLSearchParams();
+        params.set('visit_id', SHA_VISIT_ID);
+        medIds.forEach(id => params.append('inventory_ids', id));
+        const res = await fetch(SHA_PREAUTH_CHECK_URL + '?' + params.toString(), {
+            headers: { 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Preauth check failed');
+        }
+        const needing = data.inform_patient || [];
+        applyShaPreauthBanner(needing);
+        return { ok: true, needing: needing, data: data };
+    })();
+
+    shaPreauthInFlight = run;
+    try {
+        const result = await run;
+        if (showModal) {
+            showShaPreauthModalResult(result);
+        } else {
+            hideShaPreauthModal();
+        }
+        return result;
+    } catch (err) {
+        const payload = { ok: false, needing: [], error: String(err && err.message ? err.message : err) };
+        if (showModal) {
+            showShaPreauthModalResult(payload);
+        } else {
+            hideShaPreauthModal();
+        }
+        return payload;
+    } finally {
+        shaPreauthInFlight = null;
+    }
+}
+
+function refreshShaPreauthRxAdvisory(options) {
+    const opts = options || {};
+    clearTimeout(shaRxPreauthTimer);
+    shaRxPreauthTimer = setTimeout(function () {
+        runShaPreauthCheck({ showModal: !!opts.showModal });
+    }, opts.immediate ? 0 : 200);
+}
+
+document.getElementById('sha-preauth-modal-close')?.addEventListener('click', function () {
+    hideShaPreauthModal();
+});
+document.getElementById('sha-preauth-modal-continue')?.addEventListener('click', function () {
+    hideShaPreauthModal();
+    const form = document.getElementById('prescription-form');
+    if (form && shaPreauthPendingSubmit) {
+        shaPreauthPendingSubmit = false;
+        form.dataset.shaPreauthDone = '1';
+        form.requestSubmit(form.querySelector('.prescribe-submit-btn'));
+    }
+});
+document.querySelector('#sha-preauth-modal .sha-preauth-modal__backdrop')?.addEventListener('click', function () {
+    if (!shaPreauthPendingSubmit) hideShaPreauthModal();
+});
+
+document.addEventListener('change', function (e) {
+    if (e.target && e.target.name && String(e.target.name).endsWith('-medication')) {
+        refreshShaPreauthRxAdvisory({ showModal: false });
+    }
+});
 
 async function runCdsMedicationCheck(payload) {
     const box = document.getElementById('cds-live-check');
@@ -1029,6 +1375,48 @@ function clearDhaSelection(entry) {
     if (dha.clearBtn) dha.clearBtn.hidden = true;
 }
 
+async function checkDrugPreauth(entry, medId) {
+    if (!SHA_VISIT_BILLED || !SHA_PREAUTH_CHECK_URL || !medId) return;
+    const dha = getDhaFields(entry);
+    if (!dha.panel) return;
+
+    let preauthBox = dha.panel.querySelector('.rx-drug-preauth-status');
+    if (!preauthBox) {
+        preauthBox = document.createElement('div');
+        preauthBox.className = 'rx-drug-preauth-status';
+        dha.panel.appendChild(preauthBox);
+    }
+    preauthBox.innerHTML = '<div style="font-size:0.72rem; color:#64748b; margin-top:0.35rem;"><i class="fas fa-spinner fa-spin"></i> Checking SHA pre-authorization status...</div>';
+
+    try {
+        const params = new URLSearchParams({ visit_id: SHA_VISIT_ID, inventory_ids: medId });
+        const resp = await fetch(`${SHA_PREAUTH_CHECK_URL}?${params.toString()}`, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        });
+        const data = await resp.json();
+        const needing = (data && data.inform_patient) || [];
+        if (needing.length) {
+            const row = needing[0];
+            preauthBox.innerHTML = `
+                <div style="margin-top:0.45rem; padding:0.45rem 0.65rem; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; font-size:0.75rem; color:#92400e; font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                    <i class="fas fa-exclamation-triangle" style="color:#d97706; font-size:0.85rem;"></i>
+                    <span>SHA Pre-authorization Required: <code>${row.intervention_code || 'Benefit Approval'}</code>${row.needs_manual_preauth_approval ? ' (Elective)' : ''}</span>
+                </div>
+            `;
+        } else {
+            preauthBox.innerHTML = `
+                <div style="margin-top:0.45rem; padding:0.35rem 0.65rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; font-size:0.74rem; color:#166534; font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                    <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+                    <span>Covered under standard SHA benefit (No pre-authorization needed)</span>
+                </div>
+            `;
+        }
+    } catch (e) {
+        preauthBox.innerHTML = '';
+    }
+}
+
 function setDhaSelection(entry, item) {
     const dha = getDhaFields(entry);
     if (!dha.code || !item) return;
@@ -1037,16 +1425,23 @@ function setDhaSelection(entry, item) {
     dha.panel.hidden = false;
     dha.panel.classList.remove('is-loading', 'is-warn', 'is-error');
     dha.panel.classList.add('is-ok');
-    dha.status.textContent = 'Matched';
-    dha.selected.innerHTML = `<code>${item.code || ''}</code>${item.title || ''}`;
+    dha.status.innerHTML = '<span style="color:#059669; font-weight:700; font-size:0.75rem;"><i class="fas fa-check-circle"></i> Exists in DHA Terminology</span>';
+    dha.selected.innerHTML = `<code>${item.code || ''}</code><strong>${item.title || ''}</strong>`;
     dha.results.classList.remove('is-open');
     dha.results.innerHTML = '';
     dha.manual.classList.remove('is-open');
     dha.changeBtn.hidden = false;
     dha.manualBtn.hidden = false;
     dha.clearBtn.hidden = false;
+
     const select = entry.querySelector('select[name$="-medication"]');
     const meta = select && medMetadata[select.value] ? medMetadata[select.value] : {};
+    
+    // Check if preauthorization is needed for this drug on SHA visits
+    if (select && select.value) {
+        checkDrugPreauth(entry, select.value);
+    }
+
     runCdsMedicationCheck({
         name: meta.name || item.title || '',
         generic_concept_code: item.code || '',
@@ -1061,15 +1456,18 @@ function showDhaChoices(entry, results, message, stateClass) {
     dha.panel.hidden = false;
     dha.panel.classList.remove('is-loading', 'is-ok', 'is-warn', 'is-error');
     dha.panel.classList.add(stateClass || 'is-warn');
-    dha.status.textContent = message || 'Select a DHA code';
+    dha.status.innerHTML = `<span style="font-weight:700; font-size:0.75rem;">${message || 'Select a DHA code'}</span>`;
     dha.selected.innerHTML = '';
     dha.results.innerHTML = '';
+    const preauthBox = dha.panel.querySelector('.rx-drug-preauth-status');
+    if (preauthBox) preauthBox.innerHTML = '';
+
     (results || []).slice(0, 20).forEach((item) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'rx-dha-item';
         btn.innerHTML = `
-            <div class="rx-dha-item-code">${item.code || ''}</div>
+            <div class="rx-dha-item-code"><i class="fas fa-check" style="margin-right:0.25rem;"></i>${item.code || ''}</div>
             <div class="rx-dha-item-title">${item.title || ''}</div>
         `;
         btn.addEventListener('click', () => setDhaSelection(entry, item));
@@ -1091,30 +1489,23 @@ async function resolveDhaMedication(entry) {
     }
     const data = medMetadata[select.value] || {};
 
-    // Prefer inventory master GE* code when already standardized
-    if (data.generic_concept_code) {
-        setDhaSelection(entry, {
-            code: data.generic_concept_code,
-            title: data.generic_concept_display || data.name || '',
-        });
-        dha.status.textContent = 'From inventory master';
-        return;
-    }
-
     dha.panel.hidden = false;
     dha.panel.classList.remove('is-ok', 'is-warn', 'is-error');
     dha.panel.classList.add('is-loading');
-    dha.status.textContent = 'Checking with DHA…';
+    dha.status.innerHTML = '<span style="color:#2563eb; font-weight:700; font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Checking DHA Terminology...</span>';
     dha.selected.innerHTML = '';
     dha.results.classList.remove('is-open');
     dha.changeBtn.hidden = true;
     dha.manualBtn.hidden = true;
     dha.clearBtn.hidden = true;
+    const preauthBox = dha.panel.querySelector('.rx-drug-preauth-status');
+    if (preauthBox) preauthBox.innerHTML = '';
 
     const params = new URLSearchParams({
         name: data.name || '',
         generic_name: data.generic_name || '',
         formulation: data.formulation || '',
+        code: data.generic_concept_code || '',
     });
     try {
         const resp = await fetch(`${HPT_SUGGEST_URL}?${params.toString()}`, {
@@ -1123,23 +1514,81 @@ async function resolveDhaMedication(entry) {
         });
         const payload = await resp.json();
         if (!payload.success) {
-            showDhaChoices(entry, [], payload.message || payload.error || 'DHA unavailable', 'is-error');
+            showDhaChoices(entry, [], payload.message || payload.error || 'DHA Terminology unavailable', 'is-error');
             dha.manualBtn.hidden = false;
+            return;
+        }
+        if (payload.code_verified && payload.suggested) {
+            setDhaSelection(entry, payload.suggested);
             return;
         }
         if (payload.auto_selected && payload.suggested) {
             setDhaSelection(entry, payload.suggested);
-            dha.status.textContent = 'Auto-matched';
             return;
         }
         if ((payload.results || []).length) {
-            showDhaChoices(entry, payload.results, payload.message || 'Choose DHA product', 'is-warn');
+            showDhaChoices(entry, payload.results, `Found ${payload.results.length} DHA match(es) — select matching concept`, 'is-warn');
             return;
         }
-        showDhaChoices(entry, [], payload.message || 'No DHA match', 'is-warn');
+
+        // Not found in DHA Terminology
+        if (SHA_VISIT_BILLED) {
+            dha.panel.classList.remove('is-ok', 'is-warn', 'is-loading');
+            dha.panel.classList.add('is-error');
+            dha.status.innerHTML = '<span style="color:#b91c1c; font-weight:800; font-size:0.75rem;"><i class="fas fa-ban"></i> NOT ALLOWED FOR SHA: Drug not found in DHA Terminology</span>';
+            dha.selected.innerHTML = '<div style="color:#b91c1c; font-size:0.78rem; font-weight:700; padding:0.4rem 0; line-height:1.4;"><i class="fas fa-exclamation-circle"></i> This medication cannot be prescribed for a SHA visit because it does not exist in DHA Terminology.</div>';
+            if (dha.code) dha.code.value = '';
+            if (dha.display) dha.display.value = '';
+            dha.manualBtn.hidden = false;
+            dha.manual.classList.add('is-open');
+            return;
+        }
+
+        showDhaChoices(entry, [], payload.message || 'No matching concept in DHA Terminology', 'is-error');
+        dha.manual.classList.add('is-open');
     } catch (err) {
-        showDhaChoices(entry, [], 'Could not reach DHA terminology', 'is-error');
+        showDhaChoices(entry, [], 'Could not reach DHA terminology service', 'is-error');
         dha.manualBtn.hidden = false;
+    }
+}
+
+function clearMedicationSelection(entry) {
+    if (!entry) return;
+    const select = entry.querySelector('select[name$="-medication"]');
+    const searchInput = entry.querySelector('.med-search-input');
+    const clearBtn = entry.querySelector('.med-search-clear-btn');
+    const hintDiv = entry.querySelector('.med-details-hint');
+    const resultsDiv = entry.querySelector('.med-search-results');
+
+    if (select) {
+        select.value = '';
+        select.setCustomValidity('');
+    }
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    if (clearBtn) {
+        clearBtn.classList.add('hidden');
+    }
+    if (resultsDiv) {
+        resultsDiv.classList.add('hidden');
+    }
+    if (hintDiv) {
+        hintDiv.innerHTML = '';
+    }
+
+    hideWholeDispenseNotice(entry);
+    clearDhaSelection(entry);
+
+    const quantityInput = entry.querySelector('input[name$="-quantity"]');
+    if (quantityInput) {
+        quantityInput.value = '';
+        quantityInput.setCustomValidity('');
+        quantityInput.classList.remove('border-rose-500', 'focus:border-rose-500', 'bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+    }
+
+    if (searchInput) {
+        searchInput.focus();
     }
 }
 
@@ -1156,7 +1605,9 @@ function initDhaPanel(entry) {
         });
     }
     if (dha.clearBtn) {
-        dha.clearBtn.addEventListener('click', () => clearDhaSelection(entry));
+        dha.clearBtn.addEventListener('click', () => {
+            clearMedicationSelection(entry);
+        });
     }
     if (dha.manualBtn) {
         dha.manualBtn.addEventListener('click', () => {
@@ -1200,19 +1651,42 @@ function initializeSearchWidget(entry) {
     select.classList.add('hidden');
 
     if (!container.querySelector('.med-search-input')) {
+        const wrap = document.createElement('div');
+        wrap.className = 'med-search-input-wrap relative flex items-center w-full';
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.className = 'med-search-input';
+        searchInput.className = 'med-search-input w-full pr-8';
         searchInput.placeholder = 'Search by name, generic, or class…';
 
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'med-search-clear-btn absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-600 transition-colors hidden text-sm p-1';
+        clearBtn.title = 'Clear selection';
+        clearBtn.innerHTML = '<i class="fas fa-times-circle"></i>';
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearMedicationSelection(entry);
+        });
+
         const resultsDiv = document.createElement('div');
-        resultsDiv.className = 'med-search-results absolute z-50 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-xl mt-2 max-h-60 overflow-y-auto hidden';
+        resultsDiv.className = 'med-search-results absolute z-50 left-0 right-0 top-full bg-white border border-slate-200 rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto hidden';
 
-        container.insertBefore(searchInput, select);
-        container.appendChild(resultsDiv);
+        wrap.appendChild(searchInput);
+        wrap.appendChild(clearBtn);
+        wrap.appendChild(resultsDiv);
 
-        searchInput.addEventListener('input', (e) => handleSearch(e, resultsDiv, select));
-        searchInput.addEventListener('focus', (e) => handleSearch(e, resultsDiv, select));
+        container.insertBefore(wrap, select);
+
+        searchInput.addEventListener('input', (e) => {
+            if (e.target.value) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+            handleSearch(e, resultsDiv, select);
+        });
+        searchInput.addEventListener('focus', (e) => {
+            if (e.target.value) clearBtn.classList.remove('hidden');
+            handleSearch(e, resultsDiv, select);
+        });
 
         document.addEventListener('click', (e) => {
             if (!container.contains(e.target)) {
@@ -1222,6 +1696,7 @@ function initializeSearchWidget(entry) {
 
         if (select.value && medMetadata[select.value]) {
             searchInput.value = medMetadata[select.value].name;
+            clearBtn.classList.remove('hidden');
             updateMedDetails(select);
         }
     }
@@ -1229,6 +1704,7 @@ function initializeSearchWidget(entry) {
 }
 
 function handleSearch(e, resultsDiv, select) {
+    const entry = select.closest('.medication-entry');
     const query = e.target.value.toLowerCase();
     resultsDiv.innerHTML = '';
     resultsDiv.classList.remove('hidden');
@@ -1249,13 +1725,18 @@ function handleSearch(e, resultsDiv, select) {
         const itemDiv = document.createElement('div');
         itemDiv.className = `p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex justify-between items-center ${isOutOfStock && data.visit_type === 'OUT-PATIENT' ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`;
 
+        const dhaBadge = data.generic_concept_code
+            ? `<span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 inline-flex items-center gap-1"><i class="fas fa-check-circle text-emerald-600"></i>DHA: ${data.generic_concept_code}</span>`
+            : `<span class="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded inline-flex items-center gap-1"><i class="fas fa-search text-slate-400"></i>Check DHA</span>`;
+
         itemDiv.innerHTML = `
             <div>
-                <div class="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                <div class="font-semibold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
                     ${data.name}
                     ${data.is_dispensed_as_whole ? '<span class="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Whole unit</span>' : ''}
+                    ${dhaBadge}
                 </div>
-                <div class="flex gap-2 mt-1">
+                <div class="flex gap-2 mt-1 flex-wrap">
                     ${data.generic_name ? `<span class="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">${data.generic_name}</span>` : ''}
                     ${data.drug_class ? `<span class="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${data.drug_class}</span>` : ''}
                 </div>
@@ -1271,7 +1752,10 @@ function handleSearch(e, resultsDiv, select) {
         if (!isOutOfStock || data.visit_type !== 'OUT-PATIENT') {
             itemDiv.addEventListener('click', () => {
                 select.value = id;
-                e.target.value = data.name;
+                const searchInput = entry.querySelector('.med-search-input');
+                if (searchInput) searchInput.value = data.name;
+                const clearBtn = entry.querySelector('.med-search-clear-btn');
+                if (clearBtn) clearBtn.classList.remove('hidden');
                 resultsDiv.classList.add('hidden');
                 updateMedDetails(select);
                 select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1373,6 +1857,7 @@ function showWholeDispenseNotice(entry, data) {
 function updateMedDetails(select) {
     const entry = select.closest('.medication-entry');
     const hintDiv = entry.querySelector('.med-details-hint');
+    const clearBtn = entry.querySelector('.med-search-clear-btn');
     const drugId = select.value;
     const data = medMetadata[drugId];
     const quantityInput = entry.querySelector('input[name$="-quantity"]');
@@ -1382,10 +1867,12 @@ function updateMedDetails(select) {
 
     hintDiv.innerHTML = '';
     if (!drugId || !data) {
+        if (clearBtn) clearBtn.classList.add('hidden');
         hideWholeDispenseNotice(entry);
         clearDhaSelection(entry);
         return;
     }
+    if (clearBtn) clearBtn.classList.remove('hidden');
 
     if (data.generic_name) {
         const gBadge = document.createElement('span');
@@ -1521,18 +2008,18 @@ function refreshMedsTable() {
         const doseText = `${dose.value || '—'}${unitPart}`;
         const freqText = freq.options[freq.selectedIndex] ? freq.options[freq.selectedIndex].text : (freq.value || '—');
         const dhaMeta = dhaCode && dhaCode.value
-            ? `${dhaCode.value}${dhaDisplay && dhaDisplay.value ? ' · ' + dhaDisplay.value : ''}`
-            : '';
+            ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle text-emerald-600"></i>DHA: ${dhaCode.value}${dhaDisplay && dhaDisplay.value ? ' · ' + dhaDisplay.value : ''}</span>`
+            : '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200"><i class="fas fa-exclamation-triangle text-amber-500"></i>No DHA Code</span>';
 
         const tr = document.createElement('tr');
         tr.dataset.entryId = entry.dataset.entryKey || '';
         tr.innerHTML = `
             <td>
-                <div class="drug-name">${data.name || select.options[select.selectedIndex]?.text || 'Medicine'}</div>
-                <div class="drug-meta">${[
-                    data.generic_name || '',
+                <div class="drug-name font-bold text-slate-800">${data.name || select.options[select.selectedIndex]?.text || 'Medicine'}</div>
+                <div class="drug-meta flex flex-wrap gap-1.5 items-center mt-0.5">${[
+                    data.generic_name ? `<span class="text-xs text-indigo-600 font-medium">${data.generic_name}</span>` : '',
                     dhaMeta,
-                    instructions && instructions.value ? instructions.value : ''
+                    instructions && instructions.value ? `<span class="text-xs text-slate-500">(${instructions.value})</span>` : ''
                 ].filter(Boolean).join(' · ') || '—'}</div>
             </td>
             <td>${doseText}</td>
@@ -1599,6 +2086,17 @@ function commitMedication() {
     qty.setCustomValidity('');
 
     const dhaCode = entry.querySelector('input[name$="-generic_concept_code"]');
+    if (SHA_VISIT_BILLED && (!dhaCode || !dhaCode.value || !dhaCode.value.trim())) {
+        alert("⛔ SHA Visit Policy Error:\n\nThis medication does not exist in DHA Terminology (missing generic concept code).\n\nUnder SHA rules, all prescribed drugs must be verified in DHA Terminology. Please choose a DHA-verified medication or search DHA for a generic equivalent.");
+        const panel = entry.querySelector('.rx-dha-panel');
+        if (panel) {
+            panel.hidden = false;
+            panel.classList.remove('is-ok', 'is-warn');
+            panel.classList.add('is-error');
+        }
+        return;
+    }
+
     if (HPT_REQUIRE_CODE && (!dhaCode || !dhaCode.value)) {
         if (dhaCode) {
             dhaCode.setCustomValidity('Select a DHA generic product code for this medicine');
@@ -1618,6 +2116,9 @@ function commitMedication() {
     document.getElementById('medication-formset-store').appendChild(entry);
     refreshMedsTable();
     addMedication();
+    if (typeof refreshShaPreauthRxAdvisory === 'function') {
+        refreshShaPreauthRxAdvisory({ showModal: false, immediate: true });
+    }
 }
 
 function removeCommittedMedication(entry) {
@@ -1631,6 +2132,9 @@ function removeCommittedMedication(entry) {
         document.getElementById('medication-formset-store').appendChild(entry);
     }
     refreshMedsTable();
+    if (typeof refreshShaPreauthRxAdvisory === 'function') {
+        refreshShaPreauthRxAdvisory({ showModal: false, immediate: true });
+    }
 }
 
 function addMedication() {
@@ -1773,7 +2277,6 @@ function removeMedication(btn) {
         if (composer) {
             const select = composer.querySelector('select[name$="-medication"]');
             if (select && select.value) {
-                // User filled the composer but didn't click Add — commit it first
                 const dose = composer.querySelector('input[name$="-dose_count"]');
                 const freq = composer.querySelector('select[name$="-frequency"]');
                 const days = composer.querySelector('input[name$="-number_of_days"]');
@@ -1793,11 +2296,41 @@ function removeMedication(btn) {
             }
         }
 
+        // SHA visit: run preauth check with progress modal before save
+        if (SHA_VISIT_BILLED && SHA_PREAUTH_CHECK_URL && form.dataset.shaPreauthDone !== '1') {
+            e.preventDefault();
+            if (submitting) return;
+            submitting = true;
+            shaPreauthPendingSubmit = true;
+            runShaPreauthCheck({ showModal: true }).then(function (result) {
+                submitting = false;
+                if (result.skipped || result.empty) {
+                    form.dataset.shaPreauthDone = '1';
+                    hideShaPreauthModal();
+                    form.requestSubmit(form.querySelector('.prescribe-submit-btn'));
+                    return;
+                }
+                // Result modal shown — user confirms via Continue prescribe
+                if (!result.needing || !result.needing.length) {
+                    // Auto-continue briefly when clear
+                    form.dataset.shaPreauthDone = '1';
+                    setTimeout(function () {
+                        hideShaPreauthModal();
+                        form.requestSubmit(form.querySelector('.prescribe-submit-btn'));
+                    }, 650);
+                }
+            }).catch(function () {
+                submitting = false;
+            });
+            return;
+        }
+
         if (submitting) {
             e.preventDefault();
             return;
         }
         submitting = true;
+        form.dataset.shaPreauthDone = '';
 
         form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
             btn.disabled = true;
@@ -1815,6 +2348,61 @@ function removeMedication(btn) {
             }
         });
     });
+})();
+
+(function initDiagnosisVisibilityGuard() {
+    function updateDiagnosisFormVisibility() {
+        const diagInput = document.querySelector('.icd-diagnosis-picker input[name="diagnosis"], textarea[name="diagnosis"], input[name$="diagnosis"], .icd-diagnosis-value');
+        const dependentSections = document.getElementById('rx-dependent-sections');
+        const promptBox = document.getElementById('rx-diagnosis-prompt');
+
+        const hasDiagnosis = !!(diagInput && diagInput.value && diagInput.value.trim());
+
+        if (dependentSections) {
+            if (hasDiagnosis) {
+                dependentSections.classList.remove('hidden');
+                dependentSections.style.display = '';
+            } else {
+                dependentSections.classList.add('hidden');
+                dependentSections.style.display = 'none';
+            }
+        }
+
+        if (promptBox) {
+            if (hasDiagnosis) {
+                promptBox.classList.add('hidden');
+                promptBox.style.display = 'none';
+            } else {
+                promptBox.classList.remove('hidden');
+                promptBox.style.display = '';
+            }
+        }
+    }
+
+    document.addEventListener('change', function (e) {
+        if (e.target && (e.target.name === 'diagnosis' || e.target.classList.contains('icd-diagnosis-value'))) {
+            updateDiagnosisFormVisibility();
+        }
+    });
+
+    document.addEventListener('input', function (e) {
+        if (e.target && (e.target.name === 'diagnosis' || e.target.classList.contains('icd-diagnosis-value'))) {
+            updateDiagnosisFormVisibility();
+        }
+    });
+
+    document.addEventListener('icd11:selected', updateDiagnosisFormVisibility);
+    document.addEventListener('icd11:cleared', updateDiagnosisFormVisibility);
+
+    const diagField = document.querySelector('.icd-diagnosis-picker input[name="diagnosis"], textarea[name="diagnosis"], .icd-diagnosis-value');
+    if (diagField) {
+        const observer = new MutationObserver(updateDiagnosisFormVisibility);
+        observer.observe(diagField, { attributes: true, attributeFilter: ['value'] });
+    }
+
+    updateDiagnosisFormVisibility();
+    setTimeout(updateDiagnosisFormVisibility, 60);
+    setTimeout(updateDiagnosisFormVisibility, 350);
 })();
 </script>
 {% endblock %}

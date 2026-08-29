@@ -20,6 +20,22 @@ class Service(models.Model):
     department = models.ForeignKey('home.Departments', on_delete=models.PROTECT, related_name='services', null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    # AfyaConnect Terminology Service bindings
+    # LOINC — laboratory / clinical observations
+    loinc_code = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    loinc_display = models.CharField(max_length=512, blank=True, null=True)
+    # ICHI — procedures / interventions
+    ichi_code = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    ichi_display = models.CharField(max_length=512, blank=True, null=True)
+    # SHA benefit intervention code (e.g. SHA-18-005) for claims / preauth checks
+    sha_intervention_code = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="SHA intervention / benefit code used for eligibility and preauth checks",
+    )
+    sha_intervention_name = models.CharField(max_length=255, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_updated = models.BooleanField(default=False, help_text="Set to True once the service has been reviewed/updated")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -29,6 +45,15 @@ class Service(models.Model):
         if self.department:
             return f"{self.name} ({self.department.name})"
         return f"{self.name}"
+
+    @property
+    def terminology_label(self) -> str:
+        parts = []
+        if self.loinc_code:
+            parts.append(f"LOINC {self.loinc_code}")
+        if self.ichi_code:
+            parts.append(f"ICHI {self.ichi_code}")
+        return " · ".join(parts)
     
     class Meta:
         ordering = ['department__name', 'name']
@@ -438,12 +463,25 @@ class ShaClaimSession(models.Model):
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='draft', db_index=True)
     service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES, default='OUTPATIENT')
     intervention_codes = models.JSONField(default=list, blank=True)
+    sub_benefit_code = models.CharField(max_length=64, blank=True)
+    intervention_meta = models.JSONField(default=dict, blank=True)
 
     # Patient / coverage snapshot
     patient_cr_id = models.CharField(max_length=64, blank=True)
     patient_id_number = models.CharField(max_length=32, blank=True)
     eligibility_raw = models.JSONField(default=dict, blank=True)
     eligible = models.BooleanField(default=False)
+    schemes = models.JSONField(default=list, blank=True)
+    is_alive = models.BooleanField(default=True)
+    whitelisted_for_otp = models.BooleanField(default=False)
+    facility_biometrics_enforced = models.BooleanField(default=False)
+    consent_method = models.CharField(
+        max_length=20,
+        blank=True,
+        default='otp',
+        help_text='otp or biometrics',
+    )
+    coverage_snapshot = models.JSONField(default=dict, blank=True)
 
     # Virtual claim identifiers from DHA
     consent_token = models.CharField(max_length=128, blank=True, db_index=True)

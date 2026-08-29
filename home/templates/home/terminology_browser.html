@@ -1,0 +1,242 @@
+{% extends 'users/dashboard_base.html' %}
+{% load static %}
+{% block title %}Terminology · HMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'hr/css/hr.css' %}">
+<style>
+    .term-shell { max-width: 1100px; margin: 0 auto; padding: 0.5rem 0.25rem 2rem; }
+    .term-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .term-tab {
+        border: 1px solid #e2e8f0; background: #fff; color: #475569;
+        padding: 0.45rem 0.9rem; border-radius: 999px; font-weight: 650;
+        font-size: 0.85rem; cursor: pointer;
+    }
+    .term-tab.active { background: #0f766e; border-color: #0f766e; color: #fff; }
+    .search-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .search-row input {
+        flex: 1; min-width: 220px; padding: 0.65rem 0.85rem; border-radius: 10px;
+        border: 1px solid #e2e8f0; background: #f8fafc;
+    }
+    .search-row button {
+        padding: 0.65rem 1.1rem; border-radius: 10px; border: none;
+        background: #0f766e; color: #fff; font-weight: 650; cursor: pointer;
+    }
+    .status-banner {
+        display: none; padding: 0.85rem 1rem; border-radius: 10px;
+        font-size: 0.875rem; font-weight: 650; margin-bottom: 1rem;
+    }
+    .status-banner.error {
+        background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.25); color: #b91c1c;
+    }
+    .status-banner.ok {
+        background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: #047857;
+    }
+    .status-banner.warn {
+        background: rgba(217, 119, 6, 0.08); border: 1px solid rgba(217, 119, 6, 0.3); color: #b45309;
+    }
+    .result-row {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid #f1f5f9; cursor: pointer;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row:hover { background: rgba(15, 118, 110, 0.04); margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 10px; }
+    .result-title { font-weight: 700; color: #0f172a; }
+    .result-meta { font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; }
+    .code-pill {
+        font-family: ui-monospace, monospace; font-size: 0.78rem; font-weight: 700;
+        background: #ecfdf5; color: #047857; padding: 0.25rem 0.55rem; border-radius: 8px;
+        white-space: nowrap;
+    }
+    .hint { color: #64748b; font-size: 0.85rem; margin-bottom: 1rem; }
+    .counts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .counts span {
+        font-size: 0.75rem; font-weight: 650; padding: 0.25rem 0.55rem;
+        border-radius: 8px; background: #f1f5f9; color: #475569;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="term-shell">
+    <div class="page-header">
+        <div>
+            <h1>Terminology browser</h1>
+            <p>Search local DB first, then confirm the code is unchanged via DHA on select.</p>
+        </div>
+        <a href="{% url 'home:icd11_search' %}" class="btn btn-outline btn-sm">Local ICD-11 DB</a>
+    </div>
+
+    <p class="hint">
+        Flow matches ICD-11 diagnoses: <strong>local lookup → DHA confirm</strong>.
+        Empty LOINC/ICHI cache is seeded from DHA on first miss, then reused locally.
+    </p>
+
+    <div class="counts">
+        <span>ICD-11 local: {{ local_icd11_count }}</span>
+        <span>LOINC local: {{ local_loinc_count }}</span>
+        <span>ICHI local: {{ local_ichi_count }}</span>
+        <span>DHA validate on select: {% if validate_on_select %}on{% else %}off{% endif %}</span>
+    </div>
+
+    <div class="term-tabs" role="tablist">
+        <button type="button" class="term-tab active" data-system="loinc">LOINC · Labs</button>
+        <button type="button" class="term-tab" data-system="ichi">ICHI · Procedures</button>
+        <button type="button" class="term-tab" data-system="icd11">ICD-11 · Diagnoses</button>
+    </div>
+
+    <div class="search-row">
+        <input type="search" id="term-q" placeholder="Search local concepts…" autocomplete="off">
+        <button type="button" id="term-search-btn"><i class="fas fa-search"></i> Search</button>
+    </div>
+
+    <div id="term-status" class="status-banner"></div>
+    <div id="term-meta" class="hint" style="display:none;"></div>
+    <div id="term-results" class="custom-card" style="padding: 0.5rem 1rem;"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const LOINC_URL = "{% url 'home:loinc_search_api' %}";
+    const ICHI_URL = "{% url 'home:ichi_search_api' %}";
+    const LOINC_VALIDATE = "{% url 'home:loinc_validate_api' %}";
+    const ICHI_VALIDATE = "{% url 'home:ichi_validate_api' %}";
+    const ICD_SEARCH = "{% url 'home:icd11_search_api' %}";
+    const ICD_VALIDATE = "{% url 'home:icd11_validate_api' %}";
+
+    let system = 'loinc';
+    const input = document.getElementById('term-q');
+    const statusEl = document.getElementById('term-status');
+    const metaEl = document.getElementById('term-meta');
+    const resultsEl = document.getElementById('term-results');
+
+    document.querySelectorAll('.term-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.term-tab').forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            system = tab.dataset.system;
+            input.placeholder = system === 'loinc'
+                ? 'e.g. glucose, hemoglobin, CBC'
+                : system === 'ichi'
+                    ? 'e.g. appendectomy, caesarean, ECG'
+                    : 'e.g. diabetes, hypertension, malaria';
+            resultsEl.innerHTML = '';
+            metaEl.style.display = 'none';
+            hideStatus();
+        });
+    });
+
+    function hideStatus() {
+        statusEl.style.display = 'none';
+        statusEl.textContent = '';
+        statusEl.className = 'status-banner';
+    }
+
+    function showStatus(msg, tone) {
+        statusEl.className = 'status-banner ' + (tone || 'ok');
+        statusEl.style.display = 'block';
+        statusEl.textContent = msg;
+    }
+
+    function buildSearchUrl(q) {
+        if (system === 'loinc') return LOINC_URL + '?q=' + encodeURIComponent(q);
+        if (system === 'ichi') return ICHI_URL + '?q=' + encodeURIComponent(q);
+        return ICD_SEARCH + '?q=' + encodeURIComponent(q);
+    }
+
+    function buildValidateUrl(code, title) {
+        const base = system === 'loinc' ? LOINC_VALIDATE
+            : system === 'ichi' ? ICHI_VALIDATE
+            : ICD_VALIDATE;
+        return base
+            + '?code=' + encodeURIComponent(code)
+            + '&title=' + encodeURIComponent(title || '');
+    }
+
+    function escapeHtml(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    async function validateSelection(item) {
+        const code = item.code || '';
+        const title = item.title || '';
+        if (!code) {
+            showStatus('Selected item has no code.', 'error');
+            return;
+        }
+        showStatus('Confirming ' + code + ' with DHA…', 'warn');
+        try {
+            const res = await fetch(buildValidateUrl(code, title), {
+                headers: { 'Accept': 'application/json' },
+            });
+            const data = await res.json();
+            if (data.success) {
+                showStatus(data.message || 'Confirmed with DHA (unchanged).', 'ok');
+            } else {
+                showStatus(data.message || 'DHA confirmation failed.', 'error');
+            }
+        } catch (err) {
+            showStatus(String(err), 'error');
+        }
+    }
+
+    async function search() {
+        const q = (input.value || '').trim();
+        if (!q) {
+            showStatus('Enter a search term.', 'error');
+            return;
+        }
+        hideStatus();
+        resultsEl.innerHTML = '<p class="hint">Searching local DB…</p>';
+        metaEl.style.display = 'none';
+        try {
+            const res = await fetch(buildSearchUrl(q), { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            if (!data.success) {
+                showStatus(data.error || 'Search failed.', 'error');
+                resultsEl.innerHTML = '';
+                return;
+            }
+            const results = data.results || [];
+            metaEl.style.display = 'block';
+            metaEl.textContent = (data.source || 'local')
+                + ' · ' + results.length + ' result(s)'
+                + (data.seeded ? ' · seeded ' + data.seeded + ' from DHA' : '')
+                + (data.local_total != null ? ' · cache size ' + data.local_total : '');
+            if (!results.length) {
+                resultsEl.innerHTML = '<p class="hint">No local matches. Try another term (first miss seeds from DHA).</p>';
+                return;
+            }
+            resultsEl.innerHTML = results.map(function (r, idx) {
+                const code = r.code || r.id || '—';
+                const title = r.title || r.display || 'Untitled';
+                return '<div class="result-row" data-idx="' + idx + '">'
+                    + '<div><div class="result-title">' + escapeHtml(title) + '</div>'
+                    + '<div class="result-meta">Click to confirm unchanged via DHA</div></div>'
+                    + '<span class="code-pill">' + escapeHtml(code) + '</span></div>';
+            }).join('');
+            resultsEl.querySelectorAll('.result-row').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    const item = results[Number(row.dataset.idx)];
+                    if (item) validateSelection(item);
+                });
+            });
+        } catch (err) {
+            showStatus(String(err), 'error');
+            resultsEl.innerHTML = '';
+        }
+    }
+
+    document.getElementById('term-search-btn').addEventListener('click', search);
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); search(); }
+    });
+})();
+</script>
+{% endblock %}

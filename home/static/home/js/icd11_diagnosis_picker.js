@@ -88,6 +88,9 @@ function initIcd11DiagnosisPicker(root) {
         searchInput.value = titleOrQuery(item);
         resultsDiv.classList.add('hidden');
         resultsDiv.innerHTML = '';
+        valueField.dispatchEvent(new Event('change', { bubbles: true }));
+        valueField.dispatchEvent(new Event('input', { bubbles: true }));
+        root.dispatchEvent(new CustomEvent('icd11:selected', { bubbles: true, detail: { item: item } }));
     }
 
     function titleOrQuery(item) {
@@ -106,6 +109,9 @@ function initIcd11DiagnosisPicker(root) {
         setValidating(false);
         setValidateStatus('', '');
         searchInput.focus();
+        valueField.dispatchEvent(new Event('change', { bubbles: true }));
+        valueField.dispatchEvent(new Event('input', { bubbles: true }));
+        root.dispatchEvent(new CustomEvent('icd11:cleared', { bubbles: true }));
     }
 
     async function validateWithDha(item) {

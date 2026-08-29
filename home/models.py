@@ -664,6 +664,62 @@ class Icd11Code(models.Model):
         }
 
 
+class TerminologyConcept(models.Model):
+    """
+    Local cache of AfyaConnect Terminology Service concepts (LOINC, ICHI, …).
+
+    Search always hits this table first; selection is re-validated against DHA
+    to confirm the code is still supported and the title has not changed.
+    """
+    SYSTEM_LOINC = 'loinc'
+    SYSTEM_ICHI = 'ichi'
+    SYSTEM_CHOICES = [
+        (SYSTEM_LOINC, 'LOINC'),
+        (SYSTEM_ICHI, 'ICHI'),
+    ]
+
+    system = models.CharField(max_length=16, choices=SYSTEM_CHOICES, db_index=True)
+    code = models.CharField(max_length=64, db_index=True)
+    title = models.CharField(max_length=512)
+    title_normalized = models.CharField(max_length=512, blank=True, db_index=True)
+    owner = models.CharField(max_length=64, blank=True)
+    source = models.CharField(max_length=64, blank=True)
+    uri = models.CharField(max_length=512, blank=True)
+    concept_id = models.CharField(max_length=128, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_dha_title = models.CharField(max_length=512, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['system', 'code', 'title']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['system', 'code'],
+                name='home_terminologyconcept_system_code_uniq',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['system', 'title_normalized']),
+            models.Index(fields=['system', 'code']),
+        ]
+
+    def __str__(self):
+        return f'{self.system.upper()} {self.code} — {self.title}'
+
+    def to_search_result(self) -> dict:
+        return {
+            'id': self.concept_id or self.code,
+            'code': self.code,
+            'title': self.title,
+            'system': f'{self.owner}/{self.source}' if self.owner and self.source else self.system.upper(),
+            'owner': self.owner or None,
+            'source': self.source or None,
+            'uri': self.uri or None,
+        }
+
+
 class TBScreening(models.Model):
     visit = models.OneToOneField(Visit, on_delete=models.CASCADE, related_name='tb_screening')
     has_cough = models.BooleanField(default=False, verbose_name="Cough")

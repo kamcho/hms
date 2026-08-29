@@ -65,11 +65,37 @@ class ExpenseCategoryForm(forms.ModelForm):
 class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
-        fields = ['name', 'department', 'price', 'description', 'is_active']
+        fields = [
+            'name',
+            'department',
+            'price',
+            'description',
+            'loinc_code',
+            'loinc_display',
+            'ichi_code',
+            'ichi_display',
+            'sha_intervention_code',
+            'sha_intervention_name',
+            'is_active',
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. General Consultation'}),
             'department': forms.Select(attrs={'class': 'form-control'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional description'}),
+            'loinc_code': forms.HiddenInput(attrs={'id': 'id_loinc_code'}),
+            'loinc_display': forms.HiddenInput(attrs={'id': 'id_loinc_display'}),
+            'ichi_code': forms.HiddenInput(attrs={'id': 'id_ichi_code'}),
+            'ichi_display': forms.HiddenInput(attrs={'id': 'id_ichi_display'}),
+            'sha_intervention_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. SHA-18-005',
+                'id': 'id_sha_intervention_code',
+            }),
+            'sha_intervention_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Optional SHA intervention name',
+                'id': 'id_sha_intervention_name',
+            }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

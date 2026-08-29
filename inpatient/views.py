@@ -36,7 +36,6 @@ from .utils import (
     admin_close_admission_and_visit,
     admin_close_orphan_visit,
 )
-from home.discharge_codes import validate_discharge_code
 @login_required
 def dashboard(request):
     # Analytics
@@ -75,6 +74,9 @@ def dashboard(request):
     for admission in active_admissions:
         admission.latest_vitals = admission.vitals.first()
 
+    from accounts.sha_hie_service import get_sha_bed_occupancy
+    sha_bed_occupancy = get_sha_bed_occupancy()
+
     return render(request, 'inpatient/dashboard.html', {
         'active_admissions': active_admissions,
         'recent_discharges': recent_discharges,
@@ -85,7 +87,9 @@ def dashboard(request):
         'ward_stats': ward_stats,
         'today': timezone.localdate(),
         'search_q': q,
+        'sha_bed_occupancy': sha_bed_occupancy,
     })
+
 
 @login_required
 def admit_patient(request, patient_id):
@@ -1047,21 +1051,12 @@ def discharge_patient(request, admission_id):
 
     # Check if a discharge already exists for this admission
     discharge_instance = InpatientDischarge.objects.filter(admission=admission).first()
-    code_valid = True
 
     if request.method == 'POST':
-        submitted_discharge_code = request.POST.get('discharge_code', '').strip()
-        if not validate_discharge_code(admission.visit_id, submitted_discharge_code):
-            code_valid = False
-            messages.error(
-                request,
-                "Invalid or expired discharge code. Please use the latest 5-digit code from Insurance Manager (expires every 30 seconds)."
-            )
-
         form = InpatientDischargeForm(request.POST, instance=discharge_instance)
         formset = PrescriptionItemFormSet(request.POST, prefix='meds')
         
-        if code_valid and form.is_valid() and formset.is_valid():
+        if form.is_valid() and formset.is_valid():
             discharge = form.save(commit=False)
             discharge.admission = admission
             discharge.total_bill_snapshot = total_bill

@@ -13,25 +13,26 @@
             <div class="page-header-premium">
                 <div class="header-main">
                     <div class="header-icon">
-                        <i class="fas fa-id-card-alt"></i>
+                        <i class="fas {% if show_sha_coverage_check %}fa-shield-alt{% else %}fa-id-card-alt{% endif %}"></i>
                     </div>
                     <div class="header-text">
                         <h1>
-                            {% if form.instance.pk %}
+                            {% if show_sha_coverage_check %}
+                                SHA Coverage Check
+                            {% elif form.instance.pk %}
                                 Edit Patient Record
                             {% else %}
                                 Patient Registration
                             {% endif %}
                         </h1>
                         <p class="subtitle text-muted">
-                            Complete the form below to
-                            {% if form.instance.pk %}
-                                update
-                            {% else
-                                %}
-                                onboard a new
+                            {% if show_sha_coverage_check %}
+                                Look up SHA registration and create visitor accounts. Full registration is handled by reception.
+                            {% elif form.instance.pk %}
+                                Complete the form below to update patient.
+                            {% else %}
+                                Complete the form below to onboard a new patient.
                             {% endif %}
-                            patient.
                         </p>
                     </div>
                 </div>
@@ -41,8 +42,48 @@
                     </a>
                 </div>
             </div>
-            <form method="post" class="premium-form">
+            <form method="post" class="premium-form"{% if show_sha_coverage_check %} onsubmit="return false;"{% endif %}>
                 {% csrf_token %}
+
+                {% if show_sha_coverage_check %}
+                <!-- SHA Check only — Insurance Manager / superuser -->
+                <div class="form-section-card sha-check-card">
+                    <div class="section-header">
+                        <div class="section-number" style="background:#0f766e;">1</div>
+                        <h3>SHA Coverage Check</h3>
+                        <span class="badge badge-billing" style="background:#ccfbf1;color:#0f766e;">SHA Manager</span>
+                    </div>
+                    <p class="sha-check-lead">
+                        Enter the patient’s ID, check SHA registration, then choose who is visiting.
+                        Selected visitors will be created as patient accounts.
+                    </p>
+                    <div class="form-grid-premium">
+                        <div class="form-group-premium">
+                            <label for="{{ form.id_type.id_for_label }}">Primary ID Type</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-passport input-icon"></i>
+                                {{ form.id_type }}
+                            </div>
+                            <small class="helper-text">{{ form.id_type.help_text }}</small>
+                            {{ form.id_type.errors }}
+                        </div>
+                        <div class="form-group-premium">
+                            <label for="{{ form.id_number.id_for_label }}">Primary ID Number</label>
+                            <div class="input-wrapper sha-id-row">
+                                <i class="fas fa-id-card input-icon"></i>
+                                {{ form.id_number }}
+                                <button type="button" id="btnShaVerify" class="btn-sha-verify" title="Check SHA registration">
+                                    <i class="fas fa-shield-alt"></i> Check SHA
+                                </button>
+                            </div>
+                            <small class="helper-text">Check SHA to view coverage and household members.</small>
+                            {{ form.id_number.errors }}
+                        </div>
+                    </div>
+                    <div id="shaCheckHint" class="sha-check-hint" aria-live="polite"></div>
+                </div>
+                {% else %}
+                <!-- Full patient registration — other roles -->
                 <!-- Personal Information Section -->
                 <div class="form-section-card">
                     <div class="section-header">
@@ -105,16 +146,10 @@
                         </div>
                         <div class="form-group-premium">
                             <label for="{{ form.id_number.id_for_label }}">Primary ID Number</label>
-                            <div class="input-wrapper sha-id-row">
+                            <div class="input-wrapper">
                                 <i class="fas fa-id-card input-icon"></i>
                                 {{ form.id_number }}
-                                {% if not form.instance.pk %}
-                                <button type="button" id="btnShaVerify" class="btn-sha-verify" title="Check SHA registration">
-                                    <i class="fas fa-shield-alt"></i> Check SHA
-                                </button>
-                                {% endif %}
                             </div>
-                            <small class="helper-text">Enter the number for the selected ID type, then Check SHA.</small>
                             {{ form.id_number.errors }}
                         </div>
                         <div class="form-group-premium">
@@ -331,28 +366,34 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </form>
         </div>
     </div>
 
-    {% if not form.instance.pk %}
+    {% if show_sha_coverage_check %}
+    <!-- Full-page busy overlay (glass + blur) -->
+    <div id="shaBusyOverlay" class="sha-busy-overlay" aria-hidden="true" aria-busy="false">
+        <div class="sha-busy-glass">
+            <div class="sha-busy-spinner" aria-hidden="true"></div>
+            <p id="shaBusyText" class="sha-busy-text">Checking SHA registration…</p>
+            <p class="sha-busy-sub">Please wait</p>
+        </div>
+    </div>
+
     <div id="shaVerifyModal" class="sha-modal" aria-hidden="true">
         <div class="sha-modal-backdrop" data-sha-close></div>
         <div class="sha-modal-card" role="dialog" aria-modal="true" aria-labelledby="shaModalTitle">
             <div class="sha-modal-header">
                 <div>
-                    <h3 id="shaModalTitle">SHA Registration Check</h3>
-                    <p class="sha-modal-sub">Patient registration & dependents via DHA / AfyaLink</p>
+                    <h3 id="shaModalTitle">SHA Registration</h3>
+                    <p class="sha-modal-sub">Coverage check for this patient</p>
                 </div>
                 <button type="button" class="sha-modal-close" data-sha-close aria-label="Close">&times;</button>
             </div>
             <div class="sha-modal-body">
                 <div id="shaModalStatus" class="sha-status">Ready.</div>
                 <div id="shaModalResult" class="sha-result" style="display:none;"></div>
-                <div id="shaModalApiBlock" class="sha-api-block" style="display:none;">
-                    <div class="sha-api-block-title">API response</div>
-                    <pre id="shaModalDebug" class="sha-debug"></pre>
-                </div>
             </div>
             <div class="sha-modal-footer">
                 <button type="button" class="btn-ghost" data-sha-close>Close</button>
@@ -372,7 +413,7 @@
             <div class="sha-modal-header">
                 <div>
                     <h3 id="shaDepTitle">Who is visiting today?</h3>
-                    <p class="sha-modal-sub">Select the principal and/or one or more dependents. Accounts will be created for everyone selected (principal is always registered when dependents visit).</p>
+                    <p class="sha-modal-sub">Tick everyone who needs an account. Nothing is selected by default.</p>
                 </div>
                 <button type="button" class="sha-modal-close" data-dep-close aria-label="Close">&times;</button>
             </div>
@@ -385,6 +426,25 @@
                 <button type="button" id="btnShaCreateVisitors" class="btn-primary-premium">
                     <i class="fas fa-user-plus"></i> Create selected accounts
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shaSuccessModal" class="sha-modal" aria-hidden="true">
+        <div class="sha-modal-backdrop" data-success-close></div>
+        <div class="sha-modal-card sha-modal-card-success" role="dialog" aria-modal="true" aria-labelledby="shaSuccessTitle">
+            <div class="sha-modal-header sha-modal-header-success">
+                <div>
+                    <h3 id="shaSuccessTitle">Accounts ready</h3>
+                    <p class="sha-modal-sub">Patient records were created successfully</p>
+                </div>
+                <button type="button" class="sha-modal-close" data-success-close aria-label="Close">&times;</button>
+            </div>
+            <div class="sha-modal-body">
+                <div id="shaSuccessMessage" class="sha-success-message"></div>
+            </div>
+            <div class="sha-modal-footer">
+                <button type="button" class="btn-primary-premium" data-success-close>Continue</button>
             </div>
         </div>
     </div>
@@ -578,6 +638,25 @@
         flex: 1;
         padding-right: 0.75rem;
     }
+    .sha-check-card {
+        border: 1px solid #99f6e4;
+        background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 55%);
+    }
+    .sha-check-lead {
+        margin: -0.5rem 0 1.25rem;
+        color: #475569;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+    .sha-check-hint {
+        margin-top: 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        min-height: 1.2em;
+        color: #0f766e;
+    }
+    .sha-check-hint.is-error { color: #b91c1c; }
+    .sha-check-hint.is-muted { color: #64748b; font-weight: 500; }
     .btn-sha-verify {
         white-space: nowrap;
         border: none;
@@ -601,6 +680,53 @@
     .btn-sha-verify:hover:not(:disabled) {
         background: #0d9488;
     }
+
+    .sha-busy-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        background: rgba(15, 23, 42, 0.28);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .sha-busy-overlay.open { display: flex; }
+    .sha-busy-glass {
+        width: min(360px, 100%);
+        padding: 1.75rem 1.5rem;
+        border-radius: 20px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+    }
+    .sha-busy-spinner {
+        width: 42px;
+        height: 42px;
+        margin: 0 auto 1rem;
+        border-radius: 50%;
+        border: 3px solid rgba(15, 118, 110, 0.2);
+        border-top-color: #0f766e;
+        animation: sha-spin 0.8s linear infinite;
+    }
+    @keyframes sha-spin { to { transform: rotate(360deg); } }
+    .sha-busy-text {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .sha-busy-sub {
+        margin: 0.35rem 0 0;
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
     .sha-modal {
         position: fixed;
         inset: 0;
@@ -614,21 +740,27 @@
     .sha-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(15, 23, 42, 0.55);
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
     }
     .sha-modal-card {
         position: relative;
         width: min(640px, 100%);
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.28);
         overflow: hidden;
         z-index: 1;
         max-height: 90vh;
         display: flex;
         flex-direction: column;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
     .sha-modal-card-wide { width: min(720px, 100%); }
+    .sha-modal-card-success { width: min(480px, 100%); }
     .sha-modal-body { overflow-y: auto; }
     .sha-dep-list {
         display: flex;
@@ -675,10 +807,14 @@
     .sha-modal-header {
         display: flex;
         justify-content: space-between;
+        align-items: flex-start;
         gap: 1rem;
         padding: 1.1rem 1.25rem;
-        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        background: linear-gradient(135deg, #0f766e, #0d9488);
         color: #fff;
+    }
+    .sha-modal-header-success {
+        background: linear-gradient(135deg, #047857, #10b981);
     }
     .sha-modal-header h3 { margin: 0; font-size: 1.05rem; }
     .sha-modal-sub { margin: 0.25rem 0 0; font-size: 0.78rem; opacity: 0.9; }
@@ -686,17 +822,19 @@
         border: none;
         background: transparent;
         color: #fff;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         line-height: 1;
         cursor: pointer;
+        opacity: 0.9;
     }
     .sha-modal-body { padding: 1.1rem 1.25rem; }
     .sha-status {
-        font-size: 0.9rem;
-        padding: 0.75rem 0.9rem;
-        border-radius: 8px;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
         background: #f1f5f9;
         color: #334155;
+        font-size: 0.88rem;
+        font-weight: 600;
         margin-bottom: 0.9rem;
     }
     .sha-status.loading { background: #ecfeff; color: #155e75; }
@@ -705,66 +843,44 @@
     .sha-result {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.65rem 1rem;
-        font-size: 0.86rem;
+        gap: 0.85rem;
     }
     .sha-result .label {
         display: block;
-        font-size: 0.68rem;
+        font-size: 0.7rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: #64748b;
-        font-weight: 700;
-        margin-bottom: 0.15rem;
+        margin-bottom: 0.2rem;
     }
     .sha-result .value {
+        font-size: 0.92rem;
         font-weight: 600;
         color: #0f172a;
         word-break: break-word;
     }
     .sha-badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
         padding: 0.2rem 0.55rem;
         border-radius: 999px;
-        font-size: 0.72rem;
+        font-size: 0.75rem;
         font-weight: 800;
-        text-transform: uppercase;
     }
     .sha-badge.ok { background: #d1fae5; color: #047857; }
     .sha-badge.bad { background: #fee2e2; color: #b91c1c; }
     .sha-badge.warn { background: #fef3c7; color: #b45309; }
-    .sha-debug {
-        margin: 0;
-        max-height: 220px;
-        overflow: auto;
-        background: #0f172a;
-        color: #e2e8f0;
-        border-radius: 8px;
-        padding: 0.75rem;
-        font-size: 0.72rem;
-        line-height: 1.4;
+    .sha-success-message {
+        font-size: 0.95rem;
+        color: #334155;
+        line-height: 1.5;
     }
-    .sha-api-block {
-        margin-top: 0.9rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        overflow: hidden;
-        background: #f8fafc;
-    }
-    .sha-api-block-title {
-        font-size: 0.68rem;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #64748b;
-        padding: 0.55rem 0.75rem;
-        background: #f1f5f9;
-        border-bottom: 1px solid #e2e8f0;
-    }
+    .sha-success-message strong { color: #0f172a; }
     .sha-modal-footer {
         display: flex;
         justify-content: flex-end;
-        gap: 0.75rem;
+        gap: 0.5rem;
         padding: 0.9rem 1.25rem 1.15rem;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
@@ -1077,20 +1193,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnShaVerify = document.getElementById('btnShaVerify');
     const shaModal = document.getElementById('shaVerifyModal');
     const depModal = document.getElementById('shaDependentsModal');
+    const successModal = document.getElementById('shaSuccessModal');
+    const busyOverlay = document.getElementById('shaBusyOverlay');
+    const busyText = document.getElementById('shaBusyText');
+    const shaCheckHint = document.getElementById('shaCheckHint');
+
     if (btnShaVerify && shaModal) {
         const statusEl = document.getElementById('shaModalStatus');
         const resultEl = document.getElementById('shaModalResult');
-        const apiBlockEl = document.getElementById('shaModalApiBlock');
-        const debugEl = document.getElementById('shaModalDebug');
         const applyBtn = document.getElementById('btnShaApply');
         const manualBtn = document.getElementById('btnShaContinueManual');
         const idInput = document.getElementById('id_id_number');
         const depList = document.getElementById('shaDepList');
         const depStatus = document.getElementById('shaDepStatus');
         const btnCreateVisitors = document.getElementById('btnShaCreateVisitors');
+        const successMessage = document.getElementById('shaSuccessMessage');
         let lastPatient = null;
         let lastDependents = [];
 
+        function showBusy(message) {
+            if (!busyOverlay) return;
+            if (busyText) busyText.textContent = message || 'Please wait…';
+            busyOverlay.classList.add('open');
+            busyOverlay.setAttribute('aria-hidden', 'false');
+            busyOverlay.setAttribute('aria-busy', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+        function hideBusy() {
+            if (!busyOverlay) return;
+            busyOverlay.classList.remove('open');
+            busyOverlay.setAttribute('aria-hidden', 'true');
+            busyOverlay.setAttribute('aria-busy', 'false');
+            document.body.style.overflow = '';
+        }
+        function setHint(text, kind) {
+            if (!shaCheckHint) return;
+            shaCheckHint.textContent = text || '';
+            shaCheckHint.className = 'sha-check-hint' + (kind ? ' is-' + kind : '');
+        }
         function showManualContinue(show) {
             if (!manualBtn) return;
             manualBtn.style.display = show ? 'inline-flex' : 'none';
@@ -1098,11 +1238,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function continueManually() {
             closeModal(shaModal);
             showManualContinue(false);
-            const first = document.getElementById('id_first_name');
-            if (first) {
-                first.focus();
-                first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            setHint('No SHA match. Ask reception to register the patient on the standard registration form.', 'muted');
         }
 
         function csrfToken() {
@@ -1110,11 +1246,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (m) return decodeURIComponent(m[1]);
             const inp = document.querySelector('[name=csrfmiddlewaretoken]');
             return inp ? inp.value : '';
-        }
-        function logSha() {
-            const args = Array.from(arguments);
-            args.unshift('[SHA UI]');
-            console.log.apply(console, args);
         }
         function openModal(el) {
             el.classList.add('open');
@@ -1133,29 +1264,6 @@ document.addEventListener('DOMContentLoaded', function() {
             depStatus.textContent = text;
             depStatus.className = 'sha-status' + (type ? ' ' + type : '');
         }
-        function showApiResponse(httpStatus, data) {
-            if (!apiBlockEl || !debugEl) return;
-            const payload = {
-                http_status: httpStatus,
-                hmis: {
-                    success: data && data.success,
-                    found: data && data.found,
-                    id_number: data && data.id_number,
-                    eligibility_error: data && data.eligibility_error,
-                    client_registry_error: data && data.client_registry_error,
-                    patient: data && data.patient,
-                    dependents: data && data.dependents,
-                },
-                afyalink_raw: (data && data.raw) || {},
-                full_response: data || {},
-            };
-            apiBlockEl.style.display = 'block';
-            debugEl.textContent = JSON.stringify(payload, null, 2);
-        }
-        function hideApiResponse() {
-            if (apiBlockEl) apiBlockEl.style.display = 'none';
-            if (debugEl) debugEl.textContent = '';
-        }
         function field(label, value) {
             const v = (value === null || value === undefined || value === '') ? '—' : value;
             return `<div><span class="label">${label}</span><div class="value">${v}</div></div>`;
@@ -1168,12 +1276,26 @@ document.addEventListener('DOMContentLoaded', function() {
         function displayName(p) {
             if (!p) return 'Unknown';
             if (p.full_name) return p.full_name;
-            return [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown';
+            const joined = [p.first_name, p.middle_name, p.last_name].filter(Boolean).join(' ');
+            return joined || 'Unknown';
+        }
+        function friendlyError(raw) {
+            const msg = String(raw || '').toLowerCase();
+            if (msg.includes('network') || msg.includes('failed to fetch')) {
+                return 'We could not reach SHA right now. Check your connection and try again, or continue manually.';
+            }
+            if (msg.includes('401') || msg.includes('403') || msg.includes('token') || msg.includes('unauthorized')) {
+                return 'SHA sign-in is not available at the moment. Continue manually, or ask an administrator to check SHA credentials.';
+            }
+            if (msg.includes('timeout') || msg.includes('522') || msg.includes('502') || msg.includes('503')) {
+                return 'SHA is taking too long to respond. Please try again shortly, or continue manually.';
+            }
+            return 'We could not complete the SHA check. You can continue manually and fill in the patient details.';
         }
         function renderPatient(patient, found) {
             if (!found) {
                 resultEl.style.display = 'block';
-                resultEl.innerHTML = '<div class="value">No SHA registration found for this ID. Use <strong>Continue manually</strong> to type the patient details on the form.</div>';
+                resultEl.innerHTML = '<div class="value">No SHA registration was found for this ID. Use <strong>Continue manually</strong> to enter the patient details on the form.</div>';
                 applyBtn.style.display = 'none';
                 showManualContinue(true);
                 return;
@@ -1183,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resultEl.style.display = 'grid';
             resultEl.innerHTML = `
                 ${field('SHA Status', registrationBadge(patient, found))}
-                ${field('Full name', patient.full_name)}
+                ${field('Full name', displayName(patient))}
                 ${field('CR ID', patient.cr_id)}
                 ${field('ID number', patient.id_number)}
                 ${field('Gender', patient.gender)}
@@ -1195,10 +1317,12 @@ document.addEventListener('DOMContentLoaded', function() {
             applyBtn.style.display = 'inline-flex';
             applyBtn.innerHTML = depCount
                 ? '<i class="fas fa-users"></i> Choose visitors'
-                : '<i class="fas fa-check"></i> Apply to form';
+                : '<i class="fas fa-user-plus"></i> Create patient account';
         }
         function applyPatientToForm(patient) {
             if (!patient) return;
+            // Coverage-only view has no registration fields — skip apply.
+            if (!document.getElementById('id_first_name')) return;
             const first = document.getElementById('id_first_name');
             const last = document.getElementById('id_last_name');
             const phone = document.getElementById('id_phone');
@@ -1265,16 +1389,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 payment.value = 'Insurance';
                 payment.dispatchEvent(new Event('change'));
             }
-            logSha('applied patient to form', patient);
         }
         function openDependentsModal() {
             if (!depModal || !depList || !lastPatient) return;
             depList.innerHTML = '';
 
             const principalHtml = document.createElement('label');
-            principalHtml.className = 'sha-dep-item selected';
+            principalHtml.className = 'sha-dep-item';
             principalHtml.innerHTML = `
-                <input type="checkbox" name="shaVisitor" value="principal" checked>
+                <input type="checkbox" name="shaVisitor" value="principal">
                 <div>
                     <div class="sha-dep-name">${displayName(lastPatient)} <span class="sha-dep-role principal">Principal</span></div>
                     <div class="sha-dep-meta">CR: ${lastPatient.cr_id || '—'} · ID: ${lastPatient.id_number || '—'}</div>
@@ -1303,11 +1426,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cb = item.querySelector('input');
                 const sync = () => item.classList.toggle('selected', cb.checked);
                 cb.addEventListener('change', sync);
+                sync();
             });
 
-            setDepStatus(`Select who is visiting. ${lastDependents.length} dependent(s) found.`, '');
+            setDepStatus(`Select who is visiting. ${lastDependents.length} dependent(s) found. Nothing is selected yet.`, '');
             closeModal(shaModal);
             openModal(depModal);
+        }
+
+        function showSuccessModal(messageHtml) {
+            if (!successModal || !successMessage) {
+                window.alert(messageHtml.replace(/<[^>]+>/g, ' '));
+                return;
+            }
+            successMessage.innerHTML = messageHtml;
+            openModal(successModal);
         }
 
         async function createSelectedVisitors() {
@@ -1326,6 +1459,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnCreateVisitors.disabled = true;
             btnCreateVisitors.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
             setDepStatus('Creating patient accounts…', 'loading');
+            showBusy('Creating selected patient accounts…');
 
             try {
                 const res = await fetch('{% url "home:create_sha_household" %}', {
@@ -1344,24 +1478,79 @@ document.addEventListener('DOMContentLoaded', function() {
                     }),
                 });
                 const data = await res.json();
+                hideBusy();
                 if (!res.ok || !data.success) {
-                    setDepStatus(data.error || 'Failed to create accounts.', 'error');
+                    setDepStatus(data.error || 'Could not create the selected accounts. Please try again.', 'error');
                     return;
                 }
-                setDepStatus(data.message || 'Accounts created.', 'success');
 
                 const focusProfile = selectedDeps.length ? selectedDeps[0] : lastPatient;
-                applyPatientToForm(focusProfile);
                 closeModal(depModal);
 
-                const names = (data.patients || []).map(p => p.full_name).join(', ');
-                alert((data.message || 'Done.') + '\n\nPatients: ' + names + '\n\nForm filled for: ' + displayName(focusProfile) + '. Complete registration for this visitor; others are already in Patients list.');
+                const names = (data.patients || []).map(p => p.full_name).filter(Boolean);
+                const namesHtml = names.length
+                    ? '<ul style="margin:0.65rem 0 0;padding-left:1.1rem;">' + names.map(n => `<li><strong>${n}</strong></li>`).join('') + '</ul>'
+                    : '';
+                const listUrl = "{% url 'home:patient_list' %}";
+                showSuccessModal(
+                    `<p style="margin:0;">${data.message || 'Accounts created successfully.'}</p>` +
+                    namesHtml +
+                    `<p style="margin:0.85rem 0 0;">Reception can complete visits from the Patients list` +
+                    (focusProfile ? ` (focus: <strong>${displayName(focusProfile)}</strong>)` : '') +
+                    `.</p>` +
+                    `<p style="margin:0.75rem 0 0;"><a href="${listUrl}" style="font-weight:700;color:#047857;">Open Patients list →</a></p>`
+                );
+                setHint('Patient accounts created. Reception handles full registration / visits.', '');
             } catch (err) {
-                console.error(err);
-                setDepStatus('Request failed: ' + (err.message || err), 'error');
+                hideBusy();
+                setDepStatus(friendlyError(err && err.message), 'error');
             } finally {
                 btnCreateVisitors.disabled = false;
                 btnCreateVisitors.innerHTML = '<i class="fas fa-user-plus"></i> Create selected accounts';
+            }
+        }
+
+        async function createPrincipalOnly() {
+            if (!lastPatient) return;
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+            showBusy('Creating patient account…');
+            try {
+                const res = await fetch('{% url "home:create_sha_household" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        principal: lastPatient,
+                        dependents: [],
+                        include_principal: true,
+                    }),
+                });
+                const data = await res.json();
+                hideBusy();
+                if (!res.ok || !data.success) {
+                    setStatus(data.error || 'Could not create the patient account.', 'error');
+                    return;
+                }
+                closeModal(shaModal);
+                const listUrl = "{% url 'home:patient_list' %}";
+                showSuccessModal(
+                    `<p style="margin:0;">${data.message || 'Patient account created.'}</p>` +
+                    `<p style="margin:0.85rem 0 0;"><strong>${displayName(lastPatient)}</strong> is in the Patients list. Reception can complete the visit.</p>` +
+                    `<p style="margin:0.75rem 0 0;"><a href="${listUrl}" style="font-weight:700;color:#047857;">Open Patients list →</a></p>`
+                );
+                setHint('Patient account created for ' + displayName(lastPatient) + '.', '');
+            } catch (err) {
+                hideBusy();
+                setStatus(friendlyError(err && err.message), 'error');
+            } finally {
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create patient account';
             }
         }
 
@@ -1369,9 +1558,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (depModal) {
             depModal.querySelectorAll('[data-dep-close]').forEach(el => el.addEventListener('click', () => closeModal(depModal)));
         }
+        if (successModal) {
+            successModal.querySelectorAll('[data-success-close]').forEach(el => el.addEventListener('click', () => closeModal(successModal)));
+        }
         applyBtn.addEventListener('click', () => {
             if (lastDependents.length) openDependentsModal();
-            else { applyPatientToForm(lastPatient); closeModal(shaModal); }
+            else createPrincipalOnly();
         });
         if (manualBtn) manualBtn.addEventListener('click', continueManually);
         if (btnCreateVisitors) btnCreateVisitors.addEventListener('click', createSelectedVisitors);
@@ -1386,75 +1578,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 ALIEN_ID: 'Alien ID',
             };
             const identificationType = typeMap[idTypeEl?.value] || 'National ID';
-            logSha('verify click', { idNumber, identificationType });
             if (!idNumber) {
+                setHint('Enter an ID number first.', 'error');
                 openModal(shaModal);
                 setStatus('Enter an ID number first.', 'error');
                 resultEl.style.display = 'none';
                 applyBtn.style.display = 'none';
                 showManualContinue(false);
-                hideApiResponse();
                 return;
             }
 
-            openModal(shaModal);
-            setStatus('Checking SHA registration…', 'loading');
             resultEl.style.display = 'none';
             applyBtn.style.display = 'none';
             showManualContinue(false);
-            hideApiResponse();
             lastPatient = null;
             lastDependents = [];
             btnShaVerify.disabled = true;
+            setHint('Checking SHA registration…', 'muted');
+            showBusy('Checking SHA registration…');
 
             const url = `{% url "accounts:sha_patient_by_id" %}?id_number=${encodeURIComponent(idNumber)}&identification_type=${encodeURIComponent(identificationType)}&skip_eligibility=1`;
-            logSha('fetching', url);
             try {
                 const res = await fetch(url, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin',
                 });
                 const text = await res.text();
-                logSha('raw response', res.status, text.slice(0, 500));
                 let data = null;
                 try { data = JSON.parse(text); } catch (e) {
-                    setStatus(`Server returned non-JSON (HTTP ${res.status}). DHA may be unreachable — continue manually.`, 'error');
-                    showApiResponse(res.status, { parse_error: true, body: text.slice(0, 4000) });
+                    hideBusy();
+                    openModal(shaModal);
+                    setStatus(friendlyError('parse'), 'error');
                     resultEl.style.display = 'block';
-                    resultEl.innerHTML = '<div class="value">Could not read SHA response. Use <strong>Continue manually</strong> to register the patient on the form.</div>';
+                    resultEl.innerHTML = '<div class="value">We could not read the SHA result. Use <strong>Continue manually</strong> to register the patient.</div>';
                     showManualContinue(true);
+                    setHint('SHA check unavailable — continue manually.', 'error');
                     return;
                 }
-                showApiResponse(res.status, data);
+                hideBusy();
+                openModal(shaModal);
                 if (!res.ok || !data.success) {
-                    setStatus((data.error || `Lookup failed (HTTP ${res.status}).`) + ' You can continue manually.', 'error');
+                    setStatus(friendlyError(data && data.error), 'error');
                     resultEl.style.display = 'block';
-                    resultEl.innerHTML = '<div class="value">SHA / DHA unreachable or returned an error. Use <strong>Continue manually</strong> to type patient details.</div>';
+                    resultEl.innerHTML = '<div class="value">SHA could not complete this check right now. Use <strong>Continue manually</strong> to enter patient details.</div>';
                     showManualContinue(true);
+                    setHint('SHA check failed — continue manually.', 'error');
                     return;
                 }
                 lastPatient = data.patient || {};
                 lastDependents = Array.isArray(data.dependents) ? data.dependents : [];
                 if (data.found) {
-                    let msg = `SHA registration found for ID ${data.id_number}.`;
+                    let msg = 'SHA registration found.';
                     if (lastDependents.length) msg += ` ${lastDependents.length} dependent(s) linked.`;
                     setStatus(msg, 'success');
+                    setHint(msg, '');
                 } else {
-                    setStatus(`No SHA registration found for ID ${data.id_number}. Continue manually.`, 'error');
+                    setStatus('No SHA registration found for this ID. Continue manually.', 'error');
+                    setHint('No SHA registration found — continue manually.', 'error');
                 }
                 renderPatient(lastPatient, data.found);
             } catch (err) {
-                console.error('[SHA UI] fetch error', err);
-                setStatus(`Network error: ${err.message || err}. Continue manually.`, 'error');
-                showApiResponse(0, { network_error: String(err) });
+                hideBusy();
+                openModal(shaModal);
+                setStatus(friendlyError(err && err.message), 'error');
                 resultEl.style.display = 'block';
-                resultEl.innerHTML = '<div class="value">DHA API unreachable. Use <strong>Continue manually</strong> to register the patient on the form.</div>';
+                resultEl.innerHTML = '<div class="value">SHA is unreachable right now. Use <strong>Continue manually</strong> to register the patient.</div>';
                 showManualContinue(true);
+                setHint('SHA unreachable — continue manually.', 'error');
             } finally {
                 btnShaVerify.disabled = false;
             }
         });
     }
+
 });
 </script>
 {% endblock extra_js %}
