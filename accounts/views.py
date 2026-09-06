@@ -19,7 +19,6 @@ from .forms import (
     SupplierInvoiceForm, SupplierPaymentForm, ServiceForm, SupplierForm
 )
 from home.models import Patient, Departments, Visit
-from home.discharge_codes import get_or_create_discharge_code_payload
 from .sha_hie_service import (
     ShaHieConfigError,
     ShaHieRequestError,
@@ -417,15 +416,6 @@ def insurance_manager(request):
             visit_date__gte=today_start
         ).order_by('-visit_date')
 
-    discharge_visit_ids = set(active_cash_visits.values_list('id', flat=True))
-    discharge_visit_ids.update(ipd_invoices.values_list('visit_id', flat=True))
-    discharge_visit_ids = [visit_id for visit_id in discharge_visit_ids if visit_id]
-
-    discharge_codes = {
-        visit_id: get_or_create_discharge_code_payload(visit_id)
-        for visit_id in discharge_visit_ids
-    }
-
     balance_expr = F('total_amount') - F('insurance_adjustment') - F('paid_amount')
 
     def outstanding_total(qs):
@@ -442,7 +432,6 @@ def insurance_manager(request):
         'search_mat': search_mat,
         'search_sha': search_sha,
         'active_cash_visits': active_cash_visits,
-        'discharge_codes': discharge_codes,
         'title': 'Insurance & Credit Manager',
         'stats': {
             'opd_count': opd_invoices.count(),
@@ -872,17 +861,6 @@ def sha_facility_by_code(request):
             status=500,
         )
 
-
-@login_required
-@user_passes_test(is_billing_staff)
-def get_discharge_code(request, visit_id):
-    visit = get_object_or_404(Visit, pk=visit_id)
-    payload = get_or_create_discharge_code_payload(visit.id)
-    return JsonResponse({
-        'success': True,
-        'visit_id': visit.id,
-        **payload,
-    })
 
 @login_required
 @user_passes_test(is_billing_staff)

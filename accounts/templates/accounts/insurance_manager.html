@@ -955,7 +955,6 @@
                                     <th>Patient Details</th>
                                     <th>Admission Date</th>
                                     <th>Ward/Bed</th>
-                                    <th>Discharge Code (30s)</th>
                                     <th>Current Bill</th>
                                     <th>Balance Due</th>
                                     <th>Status</th>
@@ -982,23 +981,6 @@
                                                 <span class="text-slate-300 italic">No Active Admission</span>
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            {% with code_data=discharge_codes|get_item:inv.visit.id %}
-                                                {% if code_data %}
-                                                    <div
-                                                        class="inline-flex flex-col gap-1"
-                                                        data-discharge-code-row
-                                                        data-visit-id="{{ inv.visit.id }}"
-                                                        data-expires-at="{{ code_data.expires_at }}"
-                                                    >
-                                                        <span class="font-black text-emerald-700 text-sm tracking-widest" data-discharge-code>{{ code_data.code }}</span>
-                                                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500" data-discharge-timer>{{ code_data.remaining_seconds }}s</span>
-                                                    </div>
-                                                {% else %}
-                                                    <span class="text-slate-300 italic">—</span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
                                         <td class="amount-cell text-slate-900">Ksh {{ inv.total_amount|format_number:2 }}</td>
                                         <td class="amount-cell text-rose-600">Ksh {{ inv.balance|format_number:2 }}</td>
                                         <td>
@@ -1015,7 +997,7 @@
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="8" class="empty-state">
+                                        <td colspan="7" class="empty-state">
                                             <div class="flex flex-col items-center gap-3">
                                                 <div class="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-2xl mb-2">
                                                     <i class="fas fa-check-circle"></i>
@@ -1158,7 +1140,6 @@
                                     <th>Patient Details</th>
                                     <th>Visit Date & Time</th>
                                     <th>Type</th>
-                                    <th>Discharge Code (30s)</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -1180,25 +1161,12 @@
                                         <td class="font-bold text-slate-600">{{ visit.visit_date|date:"d M, Y H:i" }}</td>
                                         <td class="font-bold text-slate-600">{{ visit.visit_type }}</td>
                                         <td>
-                                            {% with code_data=discharge_codes|get_item:visit.id %}
-                                                <div
-                                                    class="inline-flex flex-col gap-1"
-                                                    data-discharge-code-row
-                                                    data-visit-id="{{ visit.id }}"
-                                                    data-expires-at="{{ code_data.expires_at }}"
-                                                >
-                                                    <span class="font-black text-emerald-700 text-sm tracking-widest" data-discharge-code>{{ code_data.code }}</span>
-                                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500" data-discharge-timer>{{ code_data.remaining_seconds }}s</span>
-                                                </div>
-                                            {% endwith %}
-                                        </td>
-                                        <td>
                                             <span class="balance-tag bg-amber-100 text-amber-700 font-black px-2 py-1 rounded">ACTIVE</span>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="6" class="empty-state">
+                                        <td colspan="5" class="empty-state">
                                             <div class="flex flex-col items-center gap-3">
                                                 <div class="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200 text-2xl mb-2">
                                                     <i class="fas fa-check-circle"></i>
@@ -1342,53 +1310,6 @@
     let currentAdmissionInfo = null;
     let currentMaternityRebate = null;
     let currentAdjustment = 0;
-    let dischargeCodeTimer = null;
-
-    function startDischargeCodeTicker() {
-        const rows = document.querySelectorAll('[data-discharge-code-row]');
-        if (!rows.length) return;
-
-        const tick = () => {
-            const now = Math.floor(Date.now() / 1000);
-            rows.forEach(row => {
-                const expiresAt = parseInt(row.dataset.expiresAt || '0', 10);
-                const timerEl = row.querySelector('[data-discharge-timer]');
-                const remaining = Math.max(0, expiresAt - now);
-
-                if (timerEl) {
-                    timerEl.textContent = `${remaining}s`;
-                }
-
-                if (remaining <= 0 && !row.dataset.refreshing) {
-                    refreshDischargeCode(row);
-                }
-            });
-        };
-
-        tick();
-        dischargeCodeTimer = setInterval(tick, 1000);
-    }
-
-    function refreshDischargeCode(row) {
-        const visitId = row.dataset.visitId;
-        if (!visitId) return;
-        row.dataset.refreshing = '1';
-
-        fetch(`/accounts/api/discharge-code/${visitId}/`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) return;
-                row.dataset.expiresAt = data.expires_at;
-                const codeEl = row.querySelector('[data-discharge-code]');
-                const timerEl = row.querySelector('[data-discharge-timer]');
-                if (codeEl) codeEl.textContent = data.code;
-                if (timerEl) timerEl.textContent = `${data.remaining_seconds}s`;
-            })
-            .catch(err => console.error(err))
-            .finally(() => {
-                delete row.dataset.refreshing;
-            });
-    }
 
     function openClaimModal(invoiceId, patientName, balance) {
         currentInvoiceId = invoiceId;
@@ -1803,6 +1724,5 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', startDischargeCodeTicker);
     </script>
 {% endblock %}
