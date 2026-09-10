@@ -273,7 +273,8 @@ function initIcd11DiagnosisPicker(root) {
                 setValidateStatus('Still checking with DHA terminology — please wait.', 'loading');
                 return;
             }
-            if (!valueField.value.trim()) {
+            const isRequired = root.dataset.required !== 'false';
+            if (isRequired && !valueField.value.trim()) {
                 e.preventDefault();
                 setValidateStatus('Select an ICD-11 diagnosis from search results (DHA-verified).', 'error');
                 searchInput.focus();

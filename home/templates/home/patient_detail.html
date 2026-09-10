@@ -1991,8 +1991,8 @@
                         <input type="hidden" name="visit_id" id="diagnosis_visit_id">
                         <input type="hidden" name="diagnosis_id" id="diagnosis_edit_id" value="">
                         <div class="form-group">
-                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis (ICD-11 / KNHTS)</label>
-                            {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=diagnosis_form.data %}
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Diagnosis</label>
+                            {{ diagnosis_form.data }}
                         </div>
                         <div class="form-group" style="margin-top:1rem;">
                             <label class="checkbox-premium" style="display:flex; align-items:center; gap:0.5rem;">
@@ -2026,8 +2026,8 @@
                         <input type="hidden" name="visit_id" value="{% if selected_visit %}{{ selected_visit.pk }}{% elif latest_visit %}{{ latest_visit.pk }}{% endif %}">
                         <input type="hidden" id="problem_edit_id" value="">
                         <div class="form-group" style="margin-bottom:1rem;">
-                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Problem / Diagnosis (ICD-11)</label>
-                            {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=problem_form.display %}
+                            <label style="font-weight: 700; color: var(--clinical-text-muted); font-size: 0.75rem;">Problem / Diagnosis</label>
+                            {{ problem_form.display }}
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                             <div class="form-group">
@@ -2504,7 +2504,6 @@
     {% endblock %}
     {% block extra_js %}
         {{ tb_screening_map|json_script:"tb-screening-map" }}
-        <script src="{% static 'home/js/icd11_diagnosis_picker.js' %}"></script>
         <script>
     const TB_SCREENING_REQUIRED = {{ tb_screening_required|yesno:"true,false" }};
     const TB_SCREENING_VISIT_ID = {{ tb_screening_visit_id|default:"null" }};
@@ -2812,35 +2811,8 @@
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
 
-    /* ---- Diagnosis Modal (Add / Edit) — ICD-11 / KNHTS ---- */
+    /* ---- Diagnosis Modal (Add / Edit) — free text ---- */
     let diagnosisEditId = null;
-
-    function getDiagnosisPicker() {
-        return document.querySelector('#diagnosisModal .icd-diagnosis-picker');
-    }
-
-    function resetIcdPicker(picker, value) {
-        if (!picker) return;
-        const valueField = picker.querySelector('.icd-diagnosis-value');
-        const searchInput = picker.querySelector('.icd-diagnosis-search');
-        const selectedBox = picker.querySelector('.icd-diagnosis-selected');
-        const selectedLabel = picker.querySelector('.icd-diagnosis-selected-label');
-        const selectedMeta = picker.querySelector('.icd-diagnosis-selected-meta');
-        const statusEl = picker.querySelector('.icd-diagnosis-validate-status');
-        if (valueField) valueField.value = value || '';
-        if (searchInput) searchInput.value = '';
-        if (statusEl) {
-            statusEl.classList.add('hidden');
-            statusEl.textContent = '';
-        }
-        if (value) {
-            if (selectedLabel) selectedLabel.textContent = value;
-            if (selectedMeta) selectedMeta.textContent = 'ICD-11 selected';
-            if (selectedBox) selectedBox.classList.remove('hidden');
-        } else if (selectedBox) {
-            selectedBox.classList.add('hidden');
-        }
-    }
 
     function openDiagnosisModal(visitId) {
         if (!guardClinicalAction()) return;
@@ -2850,7 +2822,8 @@
         document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Add Diagnosis';
         const addToList = document.getElementById('diagnosis_add_to_problem_list');
         if (addToList) addToList.checked = true;
-        resetIcdPicker(getDiagnosisPicker(), '');
+        const dataField = document.querySelector('#addDiagnosisForm textarea[name="data"], #addDiagnosisForm input[name="data"]');
+        if (dataField) dataField.value = '';
         showModal('diagnosisModal');
     }
 
@@ -2862,7 +2835,8 @@
         document.getElementById('diagnosisModalTitle').innerHTML = '<i class="fas fa-diagnoses"></i> Edit Diagnosis';
         const addToList = document.getElementById('diagnosis_add_to_problem_list');
         if (addToList) addToList.checked = false;
-        resetIcdPicker(getDiagnosisPicker(), existingData || '');
+        const dataField = document.querySelector('#addDiagnosisForm textarea[name="data"], #addDiagnosisForm input[name="data"]');
+        if (dataField) dataField.value = existingData || '';
         showModal('diagnosisModal');
     }
 
@@ -2871,7 +2845,7 @@
         const formData = new FormData(form);
         const dataVal = (formData.get('data') || '').trim();
         if (!dataVal) {
-            showMessageModal('Error', 'Select an ICD-11 diagnosis from search.', null, 'error');
+            showMessageModal('Error', 'Enter a diagnosis.', null, 'error');
             return;
         }
         let url;
@@ -2897,12 +2871,8 @@
             .catch(err => showMessageModal('Error', 'Network error.', null, 'error'));
     }
 
-    /* ---- Problem List (KNHTS) ---- */
+    /* ---- Problem List ---- */
     let problemEditId = null;
-
-    function getProblemPicker() {
-        return document.querySelector('#problemModal .icd-diagnosis-picker');
-    }
 
     function openProblemModal() {
         problemEditId = null;
@@ -2910,7 +2880,6 @@
         document.getElementById('problemModalTitle').innerHTML = '<i class="fas fa-notes-medical"></i> Record Problem';
         const form = document.getElementById('problemForm');
         if (form) form.reset();
-        resetIcdPicker(getProblemPicker(), '');
         const status = form && form.querySelector('[name="clinical_status"]');
         if (status) status.value = 'active';
         const ver = form && form.querySelector('[name="verification_status"]');
@@ -2925,7 +2894,6 @@
         document.getElementById('problem_edit_id').value = problemEditId;
         document.getElementById('problemModalTitle').innerHTML = '<i class="fas fa-notes-medical"></i> Update Problem';
         const form = document.getElementById('problemForm');
-        resetIcdPicker(getProblemPicker(), btn.dataset.display || '');
         if (form) {
             const set = (name, val) => {
                 const el = form.querySelector(`[name="${name}"]`);
@@ -2952,7 +2920,7 @@
         const formData = new FormData(form);
         const display = (formData.get('display') || '').trim();
         if (!display) {
-            showMessageModal('Error', 'Select an ICD-11 coded problem from search.', null, 'error');
+            showMessageModal('Error', 'Enter a problem / diagnosis.', null, 'error');
             return;
         }
         const url = problemEditId

@@ -1145,6 +1145,23 @@ def discharge_patient(request, admission_id):
 
             messages.success(request, f"Patient {admission.patient.full_name} has been discharged and take-home medications recorded.")
             return redirect('inpatient:discharge_summary', pk=discharge.pk)
+
+        # Validation failed — surface errors (template also lists field errors)
+        if form.errors:
+            for field, errs in form.errors.items():
+                label = field.replace('_', ' ').title() if field != '__all__' else 'Form'
+                for err in errs:
+                    messages.error(request, f"{label}: {err}")
+        if formset.non_form_errors():
+            for err in formset.non_form_errors():
+                messages.error(request, str(err))
+        for med_form in formset:
+            if med_form.errors:
+                for errs in med_form.errors.values():
+                    for err in errs:
+                        messages.error(request, f"Take-home medication: {err}")
+        if not form.errors and not formset.errors and not formset.non_form_errors():
+            messages.error(request, "Discharge could not be saved. Please check the form and try again.")
     else:
         # Build initial operations/procedures string
         performed_list = []

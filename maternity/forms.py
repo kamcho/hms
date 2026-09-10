@@ -329,32 +329,14 @@ class MaternityDischargeForm(forms.ModelForm):
             'mother_condition_at_discharge': forms.Select(attrs={'class': 'form-control'}),
             'baby_condition_at_discharge': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Alive and healthy'}),
             'final_diagnosis': forms.Textarea(attrs={
-                'class': 'icd-diagnosis-value hidden',
-                'rows': 2,
-                'placeholder': 'ICD-11 diagnosis will be set from search…',
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Enter final diagnosis…',
             }),
             'discharge_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'follow_up_plan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'medications_prescribed': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'List take-home medications'}),
         }
-
-    def clean_final_diagnosis(self):
-        from home.icd11_diagnosis import validate_and_resolve_diagnosis
-
-        value = self.cleaned_data.get('final_diagnosis')
-        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
-        self._final_icd11_entry = entry
-        return display
-
-    def save(self, commit=True):
-        discharge = super().save(commit=False)
-        entry = getattr(self, '_final_icd11_entry', None)
-        if entry:
-            discharge.final_icd11_code = entry.code
-            discharge.final_icd11_entry = entry
-        if commit:
-            discharge.save()
-        return discharge
 
 
 class MaternityReferralForm(forms.ModelForm):

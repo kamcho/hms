@@ -701,7 +701,7 @@
                 <div class="space-y-5">
                     <div class="rx-field relative">
                         <label class="rx-label">Clinical diagnosis *</label>
-                        {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=form.diagnosis %}
+                        {{ form.diagnosis }}
                         {% if form.diagnosis.errors %}
                         <p class="text-rose-600 text-xs font-medium mt-2">{{ form.diagnosis.errors.0 }}</p>
                         {% endif %}
@@ -951,7 +951,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'home/js/icd11_diagnosis_picker.js' %}"></script>
 <script>
 const medMetadata = {{ med_metadata_json|safe }};
 const HPT_SUGGEST_URL = "{% url 'home:hpt_suggest_api' %}";

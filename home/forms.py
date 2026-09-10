@@ -98,32 +98,13 @@ class PrescriptionForm(forms.ModelForm):
         widgets = {
             'diagnosis': forms.Textarea(attrs={
                 'rows': 2,
-                'class': 'icd-diagnosis-value hidden',
-                'placeholder': 'ICD-11 diagnosis will be set from search…',
+                'placeholder': 'Enter clinical diagnosis…',
             }),
             'notes': forms.Textarea(attrs={
                 'rows': 2,
                 'placeholder': 'Additional instructions or notes (optional)...'
             }),
         }
-
-    def clean_diagnosis(self):
-        from .icd11_diagnosis import validate_and_resolve_diagnosis
-
-        value = self.cleaned_data.get('diagnosis')
-        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
-        self._icd11_diagnosis_entry = entry
-        return display
-
-    def save(self, commit=True):
-        prescription = super().save(commit=False)
-        entry = getattr(self, '_icd11_diagnosis_entry', None)
-        if entry:
-            prescription.icd11_code = entry.code
-            prescription.icd11_entry = entry
-        if commit:
-            prescription.save()
-        return prescription
 
 
 class PrescriptionItemForm(forms.ModelForm):
@@ -436,29 +417,11 @@ class DiagnosisForm(forms.ModelForm):
         fields = ['data']
         widgets = {
             'data': forms.Textarea(attrs={
-                'class': 'icd-diagnosis-value hidden',
-                'rows': 2,
-                'placeholder': 'ICD-11 diagnosis will be set from search…',
+                'class': 'clinical-input',
+                'rows': 3,
+                'placeholder': 'Enter diagnosis…',
             }),
         }
-
-    def clean_data(self):
-        from .icd11_diagnosis import validate_and_resolve_diagnosis
-
-        value = self.cleaned_data.get('data')
-        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
-        self._icd11_entry = entry
-        return display
-
-    def save(self, commit=True):
-        diagnosis = super().save(commit=False)
-        entry = getattr(self, '_icd11_entry', None)
-        if entry:
-            diagnosis.icd11_code = entry.code
-            diagnosis.icd11_entry = entry
-        if commit:
-            diagnosis.save()
-        return diagnosis
 
 class ReferralForm(forms.ModelForm):
     class Meta:
@@ -524,7 +487,7 @@ class AppointmentForm(forms.ModelForm):
 
 
 class ProblemForm(forms.ModelForm):
-    """KNHTS / KPS Condition problem-list item form (ICD-11 coded)."""
+    """Problem-list item form (free-text diagnosis on stablev1)."""
 
     class Meta:
         model = Problem
@@ -534,9 +497,9 @@ class ProblemForm(forms.ModelForm):
         ]
         widgets = {
             'display': forms.Textarea(attrs={
-                'class': 'icd-diagnosis-value hidden',
-                'rows': 2,
-                'placeholder': 'ICD-11 diagnosis will be set from search…',
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Enter problem / diagnosis…',
             }),
             'clinical_status': forms.Select(attrs={'class': 'form-control'}),
             'verification_status': forms.Select(attrs={'class': 'form-control'}),
@@ -549,7 +512,8 @@ class ProblemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['display'].label = 'Problem / Diagnosis (ICD-11)'
+        self.fields['display'].label = 'Problem / Diagnosis'
+        self.fields['display'].required = True
         self.fields['clinical_status'].help_text = 'KPS clinicalStatus (required)'
         self.fields['verification_status'].help_text = 'KPS verificationStatus'
         for name in (
@@ -558,38 +522,15 @@ class ProblemForm(forms.ModelForm):
         ):
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
 
-    def clean_display(self):
-        from .icd11_diagnosis import validate_and_resolve_diagnosis
-
-        value = self.cleaned_data.get('display')
-        _code, display, entry = validate_and_resolve_diagnosis(value, required=True)
-        self._icd11_entry = entry
-        self._icd11_code = _code
-        return display
-
     def clean(self):
         cleaned = super().clean()
         status = cleaned.get('clinical_status')
         abatement = cleaned.get('abatement_date')
         if status in ('resolved', 'remission', 'inactive') and not abatement:
-            # Soft guidance — allow blank but preferred
             pass
         if status in ('active', 'recurrence', 'relapse') and abatement:
             cleaned['abatement_date'] = None
         return cleaned
-
-    def save(self, commit=True):
-        problem = super().save(commit=False)
-        entry = getattr(self, '_icd11_entry', None)
-        code = getattr(self, '_icd11_code', '') or ''
-        if entry:
-            problem.icd11_code = entry.code
-            problem.icd11_entry = entry
-        elif code:
-            problem.icd11_code = code
-        if commit:
-            problem.save()
-        return problem
 
 
 class PatientMedicationForm(forms.ModelForm):

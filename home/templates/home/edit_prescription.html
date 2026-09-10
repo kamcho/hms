@@ -270,7 +270,7 @@
                                 Clinical
                                 Diagnosis *
                             </label>
-                            {% include 'home/partials/icd11_diagnosis_picker.html' with diagnosis_field=form.diagnosis %}
+                            {{ form.diagnosis }}
                             {% if form.diagnosis.errors %}<p class="text-rose-500 text-xs font-bold mt-2 ml-2">{{ form.diagnosis.errors.0 }}</p>{% endif %}
                         </div>
                         <div class="space-y-3">
@@ -515,7 +515,6 @@
     </div>
 {% endblock %}
 {% block extra_js %}
-    <script src="{% static 'home/js/icd11_diagnosis_picker.js' %}"></script>
     <script>
     const medMetadata = {{ med_metadata_json| safe }};
 

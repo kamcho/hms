@@ -1725,14 +1725,11 @@ def update_impression(request, pk):
 
 @login_required
 def add_diagnosis(request):
-    """Add ICD-11 coded diagnosis to a visit; optionally promote to problem list."""
+    """Add free-text diagnosis to a visit; optionally promote to problem list."""
     if request.method == 'POST':
         try:
-            from django.core.exceptions import ValidationError as DjangoValidationError
-            from .icd11_diagnosis import validate_and_resolve_diagnosis
-
             visit_id = request.POST.get('visit_id')
-            data = request.POST.get('data')
+            data = (request.POST.get('data') or '').strip()
             add_to_problem_list = request.POST.get('add_to_problem_list', '1') in ('1', 'true', 'yes', 'on')
 
             visit = get_object_or_404(Visit, pk=visit_id)
@@ -1748,17 +1745,12 @@ def add_diagnosis(request):
             if doctor_requires_tb_screening(request.user, visit):
                 return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
-            try:
-                code, display, entry = validate_and_resolve_diagnosis(data, required=True)
-            except DjangoValidationError as exc:
-                msg = '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
-                return JsonResponse({'success': False, 'error': msg})
+            if not data:
+                return JsonResponse({'success': False, 'error': 'Diagnosis is required.'})
 
             diagnosis = Diagnosis.objects.create(
                 visit=visit,
-                data=display,
-                icd11_code=code,
-                icd11_entry=entry,
+                data=data,
                 created_by=request.user,
             )
 
@@ -1780,12 +1772,9 @@ def add_diagnosis(request):
 
 @login_required
 def update_diagnosis(request, pk):
-    """Update an existing visit diagnosis (ICD-11 coded)."""
+    """Update an existing visit diagnosis (free text)."""
     if request.method == 'POST':
         try:
-            from django.core.exceptions import ValidationError as DjangoValidationError
-            from .icd11_diagnosis import validate_and_resolve_diagnosis
-
             diagnosis = get_object_or_404(Diagnosis, pk=pk)
             visit = diagnosis.visit
 
@@ -1799,18 +1788,13 @@ def update_diagnosis(request, pk):
             if doctor_requires_tb_screening(request.user, visit):
                 return JsonResponse({'success': False, 'error': TB_SCREENING_MESSAGE})
 
-            data = request.POST.get('data')
-            try:
-                code, display, entry = validate_and_resolve_diagnosis(data, required=True)
-            except DjangoValidationError as exc:
-                msg = '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
-                return JsonResponse({'success': False, 'error': msg})
+            data = (request.POST.get('data') or '').strip()
+            if not data:
+                return JsonResponse({'success': False, 'error': 'Diagnosis is required.'})
 
-            diagnosis.data = display
-            diagnosis.icd11_code = code
-            diagnosis.icd11_entry = entry
+            diagnosis.data = data
             diagnosis.updated_by = request.user
-            diagnosis.save()
+            diagnosis.save(update_fields=['data', 'updated_by'])
 
             if request.POST.get('add_to_problem_list', '0') in ('1', 'true', 'yes', 'on'):
                 _upsert_problem_from_diagnosis(
@@ -1833,28 +1817,40 @@ def _parse_optional_date(value):
 
 
 def _upsert_problem_from_diagnosis(diagnosis, *, recorded_by, visit=None):
-    """Create or refresh a problem-list item from a coded visit diagnosis."""
-    code = (diagnosis.icd11_code or '').strip().upper()
-    if not code:
+    """Create or refresh a problem-list item from a visit diagnosis (free text or coded)."""
+    display = (diagnosis.data or '').strip()
+    if not display:
         return None
 
+    code = (diagnosis.icd11_code or '').strip().upper()
     patient = diagnosis.visit.patient
-    problem = (
-        Problem.objects.filter(patient=patient, icd11_code__iexact=code)
-        .exclude(verification_status='entered-in-error')
-        .order_by('-updated_at')
-        .first()
-    )
     visit = visit or diagnosis.visit
+
+    problem = None
+    if code:
+        problem = (
+            Problem.objects.filter(patient=patient, icd11_code__iexact=code)
+            .exclude(verification_status='entered-in-error')
+            .order_by('-updated_at')
+            .first()
+        )
+    if problem is None:
+        problem = (
+            Problem.objects.filter(patient=patient, display__iexact=display)
+            .exclude(verification_status='entered-in-error')
+            .filter(clinical_status__in=('active', 'recurrence', 'relapse'))
+            .order_by('-updated_at')
+            .first()
+        )
 
     if problem is None:
         problem = Problem(
             patient=patient,
             visit=visit,
             source_diagnosis=diagnosis,
-            display=diagnosis.data,
+            display=display,
             icd11_code=code,
-            icd11_entry=diagnosis.icd11_entry,
+            icd11_entry=diagnosis.icd11_entry if code else None,
             clinical_status='active',
             verification_status='confirmed',
             category='problem-list-item',
@@ -1870,11 +1866,14 @@ def _upsert_problem_from_diagnosis(diagnosis, *, recorded_by, visit=None):
         return problem
 
     changed = False
+    action = 'updated'
+    summary = 'Updated from visit diagnosis'
     if diagnosis.data and problem.display != diagnosis.data:
         problem.display = diagnosis.data
         changed = True
-    if diagnosis.icd11_entry_id and problem.icd11_entry_id != diagnosis.icd11_entry_id:
+    if code and diagnosis.icd11_entry_id and problem.icd11_entry_id != diagnosis.icd11_entry_id:
         problem.icd11_entry = diagnosis.icd11_entry
+        problem.icd11_code = code
         changed = True
     if visit and problem.visit_id != visit.pk:
         problem.visit = visit
@@ -1888,20 +1887,20 @@ def _upsert_problem_from_diagnosis(diagnosis, *, recorded_by, visit=None):
         changed = True
         action = 'reactivated'
         summary = 'Reactivated from visit diagnosis'
-    else:
-        action = 'updated'
-        summary = 'Updated from visit diagnosis'
-
     if changed:
         problem.updated_by = recorded_by
         problem.save()
-        problem.record_history(action=action, changed_by=recorded_by, change_summary=summary)
+        problem.record_history(
+            action=action,
+            changed_by=recorded_by,
+            change_summary=summary,
+        )
     return problem
 
 
 @login_required
 def add_problem(request, patient_pk):
-    """Record a new KNHTS-coded problem list item for a patient."""
+    """Record a new problem list item for a patient."""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request'}, status=405)
 
