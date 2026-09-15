@@ -108,7 +108,8 @@ def _get_maternity_sha_rebate_info(invoice):
         'package_item_name': package_item.name if package_item else None,
         'package_unit_price': float(package_item.unit_price) if package_item else None,
         'total_billed': float(invoice.total_amount),
-        'effective_after_rebate': float(invoice.total_amount),
+        'effective_after_rebate': float(invoice.effective_amount),
+        'suggested_claim': float(invoice.balance),
     }
 
 

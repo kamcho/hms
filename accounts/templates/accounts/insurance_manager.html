@@ -1358,7 +1358,10 @@
         `;
         document.getElementById('claimAmountInput').value = "0.00";
         document.getElementById('claimAmountInput').readOnly = false; // Default to editable
-        document.getElementById('confirmBtn').classList.add('hidden'); // Initially hidden
+        const confirmBtnEl = document.getElementById('confirmBtn');
+        confirmBtnEl.classList.add('hidden'); // Initially hidden
+        confirmBtnEl.disabled = false;
+        confirmBtnEl.classList.remove('opacity-50', 'grayscale');
         document.getElementById('claimInputs').classList.add('hidden'); // Initially hidden
         document.getElementById('perDiemInfo').classList.add('hidden');
         document.getElementById('maternityRebateInfo').classList.add('hidden');
@@ -1395,6 +1398,7 @@
                     rebateInput.oninput = function () {
                         currentAdjustment = parseFloat(this.value) || 0;
                         updateMaternityEffectiveLabel();
+                        calculateTotal();
                     };
                 }
 
@@ -1421,6 +1425,15 @@
         document.getElementById('maternityEffectiveLabel').textContent =
             `Ksh ${effective.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
         currentAdjustment = rebate;
+    }
+
+    function defaultClaimFromSelection(totalSelected, invoiceBalance) {
+        const selected = Math.max(parseFloat(totalSelected) || 0, 0);
+        const balance = Math.max(parseFloat(invoiceBalance) || 0, 0);
+        if (balance > 0) {
+            return Math.min(selected, balance);
+        }
+        return selected;
     }
 
     function renderItems() {
@@ -1519,18 +1532,23 @@
                 adjustmentEl.classList.add('text-emerald-600');
             }
         } else if (currentMaternityRebate && selectedItemIds.size > 0) {
-            currentAdjustment = parseFloat(document.getElementById('maternityRebateClaimInput').value) || currentMaternityRebate.default_rebate;
+            const rebateInput = document.getElementById('maternityRebateClaimInput');
+            const rebateVal = parseFloat(rebateInput.value);
+            currentAdjustment = Number.isNaN(rebateVal)
+                ? (currentMaternityRebate.current_rebate > 0
+                    ? currentMaternityRebate.current_rebate
+                    : currentMaternityRebate.default_rebate)
+                : rebateVal;
             updateMaternityEffectiveLabel();
-            const maternityCap = Math.max(currentMaternityRebate.total_billed - currentAdjustment, 0);
-            amountInput.value = Math.min(totalSelected, maternityCap, invoiceBalance).toFixed(2);
+            // Rebate is sent as adjustment; claim amount = remaining due (not total_billed - rebate)
+            if (typeof currentMaternityRebate.suggested_claim === 'number' && invoiceBalance <= 0) {
+                invoiceBalance = Math.max(currentMaternityRebate.suggested_claim, 0);
+            }
+            amountInput.value = defaultClaimFromSelection(totalSelected, invoiceBalance).toFixed(2);
             amountInput.readOnly = false;
             amountInput.classList.remove('bg-slate-50', 'cursor-not-allowed');
         } else {
-            // Never default above invoice balance (line sums can exceed header after partial pay / FIFO drift)
-            const claimDefault = invoiceBalance > 0
-                ? Math.min(totalSelected, invoiceBalance)
-                : totalSelected;
-            amountInput.value = claimDefault.toFixed(2);
+            amountInput.value = defaultClaimFromSelection(totalSelected, invoiceBalance).toFixed(2);
             amountInput.readOnly = false;
             amountInput.classList.remove('bg-slate-50', 'cursor-not-allowed');
             currentAdjustment = 0;
@@ -1558,7 +1576,8 @@
 
         // Skip max amount check for IPD (Admission) because they pay flat rate 2240
         const isIPD = currentAdmissionInfo !== null;
-        const isInvalid = val <= 0 || (!isIPD && val > max);
+        const tol = 0.02;
+        const isInvalid = val <= 0 || (!isIPD && val > max + tol);
 
         if (isInvalid) {
             amountInput.classList.add('border-rose-500', 'text-rose-600');
