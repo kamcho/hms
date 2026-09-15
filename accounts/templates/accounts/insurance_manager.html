@@ -1337,6 +1337,9 @@
             .then(res => res.json())
             .then(data => {
                 invoiceItems = data.items;
+                if (typeof data.invoice_balance === 'number' && !Number.isNaN(data.invoice_balance)) {
+                    window.currentInvoiceBalance = data.invoice_balance;
+                }
                 currentAdmissionInfo = data.admission_info;
                 currentMaternityRebate = data.maternity_rebate;
 
@@ -1484,14 +1487,16 @@
         } else if (currentMaternityRebate && selectedItemIds.size > 0) {
             currentAdjustment = parseFloat(document.getElementById('maternityRebateClaimInput').value) || currentMaternityRebate.default_rebate;
             updateMaternityEffectiveLabel();
-            // Claim amount remains editable; default to selected balances after rebate awareness
-            const effectiveBal = Math.max(invoiceBalance - (currentMaternityRebate.current_rebate > 0 ? 0 : 0), 0);
-            // Prefer selected line total; user can edit
-            amountInput.value = Math.min(totalSelected, Math.max(currentMaternityRebate.total_billed - currentAdjustment, 0)).toFixed(2);
+            const maternityCap = Math.max(currentMaternityRebate.total_billed - currentAdjustment, 0);
+            amountInput.value = Math.min(totalSelected, maternityCap, invoiceBalance).toFixed(2);
             amountInput.readOnly = false;
             amountInput.classList.remove('bg-slate-50', 'cursor-not-allowed');
         } else {
-            amountInput.value = totalSelected.toFixed(2);
+            // Never default above invoice balance (line sums can exceed header after partial pay / FIFO drift)
+            const claimDefault = invoiceBalance > 0
+                ? Math.min(totalSelected, invoiceBalance)
+                : totalSelected;
+            amountInput.value = claimDefault.toFixed(2);
             amountInput.readOnly = false;
             amountInput.classList.remove('bg-slate-50', 'cursor-not-allowed');
             currentAdjustment = 0;

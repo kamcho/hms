@@ -866,6 +866,10 @@ def sha_facility_by_code(request):
 @user_passes_test(is_billing_staff)
 def get_invoice_items(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
+    # Re-sync line paid_amount with payment FIFO (e.g. items added after partial pay)
+    invoice.distribute_payments()
+    invoice.refresh_from_db()
+
     items_data = []
     for item in invoice.items.all().order_by('created_at'):
         # Get delivery info safely
@@ -910,6 +914,9 @@ def get_invoice_items(request, invoice_id):
         'maternity_rebate': maternity_rebate,
         'is_maternity': _is_maternity_invoice(invoice),
         'is_sha': _is_sha_visit(invoice),
+        'invoice_balance': float(invoice.balance),
+        'invoice_paid_amount': float(invoice.paid_amount),
+        'invoice_total_amount': float(invoice.total_amount),
     })
 
 @login_required
