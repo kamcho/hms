@@ -949,23 +949,47 @@ def process_insurance_claim(request):
             invoice.refresh_from_db()
             claim_amount = per_diem['per_diem_total']
         elif maternity_rebate:
-            # SHA maternity: package amount is edited on the delivery line separately.
-            # Optional adjustment from claim UI still allowed, but default is 0 (not a write-off of 10k).
-            rebate_amt = Decimal(str(adjustment)) if adjustment not in (None, '') else Decimal('0')
-            if rebate_amt < 0:
-                return JsonResponse({'success': False, 'error': 'Adjustment cannot be negative.'}, status=400)
-            if rebate_amt > invoice.total_amount:
-                rebate_amt = invoice.total_amount
-            invoice.insurance_adjustment = rebate_amt
-            invoice.save()
+            # SHA maternity: "adjustment" from the claim UI is the delivery package price,
+            # NOT insurance_adjustment (write-off). Write-off here zeroes balance incorrectly.
+            package_amt = None
+            if adjustment not in (None, ''):
+                try:
+                    package_amt = Decimal(str(adjustment).replace(',', '').strip())
+                except Exception:
+                    return JsonResponse({'success': False, 'error': 'Invalid SHA package amount.'}, status=400)
+                if package_amt < 0:
+                    return JsonResponse({'success': False, 'error': 'Package amount cannot be negative.'}, status=400)
+
+            package_item = _maternity_package_item(invoice)
+            if package_item and package_amt is not None and package_amt > 0:
+                if package_item.unit_price != package_amt:
+                    package_item.unit_price = package_amt
+                    package_item.save()
+
+            if invoice.insurance_adjustment:
+                invoice.insurance_adjustment = Decimal('0')
+                invoice.save(update_fields=['insurance_adjustment'])
+
+            invoice.update_totals()
             invoice.distribute_payments()
             invoice.refresh_from_db()
-            selected_total = selected_items.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            claim_amount = (
-                Decimal(str(custom_amount)) if custom_amount is not None else selected_total
+
+            selected_balance = sum(
+                (item.balance for item in selected_items),
+                Decimal('0'),
             )
+            if custom_amount is not None and custom_amount != '':
+                claim_amount = Decimal(str(custom_amount).replace(',', '').strip())
+            else:
+                claim_amount = selected_balance
+
             if claim_amount > invoice.balance + tol:
-                claim_amount = max(invoice.balance, Decimal('0'))
+                if invoice.balance <= 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Nothing left to collect on this invoice after prior payments.',
+                    })
+                claim_amount = invoice.balance
         else:
             if adjustment is not None:
                 invoice.insurance_adjustment = Decimal(str(adjustment))
