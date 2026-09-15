@@ -882,7 +882,10 @@
                             </thead>
                             <tbody>
                                 {% for inv in opd_invoices %}
-                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors js-claim-row"
+                                        data-invoice-id="{{ inv.id }}"
+                                        data-patient-name="{{ inv.patient.full_name }}"
+                                        data-balance="{{ inv.balance|floatformat:2 }}">
                                         <td>
                                             <div class="patient-cell">
                                                 <span class="patient-avatar bg-indigo-100 text-indigo-700">{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}</span>
@@ -899,8 +902,8 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right" onclick="event.stopPropagation()">
-                                            <button type="button" class="btn-claim" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td class="text-right js-claim-actions">
+                                            <button type="button" class="btn-claim js-claim-btn">
                                                 <i class="fas fa-file-invoice-dollar"></i> Claim
                                             </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
@@ -963,7 +966,10 @@
                             </thead>
                             <tbody>
                                 {% for inv in ipd_invoices %}
-                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors js-claim-row"
+                                        data-invoice-id="{{ inv.id }}"
+                                        data-patient-name="{{ inv.patient.full_name }}"
+                                        data-balance="{{ inv.balance|floatformat:2 }}">
                                         <td>
                                             <div class="patient-cell">
                                                 <span class="patient-avatar bg-emerald-100 text-emerald-700">{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}</span>
@@ -986,8 +992,8 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right" onclick="event.stopPropagation()">
-                                            <button type="button" class="btn-claim" style="background: linear-gradient(135deg, #059669, #10b981);" onclick="openClaimModal('{{ inv.id }}', '{{ inv.patient.full_name }}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td class="text-right js-claim-actions">
+                                            <button type="button" class="btn-claim js-claim-btn" style="background: linear-gradient(135deg, #059669, #10b981);">
                                                 <i class="fas fa-file-invoice-dollar"></i> Claim
                                             </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
@@ -1050,7 +1056,10 @@
                             </thead>
                             <tbody>
                                 {% for inv in maternity_invoices %}
-                                    <tr class="cursor-pointer transition-colors" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                    <tr class="cursor-pointer transition-colors js-claim-row"
+                                        data-invoice-id="{{ inv.id }}"
+                                        data-patient-name="{% if inv.patient %}{{ inv.patient.full_name }}{% elif inv.visit.labor_delivery.pregnancy.patient %}{{ inv.visit.labor_delivery.pregnancy.patient.full_name }}{% else %}Unknown{% endif %}"
+                                        data-balance="{{ inv.balance|floatformat:2 }}">
                                         <td>
                                             <div class="patient-cell">
                                                 <span class="patient-avatar bg-pink-100 text-pink-700">{% if inv.patient %}{{ inv.patient.first_name|slice:":1" }}{{ inv.patient.last_name|slice:":1" }}{% else %}—{% endif %}</span>
@@ -1073,8 +1082,8 @@
                                         <td>
                                             <span class="balance-tag {% if inv.status == 'Partial' %}tag-partial{% else %}tag-pending{% endif %}">{{ inv.get_status_display }}</span>
                                         </td>
-                                        <td class="text-right" onclick="event.stopPropagation()">
-                                            <button type="button" class="btn-claim" style="background: linear-gradient(135deg, #db2777, #ec4899);" onclick="openClaimModal('{{ inv.id }}', '{% if inv.patient %}{{ inv.patient.full_name }}{% else %}Unknown{% endif %}', '{{ inv.balance|floatformat:2 }}')">
+                                        <td class="text-right js-claim-actions">
+                                            <button type="button" class="btn-claim js-claim-btn" style="background: linear-gradient(135deg, #db2777, #ec4899);">
                                                 <i class="fas fa-file-invoice-dollar"></i> Claim
                                             </button>
                                             <a href="{% url 'accounts:invoice_detail' inv.id %}" class="action-btn btn-view">
@@ -1310,6 +1319,31 @@
     let currentAdmissionInfo = null;
     let currentMaternityRebate = null;
     let currentAdjustment = 0;
+
+    function openClaimModalFromRow(rowEl) {
+        if (!rowEl || !rowEl.dataset.invoiceId) return;
+        openClaimModal(
+            rowEl.dataset.invoiceId,
+            rowEl.dataset.patientName || 'Unknown',
+            rowEl.dataset.balance || '0'
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.js-claim-row').forEach(function (row) {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('a, button, .js-claim-actions')) return;
+                openClaimModalFromRow(row);
+            });
+        });
+        document.querySelectorAll('.js-claim-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openClaimModalFromRow(btn.closest('.js-claim-row'));
+            });
+        });
+    });
 
     function openClaimModal(invoiceId, patientName, balance) {
         currentInvoiceId = invoiceId;
